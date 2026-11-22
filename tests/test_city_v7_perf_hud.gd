@@ -37,8 +37,13 @@ func _run() -> void:
     assert(probe.visible and probe.is_processing())
     assert(probe.scene_root==viewer._scene)
     var first: Dictionary=probe.snapshot()
-    assert(int(first["cities"])==4)
-    assert(int(first["city_lod2"])==4)
+    assert(int(first["cities"])==2)
+    # The other two of the four original economic cities are now
+    # native command HQ V24 landmarks, not civilian-city LOD entries.
+    assert(int(first["headquarters"])==2)
+    assert(int(first["headquarters_meshes"])==6)
+    assert(int(first["headquarters_surfaces"])==26)
+    assert(int(first["city_lod2"])==2)
     assert(first["sample_count"]>=0)
     for _frame in range(12):
         await process_frame
@@ -89,7 +94,7 @@ func _run() -> void:
     assert(driver.update_now(viewer.camera,mobile_height)>0)
     probe.refresh_once()
     var far: Dictionary=probe.snapshot()
-    assert(int(far["city_lod2"])==4)
+    assert(int(far["city_lod2"])==2)
     assert(int(far["city_meshes"])==int(before["city_meshes"]))
     assert(int(far["city_lod_changes"])>0)
     assert(board.state==untouched)

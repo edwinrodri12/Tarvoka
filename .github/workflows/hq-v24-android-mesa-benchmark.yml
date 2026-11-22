@@ -1,0 +1,73 @@
+name: TARVOKA HQ V24 Android-like Mesa stress QA
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "tests/benchmark_hq_v24_android_like_mesa.gd"
+      - "scripts/ui/HeadquartersBattle3D.gd"
+      - "scripts/ui/HeadquartersMapLOD3D.gd"
+      - "scripts/ui/HeadquartersBattleAccents3D.gd"
+      - "scripts/ui/HeadquartersCurvedRoof3D.gd"
+      - ".github/workflows/hq-v24-android-mesa-benchmark.yml"
+  push:
+    branches: [test/hq-v24-android-mesa-performance-baseline-20261121]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  native-mesa-stress:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Install unmodified Godot 4.3 engine
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -fLsS --retry 3 \
+            "https://github.com/godotengine/godot/releases/download/4.3-stable/Godot_v4.3-stable_linux.x86_64.zip" \
+            -o /tmp/hq24-mesa-godot.zip
+          unzip -oq /tmp/hq24-mesa-godot.zip -d /tmp
+          chmod +x /tmp/Godot_v4.3-stable_linux.x86_64
+      - name: Import current playable Battle without legacy Web inspector dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -f scripts/ui/BastionStudioAdapter.gd scripts/ui/ArmoredWorkshopStudioAdapterV1.gd
+          /tmp/Godot_v4.3-stable_linux.x86_64 --headless \
+            --editor --path . --import --quit 2>&1 | tee /tmp/hq24-mesa-import.log
+          if grep -E 'SCRIPT ERROR:|Parse Error:|ERROR: Failed to load script' \
+              /tmp/hq24-mesa-import.log; then exit 1; fi
+      - name: Profile actual battle, 960x540 native GL and 24 visual HQs
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=10s 240s \
+            xvfb-run -a -s '-screen 0 1280x720x24' \
+            env LIBGL_ALWAYS_SOFTWARE=1 \
+            /tmp/Godot_v4.3-stable_linux.x86_64 \
+            --rendering-method gl_compatibility --audio-driver Dummy --path . \
+            --script res://tests/benchmark_hq_v24_android_like_mesa.gd \
+            2>&1 | tee /tmp/hq24-mesa-stress.log
+          if grep -E 'SCRIPT ERROR:|Assertion failed|Parse Error:|ERROR:' \
+              /tmp/hq24-mesa-stress.log; then exit 1; fi
+          grep -F 'PASS HQ V24 ANDROID-LIKE MESA STRESS:' /tmp/hq24-mesa-stress.log
+          test -s artifacts/hq_v24_mobile_mesa/hq_v24_mesa_performance.json
+          test "$(find artifacts/hq_v24_mobile_mesa -name '*.png' | wc -l)" -eq 3
+      - name: Archive truthful CPU/GPU baseline and native images
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: TARVOKA-HQ-V24-Android-like-Mesa-performance
+          retention-days: 14
+          if-no-files-found: warn
+          path: |
+            artifacts/hq_v24_mobile_mesa/*.json
+            artifacts/hq_v24_mobile_mesa/*.png
+            /tmp/hq24-mesa-stress.log
+            /tmp/hq24-mesa-import.log

@@ -8,6 +8,7 @@ const ClosureV7 = preload("res://scripts/ui/InfantryEngineerCompletenessV7.gd")
 const PremiumV8 = preload("res://scripts/ui/InfantryEngineerPremiumV8.gd")
 const FinishV9 = preload("res://scripts/ui/InfantryEngineerFinishV9.gd")
 const AnatomyV10 = preload("res://scripts/ui/InfantryEngineerAnatomyV10.gd")
+const MechanicsV11 = preload("res://scripts/ui/InfantryEngineerMechanicsV11.gd")
 const Infantry = preload("res://scripts/ui/InfantryFamilyV1.gd")
 const OUT := "res://build/qa/infantry-v6"
 var errors: int=0
@@ -99,6 +100,78 @@ func _run() -> void:
                 "V9 joined helmet, weapon grip and dorsal harness F%d LOD%d"%[faction,lod])
             check(AnatomyV10.has_model(model),
                 "V10 realistic forearms, rib fairings and tool fingers F%d LOD%d"%[faction,lod])
+            check(MechanicsV11.has_model(model),
+                "V11 real pressed torso and concentric mechanical hinges F%d L%d"%[faction,lod])
+            var chest_v11: Node3D=model.find_child(
+                "TorsoRig",true,false) as Node3D
+            var hips_v11: Node3D=model.find_child(
+                "CaderaRig",true,false) as Node3D
+            var hinge_v11: Node3D=model.find_child(
+                Engineer.RIG,true,false) as Node3D
+            var belly_v11: MeshInstance3D=model.find_child(
+                MechanicsV11.LOWER,true,false) as MeshInstance3D
+            var trim_v11: MeshInstance3D=model.find_child(
+                "V11_CintaColorEnPetoCurvo",true,false) as MeshInstance3D
+            var color_v11: StandardMaterial3D=(
+                trim_v11.material_override as StandardMaterial3D
+                if trim_v11!=null else null)
+            check(belly_v11!=null and belly_v11.mesh is ArrayMesh and
+                belly_v11.get_parent()==chest_v11 and
+                _watertight(belly_v11.mesh),
+                "V11 curved abdominal armor physically sealed, not flat transparent plane")
+            check(color_v11!=null and
+                color_v11.albedo_color.is_equal_approx(
+                    Models.faction_paint_color(faction)) and
+                _watertight(trim_v11.mesh),
+                "V11 colorful lower armor stripe uses exact active faction and closed mesh")
+            for side in [-1,1]:
+                var lateral_v11: MeshInstance3D=model.find_child(
+                    MechanicsV11.LATERAL+"_%d"%side,true,false) as MeshInstance3D
+                var hip_v11: Node3D=model.find_child(
+                    MechanicsV11.HIP+"_%d"%side,true,false) as Node3D
+                var shoulder_v11: Node3D=model.find_child(
+                    MechanicsV11.SHOULDER+"_%d"%side,true,false) as Node3D
+                var arm_v11: Node3D=model.find_child(
+                    "BrazoRig_%d"%side,true,false) as Node3D
+                var axle_v11: MeshInstance3D=model.find_child(
+                    MechanicsV11.HINGE_MOVING+"_%d"%side,true,false) as MeshInstance3D
+                var seat_v11: MeshInstance3D=model.find_child(
+                    MechanicsV11.HINGE_FIXED+"_%d"%side,true,false) as MeshInstance3D
+                var wing_v11: Node3D=model.find_child(
+                    Engineer.WINGS[0] if side<0 else Engineer.WINGS[1],
+                    true,false) as Node3D
+                var bolt_v11: MeshInstance3D=model.find_child(
+                    MechanicsV11.WING+"_%d"%side,true,false) as MeshInstance3D
+                check(lateral_v11!=null and lateral_v11.mesh is ArrayMesh
+                    and _watertight(lateral_v11.mesh)
+                    and lateral_v11.get_parent()==chest_v11,
+                    "V11 both anatomical torso edges are fully capped 3D shells")
+                check(hip_v11!=null and hip_v11.get_parent()==hips_v11
+                    and shoulder_v11!=null and shoulder_v11.get_parent()==arm_v11,
+                    "V11 hip bearings and shoulders stay on respective live rigs")
+                check(seat_v11!=null and axle_v11!=null
+                    and seat_v11.mesh is CylinderMesh
+                    and axle_v11.mesh is CylinderMesh
+                    and seat_v11.get_parent()==chest_v11
+                    and axle_v11.get_parent()==hinge_v11
+                    and bolt_v11!=null and bolt_v11.get_parent()==wing_v11,
+                    "V11 hinge axle and live wing bolt attached to proper moving rigs")
+            for phase_v11 in [0.0,0.25,0.5,1.0]:
+                check(Engineer.pose(model,"inspect",phase_v11),
+                    "V11 shield inspection retains native V6 articulation")
+                for side in [-1,1]:
+                    var static_v11: Node3D=model.find_child(
+                        MechanicsV11.HINGE_FIXED+"_%d"%side,
+                        true,false) as Node3D
+                    var moving_v11: Node3D=model.find_child(
+                        MechanicsV11.HINGE_MOVING+"_%d"%side,
+                        true,false) as Node3D
+                    if static_v11!=null and moving_v11!=null and hinge_v11!=null:
+                        check(static_v11.position.distance_to(
+                            hinge_v11.transform*moving_v11.position)<0.00001,
+                            "V11 coaxial shield axle never separates F%d L%d side%d t%.2f"%
+                            [faction,lod,side,phase_v11])
+            Engineer.reset(model)
             for side in [-1,1]:
                 var sleeve: MeshInstance3D=model.find_child(
                     FinishV9.LINK+"_%d"%side,true,false) as MeshInstance3D
@@ -352,8 +425,9 @@ func _run() -> void:
         var other: Node3D=Models.build(other_role,0,true,13)
         check(other!=null and not Engineer.has_model(other) and
             not ClosureV7.has_model(other) and not PremiumV8.has_model(other) and
-            not FinishV9.has_model(other),
-            "no engineer V6-V9 art installed on another core role "+other_role)
+            not FinishV9.has_model(other) and
+            not MechanicsV11.has_model(other),
+            "no engineer V6-V11 sculpt installed on another core role "+other_role)
         if other!=null:
             other.free()
 
@@ -473,6 +547,28 @@ func _run() -> void:
         camera.position=positions["right"]
         camera.look_at(Vector3(0,1.19,0),Vector3.UP)
         await _frame(view,"engineer_v10_unique_work_fingers_right")
+        # V11: pressed solid lower vest, two coaxial hinge assemblies,
+        # a moving wing pin, and hip seals, inspected in actual Godot.
+        Models.restore_model_pose("infantry_engineer",art)
+        camera.size=2.0
+        for side in ["front","right"]:
+            camera.position=positions[side]
+            camera.look_at(Vector3(0,1.48,0),Vector3.UP)
+            await _frame(view,"engineer_v11_pressed_lower_vest_%s"%side)
+        camera.size=2.35
+        for phase_key in ["folded","unfolded"]:
+            Engineer.pose(art,"inspect",0.0 if phase_key=="folded" else 1.0)
+            camera.position=positions["rear"]
+            camera.look_at(Vector3(0,1.66,0),Vector3.UP)
+            await _frame(view,"engineer_v11_coaxial_shield_%s"%phase_key)
+        camera.position=positions["right"]
+        camera.look_at(Vector3(0,1.55,0),Vector3.UP)
+        await _frame(view,"engineer_v11_moving_wing_pin_right")
+        Engineer.reset(art)
+        camera.size=2.45
+        camera.position=positions["front"]
+        camera.look_at(Vector3(0,0.97,0),Vector3.UP)
+        await _frame(view,"engineer_v11_hip_joint_front")
         camera.size=3.6
         Models.pose_model("infantry_engineer",art,"work",0.25)
         camera.position=positions["front"]
@@ -487,10 +583,10 @@ func _run() -> void:
         camera.look_at(Vector3(0,1.15,0),Vector3.UP)
         await _frame(view,"engineer_v6_android_lod8_rear")
         small.queue_free()
-    check(shots==28,"twenty-eight authentic Godot V6-V10 360 inspection PNGs")
+    check(shots==34,"thirty-four authentic Godot V6-V11 360 inspection PNGs")
     if errors>0:
         push_error("FAIL ENGINEER V6 360: %d issues"%errors)
         quit(1)
     else:
-        print("PASS ENGINEER V6 360: 8 factions x two LOD, 4 angles x 2 poses, work, damage, 28 real PNGs; V10 slim forearms, no duplicate wrench fingers and sealed visor")
+        print("PASS ENGINEER V6 360: 8 factions x two LOD, 4 angles x 2 poses, work, damage, 34 real PNGs; V11 pressed closed torso, coaxial shield and responsive 3D hinges")
         quit(0)

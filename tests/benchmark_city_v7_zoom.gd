@@ -11,7 +11,7 @@ const Cases=[
     {"id":"10x8_real","dims":Vector2i(10,8),"extra":0},
     {"id":"24x18_real","dims":Vector2i(24,18),"extra":0},
     {"id":"40x30_real","dims":Vector2i(40,30),"extra":0},
-    {"id":"24x18_stress_10cities","dims":Vector2i(24,18),"extra":6},
+    {"id":"24x18_stress_10cities","dims":Vector2i(24,18),"extra":8},
 ]
 const FRAMES: int=9
 var viewport: SubViewport
@@ -60,7 +60,8 @@ func _place_stress_cities(state: Dictionary) -> void:
     # No playable map rule, save, or default income is changed.
     var spots=[
         Vector2i(4,5),Vector2i(9,5),Vector2i(14,5),
-        Vector2i(19,5),Vector2i(5,12),Vector2i(18,12)]
+        Vector2i(19,5),Vector2i(5,12),Vector2i(18,12),
+        Vector2i(10,12),Vector2i(14,12)]
     var sites: Array=state["economy"]["sites"]
     for pos in spots:
         sites.append({"kind":"city","pos":pos,"owner":-1})
@@ -115,7 +116,9 @@ func _run_case(spec: Dictionary) -> Dictionary:
     var driver= battlefield.get_node_or_null(
         "CiudadesCivilesV6_LOD_Camara")
     assert(driver!=null)
-    var expected: int=4+int(spec["extra"])
+    # Two original sites now render native command HQ V24. The two
+    # civilian cities + eight stress-only sites yield 10 civilian LODs.
+    var expected: int=2+int(spec["extra"])
     assert(driver.cities.size()==expected)
     var center: Vector3=Terrain.world_at(Vector2i(dims.x/2,dims.y/2))
     camera.position=center+Vector3(23,28,26)
