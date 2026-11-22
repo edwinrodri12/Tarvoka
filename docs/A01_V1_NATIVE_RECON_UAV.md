@@ -141,3 +141,12 @@ El primer modelo se genera en `scripts/ui/A01ReconDroneV1.gd`, conectado al cons
 - Al volver al selector del A01 o cambiar facción, `_display_role` mantiene el LOD elegido y la identidad cromática de facción; panel de información muestra LOD y número de mallas.
 - `tests/test_a01_recon_shared_studio.gd` pulsa los botones visibles con `Button.pressed.emit()` y comprueba cambios LOD13→8→13, misma cámara/preview, preservación de daño D3, cambio de facción dentro de LOD8, reparación D0 y rechazo de valores no válidos.
 - **Estado**: V10.4 código y regresión añadidos a la rama en borrador; estas nuevas pruebas requieren ejecución Godot/Pages posterior al último commit. La publicación web todavía necesita habilitar despliegue al integrar en `main`; no fusionar antes de revisar la prueba completa y la aceptación visual Android.
+
+
+## V10.5 — Accesibilidad de LOD en visor apaisado y liberación segura
+
+- QA V10.4 del commit `4413611af4ea3182c3ae21dbf3175b34c613bf90`: [CI nativa](https://github.com/edwinrodri12/Tarvoka/actions/runs/44982040114) y [CI Studio unificado](https://github.com/edwinrodri12/Tarvoka/actions/runs/44982039843) concluyeron **SUCCESS**; el Studio ejecutó `PASS A01 V10 SHARED STUDIO`, con LOD8/13, ocho colores, D0–D4 y foco de cámara preservado. Capturas de comparación del mismo visor fueron archivadas por la CI.
+- Inspección de ambas capturas de tamaño **1152×648**: los botones de calidad aparecían tras cuatro filas de cámaras, demasiado abajo en el panel y fuera del área visible. Se han **movido inmediatamente debajo del título de la sección A01** y antes de los ángulos, evitando desplazamiento innecesario en Android apaisado.
+- Se añadió el rótulo en vivo `A01_LodActivo` con `Calidad activa: LOD13 · detalle` o `Calidad activa: LOD8 · Android`. Se sincroniza tanto al pulsar un botón LOD como al reconstruir el A01 tras un cambio de facción. No modifica mallas ni jugabilidad.
+- `tests/test_a01_recon_shared_studio.gd` ahora exige que ambos botones estén colocados **antes** de la fila «Frente/Trasera», que la etiqueta muestre el nivel real tras cada cambio y que las verificaciones anteriores de daño, zoom, foco y facciones permanezcan intactas.
+- Último cambio de UI **pendiente de CI**. El flujo de publicación de Pages en PR compila y archiva pruebas, pero el despliegue se omite; el modelo V10.5 no está marcado como publicado públicamente ni fusionado hasta la aceptación visual del usuario y las pruebas Android.
