@@ -295,7 +295,7 @@ jobs:
           # The publisher keeps the complete HQ/Airbase/G09 web studio from its
           # release branch. Only P06 model/animation files and an additive
           # subclass adapter come from main; no building assets are replaced.
-          for item in UnitModels3D.gd InfantryFamilyV1.gd InfantrySculptFinishV2.gd InfantryVariantsV4.gd InfantryEngineerSilhouetteV5.gd InfantryEngineerFinishV6.gd InfantryEngineerCompletenessV7.gd InfantryEngineerPremiumV8.gd InfantryEngineerFinishV9.gd InfantryCampRosterV1.gd AttackHelicopterV1.gd AttackHelicopterCabinV2.gd AttackHelicopterRotorV3.gd AttackHelicopterEnginesV4.gd AttackHelicopterLandingV5.gd AttackHelicopterLandingFinishV6.gd AttackHelicopterReadabilityV7.gd AttackHelicopterSilhouetteV8.gd AttackHelicopterFinishV10.gd AttackHelicopterTailV11.gd AttackHelicopterNoseV12.gd AttackHelicopterDamageV13.gd AttackHelicopterFactionV14.gd AttackHelicopterCombatFXV14.gd AttackHelicopterNightStudioV144.gd AttackHelicopterRotorMountV145.gd AttackHelicopterRotorDampersV146.gd AttackHelicopterDamperFinishV147.gd AttackHelicopterPitchHingesV148.gd AttackHelicopterRotorAnchorsV149.gd AttackHelicopterRotorContactV1410.gd AttackHelicopterBladeRootsV1411.gd AttackHelicopterBladeSeamV1412.gd AttackHelicopterHubCrownV1413.gd AttackHelicopterHubWreckV1414.gd AttackHelicopterHubCutFinishV1415.gd BastionVisualRig3D.gd BastionDamage3D.gd BastionStudioAdapter.gd APCArtV1.gd APCArmorV2.gd APCBatchingV4.gd APCFinishV3.gd APCDetailV5.gd APCFinishV6.gd APCMachineGunV7.gd APCDamageV7.gd APCRearDesignV10.gd APCExteriorV11.gd APCTurretV12.gd APCSurfaceV13.gd APCWheelV14.gd APCUndercarriageV15.gd APCJointFinishV16.gd APCContourV17.gd APCWheelwellV18.gd APCUnifiedFlankV19.gd APCMicrodetailV20.gd APCMaterialFinishV21.gd APCWeatherFinishV22.gd APCTireFinishV23.gd APCRubberArchV24.gd APCClosedTiresV25.gd APCTacticalLOD8.gd APCDistanceLODControllerV9.gd APCWeaponAudioV8.gd APCVisualRigV1.gd G11Art3D.gd G11VisualRig3D.gd G11FinishV2.gd G11SurfaceV3.gd G11GeometryV4.gd G11MechanicsV5.gd G11DamageSculptV6.gd G11DamageAtmosphereV7.gd G11SequentialSalvoV8.gd G11ExhaustV9.gd G11CooldownV10.gd G11ArmorFinishV11.gd G11CabChassisV12.gd G11TracksFactionV13.gd G11MechanicalDetailV14.gd G11AftPodFinishV15.gd G11FrontFrameV16.gd G11SurfaceWeatherV17.gd G11TrackAssemblyV18.gd G11TrackFinishV19.gd G11WheelSuspensionV20.gd G11ShockMountFinishV21.gd G11SuspensionJointsV22.gd G11JointFinishV23.gd G11MobileLOD.gd G11TacticalReadabilityV24.gd G11BattleLODControllerV25.gd G11BattleContextV25.gd G11RocketFaceReadabilityV25.gd G11TacticalPaintReadabilityV27.gd G11CameraIdentityV28.gd G11BattleActionsV29.gd G11RearUndercarriageV30.gd G11RocketTrailsV30.gd G11RocketFlightV31.gd G11RunningGearV32.gd G11FinalAuditV33.gd G13MobileAirDefenseV1.gd G13DetailV2.gd G13GroundAirFinishV4.gd G13UndercarriageV6.gd G13WheelFinishV7.gd G13SurfaceFinishV8.gd G13SilhouetteV10.gd InfantryBarracksBattle3D.gd InfantryBarracksWindowShadeV11.gd FactionIdentity.gd BattleTerrain3D.gd TerrainVisualMapBridge3D.gd TerrainSurfaceFinish3D.gd TerrainSurfaceSampler3D.gd TerrainStudioRoadShore3D.gd TerrainStudioSnowPaletteV15.gd WinterBattleBiome.gd; do
+          for item in UnitModels3D.gd InfantryFamilyV1.gd InfantrySculptFinishV2.gd InfantryVariantsV4.gd InfantryEngineerSilhouetteV5.gd InfantryEngineerFinishV6.gd InfantryEngineerCompletenessV7.gd InfantryEngineerPremiumV8.gd InfantryEngineerFinishV9.gd InfantryCampRosterV1.gd AttackHelicopterV1.gd AttackHelicopterCabinV2.gd AttackHelicopterRotorV3.gd AttackHelicopterEnginesV4.gd AttackHelicopterLandingV5.gd AttackHelicopterLandingFinishV6.gd AttackHelicopterReadabilityV7.gd AttackHelicopterSilhouetteV8.gd AttackHelicopterFinishV10.gd AttackHelicopterTailV11.gd AttackHelicopterNoseV12.gd AttackHelicopterDamageV13.gd AttackHelicopterFactionV14.gd AttackHelicopterCombatFXV14.gd AttackHelicopterNightStudioV144.gd AttackHelicopterRotorMountV145.gd AttackHelicopterRotorDampersV146.gd AttackHelicopterDamperFinishV147.gd AttackHelicopterPitchHingesV148.gd AttackHelicopterRotorAnchorsV149.gd AttackHelicopterRotorContactV1410.gd AttackHelicopterBladeRootsV1411.gd AttackHelicopterBladeSeamV1412.gd AttackHelicopterHubCrownV1413.gd AttackHelicopterHubWreckV1414.gd AttackHelicopterHubCutFinishV1415.gd BastionVisualRig3D.gd BastionDamage3D.gd BastionStudioAdapter.gd APCArtV1.gd APCArmorV2.gd APCBatchingV4.gd APCFinishV3.gd APCDetailV5.gd APCFinishV6.gd APCMachineGunV7.gd APCDamageV7.gd APCRearDesignV10.gd APCExteriorV11.gd APCTurretV12.gd APCSurfaceV13.gd APCWheelV14.gd APCUndercarriageV15.gd APCJointFinishV16.gd APCContourV17.gd APCWheelwellV18.gd APCUnifiedFlankV19.gd APCMicrodetailV20.gd APCMaterialFinishV21.gd APCWeatherFinishV22.gd APCTireFinishV23.gd APCRubberArchV24.gd APCClosedTiresV25.gd APCTacticalLOD8.gd APCDistanceLODControllerV9.gd APCWeaponAudioV8.gd APCVisualRigV1.gd G11Art3D.gd G11VisualRig3D.gd G11FinishV2.gd G11SurfaceV3.gd G11GeometryV4.gd G11MechanicsV5.gd G11DamageSculptV6.gd G11DamageAtmosphereV7.gd G11SequentialSalvoV8.gd G11ExhaustV9.gd G11CooldownV10.gd G11ArmorFinishV11.gd G11CabChassisV12.gd G11TracksFactionV13.gd G11MechanicalDetailV14.gd G11AftPodFinishV15.gd G11FrontFrameV16.gd G11SurfaceWeatherV17.gd G11TrackAssemblyV18.gd G11TrackFinishV19.gd G11WheelSuspensionV20.gd G11ShockMountFinishV21.gd G11SuspensionJointsV22.gd G11JointFinishV23.gd G11MobileLOD.gd G11TacticalReadabilityV24.gd G11BattleLODControllerV25.gd G11BattleContextV25.gd G11RocketFaceReadabilityV25.gd G11TacticalPaintReadabilityV27.gd G11CameraIdentityV28.gd G11BattleActionsV29.gd G11RearUndercarriageV30.gd G11RocketTrailsV30.gd G11RocketFlightV31.gd G11RunningGearV32.gd G11FinalAuditV33.gd G13MobileAirDefenseV1.gd G13DetailV2.gd G13GroundAirFinishV4.gd G13UndercarriageV6.gd G13WheelFinishV7.gd G13SurfaceFinishV8.gd G13SilhouetteV10.gd InfantryBarracksBattle3D.gd InfantryBarracksWindowShadeV11.gd FactionIdentity.gd CommandCityArtV14.gd HeadquartersBattle3D.gd HeadquartersCurvedRoof3D.gd HeadquartersBattleAccents3D.gd HeadquartersMapLOD3D.gd BattleTerrain3D.gd TerrainVisualMapBridge3D.gd TerrainSurfaceFinish3D.gd TerrainSurfaceSampler3D.gd TerrainStudioRoadShore3D.gd TerrainStudioSnowPaletteV15.gd WinterBattleBiome.gd; do
             test -s "hq-android-v15/scripts/ui/${item}"
             cp "hq-android-v15/scripts/ui/${item}" "scripts/ui/${item}"
           done
@@ -509,6 +509,19 @@ jobs:
           test -s scenes/UnitArtStudioWeb.tscn
           sed -i 's|res://scripts/ui/CombinedArtStudioWeb.gd|res://scripts/ui/BastionStudioAdapter.gd|' scenes/UnitArtStudioWeb.tscn
           grep -q 'res://scripts/ui/BastionStudioAdapter.gd' scenes/UnitArtStudioWeb.tscn
+          # Copy additive HQ V24 reviewer and test from this exact main/PR
+          # snapshot BEFORE the temporary checkout is removed.
+          test -s hq-android-v15/scripts/publishing/HeadquartersV24SharedStudioAdapter.gd.txt
+          cp hq-android-v15/scripts/publishing/HeadquartersV24SharedStudioAdapter.gd.txt \
+             scripts/ui/HeadquartersV24SharedStudioAdapter.gd
+          test -s hq-android-v15/tests/test_hq_v24_main_pages_studio.gd
+          cp hq-android-v15/tests/test_hq_v24_main_pages_studio.gd tests/
+          test -s scripts/ui/HeadquartersBattle3D.gd
+          test -s scripts/ui/HeadquartersMapLOD3D.gd
+          test -s scripts/ui/HeadquartersBattleAccents3D.gd
+          test -s scripts/ui/HeadquartersCurvedRoof3D.gd
+          # The same N1-N3/D0-D4 sculpt must be used by the playable Battle
+          # and by the Web art viewer. No shadow copies or stale HQ art.
           rm -rf hq-android-v15
           test "$(find assets/buildings/hq_v15 -maxdepth 1 -name '*.png' | wc -l)" -eq 9
       # The main terrain visualizer already imports civilian city V5 types,
@@ -853,6 +866,15 @@ jobs:
           grep -F 'res://scripts/ui/PowerPlantStudioAdapterV1.gd' scenes/UnitArtStudioWeb.tscn
           sed -i 's|res://scripts/ui/PowerPlantStudioAdapterV1.gd|res://scripts/ui/ArmoredWorkshopStudioAdapterV1.gd|' scenes/UnitArtStudioWeb.tscn
           grep -F 'res://scripts/ui/ArmoredWorkshopStudioAdapterV1.gd' scenes/UnitArtStudioWeb.tscn
+          # Last adapter in the SAME Godot Studio scene preserves every
+          # existing seven-building option, unit, terrain and animation.
+          test -s scripts/ui/HeadquartersV24SharedStudioAdapter.gd
+          grep -F 'extends "res://scripts/ui/ArmoredWorkshopStudioAdapterV1.gd"' \
+            scripts/ui/HeadquartersV24SharedStudioAdapter.gd
+          sed -i 's|res://scripts/ui/ArmoredWorkshopStudioAdapterV1.gd|res://scripts/ui/HeadquartersV24SharedStudioAdapter.gd|' \
+            scenes/UnitArtStudioWeb.tscn
+          grep -F 'res://scripts/ui/HeadquartersV24SharedStudioAdapter.gd' \
+            scenes/UnitArtStudioWeb.tscn
           # Preserve all existing 6 buildings, do not modify supply rules.
           test -s scripts/ui/CivilianCity3DV1.gd
           test -s scripts/ui/PowerPlant3DV2.gd
@@ -1504,6 +1526,23 @@ jobs:
           test -s build/qa/city-v43-visible-main-studio.png
           test -s build/qa/studio-960x540.png
           test -s build/qa/studio-1280x720.png
+          # HQ V24 native battle geometry MUST be selectable directly from
+          # the actual shared seven-building Pages Studio, not a second site.
+          timeout --signal=TERM --kill-after=10s 170s \
+            xvfb-run -a -s '-screen 0 1280x800x24' \
+            env LIBGL_ALWAYS_SOFTWARE=1 \
+            /tmp/Godot_v4.3-stable_linux.x86_64 \
+            --rendering-method gl_compatibility --audio-driver Dummy --path . \
+            --script res://tests/test_hq_v24_main_pages_studio.gd \
+            2>&1 | tee /tmp/hq-v24-shared-pages-smoke.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed|Parse Error:' \
+              /tmp/hq-v24-shared-pages-smoke.log; then
+            echo 'HQ V24 failed in real shared studio'; exit 1
+          fi
+          grep -F 'PASS HQ V24 MAIN PAGES SHARED STUDIO:' \
+            /tmp/hq-v24-shared-pages-smoke.log
+          test -s artifacts/hq_v24_shared_pages/02_same_real_battle_HQ_N1_D0.png
+          test -s artifacts/hq_v24_shared_pages/04_hq_real_fractured_ruin_D4.png
           # G13 V53: real metal/alloy/rubber materials in both native LODs.
           xvfb-run -a -s '-screen 0 1280x720x24' env LIBGL_ALWAYS_SOFTWARE=1 \
             /tmp/Godot_v4.3-stable_linux.x86_64 \
@@ -2334,6 +2373,16 @@ jobs:
           if-no-files-found: error
           retention-days: 14
 
+      - name: Archive V24 actual shared Godot model screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: TARVOKA-HQ-V24-real-shared-pages-QA
+          path: |
+            artifacts/hq_v24_shared_pages/*.png
+            /tmp/hq-v24-shared-pages-smoke.log
+          retention-days: 14
+          if-no-files-found: warn
       - name: Upload GitHub Pages web site
         uses: actions/upload-pages-artifact@v3
         with:
