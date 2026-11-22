@@ -68,6 +68,18 @@ func _mesh_count(root:Node3D)->int:
                 "all surfaces remain opaque in Android and hero")
     return count
 
+func _tactical_difference(a:Image,b:Image)->int:
+    if a==null or b==null or a.get_size()!=b.get_size():
+        return 0
+    var changed:int=0
+    for y in range(35,a.get_height()-35,6):
+        for x in range(35,a.get_width()-35,6):
+            var ca:Color=a.get_pixel(x,y)
+            var cb:Color=b.get_pixel(x,y)
+            if absf(ca.r-cb.r)+absf(ca.g-cb.g)+absf(ca.b-cb.b)>0.11:
+                changed+=1
+    return changed
+
 func _initialize()->void:
     call_deferred("_run")
 
@@ -99,6 +111,8 @@ func _run()->void:
     vp.add_child(camera)
     camera.current=true
     var palette:Dictionary={}
+    var tactical_baseline:Image=null
+    var tactical_images:int=0
     for team in range(8):
         for lod in [8,13]:
             var m:Node3D=Models.build("uav_recon",team,true,lod)
@@ -191,9 +205,33 @@ func _run()->void:
                         var path:String="%s/a01-v10-%s-lod%d.png" % [OUT,angle,lod]
                         check(image.save_png(path)==OK,"save real render "+path)
                         saved+=1
+            # Capture every faction from the SAME tactical Android camera.
+            # This catches team paints that exist in code but are invisible
+            # at normal viewing distance, not just in hero close-ups.
+            if lod==8:
+                camera.position=Vector3(5.2,7.5,7.6)
+                camera.size=8.5
+                camera.look_at(Vector3(0,0.95,0),Vector3.UP)
+                await process_frame
+                await process_frame
+                await process_frame
+                var tactical:Image=vp.get_texture().get_image()
+                check(tactical!=null and not tactical.is_empty(),
+                    "faction %d real tactical Android framebuffer" % team)
+                if tactical!=null and not tactical.is_empty():
+                    var tactical_path:String="%s/a01-v10-tactical-f%d-lod8.png" % [OUT,team]
+                    check(tactical.save_png(tactical_path)==OK,
+                        "save tactical faction visual "+tactical_path)
+                    tactical_images+=1
+                    if team==0:
+                        tactical_baseline=tactical.duplicate()
+                    else:
+                        check(_tactical_difference(tactical_baseline,tactical)>6,
+                            "faction %d is visibly distinct at tactical scale" % team)
             vp.remove_child(m)
             m.free()
     check(saved==5,"five real native V10 captures including optic and Android")
+    check(tactical_images==8,"8 physical faction tactical screenshots in Android LOD8")
     check(palette.size()==8,"all eight faction physical nose accents exist")
     check(Arsenal.profile("uav_recon")==profile,
         "A01 optics never grant extra fog reveal, attack or cost")
@@ -203,5 +241,5 @@ func _run()->void:
         printerr("FAIL A01 V10 NOSE OPTICS: %d errors" % errors)
         quit(1)
     else:
-        print("PASS A01 V10 NOSE OPTICS: 8 factions, 2 LODs, sealed nose/guard, EOIR tracking, five captures, Android D4 budget")
+        print("PASS A01 V10 NOSE OPTICS: 8 factions, 2 LODs, sealed nose/guard, EOIR tracking, five inspection captures + eight faction tactical captures, Android D4 budget")
         quit(0)
