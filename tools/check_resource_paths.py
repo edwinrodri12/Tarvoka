@@ -69,7 +69,8 @@ def audit(root: pathlib.Path) -> list[str]:
             try:
                 resolved_target = target.resolve(strict=True)
                 valid_target = resolved_target.is_relative_to(root) and resolved_target.is_file()
-            except (OSError, RuntimeError):
+            except (OSError, RuntimeError, ValueError):
+                # Invalid filesystem names (e.g. NUL) are diagnostics, not crashes.
                 valid_target = False
             if not valid_target:
                 errors.append(f"{location}: missing resource {match.group(1)}")
