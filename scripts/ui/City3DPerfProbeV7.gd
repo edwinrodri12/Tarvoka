@@ -290,8 +290,8 @@ func refresh_once() -> void:
             +"\nCentros drones %d · cerca/lejos %d/%d · pico %.1f ms" % [
                 drones["centers"],drones["close"],drones["far"],
                 drones["peak_step_ms"]]
-            +"\nCuarteles HQ V24 %d · mallas %d · superficies %d"
-            +" · neutros %d · ruinas %d" % [
+            +("\nCuarteles HQ V24 %d · mallas %d · superficies %d"
+              +" · neutros %d · ruinas %d") % [
                 headquarters["headquarters"],headquarters["meshes"],
                 headquarters["surfaces"],headquarters["neutral"],
                 headquarters["ruins"]])
