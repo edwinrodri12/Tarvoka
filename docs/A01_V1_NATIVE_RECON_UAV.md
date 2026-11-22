@@ -100,3 +100,15 @@ El primer modelo se genera en `scripts/ui/A01ReconDroneV1.gd`, conectado al cons
 - `tests/test_a01_recon_winglet_v9.gd`: valida las superficies herméticas (bordes con orientaciones opuestas, sin triángulos degenerados), color, LOD8/13, reparación D4→D0 y cinco capturas Godot 4.3. La CI nativa y la publicación de Studio ejecutan esta prueba.
 
 **Estado:** V9 implementada en el PR #655 (borrador). No debe declararse aprobada ni publicarse hasta que la CI nativa y la CI del Studio terminen correctamente, se revisen las imágenes V9 y el usuario apruebe el diseño. Una carga de doce UAV es un ensayo geométrico en CI, no una medición de FPS en dispositivo Android físico.
+
+
+## Etapa V10 — fuselaje delantero sellado y óptica EO/IR real (en validación)
+
+- `scripts/ui/A01ReconNoseOpticsV10.gd`: sustituye la nariz esférica antigua por carenado aerodinámico longitudinal de **malla 3D cerrada** con tapas, sin texturas transparentes ni polígonos invertidos. Respeta el cuerpo/alas, el motor trasero y el sensor existente.
+- Dos insignias físicas laterales del **color oficial de cada facción**, aplicadas en LOD8/13. En nivel hero incorpora tres detalles de servicio de superficie; Android omite esos elementos para ahorrar dibujo.
+- El sensor conserva **su pivote animado original**: incorpora anillo protector **anular hueco** delante de las lentes y pequeño cristal térmico secundario. La luz atraviesa la apertura real; el anillo no es un disco opaco.
+- `UnitModels3D.gd` ahora encadena V1→V10; el mismo `BastionStudioAdapter.gd` muestra V10, sin sustituir el helicóptero de ataque A05 ni crear una segunda interfaz.
+- `tests/test_a01_recon_nose_optics_v10.gd`: valida 8 colores × 2 LOD, malla cerrada/caras/oclusiones, anillo con hueco real, barrido EO/IR, 5 capturas 3D Godot, daño y reparación, presupuesto máximo de 70 mallas Android/95 hero y sin modificar `ModernArsenal`.
+- CI dedicada A01 y CI del Estudio compartido actualizadas para incluir los archivos V10 y generar las pruebas. La rama permanece en borrador hasta inspección visual; no afirmar despliegue en Pages ni FPS Android físico.
+
+**Hallazgos del QA V9:** Godot 4.3 ejecutó correctamente la prueba V9 tras reparar el error de sintaxis; el publicador del Estudio falló antes de la carga del A01 al reunir otro archivo de su largo catálogo. Se incorporó registro del nombre exacto del archivo faltante para identificar y reparar esa dependencia sin alterar unidades ajenas.
