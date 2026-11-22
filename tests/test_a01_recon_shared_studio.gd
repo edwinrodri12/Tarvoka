@@ -97,6 +97,20 @@ func _run()->void:
         "low-poly A01 V10 geometry is the actual Android LOD8 rig")
     check(DamageV6.stage(android)==3,
         "switch from LOD13 to Android LOD8 preserves critical D3 damage")
+    var android_mesh_count:int=Models.inspect_meshes(android)
+    check(DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(
+        "res://build/qa/a01-v1"))==OK,
+        "QA visual folder for same-UI Android and HERO screenshots")
+    await process_frame
+    await process_frame
+    await process_frame
+    var actual_android_ui:Image=root.get_texture().get_image()
+    check(actual_android_ui!=null and not actual_android_ui.is_empty(),
+        "Godot capture of real Android LOD8 inside the shared Studio UI")
+    if actual_android_ui!=null and not actual_android_ui.is_empty():
+        check(actual_android_ui.save_png(
+            "res://build/qa/a01-v1/a01-shared-lod8-d3.png")==OK,
+            "save authentic same-viewer LOD8 screenshot with D3 damage")
     check(studio.get("camera")==original_camera and
         studio.get("preview")==original_preview and
         str(studio.get("_a01_review_focus"))=="superior",
@@ -117,6 +131,18 @@ func _run()->void:
         int(hero_after.get_meta("tarvoka_a01_v10_lod",0))==13 and
         DamageV6.stage(hero_after)==3,
         "LOD13 restores details without losing faction paint or D3")
+    check(Models.inspect_meshes(hero_after)>android_mesh_count,
+        "HERO LOD13 has genuinely more native mesh detail than Android LOD8")
+    await process_frame
+    await process_frame
+    await process_frame
+    var actual_hero_ui:Image=root.get_texture().get_image()
+    check(actual_hero_ui!=null and not actual_hero_ui.is_empty(),
+        "Godot capture of real HERO LOD13 inside the shared Studio UI")
+    if actual_hero_ui!=null and not actual_hero_ui.is_empty():
+        check(actual_hero_ui.save_png(
+            "res://build/qa/a01-v1/a01-shared-lod13-d3.png")==OK,
+            "save authentic same-viewer LOD13 screenshot with D3 damage")
     check(not bool(studio.call("_a01_review_set_lod",9)) and
         int(hero_after.get_meta("tarvoka_a01_v10_lod",0))==13,
         "unsupported LOD requests are safely rejected")
