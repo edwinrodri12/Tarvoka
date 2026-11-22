@@ -29,6 +29,9 @@ def audit(root: pathlib.Path) -> list[str]:
             match = PATH_ATTRIBUTE.search(declaration.group(1))
             if match is None:
                 continue
+            if not match.group(1).startswith("res://"):
+                errors.append(f"{scene.relative_to(root)}: invalid external resource path {match.group(1)}")
+                continue
             raw = match.group(1)[6:]
             # Preserve raw segments: PurePosixPath normalizes "." and repeated
             # separators before validation, hiding malformed declarations.
