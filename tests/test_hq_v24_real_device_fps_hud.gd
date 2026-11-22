@@ -20,7 +20,7 @@ func _run() -> void:
     var battle:Node3D=Battle.build(state,"",0)
     assert(battle!=null)
     root.add_child(battle)
-    var probe:Control=Probe.new()
+    var probe=Probe.new()
     root.add_child(probe)
     probe.attach_battle(battle)
     var before:Dictionary=probe.snapshot()
