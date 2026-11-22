@@ -71,13 +71,13 @@ static func _pressed(parent: Node3D, label: String, at: Vector3,
     node.rotation_degrees.y=180.0
     return node
 
-static func _get(model: Node3D, part: String) -> Node3D:
+static func _find(model: Node3D, part: String) -> Node3D:
     return model.find_child(part,true,false) as Node3D
 
 static func has_model(model: Node3D) -> bool:
     return model!=null and bool(model.get_meta(FLAG,false)) and (
-        _get(model,CASE+"_1")!=null and _get(model,CASE+"_-1")!=null and
-        _get(model,OUTER+"_1")!=null and _get(model,OUTER+"_-1")!=null)
+        _find(model,CASE+"_1")!=null and _find(model,CASE+"_-1")!=null and
+        _find(model,OUTER+"_1")!=null and _find(model,OUTER+"_-1")!=null)
 
 static func is_visible(model: Node3D) -> bool:
     return has_model(model) and bool(model.get_meta(VISIBLE,false))
@@ -95,7 +95,7 @@ static func show_finish(model: Node3D, enabled: bool) -> bool:
                 "V9_TapaBolsaHerramientas_%d"%side,
                 "V9_CierreBolsaFaccion_%d"%side,
                 "V9_RemacheBolsa_%d"%side]:
-            var item: Node3D=_get(model,old)
+            var item: Node3D=_find(model,old)
             if item!=null:
                 item.visible=not enabled
     model.set_meta(VISIBLE,enabled)
@@ -107,10 +107,10 @@ static func apply(model: Node3D, faction_color: Color, hero: bool) -> bool:
     if str(model.get_meta("tarvoka_infantry_role",""))!=ROLE or not (
             bool(model.get_meta(MechanicsV11.FLAG,false))):
         return false
-    var torso: Node3D=_get(model,"TorsoRig")
-    var shield: Node3D=_get(model,"V6_BarreraArticuladaRig")
-    var left: Node3D=_get(model,"V6_AlaIzquierdaRig")
-    var right: Node3D=_get(model,"V6_AlaDerechaRig")
+    var torso: Node3D=_find(model,"TorsoRig")
+    var shield: Node3D=_find(model,"V6_BarreraArticuladaRig")
+    var left: Node3D=_find(model,"V6_AlaIzquierdaRig")
+    var right: Node3D=_find(model,"V6_AlaDerechaRig")
     if torso==null or shield==null or left==null or right==null:
         return false
     if shield.get_parent()!=torso or left.get_parent()!=shield or right.get_parent()!=shield:
