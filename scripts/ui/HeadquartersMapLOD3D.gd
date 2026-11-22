@@ -1,0 +1,287 @@
+extends RefCounted
+class_name TarvokaHeadquartersMapLOD3D
+
+# V24 tactical HQ skin reused from approved art V5; native grouped geometry.
+# Now supports eight factions + a genuinely neutral version and five
+# purely visual damage appearances. No economy, combat or save mutations.
+# Preserves the original V4 scene in a separate invisible subtree.
+const Style = preload("res://scripts/ui/VisualStyle.gd")
+const MATERIALS := ["concrete", "steel", "glass", "faction", "gold", "mark"]
+const PALETTE := {
+    "concrete": Color("#aeb7b6"),
+    "steel": Color("#344a56"),
+    "glass": Color("#27465e"),
+    "gold": Color("#e7ba58"),
+    "mark": Color("#eff0e8")
+}
+static var _cache: Dictionary = {}
+static var _geometry_cache: Dictionary = {}
+
+static func _mat(key: String, color: Color) -> StandardMaterial3D:
+    var tint: Color = color.darkened(0.17) if key == "faction" else PALETTE[key]
+    # Explicit neutral has NO yellow/gold accent: avoid reading it as
+    # Confederación Solar even when zooming out or under cloudy lighting.
+    if key == "gold" and color == Color("#65747d"):
+        tint = Color("#8e9da5")
+    var identity: String = key + tint.to_html()
+    if _cache.has(identity):
+        return _cache[identity]
+    var m := StandardMaterial3D.new()
+    m.albedo_color = tint
+    m.metallic = 0.08 if key == "concrete" else 0.26
+    m.roughness = 0.84 if key == "concrete" else 0.65
+    m.cull_mode = BaseMaterial3D.CULL_DISABLED
+    _cache[identity] = m
+    return m
+
+static func _box(st: SurfaceTool, center: Vector3, dimensions: Vector3) -> void:
+    var a: Vector3 = center - dimensions * 0.5
+    var b: Vector3 = center + dimensions * 0.5
+    var p000 := Vector3(a.x,a.y,a.z)
+    var p001 := Vector3(a.x,a.y,b.z)
+    var p010 := Vector3(a.x,b.y,a.z)
+    var p011 := Vector3(a.x,b.y,b.z)
+    var p100 := Vector3(b.x,a.y,a.z)
+    var p101 := Vector3(b.x,a.y,b.z)
+    var p110 := Vector3(b.x,b.y,a.z)
+    var p111 := Vector3(b.x,b.y,b.z)
+    var faces: Array = [
+        [Vector3.FORWARD,[p100,p000,p010,p110]],
+        [Vector3.BACK,[p001,p101,p111,p011]],
+        [Vector3.LEFT,[p000,p001,p011,p010]],
+        [Vector3.RIGHT,[p101,p100,p110,p111]],
+        [Vector3.UP,[p010,p011,p111,p110]],
+        [Vector3.DOWN,[p100,p101,p001,p000]]
+    ]
+    var uvs: Array[Vector2] = [Vector2.ZERO,Vector2(1,0),Vector2.ONE,Vector2(0,1)]
+    for face in faces:
+        var normal: Vector3 = face[0]
+        var points: Array = face[1]
+        for index in [0,1,2,0,2,3]:
+            st.set_normal(normal)
+            st.set_uv(uvs[index])
+            st.add_vertex(points[index])
+
+static func _dish(st: SurfaceTool, center: Vector3, radius: float) -> void:
+    for i in range(12):
+        var a: float = TAU*float(i)/12.0
+        var b: float = TAU*float(i+1)/12.0
+        for vertex in [center,
+                center+Vector3(cos(a)*radius,sin(a)*radius,0),
+                center+Vector3(cos(b)*radius,sin(b)*radius,0)]:
+            st.set_normal(Vector3.FORWARD)
+            st.set_uv(Vector2(vertex.x,vertex.y))
+            st.add_vertex(vertex)
+
+static func _build(level: int, faction: int, condition: String) -> MeshInstance3D:
+    var cache_key: String = "%d/%d/%s" % [level,faction,condition]
+    if _geometry_cache.has(cache_key):
+        var clone := MeshInstance3D.new()
+        clone.name = "MallaConsolidadaMapaV5"
+        clone.mesh = _geometry_cache[cache_key]
+        return clone
+    var color: Color = Color("#65747d") if faction == -1 else Style.faction_color(faction)
+    var surfaces: Dictionary = {}
+    for key in MATERIALS:
+        var st := SurfaceTool.new()
+        st.begin(Mesh.PRIMITIVE_TRIANGLES)
+        surfaces[key] = st
+    var concrete: SurfaceTool = surfaces["concrete"]
+    var steel: SurfaceTool = surfaces["steel"]
+    var glass: SurfaceTool = surfaces["glass"]
+    var paint: SurfaceTool = surfaces["faction"]
+    var gold: SurfaceTool = surfaces["gold"]
+    var mark: SurfaceTool = surfaces["mark"]
+    var y: float = 2.87+0.91*float(level-1)
+    _box(steel,Vector3(0,-0.1,0),Vector3(13.6,0.20,12.8))
+    if condition == "destruido":
+        # A single intact white slab read as a landing pad, not a destroyed
+        # headquarters. Replace it with a collapsed FLOOR and disconnected
+        # structural fragments; the ruin must remain solid and legible.
+        _box(steel,Vector3(0,0.07,0),Vector3(7.1,0.19,6.6))
+        _box(concrete,Vector3(-2.15,0.25,-1.15),
+            Vector3(2.40,0.39,2.36))
+        _box(concrete,Vector3(1.65,0.19,1.42),
+            Vector3(2.70,0.27,2.15))
+        _box(concrete,Vector3(1.76,0.29,-2.48),
+            Vector3(1.12,0.45,1.03))
+        # Characteristic BROKEN HQ silhouette: a fractured central command
+        # doorway, truncated east/west wings and a short rear wall remain.
+        # These are NOT intact storeys; all roofs, glass and crest are gone.
+        _box(concrete,Vector3(-1.34,1.17,-3.02),
+            Vector3(0.66,2.22,0.73)) # left gate pier
+        _box(concrete,Vector3(1.32,0.72,-3.02),
+            Vector3(0.69,1.31,0.71)) # torn right pier
+        _box(steel,Vector3(-0.60,2.28,-3.02),
+            Vector3(1.91,0.30,0.82)) # one half of the snapped arch
+        _box(concrete,Vector3(0.20,0.96,1.06),
+            Vector3(3.78,1.80,0.48)) # shortened command-room back wall
+        _box(steel,Vector3(-0.67,1.72,1.07),
+            Vector3(1.55,0.25,0.56)) # collapsed wall top
+        _box(concrete,Vector3(-4.07,0.76,0.44),
+            Vector3(1.42,1.40,1.70)) # west-wing stump
+        _box(concrete,Vector3(4.03,1.03,0.47),
+            Vector3(1.20,1.92,1.46)) # east-wing stump
+        _box(steel,Vector3(3.55,1.86,0.51),
+            Vector3(0.98,0.18,1.15)) # ragged projecting cap
+        _box(concrete,Vector3(-2.84,0.48,2.0),
+            Vector3(0.56,0.90,1.52))
+        _box(steel,Vector3(2.77,0.30,1.89),
+            Vector3(0.53,0.54,1.10))
+        _box(steel,Vector3(-0.85,0.51,-2.5),
+            Vector3(2.45,0.63,1.12))
+        for i in range(6):
+            _box(concrete,Vector3(-2.65+float(i)*1.02,0.38,
+                    -0.89+float(i%2)*1.29),
+                Vector3(0.84,0.43+float(i%3)*0.22,0.91))
+        _box(paint,Vector3(1.5,0.3,-3.6),Vector3(1.05,0.12,0.64))
+        _box(glass,Vector3(-1.1,0.24,-3.2),Vector3(0.50,0.05,0.39))
+        _box(gold,Vector3(0.4,0.25,-3.8),Vector3(0.4,0.04,0.09))
+        _box(mark,Vector3(-0.4,0.22,-4.3),Vector3(0.67,0.025,0.09))
+    else:
+        _box(concrete,Vector3(0,y*0.5,0.25),Vector3(5.82,y,5.12))
+        _box(steel,Vector3(0,y+0.09,0.25),Vector3(6.15,0.24,5.43))
+        for s in [-1,1]:
+            var sx: float = float(s)
+            if condition == "critico" and s == -1:
+                # Missing west wing; low fractured rubble takes its place.
+                _box(concrete,Vector3(sx*4.06,0.36,0.35),Vector3(2.30,0.54,3.85))
+                _box(steel,Vector3(sx*4.46,0.65,0.70),Vector3(1.75,0.19,1.72))
+                continue
+            _box(concrete,Vector3(sx*4.06,1.10,0.35),Vector3(2.30,2.20,4.16))
+            _box(steel,Vector3(sx*4.06,2.42,0.35),Vector3(2.6,0.25,4.48))
+            _box(paint,Vector3(sx*4.06,2.54,-1.89),Vector3(2.13,0.17,0.17))
+            for w in range(3):
+                _box(glass,Vector3(sx*4.06-0.75+float(w)*0.77,
+                        1.36,-1.89),Vector3(0.44,0.53,0.09))
+        _box(steel,Vector3(0,y+0.69,-2.36),Vector3(3.27,1.60,1.67))
+        _box(steel,Vector3(0,y+1.56,-2.38),Vector3(3.73,0.30,1.99))
+        _box(paint,Vector3(0,y+0.66,-3.27),Vector3(1.86,1.17,0.17))
+        _box(gold,Vector3(0,y+1.61,-3.33),Vector3(2.89,0.13,0.09))
+        _box(glass,Vector3(0,y+0.70,-3.37),Vector3(1.20,0.32,0.10))
+        _box(steel,Vector3(0,1.27,-3.18),Vector3(3.08,2.50,1.33))
+        _box(glass,Vector3(0,1.18,-3.87),Vector3(1.38,1.44,0.10))
+        var comm_h: float = 2.48+0.56*float(level-1)
+        if condition == "critico":
+            # No floating tower on a wing already reduced to rubble.
+            _box(steel,Vector3(-4.40,0.41,1.38),
+                Vector3(0.65,0.18,1.1))
+        else:
+            _box(steel,Vector3(-4.50,2.54+comm_h*0.5,1.38),
+                Vector3(0.62,comm_h,0.62))
+            _box(glass,Vector3(-4.50,2.54+comm_h+0.13,1.38),
+                Vector3(1.51,0.50,1.52))
+            _box(paint,Vector3(-4.50,2.54+comm_h+0.47,1.38),
+                Vector3(1.80,0.18,1.80))
+            # Reanchor the old orphaned faction plaque to the COMMUNICATION
+            # tower's real front face, not floating beside the roof.
+            _box(paint,Vector3(-4.50,2.54+comm_h+0.13,0.57),
+                Vector3(0.95,0.28,0.10))
+        _box(steel,Vector3(-1.86,y+1.04,0.76),Vector3(0.36,2.08,0.36))
+        _dish(mark,Vector3(-1.86,y+2.35,0.66),0.96)
+        _box(steel,Vector3(4.85,0.16,-4.08),Vector3(3.25,0.26,3.22))
+        for x in [4.56,5.14]:
+            _box(mark,Vector3(x,0.31,-4.08),Vector3(0.12,0.03,1.06))
+        _box(mark,Vector3(4.85,0.31,-4.08),Vector3(0.69,0.03,0.12))
+        _box(gold,Vector3(4.85,0.32,-5.56),Vector3(2.68,0.04,0.07))
+        if level == 3:
+            # V24 QA found an upper cube suspended 1.12 m over the roof:
+            # center y+0.60 rests a 1.20m module ON the actual y roof.
+            if condition == "critico":
+                _box(steel,Vector3(1.67,y+0.13,1.58),
+                    Vector3(1.14,0.26,1.00))
+            else:
+                _box(concrete,Vector3(1.67,y+0.60,1.58),
+                    Vector3(1.40,1.20,1.33))
+        if condition in ["danado","leve","moderado","critico"]:
+            _box(steel,Vector3(-2.30,1.61,-2.55),Vector3(0.79,0.74,0.14))
+        if condition in ["moderado","critico"]:
+            # Opaque shattered glazing and a broken frontal roof slab.
+            _box(steel,Vector3(0.58,1.12,-3.93),Vector3(0.40,1.02,0.17))
+            _box(concrete,Vector3(1.30,y+1.70,-2.65),Vector3(0.86,0.18,0.75))
+        if condition == "critico":
+            _box(steel,Vector3(-4.53,0.29,-2.65),Vector3(1.41,0.20,1.23))
+            _box(concrete,Vector3(1.80,0.34,-4.05),Vector3(0.95,0.60,0.83))
+        if condition == "capturado":
+            _box(paint,Vector3(0,0.12,-5.76),Vector3(2.31,0.04,0.17))
+    var mesh := ArrayMesh.new()
+    for kind in MATERIALS:
+        var st: SurfaceTool = surfaces[kind]
+        st.set_material(_mat(kind,color))
+        st.commit(mesh)
+    var instance := MeshInstance3D.new()
+    instance.name = "MallaConsolidadaMapaV5"
+    instance.mesh = mesh
+    _geometry_cache[cache_key] = mesh
+    return instance
+
+static func install(model: Node3D, level: int, faction: int,
+        condition: String) -> void:
+    if model == null or model.get_meta("tarvoka_hq_map_lod_v5",false):
+        return
+    assert(model.get_meta("tarvoka_hq_visual_v4",false))
+    var earlier: Array[Node] = model.get_children()
+    var full := Node3D.new()
+    full.name = "ArquitecturaCompletaV4"
+    model.add_child(full)
+    for child in earlier:
+        if child is Node3D:
+            model.remove_child(child)
+            full.add_child(child)
+    var distant := Node3D.new()
+    distant.name = "ArquitecturaDeMapaV5"
+    distant.add_child(_build(level,faction,condition))
+    distant.visible = false
+    model.add_child(distant)
+    model.set_meta("tarvoka_hq_map_lod_v5",true)
+    model.set_meta("tarvoka_hq_map_distant",false)
+
+static func set_distant(model: Node3D, distant: bool) -> bool:
+    if model == null or not model.get_meta("tarvoka_hq_map_lod_v5",false):
+        return false
+    var near: Node3D = model.get_node_or_null("ArquitecturaCompletaV4") as Node3D
+    var far: Node3D = model.get_node_or_null("ArquitecturaDeMapaV5") as Node3D
+    if near == null or far == null:
+        return false
+    near.visible = not distant
+    far.visible = distant
+    model.set_meta("tarvoka_hq_map_distant",distant)
+    return true
+
+# Standalone distance-mode node. Unlike install(), this never constructs V4:
+# mobile maps can show dozens of HQs without retaining hidden hero meshes.
+static func build_map_only(level: int, faction: int,
+        condition: String = "operativo") -> Node3D:
+    if level < 1 or level > 3 or faction < -1 or faction >= 8:
+        return null
+    if not condition in ["operativo","capturado","danado","leve","moderado","critico","destruido"]:
+        return null
+    var node := Node3D.new()
+    node.name = "CuartelGeneralMapaV6"
+    node.set_meta("tarvoka_building_kind","headquarters")
+    node.set_meta("visual_level",level)
+    node.set_meta("visual_faction",faction)
+    node.set_meta("visual_condition",condition)
+    node.set_meta("visual_only",true)
+    node.set_meta("tarvoka_hq_map_only_v6",true)
+    node.add_child(_build(level,faction,condition))
+    return node
+
+static func shared_mesh(level: int, faction: int,
+        condition: String = "operativo") -> ArrayMesh:
+    if level < 1 or level > 3 or faction < -1 or faction >= 8:
+        return null
+    if not condition in ["operativo","capturado","danado","leve","moderado","critico","destruido"]:
+        return null
+    var cache_key: String = "%d/%d/%s" % [level,faction,condition]
+    if not _geometry_cache.has(cache_key):
+        var disposable: MeshInstance3D = _build(level,faction,condition)
+        assert(disposable.mesh is ArrayMesh)
+        disposable.free()
+    return _geometry_cache[cache_key] as ArrayMesh
+
+static func cached_variant_count() -> int:
+    return _geometry_cache.size()
+
+# A public 3D scene can request a fully neutral mesh without loading
+# a faction atlas (the neutral material is never a disguised gold faction).
