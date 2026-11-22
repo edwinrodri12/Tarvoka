@@ -153,6 +153,21 @@ func _run() -> void:
                     "tarvoka_v9_hand_contact_pose",""))==anim,
                     "V9 hand connection syncs AFTER native animation "+anim)
                 var work_mode: bool=anim=="work"
+                var work_cuff: MeshInstance3D=model.find_child(
+                    "V10_MunecaContactoHerramienta",true,false) as MeshInstance3D
+                check(work_cuff!=null and
+                    work_cuff.get_parent().name==Engineer.TOOL and
+                    work_cuff.scale.x>=0.13 and
+                    work_cuff.visible==work_mode,
+                    "V10 full-size tool wrist exists only during work animation")
+                for side in [-1,1]:
+                    var wrist: MeshInstance3D=model.find_child(
+                        "V10_MunecaContactoFusil_%d"%side,true,false) as MeshInstance3D
+                    check(wrist!=null and
+                        wrist.get_parent().name=="ArmamentoRig" and
+                        wrist.scale.x>=0.13 and
+                        wrist.visible==(not work_mode or side<0),
+                        "V10 full-size rifle wrist follows active corresponding hand")
                 for finger in range(3):
                     var wrench_digit: Node3D=model.find_child(
                         AnatomyV10.TOOL_FINGER+str(finger),true,false) as Node3D
