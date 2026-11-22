@@ -61,8 +61,9 @@ func _run() -> void:
     check(int(unit_stats.get("detailed",0))==1,
         "G05 consumes one of eight Android detailed-unit slots")
     if soldier!=null:
-        check(Engineer.has_model(soldier) and Engineer.is_visible(soldier),
-            "playable G05 uses approved complete 3D engineer V12.2")
+        check(Engineer.has_model(soldier) and Engineer.is_visible(soldier)
+            and Engineer.has_seals(soldier),
+            "playable G05 LOD8 loads V12.3 opaque closed helmet and all joints")
         check(int(soldier.get_meta("tarvoka_infantry_lod",0))==8,
             "LOD8 lightweight native soldier, not LOD13 hero or fallback disc")
         check(str(soldier.get_meta("tarvoka_engineer_game_role",""))=="engineer"
@@ -96,6 +97,7 @@ func _run() -> void:
         "both playable engineers visible with approved Android LOD")
     var red: Node3D=both.find_child("Unidad3D_G05-R",false,false) as Node3D
     check(red!=null and Engineer.has_model(red) and
+        Engineer.has_seals(red) and
         int(red.get_meta("tarvoka_engineer_visual_faction",-1))==7 and
         int(red.get_meta("faction",-1))==1,
         "enemy G05 uses onyx visual faction with engine team unchanged")
