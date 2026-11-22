@@ -82,7 +82,11 @@ func _run()->void:
         "real original Studio camera tab exposes two live Android/hero LOD buttons")
     var hero_before:Node3D=studio.get("model_root") as Node3D
     var original_camera:Camera3D=studio.get("camera") as Camera3D
-    var original_preview:Node3D=studio.get("preview") as Node3D
+    # The shared viewer's preview may be a SubViewport/Node, not Node3D.
+    # Casting it to Node3D loses its identity and falsely fails the test.
+    var original_preview:Node=studio.get("preview") as Node
+    check(original_preview!=null,
+        "original shared preview is a real persistent Godot Node")
     check(str(studio.get("_a01_review_focus"))=="superior",
         "A01 overhead focus is active just before D3 visual damage")
     studio.call("_studio_run_animation","damage_3")
