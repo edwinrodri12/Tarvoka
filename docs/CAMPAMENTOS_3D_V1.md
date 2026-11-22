@@ -103,5 +103,10 @@ pero las cajas de munición quedaban detrás de la carpa y el interior parecía 
 - QA propia `tests/test_camp_supply_v3.gd`: 64 ensamblajes (8 facciones ×
   2 LOD × 4 daños), 18 capturas auténticas Godot desde las cuatro diagonales
   y dos vistas de daño; verifica mallas sólidas y posición de las cajas.
-- **Estado:** V3 en revisión visual hasta que el CI dedicado y las capturas
-  reales se comprueben. Sin integración declarada en web/Android.
+- **QA verificada**: GitHub Actions run 45060363207, trabajo
+  four-camps-godot-3d, finalizó SUCCESS: importación Godot 4.3, 256
+  modelos V1, 64 modelos V2, 64 modelos V3 y 63 PNG en total
+  (20 + 25 + 18), incluidos los cuatro ángulos V3.
+  Evidencia: https://github.com/edwinrodri12/Tarvoka/actions/runs/45060363207
+- **Estado:** V3 lista para inspección artística del usuario, no aprobada
+  todavía como modelo final. Sin integración declarada en web/Android.
