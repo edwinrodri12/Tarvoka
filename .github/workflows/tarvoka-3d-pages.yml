@@ -314,6 +314,23 @@ jobs:
             cp "hq-android-v15/scripts/ui/$battle_part" "scripts/ui/$battle_part"
             test -s "scripts/ui/$battle_part"
           done
+          # HQ V24 in MAIN introduced HeadquartersBattle3D as a dependency of
+          # the real map's BattleTerrain3D. The pinned Studio release checkout
+          # predates HQ V24: importing the now-current BattleTerrain3D without
+          # its 4 related HQ scripts made the *main push* Pages build fail,
+          # although the PR isolated build succeeded. Ship the whole closure
+          # from the same source commit as the current battle renderer.
+          # Older PR snapshots legitimately have no HeadquartersBattle3D
+          # reference; leave their existing HQ V21 Studio art unmodified.
+          if grep -Fq 'res://scripts/ui/HeadquartersBattle3D.gd' scripts/ui/BattleTerrain3D.gd; then
+            for hq_part in HeadquartersBattle3D.gd HeadquartersCurvedRoof3D.gd HeadquartersBattleAccents3D.gd CommandCityArtV14.gd; do
+              test -s "hq-android-v15/scripts/ui/$hq_part"
+              cp "hq-android-v15/scripts/ui/$hq_part" "scripts/ui/$hq_part"
+              test -s "scripts/ui/$hq_part"
+            done
+            test -s scripts/ui/HeadquartersMapLOD3D.gd
+            test -s scripts/ui/FactionIdentity.gd
+          fi
           test -s scripts/ui/ArmoredWorkshopBattle3D.gd
           test -s scripts/ui/ArmoredWorkshopBattleLOD.gd
           test -s scripts/ui/InfantryFamilyV1.gd
