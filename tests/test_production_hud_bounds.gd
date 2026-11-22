@@ -107,6 +107,13 @@ func _check_hud(main: Control, size: Vector2, compact_mode: bool) -> void:
                     failures.append("immersive %s undersized at %s: %s" % [name, size, rect.size])
                 if not visible_area.encloses(rect):
                     failures.append("immersive %s outside viewport %s: %s" % [name, size, rect])
+        # Primary actions must remain reachable; contextual actions alone
+        # must never make an otherwise unusable compact HUD pass.
+        if immersive != null:
+            for required_name in ["menu_button", "end_turn_button"]:
+                var required_button: BaseButton = immersive.get(required_name)
+                if required_button == null or not required_button.is_visible_in_tree():
+                    failures.append("compact HUD missing visible primary action %s at %s" % [required_name, size])
         if immersive_buttons_checked == 0:
             failures.append("compact HUD has no visible immersive production buttons at %s; legacy shortcuts cannot satisfy coverage" % size)
     if checked_visible == 0 or checked_buttons == 0:
