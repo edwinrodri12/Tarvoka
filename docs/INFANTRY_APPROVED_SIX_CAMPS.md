@@ -36,3 +36,15 @@ El error visible en el render nativo V6 era la cabeza descubierta por detrás. V
 **V8** aborda las partes que aún parecían bloques separados en capturas V7: las hombreras cúbicas se ocultan y se reconstruyen como volumen curvo unido a cada brazo, la protección delantera es biselada, el rifle incorpora receptor cerrado, guardamanos ventilado, agarre, riel óptico y elementos mecanizados; la barrera plegada incorpora panel facetado y alas biseladas con bandas de facción. La bisagra y las alas permanecen completamente articuladas con V6, con sujeciones fijas al cuerpo y sin saltos al invertir la animación. La pintura respeta las ocho facciones; LOD8 conserva silueta de hombros, escudo y arma con menor densidad, y LOD13 añade refuerzos y herrajes. Las placas se generan con mallas **sólidas y cerradas**, no planos transparentes.
 
 La comprobación visual cuenta con **18 PNG nativos de Godot**, incluidos primeros planos frontales y de perfil de armas/hombros, casco posterior y placas dorsales, junto con la prueba del mismo visor web de TARVOKA. Los cambios son únicamente artísticos: no afectan a cobertura, unidades de combate, balance, daño real, campamentos, guardados ni sistemas tácticos. No se declara aprobación estética definitiva hasta inspeccionar las nuevas capturas de V8.
+
+## Ingeniero V9 · casco continuo, manos ancladas y equipo dorsal (arte en QA)
+
+**Problemas de V8 detectados al inspeccionar 20 capturas nativas:** casco construido con múltiples volúmenes apilados, manos que no siempre contactaban el fusil y accesorios dorsales con poca sensación de sujeción física.
+
+La V9 conserva la **clase Ingeniero** y la silueta de construcción V5: no elimina la visera de clase ni su color, ni crea roles ni campamentos nuevos. Sustituye exclusivamente el casco prototipo V2 por una superficie propia, maciza, triangulada y cerrada en 360° que se integra con la nuca y cuello V7. Mantiene materiales PBR opacos y detalles extra en LOD13, con geometría simplificada en LOD8.
+
+Las dos manos tienen mallas **realmente unidas a los puntos de empuñadura del ArmamentoRig**. Un manguito flexible desde cada antebrazo se recalcula tras cada animación nativa; en `work/repair/capture` la mano derecha pasa físicamente al `V6_HerramientaArticuladaRig`, conservando el rifle en la izquierda. Esto se limita a pose visual, no modifica reglas de interacción o disparo.
+
+El arnés y bolsas de herramientas están anclados al `TorsoRig`, separados de `V6_BarreraArticuladaRig`. El panel sigue abriendo, plegando y girando sin arrastrar el equipo fijo.
+
+**Contrato QA**: ocho facciones, LOD8/13, malla del casco cerrada, visera V5 visible, ambas manos tocando sus grips y articulaciones verificables durante `idle/move/aim/attack/work`, comprobación de mano en herramienta, equipo dorsal fijo, pintura de facción, no regresión de V6-V8, 26 imágenes reales de Godot con primeros planos V9 (casco frente/espalda, agarres frente/perfil, mochila y herramienta). En el Estudio 3D web debe aparecer el mismo modelo y sincronizarse durante las animaciones.
