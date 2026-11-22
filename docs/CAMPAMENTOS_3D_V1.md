@@ -28,7 +28,7 @@ clase de campamento, ni nuevas unidades de infantería.
 ## Verificación
 
 - Prueba nueva: `tests/test_camp_models_v1.gd` comprueba 4 tipos × 8 facciones ×
-  2 LOD × 4 estados = 128 ensamblajes, roles exclusivos, materiales opacos,
+  2 LOD × 4 estados = 256 ensamblajes, roles exclusivos, materiales opacos,
   piezas reales, color facción, fase de despliegue y 20 renders reales Godot.
 - CI dedicado: `.github/workflows/camp-art-native-qa.yml`. Las capturas se
   conservan en el artefacto `tarvoka-four-camps-native-3d-v1` para inspección.
@@ -49,3 +49,35 @@ clase de campamento, ni nuevas unidades de infantería.
 
 **Decisión de producto:** ningún edificio permanente nuevo, ni centro de drones,
 depósito de artillería, central eléctrica, astillero ni otro almacén de suministros.
+
+## Campamento de suministros — V2 hard surface (22 noviembre 2026)
+
+Primera fase de perfeccionamiento de una estructura (no de la jugabilidad).
+Capa `scripts/ui/CampSupplyFinishV2.gd`, aplicada automáticamente por
+`CampModels3DV1.build("suministros",faccion,lod,damage)`, sin duplicar el
+campamento ni crear una escena paralela.
+
+- Cubierta modular de dos paneles **macizos y articulados** mediante bisagras
+  reales, nervaduras y pintura de facción visible desde arriba; D2 retira una
+  sección. Al plegarse rota físicamente (no se aplasta verticalmente todo el
+  edificio como en V1).
+- Dos depósitos de combustible cilíndricos **cerrados**, tapas estancas,
+  válvulas, cunas metálicas y franjas oficiales de facción.
+- Dispensador blindado, pantalla **opaca**, acoplador, manguera segmentada
+  de caucho con boquilla, cajas de munición reforzadas, sujeciones y
+  marcas de peligro geométricas.
+- Conserva paredes V1 y esconde solamente accesorios y techo prototipo
+  reemplazados, para evitar dobles caras/capas translúcidas.
+- LOD8 conserva silueta y color; LOD13 añade herrajes, cierres y nervaduras.
+- D0 completo, D1 con desgaste, D2 con daños importantes, D3 demolido.
+- Suministros sólo en manos del **Logístico de infantería**. Los cuatro roles,
+  el G16, recursos, curación y visión **no cambian**.
+- Una prueba dedicada `tests/test_camp_supply_v2.gd` verifica 64 variantes,
+  mallas volumétricas, pintura de 8 facciones, bisagras y manguera articuladas
+  y exige **25 imágenes nativas** Godot. El conjunto de las cuatro estructuras
+  verifica 256 variantes más 20 imágenes.
+
+**Estado:** modelo V2 en revisión artística, a la espera de CI y revisión de
+los PNG auténticos. Aún sin integración comprobada en el visor web original,
+ni en la batalla Android. El diseño se entrega en PR, no se fusiona
+automáticamente.
