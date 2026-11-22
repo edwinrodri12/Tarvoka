@@ -323,7 +323,7 @@ jobs:
           # Older PR snapshots legitimately have no HeadquartersBattle3D
           # reference; leave their existing HQ V21 Studio art unmodified.
           if grep -Fq 'res://scripts/ui/HeadquartersBattle3D.gd' scripts/ui/BattleTerrain3D.gd; then
-            for hq_part in HeadquartersBattle3D.gd HeadquartersCurvedRoof3D.gd HeadquartersBattleAccents3D.gd CommandCityArtV14.gd; do
+            for hq_part in HeadquartersBattle3D.gd HeadquartersMapLOD3D.gd HeadquartersCurvedRoof3D.gd HeadquartersBattleAccents3D.gd CommandCityArtV14.gd; do
               test -s "hq-android-v15/scripts/ui/$hq_part"
               cp "hq-android-v15/scripts/ui/$hq_part" "scripts/ui/$hq_part"
               test -s "scripts/ui/$hq_part"
