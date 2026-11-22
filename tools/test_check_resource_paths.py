@@ -67,7 +67,7 @@ class ResourcePathAuditTests(unittest.TestCase):
     def test_unreadable_utf8_resource_is_reported(self):
         with tempfile.TemporaryDirectory() as temp:
             root = pathlib.Path(temp)
-            (root / "invalid.tres").write_bytes(b"\\xff\\xfe\\x80")
+            (root / "invalid.tres").write_bytes(bytes((0xff, 0xfe, 0x80)))
             errors = audit(root)
             self.assertEqual(len(errors), 1, errors)
             self.assertIn("unreadable", errors[0])
