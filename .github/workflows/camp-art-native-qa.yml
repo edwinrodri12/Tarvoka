@@ -1,0 +1,72 @@
+name: TARVOKA four specialist camps - native 3D visual QA
+
+on:
+  pull_request:
+    paths:
+      - "scripts/ui/CampModels3DV1.gd"
+      - "tests/test_camp_models_v1.gd"
+      - ".github/workflows/camp-art-native-qa.yml"
+  push:
+    branches: [main]
+    paths:
+      - "scripts/ui/CampModels3DV1.gd"
+      - "tests/test_camp_models_v1.gd"
+      - ".github/workflows/camp-art-native-qa.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  four-camps-godot-3d:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download exact Godot 4.3 engine
+        run: |
+          set -euo pipefail
+          curl --fail --location --retry 3 \
+            https://github.com/godotengine/godot/releases/download/4.3-stable/Godot_v4.3-stable_linux.x86_64.zip \
+            -o /tmp/godot.zip
+          unzip -q /tmp/godot.zip -d /tmp
+          chmod +x /tmp/Godot_v4.3-stable_linux.x86_64
+      - name: Import native camp art
+        run: |
+          set -euo pipefail
+          # The shared web wrapper is supplied by an external Pages export;
+          # it is absent on main. Keep unrelated broken adapter out of import.
+          if test ! -f scripts/ui/CombinedArtStudioWeb.gd && \
+             test -f scripts/ui/BastionStudioAdapter.gd; then
+            mkdir -p /tmp/camp-web-wrapper
+            mv scripts/ui/BastionStudioAdapter.gd /tmp/camp-web-wrapper/
+          fi
+          /tmp/Godot_v4.3-stable_linux.x86_64 --headless --editor \
+            --path . --import --quit 2>&1 | tee /tmp/camp-import.log
+          if grep -E 'SCRIPT ERROR:|Parse Error:|Import failed' /tmp/camp-import.log; then
+            exit 1
+          fi
+      - name: Verify 128 native models and render 20 genuine PNG previews
+        run: |
+          set -euo pipefail
+          mkdir -p build/qa/camps-v1
+          timeout --signal=TERM --kill-after=5s 300s \
+            xvfb-run -a -s '-screen 0 1280x720x24' \
+            env LIBGL_ALWAYS_SOFTWARE=1 \
+            /tmp/Godot_v4.3-stable_linux.x86_64 \
+            --rendering-method gl_compatibility --audio-driver Dummy --path . \
+            --script res://tests/test_camp_models_v1.gd \
+            2>&1 | tee /tmp/camp-native.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Parse Error:|Assertion failed' /tmp/camp-native.log; then
+            exit 1
+          fi
+          grep -F 'PASS CAMPS V1 NATIVE 3D: 128 audits, 20 PNGs' /tmp/camp-native.log
+          test "$(find build/qa/camps-v1 -name '*.png' | wc -l)" -eq 20
+      - name: Upload actual Godot screenshots for visual review
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: tarvoka-four-camps-native-3d-v1
+          path: build/qa/camps-v1/*.png
+          if-no-files-found: warn
+          retention-days: 14
