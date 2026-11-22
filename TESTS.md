@@ -270,3 +270,5 @@ Problema: el total de victorias por relés oculta si la condición territorial s
 - Ejecuta 11 pruebas Python `unittest` y auditoría real de escenas `.tscn`/`.tres` sobre checkout en GitHub Actions; no requiere clonar localmente ni Android.
 - Estado al registrar: NO EJECUTADO / sin workflow run confirmado para el commit. No afirmar éxito hasta inspeccionar conclusión y logs. Si falla la auditoría, revisar recursos generados y falsos positivos antes de integrar.
 - Android físico: NO EJECUTADO EN DISPOSITIVO. No se modifican reglas de juego ni se genera APK.
+
+2026-11-22 — Auditor de recursos, PR #673 (rama sin fusionar): `tools/check_resource_paths.py` ahora informa `ext_resource` con `id` ausente o vacío, incluyendo línea; `tools/test_check_resource_paths.py` añade regresión para ambos casos y un ID válido. Total esperado: 12 pruebas. PASÓ: commits de fuente publicados. NO EJECUTADO: batería Python completa, auditor sobre escenas reales, Godot/CI nuevo y Android físico; el entorno de ejecución no resuelve github.com para clonar. No convertir en gate ni fusionar sin comprobar resultados de Actions. No se cambió gameplay.
