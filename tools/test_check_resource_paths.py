@@ -58,7 +58,7 @@ class ResourcePathAuditTests(unittest.TestCase):
             except (NotImplementedError, OSError):
                 self.skipTest("symlinks unavailable on this platform")
             (root / "sample.tscn").write_text(
-                '[ext_resource type="Texture2D" path="res://assets/linked.png" id="1"]\\n'
+                '[ext_resource type="Texture2D" path="res://assets/linked.png" id="1"]\n'
             )
             errors = audit(root)
             self.assertEqual(len(errors), 1, errors)
@@ -76,8 +76,8 @@ class ResourcePathAuditTests(unittest.TestCase):
             except (NotImplementedError, OSError):
                 self.skipTest("symlinks unavailable on this platform")
             (root / "sample.tscn").write_text(
-                '[ext_resource type="Texture2D" path="res://assets/alias.png" id="1"]\\n'
-                '[ext_resource type="Texture2D" path="res://assets/broken.png" id="2"]\\n'
+                '[ext_resource type="Texture2D" path="res://assets/alias.png" id="1"]\n'
+                '[ext_resource type="Texture2D" path="res://assets/broken.png" id="2"]\n'
             )
             errors = audit(root)
             self.assertEqual(len(errors), 1, errors)
