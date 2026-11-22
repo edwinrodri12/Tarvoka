@@ -13,6 +13,8 @@ on:
       - 'scripts/ui/InfantryEngineerFinishV9.gd'
       - 'scripts/ui/InfantryEngineerAnatomyV10.gd'
       - 'scripts/ui/InfantryEngineerMechanicsV11.gd'
+      - 'scripts/ui/InfantryEngineerDorsalV12.gd'
+      - 'tests/test_infantry_engineer_v12_finish.gd'
       - 'scripts/ui/InfantryCampRosterV1.gd'
       - 'tests/test_infantry_camp_roster.gd'
       - 'scripts/ui/UnitModels3D.gd'
@@ -55,6 +57,8 @@ jobs:
           test -s scripts/ui/InfantryEngineerFinishV9.gd
           test -s scripts/ui/InfantryEngineerAnatomyV10.gd
           test -s scripts/ui/InfantryEngineerMechanicsV11.gd
+          test -s scripts/ui/InfantryEngineerDorsalV12.gd
+          test -s tests/test_infantry_engineer_v12_finish.gd
           test -s tests/test_infantry_engineer_v6_360.gd
           test -s scripts/ui/InfantryCampRosterV1.gd
           test -s tests/test_infantry_family_v2.gd
@@ -68,6 +72,7 @@ jobs:
           grep -Fq 'InfantryEngineerV9.sync' scripts/ui/UnitModels3D.gd
           grep -Fq 'InfantryEngineerV10.apply' scripts/ui/UnitModels3D.gd
           grep -Fq 'InfantryEngineerV11.apply' scripts/ui/UnitModels3D.gd
+          grep -Fq 'InfantryEngineerV12.apply' scripts/ui/UnitModels3D.gd
           grep -Fq 'InfantryEngineerV6.pose' scripts/ui/UnitModels3D.gd
           grep -Fq 'InfantryFamily.pose' scripts/ui/UnitModels3D.gd
           grep -Fq 'InfantryV1.supports' scripts/ui/BastionStudioAdapter.gd
@@ -125,6 +130,17 @@ jobs:
           if grep -E 'SCRIPT ERROR:|ERROR:|Parse Error:|Assertion failed' /tmp/infantry-v6-360.log; then exit 1; fi
           grep -Fq 'PASS ENGINEER V6 360:' /tmp/infantry-v6-360.log
           test "$(find build/qa/infantry-v6 -name '*.png' | wc -l)" -eq 34
+      - name: Verify Engineer V12 dorsal sculpture and six native Godot 3D PNGs
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p build/qa/infantry-v12
+          timeout --signal=TERM --kill-after=5s 180s xvfb-run -a -s '-screen 0 1024x768x24' env LIBGL_ALWAYS_SOFTWARE=1 \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --rendering-method gl_compatibility --audio-driver Dummy --path . \
+            --script res://tests/test_infantry_engineer_v12_finish.gd 2>&1 | tee /tmp/infantry-v12-native.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Parse Error:|Assertion failed' /tmp/infantry-v12-native.log; then exit 1; fi
+          grep -Fq 'PASS ENGINEER V12:' /tmp/infantry-v12-native.log
+          test "$(find build/qa/infantry-v12 -name '*.png' | wc -l)" -eq 6
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -133,5 +149,6 @@ jobs:
             build/qa/infantry-v1/*.png
             build/qa/infantry-v2/*.png
             build/qa/infantry-v6/*.png
+            build/qa/infantry-v12/*.png
           if-no-files-found: warn
           retention-days: 14
