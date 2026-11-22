@@ -69,14 +69,27 @@ func _run()->void:
         "true overhead look exposes solid wing and faction band")
     # New real physical Android/hero LOD buttons. Exercise ACTUAL Studio
     # controls, preserve stage D3, team paint and same camera/viewport.
+    var android_lod_button:Button=null
+    var hero_lod_button:Button=null
+    if panel!=null:
+        for control in panel.find_children("*","Button",true,false):
+            var action:=control as Button
+            if action.text=="LOD8 · Android":
+                android_lod_button=action
+            elif action.text=="LOD13 · detalle":
+                hero_lod_button=action
+    check(android_lod_button!=null and hero_lod_button!=null,
+        "real original Studio camera tab exposes two live Android/hero LOD buttons")
     var hero_before:Node3D=studio.get("model_root") as Node3D
     var original_camera:Camera3D=studio.get("camera") as Camera3D
     var original_preview:Node3D=studio.get("preview") as Node3D
     studio.call("_studio_run_animation","damage_3")
     check(DamageV6.stage(hero_before)==3,
         "LOD change starts from actual D3 damage button state")
-    check(bool(studio.call("_a01_review_set_lod",8)),
-        "LOD8 button builds authentic low-poly Android model in same viewer")
+    if android_lod_button!=null:
+        android_lod_button.pressed.emit()
+    check(int(studio.get("_a01_review_lod"))==8,
+        "clicking ACTUAL LOD8 button builds Android model in same viewer")
     var android:Node3D=studio.get("model_root") as Node3D
     check(android!=null and android!=hero_before and
         NoseV10.has_model(android) and
@@ -95,8 +108,10 @@ func _run()->void:
         int(android.get_meta("tarvoka_a01_v10_lod",0))==8 and
         DamageV6.stage(android)==3,
         "faction change inside Android LOD8 preserves LOD and damage D3")
-    check(bool(studio.call("_a01_review_set_lod",13)),
-        "LOD13 button restores detailed HERO model in same viewer")
+    if hero_lod_button!=null:
+        hero_lod_button.pressed.emit()
+    check(int(studio.get("_a01_review_lod"))==13,
+        "clicking ACTUAL LOD13 button restores high-detail HERO model")
     var hero_after:Node3D=studio.get("model_root") as Node3D
     check(hero_after!=null and NoseV10.has_model(hero_after) and
         int(hero_after.get_meta("tarvoka_a01_v10_lod",0))==13 and
