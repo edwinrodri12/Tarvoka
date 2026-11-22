@@ -112,6 +112,28 @@ func _run()->void:
                     check(_watertight(panel.mesh as ArrayMesh,
                         20 if lod==13 else 12),
                         "conformal paint has closed outward-wound triangles and real thickness")
+                    # Reject the previous left-fin bug: V8 section[1/2]
+                    # is on +X even when the outer wingtip points toward -X.
+                    # The painted layer must be OUTBOARD on BOTH actual fins.
+                    var painted_faces:PackedVector3Array=(panel.mesh as ArrayMesh).get_faces()
+                    var bottom_outboard:float=INF
+                    var top_outboard:float=INF
+                    var bottom_count:int=0
+                    var top_count:int=0
+                    for vertex in painted_faces:
+                        var extent:float=float(side)*vertex.x
+                        if absf(vertex.y-1.183)<0.0001:
+                            bottom_outboard=minf(bottom_outboard,extent-1.703)
+                            bottom_count+=1
+                        if absf(vertex.y-1.395)<0.0001:
+                            top_outboard=minf(top_outboard,extent-1.757)
+                            top_count+=1
+                    check(bottom_count>0 and bottom_outboard>0.030,
+                        "faction paint on exterior face of %s fin at root" %
+                        ("left" if side<0 else "right"))
+                    check(top_count>0 and top_outboard>0.010,
+                        "faction paint on exterior face of %s fin at tip" %
+                        ("left" if side<0 else "right"))
                     var mat:=panel.material_override as StandardMaterial3D
                     check(mat!=null and
                         mat.transparency==BaseMaterial3D.TRANSPARENCY_DISABLED and
