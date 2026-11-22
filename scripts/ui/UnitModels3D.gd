@@ -23,6 +23,8 @@ const InfantryEngineerV5 = preload("res://scripts/ui/InfantryEngineerSilhouetteV
 const InfantryEngineerV6 = preload("res://scripts/ui/InfantryEngineerFinishV6.gd")
 const InfantryEngineerV7 = preload("res://scripts/ui/InfantryEngineerCompletenessV7.gd")
 const InfantryEngineerV8 = preload("res://scripts/ui/InfantryEngineerPremiumV8.gd")
+const InfantryEngineerV9 = preload("res://scripts/ui/InfantryEngineerFinishV9.gd")
+const InfantryEngineerV10 = preload("res://scripts/ui/InfantryEngineerAnatomyV10.gd")
 const G16LogisticsV1 = preload("res://scripts/ui/G16ArmoredLogisticsV1.gd")
 const G16ExteriorV2 = preload("res://scripts/ui/G16LogisticsExteriorV2.gd")
 const G16MechanicsV3 = preload("res://scripts/ui/G16LogisticsMechanicsDamageV3.gd")
@@ -1040,6 +1042,12 @@ static func build(role: String, faction: int = -1, finish_enabled: bool = true, 
                     elif not InfantryEngineerV8.apply(model,
                             faction_paint_color(faction),art_level>=13):
                         push_warning("Engineer V8 beveled shield, sculpted shoulders and detailed rifle missing")
+                    elif not InfantryEngineerV9.apply(model,
+                            faction_paint_color(faction),art_level>=13):
+                        push_warning("Engineer V9 helmet, accurate glove grips and anchored dorsal hardware missing")
+                    elif not InfantryEngineerV10.apply(model,
+                            faction_paint_color(faction),art_level>=13):
+                        push_warning("Engineer V10 anatomical arm taper, chest contour and tool fingers missing")
         "apc":
             # Art level 8 is a separate native lightweight *same silhouette*
             # profile for eight-player Android boards. Older art-level 6
@@ -1537,6 +1545,8 @@ static func pose_model(role: String, model: Node3D, kind: String,
             InfantryFinishV2.pose(model,kind,progress)
         if posed and role=="infantry_engineer" and InfantryEngineerV6.has_model(model):
             InfantryEngineerV6.pose(model,kind,progress)
+            if InfantryEngineerV9.has_model(model):
+                InfantryEngineerV9.sync(model,kind)
         return posed
     match role:
         "tank":
@@ -1588,6 +1598,8 @@ static func restore_model_pose(role: String, model: Node3D) -> void:
             InfantryFinishV2.restore(model)
         if role=="infantry_engineer" and InfantryEngineerV6.has_model(model):
             InfantryEngineerV6.reset(model)
+            if InfantryEngineerV9.has_model(model):
+                InfantryEngineerV9.sync(model,"idle")
         return
     match role:
         "tank":

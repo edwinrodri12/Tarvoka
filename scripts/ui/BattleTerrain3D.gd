@@ -21,6 +21,7 @@ const NavalBaseLOD = preload("res://scripts/ui/NavalBaseBattleLOD.gd")
 const DroneCenter3D = preload("res://scripts/ui/DroneCenterBattle3D.gd")
 const DroneCenterLOD = preload("res://scripts/ui/DroneCenterBattleLOD.gd")
 const CivilianCity = preload("res://scripts/ui/CivilianCityBattle3D.gd")
+const Headquarters3D = preload("res://scripts/ui/HeadquartersBattle3D.gd")
 const CityDistance = preload("res://scripts/ui/CivilianCityDistanceLODV6.gd")
 const APCTactical = preload("res://scripts/ui/APCTacticalLOD8.gd")
 const APCCameraLOD = preload("res://scripts/ui/APCDistanceLODControllerV9.gd")
@@ -511,6 +512,21 @@ static func _make_sites(parent: Node3D,state: Dictionary,
         # CELL_MODEL_SCALE confines all geometry to one 2.4 m board tile.
         # An explored-but-not-visible city must not reveal its new owner.
         if str(site["kind"])=="city":
+            # The same TWO command-city landmarks as the approved 2D HQ:
+            # native tactical 3D architecture, still a capturable income city.
+            # Never use the hidden real owner or upgrades through fog.
+            var command_hq:Node3D=Headquarters3D.build_site(
+                state,site,owner,visible)
+            if command_hq!=null:
+                command_hq.name="Instalacion3D_city_%d_%d" % [cell.x,cell.y]
+                command_hq.position=world_at(cell)+Vector3(
+                    0,height_at(cells,cell)+0.07,0)
+                command_hq.set_meta("owner_public",owner)
+                command_hq.set_meta("kind","city")
+                command_hq.set_meta("battle_cell",cell)
+                parent.add_child(command_hq)
+                drawn+=1
+                continue
             var city: Node3D=CivilianCity.build_site(state,site,owner,2)
             if city!=null:
                 city.name="Instalacion3D_city_%d_%d" % [cell.x,cell.y]

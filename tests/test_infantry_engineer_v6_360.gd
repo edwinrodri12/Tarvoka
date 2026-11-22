@@ -6,6 +6,8 @@ const Models = preload("res://scripts/ui/UnitModels3D.gd")
 const Engineer = preload("res://scripts/ui/InfantryEngineerFinishV6.gd")
 const ClosureV7 = preload("res://scripts/ui/InfantryEngineerCompletenessV7.gd")
 const PremiumV8 = preload("res://scripts/ui/InfantryEngineerPremiumV8.gd")
+const FinishV9 = preload("res://scripts/ui/InfantryEngineerFinishV9.gd")
+const AnatomyV10 = preload("res://scripts/ui/InfantryEngineerAnatomyV10.gd")
 const Infantry = preload("res://scripts/ui/InfantryFamilyV1.gd")
 const OUT := "res://build/qa/infantry-v6"
 var errors: int=0
@@ -93,6 +95,120 @@ func _run() -> void:
             check(Engineer.has_model(model),"real V6 installed F%d LOD%d"%[faction,lod])
             check(ClosureV7.has_model(model),"rear helmet/neck V7 installed F%d LOD%d"%[faction,lod])
             check(PremiumV8.has_model(model),"V8 real PBR finish installed F%d LOD%d"%[faction,lod])
+            check(FinishV9.has_model(model),
+                "V9 joined helmet, weapon grip and dorsal harness F%d LOD%d"%[faction,lod])
+            check(AnatomyV10.has_model(model),
+                "V10 realistic forearms, rib fairings and tool fingers F%d LOD%d"%[faction,lod])
+            for side in [-1,1]:
+                var sleeve: MeshInstance3D=model.find_child(
+                    FinishV9.LINK+"_%d"%side,true,false) as MeshInstance3D
+                var anatomy: MeshInstance3D=model.find_child(
+                    AnatomyV10.SIDE_PLATE+"_%d"%side,true,false) as MeshInstance3D
+                var tube: CylinderMesh=(
+                    sleeve.mesh as CylinderMesh if sleeve!=null else null)
+                check(tube!=null and tube.top_radius<=0.055 and
+                    tube.bottom_radius<=0.075 and tube.top_radius>0.0,
+                    "V10 slimmer physical wrist-to-elbow connector replaces thick V9 pipe")
+                check(anatomy!=null and anatomy.mesh is SphereMesh and
+                    anatomy.get_parent().name=="TorsoRig",
+                    "V10 anatomical rib fairings have solid native PBR geometry")
+            var new_helmet: MeshInstance3D=model.find_child(
+                FinishV9.HELMET,true,false) as MeshInstance3D
+            var prototype_helmet: Node3D=model.find_child(
+                "V2_CascoEsferoideCerrado",true,false) as Node3D
+            var construction_brow: Node3D=model.find_child(
+                "V5_ViseraObraIngeniero",true,false) as Node3D
+            check(new_helmet!=null and new_helmet.mesh is ArrayMesh and
+                _watertight(new_helmet.mesh) and
+                prototype_helmet!=null and not prototype_helmet.visible and
+                construction_brow!=null and construction_brow.visible,
+                "V9 helmet 360 sealed, V2 redundant shell hidden, V5 engineer brow retained")
+            var collar: MeshInstance3D=model.find_child(
+                FinishV9.COLLAR,true,false) as MeshInstance3D
+            check(collar!=null and collar.mesh is SphereMesh and
+                collar.get_parent().name=="CabezaRig",
+                "V9 nape-collar pivots with the sealed real head rig")
+            for side in [-1,1]:
+                var arm_v9: Node3D=model.find_child(
+                    "BrazoRig_%d"%side,true,false) as Node3D
+                var gun_v9: Node3D=model.find_child(
+                    "ArmamentoRig",true,false) as Node3D
+                var glove_v9: Node3D=model.find_child(
+                    FinishV9.GRIP+"_%d"%side,true,false) as Node3D
+                var link_v9: MeshInstance3D=model.find_child(
+                    FinishV9.LINK+"_%d"%side,true,false) as MeshInstance3D
+                var harness_v9: MeshInstance3D=model.find_child(
+                    FinishV9.BACK+"_%d"%side,true,false) as MeshInstance3D
+                check(glove_v9!=null and glove_v9.get_parent()==gun_v9 and
+                    link_v9!=null and link_v9.get_parent()==arm_v9 and
+                    harness_v9!=null and harness_v9.get_parent().name=="TorsoRig",
+                    "hands really on rifle, elbow sleeves on arms, dorsal load fixed to torso")
+                check(glove_v9!=null and glove_v9.position.is_equal_approx(
+                    FinishV9._contact(side)),
+                    "V9 solid glove truly coincides with physical weapon grip")
+            for anim in ["idle","move","aim","attack","work"]:
+                check(Models.pose_model("infantry_engineer",model,anim,0.35),
+                    "V9 preserves live infantry animation "+anim)
+                check(str(model.get_meta(
+                    "tarvoka_v9_hand_contact_pose",""))==anim,
+                    "V9 hand connection syncs AFTER native animation "+anim)
+                var work_mode: bool=anim=="work"
+                var work_cuff: MeshInstance3D=model.find_child(
+                    "V10_MunecaContactoHerramienta",true,false) as MeshInstance3D
+                check(work_cuff!=null and
+                    work_cuff.get_parent().name==Engineer.TOOL and
+                    work_cuff.scale.x>=0.13 and
+                    work_cuff.visible==work_mode,
+                    "V10 full-size tool wrist exists only during work animation")
+                for side in [-1,1]:
+                    var wrist: MeshInstance3D=model.find_child(
+                        "V10_MunecaContactoFusil_%d"%side,true,false) as MeshInstance3D
+                    check(wrist!=null and
+                        wrist.get_parent().name=="ArmamentoRig" and
+                        wrist.scale.x>=0.13 and
+                        wrist.visible==(not work_mode or side<0),
+                        "V10 full-size rifle wrist follows active corresponding hand")
+                for finger in range(3):
+                    var wrench_digit: Node3D=model.find_child(
+                        AnatomyV10.TOOL_FINGER+str(finger),true,false) as Node3D
+                    check(wrench_digit!=null and wrench_digit.visible==work_mode and
+                        wrench_digit.get_parent().name==Engineer.TOOL,
+                        "V10 physical wrench fingers appear ONLY while using tool")
+                    for side in [-1,1]:
+                        var gun_digit: Node3D=model.find_child(
+                            "V9_DedosCerrados_%d_%d"%[side,finger],
+                            true,false) as Node3D
+                        # Hero LOD13 has three physical gun fingers;
+                        # low-cost mobile LOD8 intentionally omits them.
+                        # Both must keep a single visible right hand on
+                        # wrench while working, never ghost rifle digits.
+                        if lod>=13:
+                            check(gun_digit!=null and gun_digit.visible==(
+                                not work_mode or side<0),
+                                "V10 hero gun fingers follow active hand only")
+                        else:
+                            check(gun_digit==null,
+                                "LOD8 omits hero-only individual rifle digits")
+                for side in [-1,1]:
+                    var arm_p: Node3D=model.find_child(
+                        "BrazoRig_%d"%side,true,false) as Node3D
+                    var gun_p: Node3D=model.find_child(
+                        "ArmamentoRig",true,false) as Node3D
+                    var wrench_p: Node3D=model.find_child(
+                        Engineer.TOOL,true,false) as Node3D
+                    var rod_p: MeshInstance3D=model.find_child(
+                        FinishV9.LINK+"_%d"%side,true,false) as MeshInstance3D
+                    var target: Vector3=(
+                        wrench_p.transform*Vector3(0,-0.055,-0.048)
+                        if anim=="work" and side>0
+                        else gun_p.transform*FinishV9._contact(side))
+                    var actual: Vector3=arm_p.transform*(
+                        rod_p.position+rod_p.quaternion*Vector3.UP*(
+                        rod_p.scale.y*0.5))
+                    check(actual.distance_to(target)<0.003,
+                        "V9 elbow actually reaches moving weapon/tool F%d L%d %s side%d"%
+                        [faction,lod,anim,side])
+            Models.restore_model_pose("infantry_engineer",model)
             var actual_shield: MeshInstance3D=model.find_child(
                 PremiumV8.SHIELD,true,false) as MeshInstance3D
             var gun_detail: MeshInstance3D=model.find_child(
@@ -235,8 +351,9 @@ func _run() -> void:
             "infantry_logistic","infantry_commando"]:
         var other: Node3D=Models.build(other_role,0,true,13)
         check(other!=null and not Engineer.has_model(other) and
-            not ClosureV7.has_model(other) and not PremiumV8.has_model(other),
-            "no engineer V6/V7/V8 art installed on another core role "+other_role)
+            not ClosureV7.has_model(other) and not PremiumV8.has_model(other) and
+            not FinishV9.has_model(other),
+            "no engineer V6-V9 art installed on another core role "+other_role)
         if other!=null:
             other.free()
 
@@ -322,6 +439,40 @@ func _run() -> void:
             camera.position=positions[side]
             camera.look_at(Vector3(0,0.60,0),Vector3.UP)
             await _frame(view,"engineer_v8_sealed_knees_%s"%side)
+        # V9 close-up visual contract: head, shoulder-to-hand contact and
+        # torso-fixed dorsal gear under two distinct Godot camera angles.
+        camera.size=2.0
+        Models.pose_model("infantry_engineer",art,"idle",0.0)
+        for side in ["front","rear"]:
+            camera.position=positions[side]
+            camera.look_at(Vector3(0,2.05,0),Vector3.UP)
+            await _frame(view,"engineer_v9_continuous_helmet_%s"%side)
+        camera.size=1.95
+        Models.pose_model("infantry_engineer",art,"aim",0.30)
+        for side in ["front","right"]:
+            camera.position=positions[side]
+            camera.look_at(Vector3(0,1.30,0),Vector3.UP)
+            await _frame(view,"engineer_v9_rifle_hand_contacts_%s"%side)
+        camera.size=2.1
+        Models.pose_model("infantry_engineer",art,"idle",0.0)
+        camera.position=positions["rear"]
+        camera.look_at(Vector3(0,1.54,0),Vector3.UP)
+        await _frame(view,"engineer_v9_dorsal_harness_rear")
+        Models.pose_model("infantry_engineer",art,"work",0.40)
+        camera.position=positions["front"]
+        camera.look_at(Vector3(0,1.35,0),Vector3.UP)
+        await _frame(view,"engineer_v9_tool_contact_work")
+        # The work-hand illusion was exposed at native closeup: V9 right
+        # gun digits stayed on the rifle while glove travelled to the wrench.
+        camera.size=2.1
+        Models.pose_model("infantry_engineer",art,"aim",0.35)
+        camera.position=positions["front"]
+        camera.look_at(Vector3(0,1.23,0),Vector3.UP)
+        await _frame(view,"engineer_v10_slim_forearms_rifle_close")
+        Models.pose_model("infantry_engineer",art,"work",0.40)
+        camera.position=positions["right"]
+        camera.look_at(Vector3(0,1.19,0),Vector3.UP)
+        await _frame(view,"engineer_v10_unique_work_fingers_right")
         camera.size=3.6
         Models.pose_model("infantry_engineer",art,"work",0.25)
         camera.position=positions["front"]
@@ -336,10 +487,10 @@ func _run() -> void:
         camera.look_at(Vector3(0,1.15,0),Vector3.UP)
         await _frame(view,"engineer_v6_android_lod8_rear")
         small.queue_free()
-    check(shots==20,"twenty authentic Godot V6/V7/V8 360 inspection PNGs")
+    check(shots==28,"twenty-eight authentic Godot V6-V10 360 inspection PNGs")
     if errors>0:
         push_error("FAIL ENGINEER V6 360: %d issues"%errors)
         quit(1)
     else:
-        print("PASS ENGINEER V6 360: 8 factions x two LOD, 4 angles x 2 poses, work, damage, 20 real PNGs; sealed knees, helmet and premium beveled sculpt")
+        print("PASS ENGINEER V6 360: 8 factions x two LOD, 4 angles x 2 poses, work, damage, 28 real PNGs; V10 slim forearms, no duplicate wrench fingers and sealed visor")
         quit(0)

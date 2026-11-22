@@ -8,6 +8,8 @@ const Specialist=preload("res://scripts/ui/InfantryVariantsV4.gd")
 const EngineerV6=preload("res://scripts/ui/InfantryEngineerFinishV6.gd")
 const ClosureV7=preload("res://scripts/ui/InfantryEngineerCompletenessV7.gd")
 const PremiumV8=preload("res://scripts/ui/InfantryEngineerPremiumV8.gd")
+const FinishV9=preload("res://scripts/ui/InfantryEngineerFinishV9.gd")
+const AnatomyV10=preload("res://scripts/ui/InfantryEngineerAnatomyV10.gd")
 const UNITS := ["line","infantry_commando","infantry_sniper",
     "infantry_engineer","infantry_logistic","infantry_medic"]
 var errors: int=0
@@ -140,6 +142,58 @@ func _run() -> void:
                 "published engineer uses the FULL opaque rear helmet and neck")
             must(PremiumV8.has_model(final_soldier),
                 "same online Godot Studio loads V8 sculpted shoulder and closed shield")
+            must(FinishV9.has_model(final_soldier),
+                "the SAME Studio viewport loads V9 sealed helmet and physical rifle grips")
+            must(AnatomyV10.has_model(final_soldier),
+                "same Studio loads V10 anatomic sleeves and 3D wrench fingers")
+            var helmet_v9: Node3D=final_soldier.find_child(
+                FinishV9.HELMET,true,false) as Node3D
+            var glove_v9: Node3D=final_soldier.find_child(
+                FinishV9.GRIP+"_1",true,false) as Node3D
+            var pack_v9: Node3D=final_soldier.find_child(
+                FinishV9.BACK+"_1",true,false) as Node3D
+            must(helmet_v9!=null and glove_v9!=null and pack_v9!=null,
+                "V9 helmet, anchored backpack and right rifle hand are real native geometry")
+            studio.call("_infantry_pose_tick",0.33,"aim")
+            must(str(final_soldier.get_meta(
+                "tarvoka_v9_hand_contact_pose",""))=="aim",
+                "Studio native aim animation updates actual V9 physical hand contact")
+            studio.call("_infantry_pose_tick",0.33,"work")
+            var hand_tool_v9: Node3D=final_soldier.find_child(
+                FinishV9.TOOL_GLOVE,true,false) as Node3D
+            must(hand_tool_v9!=null and hand_tool_v9.visible and
+                glove_v9!=null and not glove_v9.visible,
+                "Studio switches the actual right glove from weapon to animated wrench")
+            for finger in range(3):
+                var gun_finger: Node3D=final_soldier.find_child(
+                    "V9_DedosCerrados_1_%d"%finger,true,false) as Node3D
+                var tool_finger: Node3D=final_soldier.find_child(
+                    AnatomyV10.TOOL_FINGER+str(finger),true,false) as Node3D
+                must(gun_finger!=null and not gun_finger.visible and
+                    tool_finger!=null and tool_finger.visible,
+                    "Studio hides rifle fingers and shows only real wrench fingers")
+            var work_wrist: Node3D=final_soldier.find_child(
+                "V10_MunecaContactoHerramienta",true,false) as Node3D
+            var rifle_wrist: Node3D=final_soldier.find_child(
+                "V10_MunecaContactoFusil_1",true,false) as Node3D
+            must(work_wrist!=null and work_wrist.visible and
+                rifle_wrist!=null and not rifle_wrist.visible,
+                "Studio transfers real V10 wrist cuff with hand to construction tool")
+            studio.call("_infantry_pose_tick",0.0,"idle")
+            must(glove_v9!=null and glove_v9.visible and
+                hand_tool_v9!=null and not hand_tool_v9.visible,
+                "Studio reattaches right glove to rifle after work")
+            for finger in range(3):
+                var gun_finger_rest: Node3D=final_soldier.find_child(
+                    "V9_DedosCerrados_1_%d"%finger,true,false) as Node3D
+                var tool_finger_rest: Node3D=final_soldier.find_child(
+                    AnatomyV10.TOOL_FINGER+str(finger),true,false) as Node3D
+                must(gun_finger_rest!=null and gun_finger_rest.visible and
+                    tool_finger_rest!=null and not tool_finger_rest.visible,
+                    "Studio restores rifle fingers without duplicated work digits")
+            must(work_wrist!=null and not work_wrist.visible and
+                rifle_wrist!=null and rifle_wrist.visible,
+                "Studio restores genuine full-size wrist cuff to original gun")
             var shield_v8: Node3D=final_soldier.find_child(
                 PremiumV8.SHIELD,true,false) as Node3D
             var rifle_v8: Node3D=final_soldier.find_child(
