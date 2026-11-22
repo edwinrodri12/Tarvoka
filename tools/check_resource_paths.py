@@ -26,23 +26,25 @@ def audit(root: pathlib.Path) -> list[str]:
             errors.append(f"{scene.relative_to(root)}: unreadable: {exc}")
             continue
         for declaration in RESOURCE_LINE.finditer(source):
+            # Report the source line so artists can fix broken references quickly.
+            location = f"{scene.relative_to(root)}:{source.count(chr(10), 0, declaration.start()) + 1}"
             match = PATH_ATTRIBUTE.search(declaration.group(1))
             if match is None:
-                errors.append(f"{scene.relative_to(root)}: external resource missing path attribute")
+                errors.append(f"{location}: external resource missing path attribute")
                 continue
             if not match.group(1).startswith("res://"):
-                errors.append(f"{scene.relative_to(root)}: invalid external resource path {match.group(1)}")
+                errors.append(f"{location}: invalid external resource path {match.group(1)}")
                 continue
             raw = match.group(1)[6:]
             # Preserve raw segments: PurePosixPath normalizes "." and repeated
             # separators before validation, hiding malformed declarations.
             parts = raw.split("/")
             if not raw or any(part in ("", ".", "..") for part in parts) or "\\" in raw:
-                errors.append(f"{scene.relative_to(root)}: invalid resource path {match.group(1)}")
+                errors.append(f"{location}: invalid resource path {match.group(1)}")
                 continue
             target = root.joinpath(*parts)
             if not target.is_file() or not target.resolve().is_relative_to(root):
-                errors.append(f"{scene.relative_to(root)}: missing resource {match.group(1)}")
+                errors.append(f"{location}: missing resource {match.group(1)}")
     return errors
 
 
