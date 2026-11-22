@@ -67,6 +67,47 @@ func _run()->void:
     studio.call("_a01_review_look",0.0,"superior")
     check(str(studio.get("_a01_review_focus"))=="superior",
         "true overhead look exposes solid wing and faction band")
+    # New real physical Android/hero LOD buttons. Exercise ACTUAL Studio
+    # controls, preserve stage D3, team paint and same camera/viewport.
+    var hero_before:Node3D=studio.get("model_root") as Node3D
+    var original_camera:Camera3D=studio.get("camera") as Camera3D
+    var original_preview:Node3D=studio.get("preview") as Node3D
+    studio.call("_studio_run_animation","damage_3")
+    check(DamageV6.stage(hero_before)==3,
+        "LOD change starts from actual D3 damage button state")
+    check(bool(studio.call("_a01_review_set_lod",8)),
+        "LOD8 button builds authentic low-poly Android model in same viewer")
+    var android:Node3D=studio.get("model_root") as Node3D
+    check(android!=null and android!=hero_before and
+        NoseV10.has_model(android) and
+        int(android.get_meta("tarvoka_a01_v10_lod",0))==8,
+        "low-poly A01 V10 geometry is the actual Android LOD8 rig")
+    check(DamageV6.stage(android)==3,
+        "switch from LOD13 to Android LOD8 preserves critical D3 damage")
+    check(studio.get("camera")==original_camera and
+        studio.get("preview")==original_preview and
+        str(studio.get("_a01_review_focus"))=="superior",
+        "LOD switch uses SAME Studio viewport, existing camera and focus")
+    studio.call("_on_faction",6)
+    await process_frame
+    android=studio.get("model_root") as Node3D
+    check(android!=null and NoseV10.has_model(android) and
+        int(android.get_meta("tarvoka_a01_v10_lod",0))==8 and
+        DamageV6.stage(android)==3,
+        "faction change inside Android LOD8 preserves LOD and damage D3")
+    check(bool(studio.call("_a01_review_set_lod",13)),
+        "LOD13 button restores detailed HERO model in same viewer")
+    var hero_after:Node3D=studio.get("model_root") as Node3D
+    check(hero_after!=null and NoseV10.has_model(hero_after) and
+        int(hero_after.get_meta("tarvoka_a01_v10_lod",0))==13 and
+        DamageV6.stage(hero_after)==3,
+        "LOD13 restores details without losing faction paint or D3")
+    check(not bool(studio.call("_a01_review_set_lod",9)) and
+        int(hero_after.get_meta("tarvoka_a01_v10_lod",0))==13,
+        "unsupported LOD requests are safely rejected")
+    studio.call("_studio_run_animation","damage_0")
+    check(DamageV6.stage(hero_after)==0,
+        "D0 repair after dual LOD changes restores completely intact A01")
     studio.call("_a01_review_spin")
     var orbit:=studio.get("_a01_review_tween") as Tween
     check(orbit!=null and orbit.is_running(),
