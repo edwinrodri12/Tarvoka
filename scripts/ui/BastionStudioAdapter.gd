@@ -73,6 +73,15 @@ const G16MechanicsV3=preload("res://scripts/ui/G16LogisticsMechanicsDamageV3.gd"
 const G16SculptV4=preload("res://scripts/ui/G16LogisticsSculptDamageV4.gd")
 const G16MaterialsV5=preload("res://scripts/ui/G16PremiumMaterialsDamageV5.gd")
 const G16ServiceV6=preload("res://scripts/ui/G16DeployableSupplyHardwareV6.gd")
+const A01Recon=preload("res://scripts/ui/A01ReconDroneV1.gd")
+const A01Finish=preload("res://scripts/ui/A01ReconFinishV2.gd")
+const A01HardwareV3=preload("res://scripts/ui/A01ReconFinishV3.gd")
+const A01SculptV4=preload("res://scripts/ui/A01ReconAirfoilV4.gd")
+const A01TailV5=preload("res://scripts/ui/A01ReconTailV5.gd")
+const A01DamageV6=preload("res://scripts/ui/A01ReconDamageV6.gd")
+const A01WingletV8=preload("res://scripts/ui/A01ReconWingletV8.gd")
+const A01WingletV9=preload("res://scripts/ui/A01ReconWingletV9.gd")
+const A01NoseOpticsV10=preload("res://scripts/ui/A01ReconNoseOpticsV10.gd")
 const G15SculptV2=preload("res://scripts/ui/G15ChassisAndMastFinishV2.gd")
 const G15FinishV3=preload("res://scripts/ui/G15ShelterCabFinishV3.gd")
 const G15AntennaV4=preload("res://scripts/ui/G15AntennaMechanicsV4.gd")
@@ -203,6 +212,12 @@ var g13_android_probe: Node = null
 var _g13_v4_tween: Tween
 var _g15_tween: Tween
 var _g16_tween: Tween
+var _a01_tween: Tween = null
+var a01_360_panel:VBoxContainer
+var a01_lod_readout:Label=null
+var _a01_review_tween:Tween = null
+var _a01_review_focus:String="general"
+var _a01_review_lod:int=13
 # G16 in the SAME native online Godot viewer: camera presets and persistent
 # resupply inspection never affect gameplay or production stats.
 var g16_360_panel: VBoxContainer
@@ -278,6 +293,13 @@ func _ready() -> void:
     var logistics_index:int=P06Models.ROLES.find("logistics_mobile")
     if logistics_index>=0:
         role_picker.set_item_text(logistics_index,"G16 · Logística blindada 6×6 · V6 FINAL")
+    var recon_index:int=P06Models.ROLES.find("uav_recon")
+    if recon_index>=0 and role_picker!=null:
+        # Appended role only; preserve all old picker indices and models.
+        while role_picker.item_count<=recon_index:
+            role_picker.add_item(P06Models.ROLES[role_picker.item_count])
+        role_picker.set_item_text(recon_index,
+            "A01 · Dron de reconocimiento · V10 EN DESARROLLO")
     # Preserve existing roles/indices; these are additional native 3D variants.
     for entry in [
         ["line","★ INFANTERÍA BÁSICA · Guardia"],
@@ -320,6 +342,8 @@ func _studio_role_from_link_key(value:String) -> String:
     match value.strip_edges().to_lower():
         "g16", "logistics_mobile", "logistica", "logistica_6x6":
             return "logistics_mobile"
+        "a01", "uav_recon", "dron_recon":
+            return "uav_recon"
         _:
             return "apc"
 
@@ -432,6 +456,34 @@ func _install_unified_studio_navigation() -> void:
         func(): _display_role("infantry_logistic"),
         "Médico · Curación",func(): _display_role("infantry_medic"))
     infantry_six_panel.visible=false
+    a01_360_panel=VBoxContainer.new()
+    a01_360_panel.name="A01V10_InspeccionFisicaMismoVisor"
+    a01_360_panel.add_theme_constant_override("separation",6)
+    studio_camera_panel.add_child(a01_360_panel)
+    _title(a01_360_panel,"A01 V10 · NARIZ, SENSOR EO/IR Y DAÑO 3D",13)
+    # Keep quality controls ABOVE camera presets: 1152x648 landscape
+    # screenshots previously clipped both buttons below the visible fold.
+    _add_paired(a01_360_panel,"LOD13 · detalle",
+        func(): _a01_review_set_lod(13),
+        "LOD8 · Android",func(): _a01_review_set_lod(8))
+    a01_lod_readout=Label.new()
+    a01_lod_readout.name="A01_LodActivo"
+    a01_lod_readout.text="Calidad activa: LOD13 · detalle"
+    a01_lod_readout.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART
+    a01_lod_readout.add_theme_font_size_override("font_size",12)
+    a01_360_panel.add_child(a01_lod_readout)
+    _add_paired(a01_360_panel,
+        "Frente",func(): _a01_review_look(180.0,"general"),
+        "Trasera",func(): _a01_review_look(0.0,"general"))
+    _add_paired(a01_360_panel,
+        "Lateral",func(): _a01_review_look(90.0,"general"),
+        "Superior",func(): _a01_review_look(0.0,"superior"))
+    _add_paired(a01_360_panel,
+        "Sensor EO/IR · detalle",func(): _a01_review_look(35.0,"optica"),
+        "Hélice y cola",func(): _a01_review_look(0.0,"cola"))
+    _add_paired(a01_360_panel,"Giro 360°",_a01_review_spin,
+        "Vista completa",func(): _a01_review_look(35.0,"general"))
+    a01_360_panel.visible=false
     infantry_360_panel=VBoxContainer.new()
     infantry_360_panel.name="InfanteriaV2_InspeccionEnMismoVisor"
     infantry_360_panel.add_theme_constant_override("separation",6)
@@ -643,6 +695,20 @@ func _studio_animation_specs(role: String) -> Array[Dictionary]:
         ])
         return actions
     match role:
+        "uav_recon":
+            return [
+                {"group":"A01 V10 · DRON DE RECONOCIMIENTO SIN ARMAMENTO"},
+                {"title":"Volar · hélice impulsora", "action":"a01_move"},
+                {"title":"Explorar · girar cámara óptica", "action":"a01_scan"},
+                {"title":"Simular impacto visual", "action":"a01_hit"},
+                {"group":"DAÑO ACUMULATIVO · SOLO ARTE, NO MODIFICA HP"},
+                {"title":"D0 · intacto / reparar", "action":"damage_0"},
+                {"title":"D1 · impactos superficiales", "action":"damage_1"},
+                {"title":"D2 · placa dañada y humo", "action":"damage_2"},
+                {"title":"D3 · avería crítica y fuego", "action":"damage_3"},
+                {"title":"D4 · fuselaje destruido", "action":"damage_4"},
+                {"title":"Detener pose (conservar daño)", "action":"stop"}
+            ]
         "tank":
             return [
                 {"group":"G09 V32 · MOVIMIENTO Y COMBATE"},
@@ -876,6 +942,9 @@ func _studio_run_animation(action: String) -> void:
     match action:
         "stop":
             _studio_quick_stop()
+        "a01_move","a01_scan","a01_hit":
+            if _role=="uav_recon":
+                _a01_play(action.trim_prefix("a01_"))
         "engineer_v6_inspect","engineer_v6_pack":
             if _role=="infantry_engineer":
                 _engineer_v6_run(action=="engineer_v6_inspect")
@@ -1138,7 +1207,15 @@ func _studio_run_animation(action: String) -> void:
             OS.shell_open("https://edwinrodri12.github.io/Tarvoka/tanque/")
         "damage_0","damage_1","damage_2","damage_3","damage_4":
             var selected_stage: int=int(action.get_slice("_",1))
-            if InfantryV1.supports(_role):
+            if _role=="uav_recon" and A01DamageV6.has_model(model_root):
+                if _a01_tween!=null and _a01_tween.is_running():
+                    _a01_tween.kill()
+                A01Recon.restore(model_root)
+                if A01DamageV6.set_stage(model_root,selected_stage):
+                    status_label.text=(
+                        "A01 V6 · %s · SOLO ARTE · sin cambios a HP, visión o combate" %
+                        A01DamageV6.STAGES[selected_stage])
+            elif InfantryV1.supports(_role):
                 if InfantryV1.set_damage(model_root,selected_stage):
                     if selected_stage==4:
                         P06Models.pose_model(_role,model_root,"idle",1.0)
@@ -1232,8 +1309,92 @@ func _studio_g11_turn_done(art: Node3D) -> void:
 func _studio_review_reset_camera() -> void:
     if _g16_review_tween!=null and _g16_review_tween.is_running():
         _g16_review_tween.kill()
+    if _a01_review_tween!=null and _a01_review_tween.is_running():
+        _a01_review_tween.kill()
     _g16_review_focus="general"
+    _a01_review_focus="general"
     _reset_camera()
+
+# A01 cameras operate in the same Godot SubViewport.  No tactical fog,
+# combat target acquisition or fake aircraft is introduced by this rig.
+func _a01_review_look(yaw:float,focus:String)->void:
+    if _role!="uav_recon" or model_root==null or not A01Finish.has_model(model_root):
+        return
+    if _a01_review_tween!=null and _a01_review_tween.is_running():
+        _a01_review_tween.kill()
+    _a01_review_focus=focus if focus in ["general","optica","cola","superior"] else "general"
+    _yaw=yaw
+    model_root.rotation_degrees.y=yaw
+    _update_camera()
+    if status_label!=null:
+        status_label.text="A01 V10 · %s · LOD%d · dron 3D sin armamento" % [
+            _a01_review_focus,_a01_review_lod]
+
+# Switch REAL Godot LOD in the existing Studio viewport. Preserve the
+# selected faction, 360 camera preset and cumulative D0-D4 artwork. There
+# is never a second viewer, a duplicate actor or a gameplay-stat change.
+func _a01_review_set_lod(lod:int)->bool:
+    if _role!="uav_recon" or preview==null or model_root==null or (
+            lod not in [8,13]):
+        return false
+    if not A01NoseOpticsV10.has_model(model_root):
+        return false
+    if lod==_a01_review_lod:
+        return true
+    var before_damage:int=A01DamageV6.stage(model_root)
+    if before_damage<0:
+        return false
+    var candidate:Node3D=P06Models.build("uav_recon",_faction,true,lod)
+    if candidate==null:
+        return false
+    if not A01NoseOpticsV10.has_model(candidate) or (
+            not A01DamageV6.set_stage(candidate,before_damage)):
+        candidate.free()
+        return false
+    # Animated scan and orbit must not retain stale nodes after rebuild.
+    if _a01_tween!=null and _a01_tween.is_running():
+        _a01_tween.kill()
+    if _a01_review_tween!=null and _a01_review_tween.is_running():
+        _a01_review_tween.kill()
+    var previous:Node3D=model_root
+    preview.remove_child(previous)
+    previous.queue_free()
+    model_root=candidate
+    preview.add_child(model_root)
+    _a01_review_lod=lod
+    if a01_lod_readout!=null:
+        a01_lod_readout.text=(
+            "Calidad activa: LOD13 · detalle" if lod==13 else
+            "Calidad activa: LOD8 · Android")
+    model_root.rotation_degrees.y=_yaw
+    if faction_picker!=null:
+        faction_picker.visible=true
+        faction_picker.select(_faction)
+    _update_camera()
+    _update_details()
+    if status_label!=null:
+        status_label.text="A01 V10 · LOD%d · cámara %s · daño D%d · facción conservada" % [
+            lod,_a01_review_focus,before_damage]
+    return true
+
+func _a01_review_spin_tick(angle:float)->void:
+    if _role!="uav_recon" or model_root==null:
+        return
+    _yaw=angle
+    model_root.rotation_degrees.y=angle
+
+func _a01_review_spin()->void:
+    if _role!="uav_recon" or model_root==null or not A01Finish.has_model(model_root):
+        return
+    if _a01_review_tween!=null and _a01_review_tween.is_running():
+        _a01_review_tween.kill()
+    _a01_review_focus="general"
+    _update_camera()
+    _a01_review_tween=create_tween()
+    _a01_review_tween.tween_method(Callable(self,"_a01_review_spin_tick"),
+        _yaw,_yaw+360.0,7.0).set_trans(Tween.TRANS_LINEAR)
+    if status_label!=null:
+        status_label.text="A01 V10 · giro 360° · LOD%d · visor 3D TARVOKA" % _a01_review_lod
 
 # G16 V6 native camera presets: same SubViewport and real 3D geometry.
 # These are inspection tools only; the playable logistics rules do not change.
@@ -1339,6 +1500,36 @@ func _infantry_review_spin() -> void:
     status_label.text="Infantería %s · revisión 360° real en Godot" % (
         _infantry_review_edition())
 
+# A01 reconnaissance V1 preview uses the same actual Godot SubViewport.
+# No synthetic fog reveal and no attack capability are created by this rig.
+func _a01_play(kind:String)->void:
+    if _role!="uav_recon" or model_root==null or not A01Recon.has_model(model_root):
+        return
+    if kind not in A01Recon.VALID_POSES:
+        return
+    if A01DamageV6.has_model(model_root) and A01DamageV6.stage(model_root)==4 and kind in ["move","scan"]:
+        status_label.text="A01 V10 · aeronave destruida, selecciona D0 para reparar."
+        return
+    if _a01_tween!=null and _a01_tween.is_running():
+        _a01_tween.kill()
+    var art:Node3D=model_root
+    A01Recon.restore(art)
+    if kind=="idle":
+        return
+    _a01_tween=create_tween()
+    _a01_tween.tween_method(Callable(self,"_a01_tick").bind(art,kind),
+        0.0,1.0,2.8 if kind=="scan" else 1.5)
+    _a01_tween.tween_callback(Callable(self,"_a01_done").bind(art))
+    status_label.text="A01 V10 · %s · animación óptica 3D, sin alterar niebla" % kind
+
+func _a01_tick(progress:float,art:Node3D,kind:String)->void:
+    if is_instance_valid(art):
+        A01Recon.pose(art,kind,progress)
+
+func _a01_done(art:Node3D)->void:
+    if is_instance_valid(art):
+        A01Recon.restore(art)
+
 # Rebuild the actual native Godot mesh inside the existing SubViewport.
 # Preserve faction, damage, camera heading and comparison revision.
 func _infantry_review_rebuild(latest: bool, lod: int) -> bool:
@@ -1414,8 +1605,8 @@ func _engineer_v6_run(opening: bool) -> void:
         _infantry_tween.kill()
     if _engineer_v6_tween!=null and _engineer_v6_tween.is_running():
         _engineer_v6_tween.kill()
-    # Read the actual hinge angle before reversing or restarting a tween.
-    # Starting at hard-coded 0/1 snapped the board visibly if interrupted.
+    # Preserve the actual hinge position when reversing an interrupted
+    # inspection: never snap the engineering barrier between its states.
     var hinge: Node3D=model_root.find_child(
         EngineerFinishV6.RIG,true,false) as Node3D
     if hinge==null:
@@ -1457,6 +1648,11 @@ func _studio_quick_action(kind: String) -> void:
     match _role:
         "line","scout","infantry_urban","infantry_defense","infantry_antitank","infantry_engineer","infantry_sniper","infantry_logistic","infantry_medic","infantry_commando":
             _infantry_play("hit_bullet" if kind=="hit" else kind)
+        "uav_recon":
+            if kind in ["attack","attack_air","attack_ground"]:
+                status_label.text="A01 es un dron de reconocimiento SIN armamento."
+            else:
+                _a01_play(kind)
         "logistics_mobile":
             if kind in ["attack","attack_air","attack_ground"]:
                 status_label.text="G16 no tiene armamento. Solo logística y descarga."
@@ -1487,7 +1683,12 @@ func _studio_quick_action(kind: String) -> void:
             status_label.text="Este modelo no tiene animación propia implementada."
 
 func _studio_quick_stop() -> void:
-    if InfantryV1.supports(_role):
+    if _role=="uav_recon":
+        if _a01_tween!=null and _a01_tween.is_running():
+            _a01_tween.kill()
+        if model_root!=null:
+            A01Recon.restore(model_root)
+    elif InfantryV1.supports(_role):
         if _engineer_v6_tween!=null and _engineer_v6_tween.is_running():
             _engineer_v6_tween.kill()
         if _infantry_tween!=null and _infantry_tween.is_running():
@@ -1541,6 +1742,7 @@ func _refresh_unified_studio_navigation() -> void:
             "apc": label="P06 · Bastión · V25"
             "mlrs": label="G11 · Lanzador · V33"
             "attack_heli": label="A01 · Helicóptero HAT-29 · V14"
+            "uav_recon": label="A01 · Dron de reconocimiento · V10 EN DESARROLLO"
             "logistics_mobile": label="G16 · Logística blindada 6×6 · V6 PBR y suministros articulados"
             "ew_mobile": label="G15 · Guerra electrónica · V11 (neumáticos, óptica y electrónica 3D)"
             "aa_mobile": label="G13 · Antiaéreo · V54 caucho y rodadura 3D"
@@ -1581,6 +1783,8 @@ func _refresh_unified_studio_navigation() -> void:
         infantry_360_panel.visible=not building and InfantryV1.supports(_role)
     if g16_360_panel!=null:
         g16_360_panel.visible=not building and _role=="logistics_mobile"
+    if a01_360_panel!=null:
+        a01_360_panel.visible=not building and _role=="uav_recon"
     if studio_animation_panel!=null:
         studio_animation_panel.visible=not building and studio_active_tab==0
     _studio_rebuild_animation_catalog()
@@ -4019,15 +4223,29 @@ func _update_camera() -> void:
     super._update_camera()
     if (model_root!=null and camera!=null and InfantryV1.supports(_role) and
             infantry_review_lod==13):
-        # The published phone viewer had no full-body/casco framing presets.
-        # Hero mode now fits the actual 2.6m-high soldier from boots to brow.
-        # Close-up is explicitly opt-in; tactical LOD8 keeps the wider view.
         if _infantry_helmet_focus:
             camera.size=2.15
             camera.look_at(Vector3(0,2.06,0),Vector3.UP)
         elif _role=="infantry_engineer":
             camera.size=3.8 / maxf(0.90,_zoom)
             camera.look_at(Vector3(0,1.18,0),Vector3.UP)
+    if _role=="uav_recon" and model_root!=null and camera!=null:
+        if _a01_review_focus=="optica":
+            var optics:=model_root.find_child(A01Recon.SENSOR,true,false) as Node3D
+            var target:Vector3=optics.global_position if optics!=null else Vector3(0,0.65,-0.60)
+            camera.position=target+Vector3(2.5,1.4,-2.9)
+            camera.look_at(target,Vector3.UP)
+            camera.size=2.05/maxf(0.65,_zoom)
+        elif _a01_review_focus=="cola":
+            var target:=model_root.to_global(Vector3(0,1.02,1.14))
+            camera.position=target+Vector3(3.3,1.9,2.5)
+            camera.look_at(target,Vector3.UP)
+            camera.size=2.85/maxf(0.65,_zoom)
+        elif _a01_review_focus=="superior":
+            var target:=model_root.to_global(Vector3(0,1.04,-0.10))
+            camera.position=target+Vector3(0.35,5.7,0.25)
+            camera.look_at(target,Vector3(0,0,-1))
+            camera.size=4.1/maxf(0.65,_zoom)
     if _role=="logistics_mobile" and model_root!=null and camera!=null:
         # The only camera that changes is the existing unified viewer.
         # Keep close-ups stable during faction/color and zoom rebuilds.
@@ -4155,6 +4373,11 @@ func _stage_p06() -> int:
 
 func _display_role(role: String) -> void:
     _infantry_helmet_focus=false
+    if _a01_tween!=null and _a01_tween.is_running():
+        _a01_tween.kill()
+    if _a01_review_tween!=null and _a01_review_tween.is_running():
+        _a01_review_tween.kill()
+    _a01_review_focus="general"
     if role!="logistics_mobile":
         _g16_review_focus="general"
     if _g16_review_tween!=null and _g16_review_tween.is_running():
@@ -4194,6 +4417,26 @@ func _display_role(role: String) -> void:
     if not _g13_reflection_saved_v53.is_empty():
         _g13_v53_set_reflections(false)
     super._display_role(role)
+    if role=="uav_recon":
+        # UnitArtStudioWeb builds neutral paint (-1) for every role other
+        # than the tank. Rebuild this same viewport's A01 with _faction.
+        # Calling the base again would silently erase faction colors.
+        if model_root!=null:
+            preview.remove_child(model_root)
+            model_root.queue_free()
+        model_root=P06Models.build("uav_recon",_faction,true,_a01_review_lod)
+        if a01_lod_readout!=null:
+            a01_lod_readout.text=(
+                "Calidad activa: LOD13 · detalle" if _a01_review_lod==13 else
+                "Calidad activa: LOD8 · Android")
+        if model_root==null or not A01NoseOpticsV10.has_model(model_root):
+            push_error("A01 V10 nose/optics or conformal winglet paint missing in shared Studio")
+            return
+        preview.add_child(model_root)
+        model_root.rotation_degrees.y=_yaw
+        faction_picker.visible=true
+        faction_picker.select(_faction)
+        _update_camera()
     if InfantryV1.supports(role):
         if infantry_360_tween!=null and infantry_360_tween.is_running():
             infantry_360_tween.kill()
@@ -4427,6 +4670,30 @@ func _on_faction(index: int) -> void:
         _zoom=saved_zoom
         if model_root!=null:
             model_root.rotation_degrees.y=_yaw
+        _update_camera()
+        return
+    if _role=="uav_recon":
+        if index<0 or index>=Factions.FACTIONS.size():
+            return
+        var keep_yaw:float=_yaw
+        var keep_zoom:float=_zoom
+        # _display_role resets A01 camera preset to general. Reapplying
+        # this focus AFTER rebuilding the 3D model prevents an unwanted
+        # jump away from sensor/overhead/tail inspection on faction change.
+        var keep_focus:String=_a01_review_focus
+        var keep_damage:int=(
+            A01DamageV6.stage(model_root) if model_root!=null and
+            A01DamageV6.has_model(model_root) else 0)
+        _faction=index
+        _display_role("uav_recon")
+        faction_picker.select(index)
+        _yaw=keep_yaw
+        _zoom=keep_zoom
+        _a01_review_focus=keep_focus
+        if model_root!=null:
+            model_root.rotation_degrees.y=_yaw
+            if A01DamageV6.has_model(model_root):
+                A01DamageV6.set_stage(model_root,keep_damage)
         _update_camera()
         return
     if _role=="ew_mobile":
@@ -4970,6 +5237,11 @@ func _stop_animation() -> void:
 
 func _process(delta: float) -> void:
     super._process(delta)
+    # A01 V6 is checked once during model build/selection. Avoid a deep
+    # model tree audit sixty times per second on mobile browsers.
+    if _role=="uav_recon" and model_root!=null and bool(model_root.get_meta(A01DamageV6.FLAG,false)):
+        _effect_time+=maxf(0.0,delta)
+        A01DamageV6.animate(model_root,_effect_time)
     if _role=="attack_heli" and HeliV13.has_model(model_root):
         _heli_damage_clock+=maxf(0.0,delta)
         if _heli_animation.is_empty():
@@ -5067,6 +5339,15 @@ func _process(delta: float) -> void:
         _update_details()
 
 func _update_details() -> void:
+    if _role=="uav_recon" and model_root!=null and detail_label!=null and status_label!=null:
+        var ready_a01:bool=A01NoseOpticsV10.has_model(model_root)
+        var current_damage:int=A01DamageV6.stage(model_root) if ready_a01 else -1
+        detail_label.text="A01 V10 EN DESARROLLO · LOD%d · UAV SIN ARMAS · %d mallas · %s" % [
+            _a01_review_lod,P06Models.inspect_meshes(model_root),
+            A01DamageV6.STAGES[current_damage] if ready_a01 else "modelo incompleto"]
+        status_label.text="A01 · %s · daño 3D artístico, sin cambiar HP, visión ni ataque" % [
+            str(Factions.FACTIONS[_faction]["name"])]
+        return
     if _role=="logistics_mobile" and model_root!=null and detail_label!=null and status_label!=null:
         var ready_g16:bool=G16Logistics.has_model(model_root) and G16ExteriorV2.has_model(model_root) and G16MechanicsV3.has_model(model_root) and G16SculptV4.has_model(model_root) and G16MaterialsV5.has_model(model_root) and G16ServiceV6.has_model(model_root)
         var stage:int=G16MechanicsV3.stage(model_root) if G16MechanicsV3.has_model(model_root) else 0

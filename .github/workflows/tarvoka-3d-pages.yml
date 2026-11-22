@@ -214,8 +214,7 @@ on:
   pull_request:
     paths:
       - ".github/workflows/tarvoka-3d-pages.yml"
-      # Always verify edits to the same native 3D scene and its Engineer rig
-      # before approving art, rather than testing only when YAML changes.
+      # Independently validate the Engineer's original shared Godot Studio.
       - "scripts/ui/BastionStudioAdapter.gd"
       - "scripts/ui/InfantryEngineerFinishV6.gd"
       - "scripts/ui/InfantryEngineerCompletenessV7.gd"
@@ -262,7 +261,7 @@ concurrency:
   # deployment, and the city preview's workflow_run follows native success.
   # Preserve the dedicated city V16 publish slot and ignored-check isolation.
   group: >-
-    ${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref == 'feat/hq-v24-live-shared-pages-integration-20261121' && 'tarvoka-hq-v24-actual-pages-check' || github.event_name == 'pull_request' && github.event.pull_request.head.ref == 'art/engineer-v11-integrated-hq-v24-20261121' && 'tarvoka-engineer-v11-hq24-pages-review' || github.event_name == 'pull_request' && github.event.pull_request.head.ref == 'art/engineer-v10-anatomic-arms-workhand-20261121' && 'tarvoka-engineer-v10-native-pages-review' || github.event_name == 'pull_request' && github.event.pull_request.head.ref == 'fix/infantry-engineer-v6-360-hinge-continuity-20261121' && 'tarvoka-engineer-v6-hinge-pages-review' || github.event_name == 'pull_request' && github.event.pull_request.head.ref == 'feat/infantry-six-core-camps-20261120' && 'tarvoka-infantry-six-camps-pages-review' || github.event_name == 'pull_request' && github.event.pull_request.head.ref == 'feat/infantry-v3-tactical-color-lod-studio-20261120' && 'tarvoka-infantry-v3-tactical-pages-review' || github.event_name == 'pull_request' && github.event.pull_request.head.ref == 'feat/infantry-v2-in-one-studio-20261120' && 'tarvoka-infantry-v2-native-pages-review' || github.event_name == 'pull_request' && github.event.pull_request.head.ref == 'feat/g16-v6-consolidated-service-hardware-20261120' && 'tarvoka-g16-v6-native-pages-review' || github.event_name == 'pull_request' && github.event.pull_request.head.ref == 'feat/g16-v5-materials-glazing-damage-20261120' && 'tarvoka-g16-v5-native-pages-review' || github.event_name == 'pull_request' && github.event.pull_request.head.ref == 'feat/g16-v4-body-sculpt-wreck-studio-20261119' && 'tarvoka-g16-v4-pages-review' || github.event_name == 'pull_request' && github.event.pull_request.head.ref == 'feat/g16-v1-armored-logistics-studio-20261119' && 'tarvoka-g16-v3-pages-review' || github.event_name == 'pull_request' && github.event.pull_request.head.ref == 'feat/g15-v11-wheel-sidewall-cab-360-20261119' && 'tarvoka-g15-v11-pages-review' || github.event_name == 'pull_request' && github.event.pull_request.head.ref == 'fix/g15-v11b-physical-contour-closure-20261119' && 'tarvoka-g15-v11b-pages-review' || github.event_name == 'push' && startsWith(github.event.head_commit.message, 'ci(studio): ship civilian city V16 unified buildings') && 'tarvoka-city-v16-native-publish' || github.event_name == 'workflow_run' && (github.event.workflow_run.conclusion != 'success' || github.event.workflow_run.event != 'push') && 'tarvoka-pages-ignored-checks' || github.event_name == 'push' && startsWith(github.event.head_commit.message, 'art(infantry): integrate Engineer V11') && 'tarvoka-engineer-v11-hq24-publish' || github.event_name == 'push' && startsWith(github.event.head_commit.message, 'ci(workshop-pages):') && 'tarvoka-workshop-auto-lod-publish' || github.event_name == 'push' && startsWith(github.event.head_commit.message, 'ci(g16-pages):') && 'tarvoka-g16-v3-verified-main-publish' || github.event_name == 'push' && startsWith(github.event.head_commit.message, 'ci(g16-v4-pages):') && 'tarvoka-g16-v4-verified-main-deploy' || github.event_name == 'push' && startsWith(github.event.head_commit.message, 'ci(g16-v5-pages):') && 'tarvoka-g16-v5-verified-main-publish' || 'tarvoka-native-3d-studio-build' }}
+    ${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref == 'feat/hq-v24-live-shared-pages-integration-20261121' && 'tarvoka-hq-v24-actual-pages-check' || github.event_name == 'pull_request' && github.event.pull_request.head.ref == 'art/engineer-v11-integrated-hq-v24-20261121' && 'tarvoka-engineer-v11-hq24-pages-review' || github.event_name == 'pull_request' && github.event.pull_request.head.ref == 'art/engineer-v10-anatomic-arms-workhand-20261121' && 'tarvoka-engineer-v10-native-pages-review' || github.event_name == 'pull_request' && github.event.pull_request.head.ref == 'fix/infantry-engineer-v6-360-hinge-continuity-20261121' && 'tarvoka-engineer-v6-hinge-pages-review' || github.event_name == 'pull_request' && github.event.pull_request.head.ref == 'feat/a01-recon-uav-v1-studio-20261120' && 'tarvoka-a01-v6-native-pages-review' || github.event_name == 'pull_request' && github.event.pull_request.head.ref == 'feat/infantry-six-core-camps-20261120' && 'tarvoka-infantry-six-camps-pages-review' || github.event_name == 'pull_request' && github.event.pull_request.head.ref == 'feat/infantry-v3-tactical-color-lod-studio-20261120' && 'tarvoka-infantry-v3-tactical-pages-review' || github.event_name == 'pull_request' && github.event.pull_request.head.ref == 'feat/infantry-v2-in-one-studio-20261120' && 'tarvoka-infantry-v2-native-pages-review' || github.event_name == 'pull_request' && github.event.pull_request.head.ref == 'feat/g16-v6-consolidated-service-hardware-20261120' && 'tarvoka-g16-v6-native-pages-review' || github.event_name == 'pull_request' && github.event.pull_request.head.ref == 'feat/g16-v5-materials-glazing-damage-20261120' && 'tarvoka-g16-v5-native-pages-review' || github.event_name == 'pull_request' && github.event.pull_request.head.ref == 'feat/g16-v4-body-sculpt-wreck-studio-20261119' && 'tarvoka-g16-v4-pages-review' || github.event_name == 'pull_request' && github.event.pull_request.head.ref == 'feat/g16-v1-armored-logistics-studio-20261119' && 'tarvoka-g16-v3-pages-review' || github.event_name == 'pull_request' && github.event.pull_request.head.ref == 'feat/g15-v11-wheel-sidewall-cab-360-20261119' && 'tarvoka-g15-v11-pages-review' || github.event_name == 'pull_request' && github.event.pull_request.head.ref == 'fix/g15-v11b-physical-contour-closure-20261119' && 'tarvoka-g15-v11b-pages-review' || github.event_name == 'push' && startsWith(github.event.head_commit.message, 'ci(studio): ship civilian city V16 unified buildings') && 'tarvoka-city-v16-native-publish' || github.event_name == 'workflow_run' && (github.event.workflow_run.conclusion != 'success' || github.event.workflow_run.event != 'push') && 'tarvoka-pages-ignored-checks' || github.event_name == 'push' && startsWith(github.event.head_commit.message, 'art(infantry): integrate Engineer V11') && 'tarvoka-engineer-v11-hq24-publish' || github.event_name == 'push' && startsWith(github.event.head_commit.message, 'ci(workshop-pages):') && 'tarvoka-workshop-auto-lod-publish' || github.event_name == 'push' && startsWith(github.event.head_commit.message, 'ci(g16-pages):') && 'tarvoka-g16-v3-verified-main-publish' || github.event_name == 'push' && startsWith(github.event.head_commit.message, 'ci(g16-v4-pages):') && 'tarvoka-g16-v4-verified-main-deploy' || github.event_name == 'push' && startsWith(github.event.head_commit.message, 'ci(g16-v5-pages):') && 'tarvoka-g16-v5-verified-main-publish' || 'tarvoka-native-3d-studio-build' }}
   cancel-in-progress: false
 
 jobs:
@@ -300,7 +299,7 @@ jobs:
           # release branch. Only P06 model/animation files and an additive
           # subclass adapter come from main; no building assets are replaced.
           for item in UnitModels3D.gd InfantryFamilyV1.gd InfantrySculptFinishV2.gd InfantryVariantsV4.gd InfantryEngineerSilhouetteV5.gd InfantryEngineerFinishV6.gd InfantryEngineerCompletenessV7.gd InfantryEngineerPremiumV8.gd InfantryEngineerFinishV9.gd InfantryEngineerAnatomyV10.gd InfantryEngineerMechanicsV11.gd InfantryEngineerDorsalV12.gd InfantryCampRosterV1.gd AttackHelicopterV1.gd AttackHelicopterCabinV2.gd AttackHelicopterRotorV3.gd AttackHelicopterEnginesV4.gd AttackHelicopterLandingV5.gd AttackHelicopterLandingFinishV6.gd AttackHelicopterReadabilityV7.gd AttackHelicopterSilhouetteV8.gd AttackHelicopterFinishV10.gd AttackHelicopterTailV11.gd AttackHelicopterNoseV12.gd AttackHelicopterDamageV13.gd AttackHelicopterFactionV14.gd AttackHelicopterCombatFXV14.gd AttackHelicopterNightStudioV144.gd AttackHelicopterRotorMountV145.gd AttackHelicopterRotorDampersV146.gd AttackHelicopterDamperFinishV147.gd AttackHelicopterPitchHingesV148.gd AttackHelicopterRotorAnchorsV149.gd AttackHelicopterRotorContactV1410.gd AttackHelicopterBladeRootsV1411.gd AttackHelicopterBladeSeamV1412.gd AttackHelicopterHubCrownV1413.gd AttackHelicopterHubWreckV1414.gd AttackHelicopterHubCutFinishV1415.gd BastionVisualRig3D.gd BastionDamage3D.gd BastionStudioAdapter.gd APCArtV1.gd APCArmorV2.gd APCBatchingV4.gd APCFinishV3.gd APCDetailV5.gd APCFinishV6.gd APCMachineGunV7.gd APCDamageV7.gd APCRearDesignV10.gd APCExteriorV11.gd APCTurretV12.gd APCSurfaceV13.gd APCWheelV14.gd APCUndercarriageV15.gd APCJointFinishV16.gd APCContourV17.gd APCWheelwellV18.gd APCUnifiedFlankV19.gd APCMicrodetailV20.gd APCMaterialFinishV21.gd APCWeatherFinishV22.gd APCTireFinishV23.gd APCRubberArchV24.gd APCClosedTiresV25.gd APCTacticalLOD8.gd APCDistanceLODControllerV9.gd APCWeaponAudioV8.gd APCVisualRigV1.gd G11Art3D.gd G11VisualRig3D.gd G11FinishV2.gd G11SurfaceV3.gd G11GeometryV4.gd G11MechanicsV5.gd G11DamageSculptV6.gd G11DamageAtmosphereV7.gd G11SequentialSalvoV8.gd G11ExhaustV9.gd G11CooldownV10.gd G11ArmorFinishV11.gd G11CabChassisV12.gd G11TracksFactionV13.gd G11MechanicalDetailV14.gd G11AftPodFinishV15.gd G11FrontFrameV16.gd G11SurfaceWeatherV17.gd G11TrackAssemblyV18.gd G11TrackFinishV19.gd G11WheelSuspensionV20.gd G11ShockMountFinishV21.gd G11SuspensionJointsV22.gd G11JointFinishV23.gd G11MobileLOD.gd G11TacticalReadabilityV24.gd G11BattleLODControllerV25.gd G11BattleContextV25.gd G11RocketFaceReadabilityV25.gd G11TacticalPaintReadabilityV27.gd G11CameraIdentityV28.gd G11BattleActionsV29.gd G11RearUndercarriageV30.gd G11RocketTrailsV30.gd G11RocketFlightV31.gd G11RunningGearV32.gd G11FinalAuditV33.gd G13MobileAirDefenseV1.gd G13DetailV2.gd G13GroundAirFinishV4.gd G13UndercarriageV6.gd G13WheelFinishV7.gd G13SurfaceFinishV8.gd G13SilhouetteV10.gd InfantryBarracksBattle3D.gd InfantryBarracksWindowShadeV11.gd VisualStyle.gd FactionIdentity.gd CommandCityArtV14.gd HeadquartersBattle3D.gd HeadquartersCurvedRoof3D.gd HeadquartersBattleAccents3D.gd HeadquartersMapLOD3D.gd BattleTerrain3D.gd TerrainVisualMapBridge3D.gd TerrainSurfaceFinish3D.gd TerrainSurfaceSampler3D.gd TerrainStudioRoadShore3D.gd TerrainStudioSnowPaletteV15.gd WinterBattleBiome.gd; do
-            test -s "hq-android-v15/scripts/ui/${item}"
+            if [ ! -s "hq-android-v15/scripts/ui/${item}" ]; then echo "::error::Missing combined Studio file: ${item}"; exit 1; fi
             cp "hq-android-v15/scripts/ui/${item}" "scripts/ui/${item}"
           done
           # The pinned HQ 3D release scene predates the Workshop battle
@@ -386,6 +385,52 @@ jobs:
             test -s "$g16_source"
             cp "$g16_source" scripts/ui/
           done
+          # A01 uses the identical original Godot 3D catalogue, but a
+          # distinct unarmed reconnaissance mesh. Bring PR/main revisions
+          # from the same checkout as UnitModels3D and BastionStudioAdapter.
+          test -s hq-android-v15/scripts/ui/A01ReconDroneV1.gd
+          test -s hq-android-v15/scripts/ui/A01ReconFinishV2.gd
+          test -s hq-android-v15/scripts/ui/A01ReconFinishV3.gd
+          test -s hq-android-v15/scripts/ui/A01ReconAirfoilV4.gd
+          test -s hq-android-v15/scripts/ui/A01ReconTailV5.gd
+          test -s hq-android-v15/scripts/ui/A01ReconDamageV6.gd
+          test -s hq-android-v15/scripts/ui/A01ReconWingletV8.gd
+          test -s hq-android-v15/scripts/ui/A01ReconWingletV9.gd
+          test -s hq-android-v15/scripts/ui/A01ReconNoseOpticsV10.gd
+          cp hq-android-v15/scripts/ui/A01ReconDroneV1.gd scripts/ui/
+          cp hq-android-v15/scripts/ui/A01ReconFinishV2.gd scripts/ui/
+          cp hq-android-v15/scripts/ui/A01ReconFinishV3.gd scripts/ui/
+          cp hq-android-v15/scripts/ui/A01ReconAirfoilV4.gd scripts/ui/
+          cp hq-android-v15/scripts/ui/A01ReconTailV5.gd scripts/ui/
+          cp hq-android-v15/scripts/ui/A01ReconDamageV6.gd scripts/ui/
+          cp hq-android-v15/scripts/ui/A01ReconWingletV8.gd scripts/ui/
+          cp hq-android-v15/scripts/ui/A01ReconWingletV9.gd scripts/ui/
+          cp hq-android-v15/scripts/ui/A01ReconNoseOpticsV10.gd scripts/ui/
+          test -s hq-android-v15/tests/test_a01_recon_drone_v1.gd
+          cp hq-android-v15/tests/test_a01_recon_drone_v1.gd tests/
+          test -s hq-android-v15/tests/test_a01_recon_shared_studio.gd
+          cp hq-android-v15/tests/test_a01_recon_shared_studio.gd tests/
+          test -s hq-android-v15/tests/test_a01_recon_damage_v6.gd
+          cp hq-android-v15/tests/test_a01_recon_damage_v6.gd tests/
+          test -s hq-android-v15/tests/test_a01_recon_mobile_budget_v7.gd
+          cp hq-android-v15/tests/test_a01_recon_mobile_budget_v7.gd tests/
+          test -s hq-android-v15/tests/test_a01_recon_winglet_v8.gd
+          cp hq-android-v15/tests/test_a01_recon_winglet_v8.gd tests/
+          test -s hq-android-v15/tests/test_a01_recon_winglet_v9.gd
+          cp hq-android-v15/tests/test_a01_recon_winglet_v9.gd tests/
+          test -s hq-android-v15/tests/test_a01_recon_nose_optics_v10.gd
+          cp hq-android-v15/tests/test_a01_recon_nose_optics_v10.gd tests/
+          grep -Fq 'A01Recon.build' scripts/ui/UnitModels3D.gd
+          grep -Fq 'A01Finish.apply' scripts/ui/UnitModels3D.gd
+          grep -Fq 'A01HardwareV3.apply' scripts/ui/UnitModels3D.gd
+          grep -Fq 'A01AirfoilV4.apply' scripts/ui/UnitModels3D.gd
+          grep -Fq 'A01TailV5.apply' scripts/ui/UnitModels3D.gd
+          grep -Fq 'A01DamageV6.prepare' scripts/ui/UnitModels3D.gd
+          grep -Fq 'A01WingletV8.apply' scripts/ui/UnitModels3D.gd
+          grep -Fq 'A01WingletV9.apply' scripts/ui/UnitModels3D.gd
+          grep -Fq 'A01NoseOpticsV10.apply' scripts/ui/UnitModels3D.gd
+          grep -Fq 'func _a01_review_look' scripts/ui/BastionStudioAdapter.gd
+          grep -Fq 'A01 · Dron de reconocimiento · V10 EN DESARROLLO' scripts/ui/BastionStudioAdapter.gd
           test -s scripts/ui/G16ArmoredLogisticsV1.gd
           test -s scripts/ui/G16LogisticsExteriorV2.gd
           test -s scripts/ui/G16LogisticsMechanicsDamageV3.gd
@@ -1492,6 +1537,79 @@ jobs:
           test -s build/qa/g16-v6/g16-v6-unified-studio.png
           test -s build/qa/g16-v6/g16-v6-unified-deployed.png
           test -s build/qa/g16-v6/g16-v6-unified-hose-closeup.png
+          # A01 — first original unarmed reconnaissance drone in same Studio.
+          # Both the native geometry (8 factions x LOD8/13) and real selector
+          # need to pass before any public A01 preview is advertised.
+          timeout 190s xvfb-run -a -s '-screen 0 1280x720x24' env LIBGL_ALWAYS_SOFTWARE=1 \
+            /tmp/Godot_v4.3-stable_linux.x86_64 \
+            --rendering-method gl_compatibility --audio-driver Dummy --path . \
+            --script res://tests/test_a01_recon_drone_v1.gd \
+            2>&1 | tee /tmp/a01-native-v1.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed|Parse Error:' /tmp/a01-native-v1.log; then
+            echo '::error::A01 V1 closed body, optics or faction LOD failed' >&2; exit 1
+          fi
+          grep -F 'PASS A01 RECON UAV V5:' /tmp/a01-native-v1.log
+          test "$(find build/qa/a01-v1 -maxdepth 1 -name 'a01-f*-lod*.png' | wc -l)" -eq 16
+          timeout 180s xvfb-run -a -s '-screen 0 1280x720x24' env LIBGL_ALWAYS_SOFTWARE=1 \
+            /tmp/Godot_v4.3-stable_linux.x86_64 \
+            --rendering-method gl_compatibility --audio-driver Dummy --path . \
+            --script res://tests/test_a01_recon_damage_v6.gd \
+            2>&1 | tee /tmp/a01-v6-damage.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed|Parse Error:' /tmp/a01-v6-damage.log; then
+            echo '::error::A01 V6 damage stages and repair did not pass' >&2; exit 1
+          fi
+          grep -F 'PASS A01 V6 NATIVE DAMAGE:' /tmp/a01-v6-damage.log
+          test "$(find build/qa/a01-v6 -maxdepth 1 -name 'a01-v6-d*.png' | wc -l)" -eq 5
+          timeout 180s xvfb-run -a -s '-screen 0 1280x720x24' env LIBGL_ALWAYS_SOFTWARE=1 \
+            /tmp/Godot_v4.3-stable_linux.x86_64 \
+            --rendering-method gl_compatibility --audio-driver Dummy --path . \
+            --script res://tests/test_a01_recon_mobile_budget_v7.gd \
+            2>&1 | tee /tmp/a01-v7-mobile-budget.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed|Parse Error:' /tmp/a01-v7-mobile-budget.log; then
+            echo '::error::A01 V7 mobile triangle/mesh budget or 12-UAV proxy failed' >&2; exit 1
+          fi
+          grep -F 'PASS A01 V7 MOBILE BUDGET:' /tmp/a01-v7-mobile-budget.log
+          test "$(find build/qa/a01-v7 -maxdepth 1 -name 'a01-v7-12-*.png' | wc -l)" -eq 2
+          timeout 190s xvfb-run -a -s '-screen 0 1280x720x24' env LIBGL_ALWAYS_SOFTWARE=1 \
+            /tmp/Godot_v4.3-stable_linux.x86_64 \
+            --rendering-method gl_compatibility --audio-driver Dummy --path . \
+            --script res://tests/test_a01_recon_winglet_v8.gd \
+            2>&1 | tee /tmp/a01-v8-winglets.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed|Parse Error:' /tmp/a01-v8-winglets.log; then
+            echo '::error::A01 V8 sealed aerodynamic winglets failed native Godot QA' >&2; exit 1
+          fi
+          grep -F 'PASS A01 V8 WINGLETS:' /tmp/a01-v8-winglets.log
+          test "$(find build/qa/a01-v8 -maxdepth 1 -name 'a01-v8-*.png' | wc -l)" -eq 5
+          timeout 190s xvfb-run -a -s '-screen 0 1280x720x24' env LIBGL_ALWAYS_SOFTWARE=1 \
+            /tmp/Godot_v4.3-stable_linux.x86_64 \
+            --rendering-method gl_compatibility --audio-driver Dummy --path . \
+            --script res://tests/test_a01_recon_winglet_v9.gd \
+            2>&1 | tee /tmp/a01-v9-winglet.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed|Parse Error:' /tmp/a01-v9-winglet.log; then
+            echo '::error::A01 V9 conformal skins/winglet fairings failed native Godot QA' >&2; exit 1
+          fi
+          grep -F 'PASS A01 V9 CONFORMAL FINISH:' /tmp/a01-v9-winglet.log
+          test "$(find build/qa/a01-v9 -maxdepth 1 -name 'a01-v9-*.png' | wc -l)" -eq 5
+          timeout 190s xvfb-run -a -s '-screen 0 1280x720x24' env LIBGL_ALWAYS_SOFTWARE=1 \
+            /tmp/Godot_v4.3-stable_linux.x86_64 \
+            --rendering-method gl_compatibility --audio-driver Dummy --path . \
+            --script res://tests/test_a01_recon_nose_optics_v10.gd \
+            2>&1 | tee /tmp/a01-v10-nose.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed|Parse Error:' /tmp/a01-v10-nose.log; then
+            echo '::error::A01 V10 physical nose and moving EOIR optics failed' >&2; exit 1
+          fi
+          grep -F 'PASS A01 V10 NOSE OPTICS:' /tmp/a01-v10-nose.log
+          test "$(find build/qa/a01-v10 -maxdepth 1 -name 'a01-v10-*.png' | wc -l)" -eq 13
+          timeout 180s xvfb-run -a -s '-screen 0 1280x720x24' env LIBGL_ALWAYS_SOFTWARE=1 \
+            /tmp/Godot_v4.3-stable_linux.x86_64 \
+            --rendering-method gl_compatibility --audio-driver Dummy --path . \
+            --script res://tests/test_a01_recon_shared_studio.gd \
+            2>&1 | tee /tmp/a01-unified-v1.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed|Parse Error:' /tmp/a01-unified-v1.log; then
+            echo '::error::A01 V1 not selectable or animated in original TARVOKA 3D Studio' >&2; exit 1
+          fi
+          grep -F 'PASS A01 V10 SHARED STUDIO:' /tmp/a01-unified-v1.log
+          test -s build/qa/a01-v1/a01-unified-studio.png
           # Actually instantiate the published homepage under GL compatibility.
           # A successful static export alone cannot detect broken model pickers
           # or a fallback vehicle displayed instead of V5 on Android.
@@ -2348,6 +2466,9 @@ jobs:
           add_link(Path('build/web/index.html'),
                    '?unidad=g16', 'G16 V6 · REVISAR LOGÍSTICA 3D',
                    'Ver manguera, rueda, facción y animaciones de G16 V6', 256)
+          add_link(Path('build/web/index.html'),
+                   '?unidad=a01', 'A01 V10 · DRON DE RECONOCIMIENTO',
+                   'Revisar nuevo dron sin armas, sensores y ocho facciones', 316)
           add_link(Path('build/web/tanque/index.html'),
                    '../apc/', 'BASTIÓN P06 V25 · ACTUAL',
                    'Inspeccionar Bastión V25 sin alterar G09 V32', 196)
@@ -2379,6 +2500,8 @@ jobs:
           grep -q 'MAPA 3D ACTUAL' build/web/batalla-g09/index.html
           grep -q 'BASTIÓN P06 V25 · MODELO ACTUAL' build/web/index.html
           grep -Fq 'href="?unidad=g16"' build/web/index.html
+          grep -Fq 'href="?unidad=a01"' build/web/index.html
+          grep -Fq 'A01 V10 · DRON DE RECONOCIMIENTO' build/web/index.html
           grep -Fq 'G16 V6 · REVISAR LOGÍSTICA 3D' build/web/index.html
           grep -Fq "URLSearchParams(window.location.search)" scripts/ui/BastionStudioAdapter.gd
           grep -Fq 'G16ServiceV6.has_model(model_root)' scripts/ui/BastionStudioAdapter.gd
@@ -2398,6 +2521,21 @@ jobs:
           name: tarvoka-studio-3d-infantry-v2-review
           path: build/web/
           if-no-files-found: error
+          retention-days: 14
+
+      - name: Upload actual A01 V1 Godot 3D art and shared viewer captures
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: tarvoka-a01-v10-native-and-shared-studio
+          path: |
+            build/qa/a01-v1/*.png
+            build/qa/a01-v6/*.png
+            build/qa/a01-v7/*.png
+            build/qa/a01-v8/*.png
+            build/qa/a01-v9/*.png
+            build/qa/a01-v10/*.png
+          if-no-files-found: warn
           retention-days: 14
 
       - name: Archive V24 actual shared Godot model screenshots
