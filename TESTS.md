@@ -257,3 +257,5 @@ Problema: el total de victorias por relés oculta si la condición territorial s
 
 
 2026-11-22 — Auditor de recursos PR #673: diagnóstico de referencias externas ahora incluye línea exacta `archivo.tscn:N` (commit 45c1daed). Nueva regresión `test_errors_include_exact_declaration_lines` para recurso inexistente y declaración sin path (commits 921221ad, 55ec70e9). Estado: código publicado; unittest y auditoría completa NO EJECUTADO (clon local sin DNS); Godot/CI NO CONFIRMADO; Android NO EJECUTADO EN DISPOSITIVO. Ejecutar `python3 -m unittest discover -s tools -p 'test_check_resource_paths.py'` y `python3 tools/check_resource_paths.py .` antes de integrar.
+
+2026-11-22 resource auditor cache exclusion: `.godot/` and `.git/` generated/internal scene files are excluded from source asset scanning; a regression asserts source scenes are still audited. Commits cf97d43c and d56e7008 on PR #673. Python unittest and whole-project audit: NO EJECUTADO (local GitHub DNS unavailable); Godot/Android: NO EJECUTADO EN DISPOSITIVO. Run `python3 -m unittest discover -s tools -p 'test_check_resource_paths.py'` and `python3 tools/check_resource_paths.py .` before merge.
