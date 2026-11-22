@@ -5,16 +5,20 @@ on:
     paths:
       - "scripts/ui/CampModels3DV1.gd"
       - "scripts/ui/CampSupplyFinishV2.gd"
+      - "scripts/ui/CampSupplyReadabilityV3.gd"
       - "tests/test_camp_models_v1.gd"
       - "tests/test_camp_supply_v2.gd"
+      - "tests/test_camp_supply_v3.gd"
       - ".github/workflows/camp-art-native-qa.yml"
   push:
     branches: [main]
     paths:
       - "scripts/ui/CampModels3DV1.gd"
       - "scripts/ui/CampSupplyFinishV2.gd"
+      - "scripts/ui/CampSupplyReadabilityV3.gd"
       - "tests/test_camp_models_v1.gd"
       - "tests/test_camp_supply_v2.gd"
+      - "tests/test_camp_supply_v3.gd"
       - ".github/workflows/camp-art-native-qa.yml"
   workflow_dispatch:
 
@@ -50,7 +54,7 @@ jobs:
           if grep -E 'SCRIPT ERROR:|Parse Error:|Import failed' /tmp/camp-import.log; then
             exit 1
           fi
-      - name: Verify 128 native models and render 20 genuine PNG previews
+      - name: Verify 256 native variants and render 20 genuine PNG previews
         run: |
           set -euo pipefail
           mkdir -p build/qa/camps-v1
@@ -82,6 +86,22 @@ jobs:
           fi
           grep -F 'PASS SUPPLY CAMP V2 NATIVE 3D: 64 audits, 25 PNGs' /tmp/camp-supply-v2-native.log
           test "$(find build/qa/supply-camp-v2 -name '*.png' | wc -l)" -eq 25
+      - name: Inspect V3 supply camp from all four corners and both Android/art LODs
+        run: |
+          set -euo pipefail
+          mkdir -p build/qa/camps-supply-v3
+          timeout --signal=TERM --kill-after=5s 300s \
+            xvfb-run -a -s '-screen 0 1280x720x24' \
+            env LIBGL_ALWAYS_SOFTWARE=1 \
+            /tmp/Godot_v4.3-stable_linux.x86_64 \
+            --rendering-method gl_compatibility --audio-driver Dummy --path . \
+            --script res://tests/test_camp_supply_v3.gd \
+            2>&1 | tee /tmp/camp-v3-native.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Parse Error:|Assertion failed' /tmp/camp-v3-native.log; then
+            exit 1
+          fi
+          grep -F 'PASS SUPPLY CAMP V3 NATIVE QA: 64 audits, 18 views' /tmp/camp-v3-native.log
+          test "$(find build/qa/camps-supply-v3 -name '*.png' | wc -l)" -eq 18
       - name: Upload actual Godot screenshots for visual review
         if: always()
         uses: actions/upload-artifact@v4
@@ -90,5 +110,6 @@ jobs:
           path: |
             build/qa/camps-v1/*.png
             build/qa/supply-camp-v2/*.png
+            build/qa/camps-supply-v3/*.png
           if-no-files-found: warn
           retention-days: 14
