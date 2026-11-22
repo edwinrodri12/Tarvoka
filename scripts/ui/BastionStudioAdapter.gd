@@ -214,6 +214,7 @@ var _a01_tween: Tween = null
 var a01_360_panel:VBoxContainer
 var _a01_review_tween:Tween = null
 var _a01_review_focus:String="general"
+var _a01_review_lod:int=13
 # G16 in the SAME native online Godot viewer: camera presets and persistent
 # resupply inspection never affect gameplay or production stats.
 var g16_360_panel: VBoxContainer
@@ -453,7 +454,7 @@ func _install_unified_studio_navigation() -> void:
         "Médico · Curación",func(): _display_role("infantry_medic"))
     infantry_six_panel.visible=false
     a01_360_panel=VBoxContainer.new()
-    a01_360_panel.name="A01V2_InspeccionFisicaMismoVisor"
+    a01_360_panel.name="A01V10_InspeccionFisicaMismoVisor"
     a01_360_panel.add_theme_constant_override("separation",6)
     studio_camera_panel.add_child(a01_360_panel)
     _title(a01_360_panel,"A01 V10 · NARIZ, SENSOR EO/IR Y DAÑO 3D",13)
@@ -468,6 +469,9 @@ func _install_unified_studio_navigation() -> void:
         "Hélice y cola",func(): _a01_review_look(0.0,"cola"))
     _add_paired(a01_360_panel,"Giro 360°",_a01_review_spin,
         "Vista completa",func(): _a01_review_look(35.0,"general"))
+    _add_paired(a01_360_panel,"LOD13 · detalle",
+        func(): _a01_review_set_lod(13),
+        "LOD8 · Android",func(): _a01_review_set_lod(8))
     a01_360_panel.visible=false
     infantry_360_panel=VBoxContainer.new()
     infantry_360_panel.name="InfanteriaV2_InspeccionEnMismoVisor"
@@ -1310,7 +1314,51 @@ func _a01_review_look(yaw:float,focus:String)->void:
     model_root.rotation_degrees.y=yaw
     _update_camera()
     if status_label!=null:
-        status_label.text="A01 V6 · %s · mismo dron 3D sin armamento" % _a01_review_focus
+        status_label.text="A01 V10 · %s · LOD%d · dron 3D sin armamento" % [
+            _a01_review_focus,_a01_review_lod]
+
+# Switch REAL Godot LOD in the existing Studio viewport. Preserve the
+# selected faction, 360 camera preset and cumulative D0-D4 artwork. There
+# is never a second viewer, a duplicate actor or a gameplay-stat change.
+func _a01_review_set_lod(lod:int)->bool:
+    if _role!="uav_recon" or preview==null or model_root==null or (
+            lod not in [8,13]):
+        return false
+    if not A01NoseOpticsV10.has_model(model_root):
+        return false
+    if lod==_a01_review_lod:
+        return true
+    var before_damage:int=A01DamageV6.stage(model_root)
+    if before_damage<0:
+        return false
+    var candidate:Node3D=P06Models.build("uav_recon",_faction,true,lod)
+    if candidate==null:
+        return false
+    if not A01NoseOpticsV10.has_model(candidate) or (
+            not A01DamageV6.set_stage(candidate,before_damage)):
+        candidate.free()
+        return false
+    # Animated scan and orbit must not retain stale nodes after rebuild.
+    if _a01_tween!=null and _a01_tween.is_running():
+        _a01_tween.kill()
+    if _a01_review_tween!=null and _a01_review_tween.is_running():
+        _a01_review_tween.kill()
+    var previous:Node3D=model_root
+    preview.remove_child(previous)
+    previous.queue_free()
+    model_root=candidate
+    preview.add_child(model_root)
+    _a01_review_lod=lod
+    model_root.rotation_degrees.y=_yaw
+    if faction_picker!=null:
+        faction_picker.visible=true
+        faction_picker.select(_faction)
+    _update_camera()
+    _update_details()
+    if status_label!=null:
+        status_label.text="A01 V10 · LOD%d · cámara %s · daño D%d · facción conservada" % [
+            lod,_a01_review_focus,before_damage]
+    return true
 
 func _a01_review_spin_tick(angle:float)->void:
     if _role!="uav_recon" or model_root==null:
@@ -1329,7 +1377,7 @@ func _a01_review_spin()->void:
     _a01_review_tween.tween_method(Callable(self,"_a01_review_spin_tick"),
         _yaw,_yaw+360.0,7.0).set_trans(Tween.TRANS_LINEAR)
     if status_label!=null:
-        status_label.text="A01 V2 · giro 360° · visor 3D TARVOKA"
+        status_label.text="A01 V10 · giro 360° · LOD%d · visor 3D TARVOKA" % _a01_review_lod
 
 # G16 V6 native camera presets: same SubViewport and real 3D geometry.
 # These are inspection tools only; the playable logistics rules do not change.
@@ -1430,7 +1478,7 @@ func _a01_play(kind:String)->void:
     if kind not in A01Recon.VALID_POSES:
         return
     if A01DamageV6.has_model(model_root) and A01DamageV6.stage(model_root)==4 and kind in ["move","scan"]:
-        status_label.text="A01 V6 · aeronave destruida, selecciona D0 para reparar."
+        status_label.text="A01 V10 · aeronave destruida, selecciona D0 para reparar."
         return
     if _a01_tween!=null and _a01_tween.is_running():
         _a01_tween.kill()
@@ -1442,7 +1490,7 @@ func _a01_play(kind:String)->void:
     _a01_tween.tween_method(Callable(self,"_a01_tick").bind(art,kind),
         0.0,1.0,2.8 if kind=="scan" else 1.5)
     _a01_tween.tween_callback(Callable(self,"_a01_done").bind(art))
-    status_label.text="A01 V1 · %s · animación óptica 3D, sin alterar niebla" % kind
+    status_label.text="A01 V10 · %s · animación óptica 3D, sin alterar niebla" % kind
 
 func _a01_tick(progress:float,art:Node3D,kind:String)->void:
     if is_instance_valid(art):
@@ -4346,9 +4394,9 @@ func _display_role(role: String) -> void:
         if model_root!=null:
             preview.remove_child(model_root)
             model_root.queue_free()
-        model_root=P06Models.build("uav_recon",_faction,true,13)
+        model_root=P06Models.build("uav_recon",_faction,true,_a01_review_lod)
         if model_root==null or not A01NoseOpticsV10.has_model(model_root):
-            push_error("A01 V9 closed airframe or conformal winglet paint missing in shared Studio")
+            push_error("A01 V10 nose/optics or conformal winglet paint missing in shared Studio")
             return
         preview.add_child(model_root)
         model_root.rotation_degrees.y=_yaw
@@ -5255,8 +5303,8 @@ func _update_details() -> void:
     if _role=="uav_recon" and model_root!=null and detail_label!=null and status_label!=null:
         var ready_a01:bool=A01NoseOpticsV10.has_model(model_root)
         var current_damage:int=A01DamageV6.stage(model_root) if ready_a01 else -1
-        detail_label.text="A01 V10 EN DESARROLLO · UAV SIN ARMAS · %d mallas · %s" % [
-            P06Models.inspect_meshes(model_root),
+        detail_label.text="A01 V10 EN DESARROLLO · LOD%d · UAV SIN ARMAS · %d mallas · %s" % [
+            _a01_review_lod,P06Models.inspect_meshes(model_root),
             A01DamageV6.STAGES[current_damage] if ready_a01 else "modelo incompleto"]
         status_label.text="A01 · %s · daño 3D artístico, sin cambiar HP, visión ni ataque" % [
             str(Factions.FACTIONS[_faction]["name"])]
