@@ -313,6 +313,11 @@ func _ready() -> void:
     if launch_index>=0:
         role_picker.select(launch_index)
     _display_role(launch_role)
+    if launch_role=="infantry_engineer":
+        # Keep one shared viewer, but expose the finished rear shield and
+        # camera controls immediately when arriving through the review URL.
+        _studio_select_tab(1)
+        _infantry_review_look(0.0,"espalda")
     _refresh_unified_studio_navigation()
 
 func _studio_role_from_link_key(value:String) -> String:
@@ -320,6 +325,8 @@ func _studio_role_from_link_key(value:String) -> String:
     match value.strip_edges().to_lower():
         "g16", "logistics_mobile", "logistica", "logistica_6x6":
             return "logistics_mobile"
+        "ingeniero", "engineer", "infantry_engineer":
+            return "infantry_engineer"
         _:
             return "apc"
 
