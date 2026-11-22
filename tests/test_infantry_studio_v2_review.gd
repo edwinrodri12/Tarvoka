@@ -172,6 +172,13 @@ func _run() -> void:
                 must(gun_finger!=null and not gun_finger.visible and
                     tool_finger!=null and tool_finger.visible,
                     "Studio hides rifle fingers and shows only real wrench fingers")
+            var work_wrist: Node3D=final_soldier.find_child(
+                "V10_MunecaContactoHerramienta",true,false) as Node3D
+            var rifle_wrist: Node3D=final_soldier.find_child(
+                "V10_MunecaContactoFusil_1",true,false) as Node3D
+            must(work_wrist!=null and work_wrist.visible and
+                rifle_wrist!=null and not rifle_wrist.visible,
+                "Studio transfers real V10 wrist cuff with hand to construction tool")
             studio.call("_infantry_pose_tick",0.0,"idle")
             must(glove_v9!=null and glove_v9.visible and
                 hand_tool_v9!=null and not hand_tool_v9.visible,
@@ -184,6 +191,9 @@ func _run() -> void:
                 must(gun_finger_rest!=null and gun_finger_rest.visible and
                     tool_finger_rest!=null and not tool_finger_rest.visible,
                     "Studio restores rifle fingers without duplicated work digits")
+            must(work_wrist!=null and not work_wrist.visible and
+                rifle_wrist!=null and rifle_wrist.visible,
+                "Studio restores genuine full-size wrist cuff to original gun")
             var shield_v8: Node3D=final_soldier.find_child(
                 PremiumV8.SHIELD,true,false) as Node3D
             var rifle_v8: Node3D=final_soldier.find_child(
