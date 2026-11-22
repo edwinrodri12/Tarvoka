@@ -2,7 +2,7 @@ extends SceneTree
 
 # V12-native Godot 4.3 QA: 8 factions, two LODs, sealed PBR meshes,
 # torso-fixed tool cases versus the genuinely rotating V6/V11 shield,
-# reversible V11/V12 comparison and 6 real 3D SubViewport photos.
+# reversible V11/V12 comparison and 8 real 3D SubViewport photos.
 const Models=preload("res://scripts/ui/UnitModels3D.gd")
 const V6=preload("res://scripts/ui/InfantryEngineerFinishV6.gd")
 const V11=preload("res://scripts/ui/InfantryEngineerMechanicsV11.gd")
@@ -73,24 +73,40 @@ func _run() -> void:
             var shield: Node3D=soldier.find_child(V6.RIG,true,false) as Node3D
             expect(V11.has_model(soldier) and V12.has_model(soldier) and
                 V12.is_visible(soldier),"V11 intact and V12 loaded on F%d L%d"%[faction,lod])
-            var fixed_position: Vector3=Vector3.ZERO
+            var central: MeshInstance3D=soldier.find_child(
+                V12.MAIN,true,false) as MeshInstance3D
+            expect(central!=null and central.get_parent()==shield and
+                _watertight(central.mesh),
+                "V12 main chamfered shield shell sealed and on moving rig")
             for side in [-1,1]:
                 var outer: MeshInstance3D=soldier.find_child(
                     V12.OUTER+"_%d"%side,true,false) as MeshInstance3D
                 var stripe: MeshInstance3D=soldier.find_child(
                     V12.ACCENT+"_%d"%side,true,false) as MeshInstance3D
-                var pouch: Node3D=soldier.find_child(
-                    V12.CASE+"_%d"%side,true,false) as Node3D
+                var pouch: MeshInstance3D=soldier.find_child(
+                    V12.CASE+"_%d"%side,true,false) as MeshInstance3D
+                var side_mark: MeshInstance3D=soldier.find_child(
+                    V12.POUCH_ID+"_%d"%side,true,false) as MeshInstance3D
                 var rack: Node3D=soldier.find_child(
                     V12.RACK+"_%d"%side,true,false) as Node3D
-                expect(outer!=null and stripe!=null and pouch!=null and rack!=null,
-                    "both sides V12 volumetric geometry")
+                expect(outer!=null and stripe!=null and pouch!=null and
+                    rack!=null and side_mark!=null,
+                    "both sides V12 physical case and faction insignia")
                 if outer!=null and stripe!=null and pouch!=null and rack!=null:
                     expect(outer.get_parent()==shield and stripe.get_parent()==shield and
                         pouch.get_parent()==torso and rack.get_parent()==torso,
                         "shield details move, dorsal cases remain anchored")
-                    expect(_watertight(outer.mesh) and _watertight(stripe.mesh),
-                        "solid watertight faceted armor and faction enamel")
+                    expect(_watertight(outer.mesh) and _watertight(stripe.mesh)
+                        and pouch.mesh is ArrayMesh and _watertight(pouch.mesh)
+                        and _watertight(side_mark.mesh),
+                        "solid watertight faceted armor, sculpted cases, faction inlay")
+                    var side_mat: StandardMaterial3D=(
+                        side_mark.material_override as StandardMaterial3D)
+                    expect(side_mat!=null and side_mat.transparency==
+                        BaseMaterial3D.TRANSPARENCY_DISABLED and
+                        side_mat.albedo_color.is_equal_approx(
+                            Models.faction_paint_color(faction)),
+                        "side-pouch plate has exact faction color F%d L%d"%[faction,lod])
                     var mat: StandardMaterial3D=stripe.material_override as StandardMaterial3D
                     expect(mat!=null and mat.transparency==
                         BaseMaterial3D.TRANSPARENCY_DISABLED and
@@ -173,12 +189,29 @@ func _run() -> void:
         camera.position=angles["right"]
         camera.look_at(Vector3(0,1.50,0),Vector3.UP)
         await _photo(view,"engineer_v12_dorsal_cases_close")
+        # Identical rear framing before/after makes visual regression
+        # independently inspectable, rather than comparing different cameras.
+        V12.show_finish(art,false)
+        camera.position=angles["rear"]
+        camera.look_at(Vector3(0,1.52,0),Vector3.UP)
+        await _photo(view,"engineer_v11_same_camera_comparison")
         art.queue_free()
         await process_frame
-    expect(pictures==6,"six real Godot 3D PNGs")
+    var faction_art: Node3D=Models.build("infantry_engineer",7,true,13)
+    expect(faction_art!=null and V12.has_model(faction_art),
+        "second actual faction render uses latest V12 mesh")
+    if faction_art!=null:
+        view.add_child(faction_art)
+        camera.size=2.05
+        camera.position=Vector3(0,2.30,4.8)
+        camera.look_at(Vector3(0,1.52,0),Vector3.UP)
+        await _photo(view,"engineer_v12_faction7_rear")
+        faction_art.queue_free()
+        await process_frame
+    expect(pictures==8,"eight real Godot 3D PNGs")
     if failures>0:
         push_error("FAIL ENGINEER V12: %d assertions"%failures)
         quit(1)
     else:
-        print("PASS ENGINEER V12: 8 factions x 2 LOD, solid exterior, fixed tool packs, reversible comparison and 6 Godot PNGs")
+        print("PASS ENGINEER V12: 8 factions x 2 LOD, solid exterior, fixed tool packs, reversible comparison and 8 Godot PNGs")
         quit(0)
