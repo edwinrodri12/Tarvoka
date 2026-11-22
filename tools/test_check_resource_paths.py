@@ -190,6 +190,21 @@ class ResourcePathAuditTests(unittest.TestCase):
             self.assertEqual(len(errors), 1, errors)
             self.assertIn("cycle.tscn: unresolvable scene symlink", errors[0])
 
+    def test_cyclic_external_resource_symlink_is_reported_without_crash(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = pathlib.Path(temp)
+            (root / "assets").mkdir()
+            try:
+                (root / "assets" / "loop.png").symlink_to("loop.png")
+            except (NotImplementedError, OSError):
+                self.skipTest("symlinks unavailable on this platform")
+            (root / "sample.tscn").write_text(
+                '[ext_resource type="Texture2D" path="res://assets/loop.png" id="1"]\\n'
+            )
+            errors = audit(root)
+            self.assertEqual(len(errors), 1, errors)
+            self.assertIn("sample.tscn:1: missing resource res://assets/loop.png", errors[0])
+
     def test_unreadable_utf8_resource_is_reported(self):
         with tempfile.TemporaryDirectory() as temp:
             root = pathlib.Path(temp)
