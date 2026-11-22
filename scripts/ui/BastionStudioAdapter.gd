@@ -7,6 +7,7 @@ const P06Models = preload("res://scripts/ui/UnitModels3D.gd")
 const InfantryV1 = preload("res://scripts/ui/InfantryFamilyV1.gd")
 const EngineerFinishV6 = preload("res://scripts/ui/InfantryEngineerFinishV6.gd")
 const EngineerFinishV9 = preload("res://scripts/ui/InfantryEngineerFinishV9.gd")
+const EngineerMechanicsV11 = preload("res://scripts/ui/InfantryEngineerMechanicsV11.gd")
 const InfantryRoster = preload("res://scripts/ui/InfantryCampRosterV1.gd")
 const P06Visual = preload("res://scripts/ui/APCVisualRigV1.gd")
 const P06Finish = preload("res://scripts/ui/APCFinishV3.gd")
@@ -1290,8 +1291,11 @@ func _infantry_review_focus(closeup: bool) -> void:
 func _infantry_review_edition() -> String:
     if not infantry_review_v2:
         return "V1"
-    if _role=="infantry_engineer" and model_root!=null and EngineerFinishV9.has_model(model_root):
-        return "V9"
+    if _role=="infantry_engineer" and model_root!=null:
+        if EngineerMechanicsV11.has_model(model_root):
+            return "V11"
+        if EngineerFinishV9.has_model(model_root):
+            return "V9"
     return "V2"
 
 func _infantry_review_look(yaw: float, perspective: String) -> void:
@@ -1413,9 +1417,9 @@ func _engineer_v6_run(opening: bool) -> void:
             Callable(self,"_engineer_v6_tick").bind(model_root),
             start,end,maxf(0.08,1.25*absf(end-start)))
     status_label.text=(
-        "Ingeniero V9 · barrera articulada abierta para inspección 360°, sin efecto táctico"
+        "Ingeniero V11 · barrera articulada abierta para inspección 360°, sin efecto táctico"
         if opening else
-        "Ingeniero V9 · barrera plegada y asegurada en mochila")
+        "Ingeniero V11 · barrera plegada y asegurada en mochila")
 
 func _infantry_pose_tick(t: float, kind: String) -> void:
     if model_root!=null and InfantryV1.supports(_role):
