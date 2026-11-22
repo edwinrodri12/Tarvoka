@@ -25,10 +25,18 @@ def audit(root: pathlib.Path) -> list[str]:
         except (OSError, UnicodeError) as exc:
             errors.append(f"{scene.relative_to(root)}: unreadable: {exc}")
             continue
+        seen_ids: set[str] = set()
         for declaration in RESOURCE_LINE.finditer(source):
             # Report the source line so artists can fix broken references quickly.
             location = f"{scene.relative_to(root)}:{source.count(chr(10), 0, declaration.start()) + 1}"
-            match = PATH_ATTRIBUTE.search(declaration.group(1))
+            attributes = declaration.group(1)
+            resource_id = ID_ATTRIBUTE.search(attributes)
+            if resource_id is not None:
+                identifier = resource_id.group(1)
+                if identifier in seen_ids:
+                    errors.append(f"{location}: duplicate external resource id {identifier}")
+                seen_ids.add(identifier)
+            match = PATH_ATTRIBUTE.search(attributes)
             if match is None:
                 errors.append(f"{location}: external resource missing path attribute")
                 continue
