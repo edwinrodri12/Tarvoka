@@ -112,3 +112,13 @@ El primer modelo se genera en `scripts/ui/A01ReconDroneV1.gd`, conectado al cons
 - CI dedicada A01 y CI del Estudio compartido actualizadas para incluir los archivos V10 y generar las pruebas. La rama permanece en borrador hasta inspección visual; no afirmar despliegue en Pages ni FPS Android físico.
 
 **Hallazgos del QA V9:** Godot 4.3 ejecutó correctamente la prueba V9 tras reparar el error de sintaxis; el publicador del Estudio falló antes de la carga del A01 al reunir otro archivo de su largo catálogo. Se incorporó registro del nombre exacto del archivo faltante para identificar y reparar esa dependencia sin alterar unidades ajenas.
+
+
+## Revisión V10.1 — auditoría visual de V8/V9 y corrección simétrica
+
+- Se descargaron las imágenes **reales de Godot** de A01 V8 y V9 de las ejecuciones nativas y se compararon desde las vistas frontal, trasera, lateral, superior y Android. El modelo V9 mejora ciertos detalles, pero la diferencia a escala táctica sigue siendo sutil. **No son capturas de V10.**
+- Se encontró un defecto específico en `A01ReconWingletV9._ring`: la cara externa del extremo **izquierdo** está compuesta por los vértices 5/4 de V8, mientras que los extremos derecho e izquierdo usaban por error 1/2. Ese error colocaba el esmalte izquierdo hacia adentro. Se aplicó selección de cara dependiente del signo; el acabado de ambas aletas ahora apunta hacia el exterior.
+- La captura superior también reveló carenados blancos demasiado redondos en las puntas. Se redujo `A01_V9_WingtipRootFairing_*` a **0.110×0.072×0.226** en escala de malla y se reposicionó a x=±1.676, y=1.077, z=-0.037 para seguir la unión sin quedar como una esfera sobresaliente.
+- `tests/test_a01_recon_winglet_v9.gd` ahora exige que la pintura del **lado izquierdo y derecho** sea exterior en ambas estaciones, para los ocho colores y ambos LOD, y rechaza carenados que sobresalgan demasiado.
+- Se reprodujo por cálculo geométrico independiente la malla de nariz V10 (76/116 triángulos para LOD8/13) y la corona EO/IR V10 (96/160 triángulos); las cuatro mallas son cerradas y sin triángulos degenerados. Esto **no reemplaza** la renderización de Godot ni acredita el funcionamiento del visor.
+- **Pendiente antes del cierre:** prueba real Godot y revisión de **13 capturas V10** (5 inspección + 8 colores tácticos); ejecución del publicador del visor original; QA en Android físico. No fusionar ni anunciar publicación sin estos controles.
