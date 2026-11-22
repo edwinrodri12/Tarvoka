@@ -88,3 +88,15 @@ El primer modelo se genera en `scripts/ui/A01ReconDroneV1.gd`, conectado al cons
 - El workflow exclusivo exige tanto las 21 capturas de A01 V5 como la nueva prueba de cinco daños. El flujo de publicación completo incorpora las fuentes V6 al árbol real del visor y ejecuta la prueba de los botones.
 
 **Estado de V6:** programado en el PR #655; **ejecución CI de daños y visor aún sin resultado confirmado**. No fusionar el PR ni anunciar publicación en Pages hasta obtener pruebas verdes, inspeccionar las imágenes de destrucción y medir rendimiento Android; los 48/68 anteriores corresponden a D0 de V5 y no a los efectos activos D4.
+
+
+## Etapa V9 — esmalte conformado y carenados integrados (en validación)
+
+- `scripts/ui/A01ReconWingletV9.gd`: añade **dos paneles físicos cerrados** que siguen los mismos perfiles aerodinámicos y estaciones de la V8; evita las bandas que parecían cajas flotantes.
+- Las dos franjas rectangulares V8 se mantienen como respaldo invisible, mientras que las V9 son sólidos de espesor mínimo y material PBR opaco (`cull_back`).
+- Se integran **dos carenados redondeados** en la raíz de los winglets, intersectando ala/aleta de manera intencional para ocultar la junta y suavizar la silueta. El LOD Android usa menos segmentos; la envergadura y el contorno general son idénticos.
+- Los **ocho colores** proceden de `UnitModels3D.faction_paint_color`; no hay un cambio de rol, estadísticas, armamento o visión táctica. Permanecen el gimbal EO/IR, hélice impulsora, cámaras 360°, daños D0–D4 y restauración.
+- Se añadió el modelo V9 a la misma cadena V1→V9 en `UnitModels3D.gd` y a `BastionStudioAdapter.gd` en el **visor único**; no se crea un segundo visor.
+- `tests/test_a01_recon_winglet_v9.gd`: valida las superficies herméticas (bordes con orientaciones opuestas, sin triángulos degenerados), color, LOD8/13, reparación D4→D0 y cinco capturas Godot 4.3. La CI nativa y la publicación de Studio ejecutan esta prueba.
+
+**Estado:** V9 implementada en el PR #655 (borrador). No debe declararse aprobada ni publicarse hasta que la CI nativa y la CI del Studio terminen correctamente, se revisen las imágenes V9 y el usuario apruebe el diseño. Una carga de doce UAV es un ensayo geométrico en CI, no una medición de FPS en dispositivo Android físico.
