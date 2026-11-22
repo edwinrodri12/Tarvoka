@@ -151,8 +151,19 @@ func _run() -> void:
             must(MechanicsV11.has_model(final_soldier),
                 "same Studio really includes V11 closed curved torso and shield pivots")
             must(DorsalV12.has_model(final_soldier) and
-                DorsalV12.is_visible(final_soldier),
-                "V12 real sculpted dorsal cases and shield armor loaded in shared viewport")
+                DorsalV12.is_visible(final_soldier) and
+                DorsalV12.has_seals(final_soldier),
+                "V12.3 opaque helmet, face, torso and animated joint closures visible")
+            studio.call("_engineer_v123_compare",false)
+            must(not bool(final_soldier.get_meta(
+                "tarvoka_engineer_v123_seals_visible",true)) and
+                DorsalV12.has_model(final_soldier),
+                "shared Studio can genuinely compare previous V12.2 solid mesh")
+            studio.call("_engineer_v123_compare",true)
+            must(bool(final_soldier.get_meta(
+                "tarvoka_engineer_v123_seals_visible",false)) and
+                DorsalV12.has_seals(final_soldier),
+                "Studio restores V12.3 physical closures without model reload")
             must(str(studio.call("_infantry_review_edition"))=="V12",
                 "same online Studio labels latest engineer V12, not stale V11")
             studio.call("_engineer_v12_compare",false)

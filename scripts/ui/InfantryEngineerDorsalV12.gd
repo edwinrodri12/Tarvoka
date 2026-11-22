@@ -17,6 +17,19 @@ const MAIN := "V12_EscudoCentralBiseladoCerrado"
 const FRAME := "V12_MarcoOctagonalExterior"
 const WING_SKIN := "V12_RevestimientoAlaArticulada"
 const POUCH_ID := "V12_InsigniaLateralEstuche"
+# V12.3 seals are all CLOSED VOLUMES on the existing animated human rigs.
+# They cover genuinely exposed interior gaps, never draw fake 2-sided planes.
+const SEAL := "V12_Sellado"
+const SEAL_SKULL := SEAL+"CascoInterior"
+const SEAL_FACE := SEAL+"FondoVisorFrontal"
+const SEAL_NECK := SEAL+"CuelloContinuo"
+const SEAL_TORSO := SEAL+"ToraxIntegral"
+const SEAL_WAIST := SEAL+"CinturaTransicion"
+const SEAL_SHOULDER := SEAL+"HombroInterno"
+const SEAL_ARM := SEAL+"UniónAntebrazo"
+const SEAL_HIP := SEAL+"UnionCaderaMuslo"
+const SEAL_BOOT := SEAL+"UnionPantorrillaBota"
+const SEAL_SHIELD := SEAL+"CantoBarrera"
 
 static func _mat(color: Color, metallic: float, roughness: float) -> StandardMaterial3D:
     var m := StandardMaterial3D.new()
@@ -24,6 +37,9 @@ static func _mat(color: Color, metallic: float, roughness: float) -> StandardMat
     m.metallic=metallic
     m.roughness=roughness
     m.transparency=BaseMaterial3D.TRANSPARENCY_DISABLED
+    # A proper closed mesh needs exterior normals and single-sided culling.
+    # Disabling backface culling would hide a topology error, not repair it.
+    m.cull_mode=BaseMaterial3D.CULL_BACK
     return m
 
 static func _part(parent: Node3D, label: String, mesh: Mesh,
@@ -123,6 +139,29 @@ static func has_model(model: Node3D) -> bool:
 static func is_visible(model: Node3D) -> bool:
     return has_model(model) and bool(model.get_meta(VISIBLE,false))
 
+static func has_seals(model: Node3D) -> bool:
+    if not has_model(model):
+        return false
+    for name in [SEAL_SKULL,SEAL_FACE,SEAL_NECK,SEAL_TORSO,SEAL_WAIST]:
+        if _find(model,name)==null:
+            return false
+    for side in [-1,1]:
+        for name in [SEAL_SHOULDER,SEAL_ARM,SEAL_HIP,SEAL_BOOT,SEAL_SHIELD]:
+            if _find(model,name+"_%d"%side)==null:
+                return false
+    return true
+
+# Direct comparison of V12.2 vs V12.3 without rebuilding or touching any
+# combat movement / rig state; used by shared Studio and native QA.
+static func show_seals(model: Node3D, enabled: bool) -> bool:
+    if not has_seals(model):
+        return false
+    for seal in model.find_children(SEAL+"*","",true,false):
+        if seal is Node3D:
+            (seal as Node3D).visible=enabled
+    model.set_meta("tarvoka_engineer_v123_seals_visible",enabled)
+    return true
+
 # Allows a true V11/V12 comparison on the same live 3D Godot model.
 # V9 tool pouches reappear when the contoured V12 pouches are hidden.
 static func show_finish(model: Node3D, enabled: bool) -> bool:
@@ -149,6 +188,10 @@ static func show_finish(model: Node3D, enabled: bool) -> bool:
             else:
                 damage_mark.position.z=0.232 if label=="V6_RayonesD2" else 0.240
     model.set_meta(VISIBLE,enabled)
+    # A full V11/V12 switch must also restore the true V12.3 seal state.
+    # Otherwise the comparison label could disagree with visible geometry.
+    if has_seals(model):
+        model.set_meta("tarvoka_engineer_v123_seals_visible",enabled)
     return true
 
 static func apply(model: Node3D, faction_color: Color, hero: bool) -> bool:
@@ -158,10 +201,12 @@ static func apply(model: Node3D, faction_color: Color, hero: bool) -> bool:
             bool(model.get_meta(MechanicsV11.FLAG,false))):
         return false
     var torso: Node3D=_find(model,"TorsoRig")
+    var head: Node3D=_find(model,"CabezaRig")
+    var hips: Node3D=_find(model,"CaderaRig")
     var shield: Node3D=_find(model,"V6_BarreraArticuladaRig")
     var left: Node3D=_find(model,"V6_AlaIzquierdaRig")
     var right: Node3D=_find(model,"V6_AlaDerechaRig")
-    if torso==null or shield==null or left==null or right==null:
+    if torso==null or head==null or hips==null or shield==null or left==null or right==null:
         return false
     if shield.get_parent()!=torso or left.get_parent()!=shield or right.get_parent()!=shield:
         return false
@@ -170,6 +215,9 @@ static func apply(model: Node3D, faction_color: Color, hero: bool) -> bool:
     var fabric := _mat(Color("#56685d"),0.02,0.91)
     var fastener := _mat(Color("#a8babc"),0.63,0.30)
     var faction := _mat(faction_color,0.17,0.37)
+    var inner := _mat(Color("#30433e"),0.025,0.93)
+    var seal_dark := _mat(Color("#24353b"),0.09,0.86)
+    var visor_back := _mat(Color("#173b4a"),0.08,0.74)
 
     # The original board still exists for reversible V11 comparison. The
     # new single closed, chamfered central shell covers its square silhouette
@@ -251,7 +299,50 @@ static func apply(model: Node3D, faction_color: Color, hero: bool) -> bool:
                     Vector3(x*0.584,-0.271+float(i)*0.11,0.366),
                     0.008,sidewall,hero)
 
+    # V12.3 actual cavity closure. V9 deliberately hid the V2 head's
+    # original solid shell and V2 hid stock arm/leg volumes. Low-angle
+    # cameras could then look through the gaps between separate armor
+    # pieces. Restore INTERNAL opaque volumes, attached to the SAME rigs.
+    # Core stays behind the visible V12.2 armor; exterior design is intact.
+    _ellipsoid(head,SEAL_SKULL,Vector3(0,0.244,-0.032),
+        Vector3(0.448,0.475,0.438),inner,hero)
+    # The eye/respirator recess must have a closed back wall, not air
+    # between the front mask and the posterior helmet.
+    _ellipsoid(head,SEAL_FACE,Vector3(0,0.172,-0.223),
+        Vector3(0.347,0.206,0.106),visor_back,hero)
+    _ellipsoid(head,SEAL_NECK,Vector3(0,-0.021,-0.006),
+        Vector3(0.304,0.244,0.296),seal_dark,hero)
+    _ellipsoid(torso,SEAL_TORSO,Vector3(0,-0.045,-0.046),
+        Vector3(0.648,0.755,0.505),inner,hero)
+    _ellipsoid(torso,SEAL_WAIST,Vector3(0,-0.416,-0.006),
+        Vector3(0.550,0.235,0.352),inner,hero)
+    for side in [-1,1]:
+        var x: float=float(side)
+        var arm: Node3D=_find(model,"BrazoRig_%d"%side)
+        var leg: Node3D=_find(model,"PiernaRig_%d"%side)
+        if arm==null or leg==null or arm.get_parent()!=torso or leg.get_parent()!=hips:
+            return false
+        # Torso-side material is FIXED; rotating sleeves / wrists and
+        # knees remain on their animated arm/leg transforms.
+        _ellipsoid(torso,SEAL_SHOULDER+"_%d"%side,
+            Vector3(x*0.346,0.228,-0.014),
+            Vector3(0.247,0.231,0.265),seal_dark,hero)
+        _ellipsoid(arm,SEAL_ARM+"_%d"%side,
+            Vector3(0,-0.637,-0.085),
+            Vector3(0.237,0.224,0.250),inner,hero)
+        _ellipsoid(leg,SEAL_HIP+"_%d"%side,
+            Vector3(0,-0.053,0.019),
+            Vector3(0.253,0.241,0.281),inner,hero)
+        _ellipsoid(leg,SEAL_BOOT+"_%d"%side,
+            Vector3(0,-0.765,-0.105),
+            Vector3(0.230,0.213,0.257),seal_dark,hero)
+        # Protect the barrier's exposed side seam in both OPEN and FOLDED
+        # states without restricting, replacing or pinning the V6 hinge.
+        _ellipsoid(shield,SEAL_SHIELD+"_%d"%side,
+            Vector3(x*0.562,-0.101,0.273),
+            Vector3(0.112,0.512,0.193),seal_dark,hero)
     model.set_meta(FLAG,true)
     model.set_meta("tarvoka_engineer_v12_visual_only",true)
     model.set_meta("tarvoka_engineer_v12_hero",hero)
+    model.set_meta("tarvoka_engineer_v123_seals_visible",true)
     return show_finish(model,true)
