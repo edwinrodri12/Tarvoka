@@ -77,6 +77,7 @@ const A01SculptV4=preload("res://scripts/ui/A01ReconAirfoilV4.gd")
 const A01TailV5=preload("res://scripts/ui/A01ReconTailV5.gd")
 const A01DamageV6=preload("res://scripts/ui/A01ReconDamageV6.gd")
 const A01WingletV8=preload("res://scripts/ui/A01ReconWingletV8.gd")
+const A01WingletV9=preload("res://scripts/ui/A01ReconWingletV9.gd")
 const G15SculptV2=preload("res://scripts/ui/G15ChassisAndMastFinishV2.gd")
 const G15FinishV3=preload("res://scripts/ui/G15ShelterCabFinishV3.gd")
 const G15AntennaV4=preload("res://scripts/ui/G15AntennaMechanicsV4.gd")
@@ -292,7 +293,7 @@ func _ready() -> void:
         while role_picker.item_count<=recon_index:
             role_picker.add_item(P06Models.ROLES[role_picker.item_count])
         role_picker.set_item_text(recon_index,
-            "A01 · Dron de reconocimiento · V8 EN DESARROLLO")
+            "A01 · Dron de reconocimiento · V9 EN DESARROLLO")
     # Preserve existing roles/indices; these are additional native 3D variants.
     for entry in [
         ["line","★ INFANTERÍA BÁSICA · Guardia"],
@@ -453,7 +454,7 @@ func _install_unified_studio_navigation() -> void:
     a01_360_panel.name="A01V2_InspeccionFisicaMismoVisor"
     a01_360_panel.add_theme_constant_override("separation",6)
     studio_camera_panel.add_child(a01_360_panel)
-    _title(a01_360_panel,"A01 V8 · ALETAS, COLA, ÓPTICA Y DAÑO 3D",13)
+    _title(a01_360_panel,"A01 V9 · ALETAS INTEGRADAS, ÓPTICA Y DAÑO 3D",13)
     _add_paired(a01_360_panel,
         "Frente",func(): _a01_review_look(180.0,"general"),
         "Trasera",func(): _a01_review_look(0.0,"general"))
@@ -677,7 +678,7 @@ func _studio_animation_specs(role: String) -> Array[Dictionary]:
     match role:
         "uav_recon":
             return [
-                {"group":"A01 V8 · DRON DE RECONOCIMIENTO SIN ARMAMENTO"},
+                {"group":"A01 V9 · DRON DE RECONOCIMIENTO SIN ARMAMENTO"},
                 {"title":"Volar · hélice impulsora", "action":"a01_move"},
                 {"title":"Explorar · girar cámara óptica", "action":"a01_scan"},
                 {"title":"Simular impacto visual", "action":"a01_hit"},
@@ -1652,7 +1653,7 @@ func _refresh_unified_studio_navigation() -> void:
             "apc": label="P06 · Bastión · V25"
             "mlrs": label="G11 · Lanzador · V33"
             "attack_heli": label="A01 · Helicóptero HAT-29 · V14"
-            "uav_recon": label="A01 · Dron de reconocimiento · V8 EN DESARROLLO"
+            "uav_recon": label="A01 · Dron de reconocimiento · V9 EN DESARROLLO"
             "logistics_mobile": label="G16 · Logística blindada 6×6 · V6 PBR y suministros articulados"
             "ew_mobile": label="G15 · Guerra electrónica · V11 (neumáticos, óptica y electrónica 3D)"
             "aa_mobile": label="G13 · Antiaéreo · V54 caucho y rodadura 3D"
@@ -4335,8 +4336,8 @@ func _display_role(role: String) -> void:
             preview.remove_child(model_root)
             model_root.queue_free()
         model_root=P06Models.build("uav_recon",_faction,true,13)
-        if model_root==null or not A01WingletV8.has_model(model_root):
-            push_error("A01 V5 closed airframe or faction paint missing in shared Studio")
+        if model_root==null or not A01WingletV9.has_model(model_root):
+            push_error("A01 V9 closed airframe or conformal winglet paint missing in shared Studio")
             return
         preview.add_child(model_root)
         model_root.rotation_degrees.y=_yaw
@@ -5241,9 +5242,9 @@ func _process(delta: float) -> void:
 
 func _update_details() -> void:
     if _role=="uav_recon" and model_root!=null and detail_label!=null and status_label!=null:
-        var ready_a01:bool=A01WingletV8.has_model(model_root)
+        var ready_a01:bool=A01WingletV9.has_model(model_root)
         var current_damage:int=A01DamageV6.stage(model_root) if ready_a01 else -1
-        detail_label.text="A01 V8 EN DESARROLLO · UAV SIN ARMAS · %d mallas · %s" % [
+        detail_label.text="A01 V9 EN DESARROLLO · UAV SIN ARMAS · %d mallas · %s" % [
             P06Models.inspect_meshes(model_root),
             A01DamageV6.STAGES[current_damage] if ready_a01 else "modelo incompleto"]
         status_label.text="A01 · %s · daño 3D artístico, sin cambiar HP, visión ni ataque" % [
