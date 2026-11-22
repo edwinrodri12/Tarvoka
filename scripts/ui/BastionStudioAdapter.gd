@@ -4643,6 +4643,10 @@ func _on_faction(index: int) -> void:
             return
         var keep_yaw:float=_yaw
         var keep_zoom:float=_zoom
+        # _display_role resets A01 camera preset to general. Reapplying
+        # this focus AFTER rebuilding the 3D model prevents an unwanted
+        # jump away from sensor/overhead/tail inspection on faction change.
+        var keep_focus:String=_a01_review_focus
         var keep_damage:int=(
             A01DamageV6.stage(model_root) if model_root!=null and
             A01DamageV6.has_model(model_root) else 0)
@@ -4651,6 +4655,7 @@ func _on_faction(index: int) -> void:
         faction_picker.select(index)
         _yaw=keep_yaw
         _zoom=keep_zoom
+        _a01_review_focus=keep_focus
         if model_root!=null:
             model_root.rotation_degrees.y=_yaw
             if A01DamageV6.has_model(model_root):
