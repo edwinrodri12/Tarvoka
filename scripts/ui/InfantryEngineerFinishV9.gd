@@ -120,6 +120,13 @@ static func sync(model: Node3D, kind: String="idle") -> bool:
     var work_glove: Node3D=_find(model,TOOL_GLOVE)
     if work_glove!=null:
         work_glove.visible=operating
+    # Individual original V9 digits are independent gun children. They MUST
+    # disappear with the right glove when it transfers to the articulated
+    # construction tool; V10 tool digits then appear in the moving tool rig.
+    for finger in range(3):
+        var work_digit: Node3D=_find(model,"V10_DedoHerramienta_%d"%finger)
+        if work_digit!=null:
+            work_digit.visible=operating
     for side in [-1,1]:
         var arm: Node3D=_find(model,"BrazoRig_%d"%side)
         var glove: Node3D=_find(model,GRIP+"_%d"%side)
@@ -128,6 +135,11 @@ static func sync(model: Node3D, kind: String="idle") -> bool:
             return false
         var working: bool=operating and side>0
         glove.visible=not working
+        for finger in range(3):
+            var rifle_digit: Node3D=_find(model,
+                "V9_DedosCerrados_%d_%d"%[side,finger])
+            if rifle_digit!=null:
+                rifle_digit.visible=not working
         var contact_local: Vector3=(
             tool.transform*Vector3(0,-0.055,-0.048) if working
             else gun.transform*_contact(side))
