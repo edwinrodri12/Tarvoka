@@ -10,6 +10,7 @@ const SupplyFinishV2 = preload("res://scripts/ui/CampSupplyFinishV2.gd")
 const SupplyReadabilityV3 = preload("res://scripts/ui/CampSupplyReadabilityV3.gd")
 const ReconFinishV2 = preload("res://scripts/ui/CampReconFinishV2.gd")
 const DefenseFinishV2 = preload("res://scripts/ui/CampDefenseFinishV2.gd")
+const MedicalFinishV2 = preload("res://scripts/ui/CampMedicalFinishV2.gd")
 const CAMPS := ["suministros", "reconocimiento", "defensivo", "medico"]
 const BUILDERS := {
     "suministros": "infantry_logistic",
@@ -284,7 +285,7 @@ static func build(kind: String, faction: int, lod: int = 13,
             "defensivo":
                 pass  # No V1 overlapping meshes: V2 is complete physical sculpture.
             "medico":
-                _medical(deployable, accent, lod, damage)
+                pass  # Medical V2 fully replaces V1; no ghost/transparent shells.
     _weather_damage(root, damage, lod)
     if kind == "suministros":
         if not SupplyFinishV2.apply(root, accent, lod, damage):
@@ -299,6 +300,10 @@ static func build(kind: String, faction: int, lod: int = 13,
             return null
     elif kind == "defensivo":
         if not DefenseFinishV2.apply(root, accent, lod, damage):
+            root.free()
+            return null
+    elif kind == "medico":
+        if not MedicalFinishV2.apply(root, accent, lod, damage):
             root.free()
             return null
     return root
@@ -327,6 +332,11 @@ static func pose_deploy(root: Node3D, progress: float) -> bool:
         deployable.visible = true
         deployable.scale = Vector3.ONE
         if not DefenseFinishV2.pose(root, t):
+            return false
+    elif str(root.get_meta("camp_kind", "")) == "medico":
+        deployable.visible = true
+        deployable.scale = Vector3.ONE
+        if not MedicalFinishV2.pose(root, t):
             return false
     else:
         deployable.visible = t > 0.01
