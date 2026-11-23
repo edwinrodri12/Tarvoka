@@ -12,6 +12,7 @@ const WingletV8=preload("res://scripts/ui/A01ReconWingletV8.gd")
 const WingletV9=preload("res://scripts/ui/A01ReconWingletV9.gd")
 const NoseV10=preload("res://scripts/ui/A01ReconNoseOpticsV10.gd")
 const AirframeV11=preload("res://scripts/ui/A01ReconAirframeV11.gd")
+const WingRootV12=preload("res://scripts/ui/A01ReconWingRootV12.gd")
 const OUT="res://build/qa/a01-v1/a01-unified-studio.png"
 var failures:int=0
 
@@ -44,14 +45,14 @@ func _run()->void:
         "recon drone added to the SAME unit selector")
     if picker!=null and index>=0 and index<picker.item_count:
         check(picker.get_item_text(index).contains("A01") and
-            picker.get_item_text(index).contains("V11 EN DESARROLLO"),
+            picker.get_item_text(index).contains("V12 EN DESARROLLO"),
             "A01 correctly remains an unapproved first art revision")
         picker.select(index)
     studio.call("_display_role","uav_recon")
     await process_frame
     var model:=studio.get("model_root") as Node3D
     check(model!=null and Drone.has_model(model) and Finish.has_model(model) and
-        HardwareV3.has_model(model) and AeroV4.has_model(model) and TailV5.has_model(model) and DamageV6.has_model(model) and NoseV10.has_model(model) and AirframeV11.has_model(model),
+        HardwareV3.has_model(model) and AeroV4.has_model(model) and TailV5.has_model(model) and DamageV6.has_model(model) and NoseV10.has_model(model) and AirframeV11.has_model(model) and WingRootV12.has_model(model),
         "native A01 V5 airframe, sealed optics and three-blade motor in original SubViewport")
     check(factions!=null and factions.visible,"same eight-faction selector")
     var panel:=studio.get("a01_360_panel") as VBoxContainer
@@ -116,7 +117,7 @@ func _run()->void:
         "visible active-quality label changes to Android LOD8")
     var android:Node3D=studio.get("model_root") as Node3D
     check(android!=null and android!=hero_before and
-        NoseV10.has_model(android) and AirframeV11.has_model(android) and
+        NoseV10.has_model(android) and AirframeV11.has_model(android) and WingRootV12.has_model(android) and
         int(android.get_meta("tarvoka_a01_v10_lod",0))==8,
         "low-poly A01 V10 geometry is the actual Android LOD8 rig")
     check(DamageV6.stage(android)==3,
@@ -131,7 +132,7 @@ func _run()->void:
     studio.call("_on_faction",6)
     await process_frame
     android=studio.get("model_root") as Node3D
-    check(android!=null and NoseV10.has_model(android) and AirframeV11.has_model(android) and
+    check(android!=null and NoseV10.has_model(android) and AirframeV11.has_model(android) and WingRootV12.has_model(android) and
         int(android.get_meta("tarvoka_a01_v10_lod",0))==8 and
         DamageV6.stage(android)==3,
         "faction change inside Android LOD8 preserves LOD and damage D3")
@@ -157,7 +158,7 @@ func _run()->void:
     check(lod_label!=null and lod_label.text.contains("LOD13"),
         "visible active-quality label returns to high-detail LOD13")
     var hero_after:Node3D=studio.get("model_root") as Node3D
-    check(hero_after!=null and NoseV10.has_model(hero_after) and AirframeV11.has_model(hero_after) and
+    check(hero_after!=null and NoseV10.has_model(hero_after) and AirframeV11.has_model(hero_after) and WingRootV12.has_model(hero_after) and
         int(hero_after.get_meta("tarvoka_a01_v10_lod",0))==13 and
         DamageV6.stage(hero_after)==3,
         "LOD13 restores details without losing faction paint or D3")
@@ -213,7 +214,7 @@ func _run()->void:
     await process_frame
     model=studio.get("model_root") as Node3D
     check(model!=null and Drone.has_model(model) and Finish.has_model(model) and
-        HardwareV3.has_model(model) and AeroV4.has_model(model) and TailV5.has_model(model) and DamageV6.has_model(model) and NoseV10.has_model(model) and AirframeV11.has_model(model),
+        HardwareV3.has_model(model) and AeroV4.has_model(model) and TailV5.has_model(model) and DamageV6.has_model(model) and NoseV10.has_model(model) and AirframeV11.has_model(model) and WingRootV12.has_model(model),
         "changing faction rebuilds A01 V8 sealed PBR wingtip model")
     check(factions!=null and factions.visible and factions.selected==6,
         "A01 keeps the same visible faction selector after repainting")
@@ -255,6 +256,21 @@ func _run()->void:
         (wing_v11.material_override as StandardMaterial3D).albedo_color.is_equal_approx(
             Models.faction_paint_color(6)),
         "shared viewer uses real conformal V11 wing color, not a suspended V2 box")
+    # V12 wing shoulder sculpt must be visible in exactly this shared Studio.
+    var left_root_v12:=model.find_child(WingRootV12.ROOT_L,
+        true,false) as MeshInstance3D
+    var right_root_v12:=model.find_child(WingRootV12.ROOT_R,
+        true,false) as MeshInstance3D
+    check(left_root_v12!=null and right_root_v12!=null and
+        left_root_v12.visible and right_root_v12.visible and
+        left_root_v12.mesh is ArrayMesh and right_root_v12.mesh is ArrayMesh,
+        "the original web Studio actually displays both sculpted V12 shoulder fillets")
+    for suffix in ["_L","_R"]:
+        var old_root_v4:=model.find_child(
+            "A01_V4_SmoothCompositeWingRoot"+suffix,
+            true,false) as MeshInstance3D
+        check(old_root_v4!=null and not old_root_v4.visible,
+            "shared viewer hides obsolete spherical V4 wing root "+suffix)
     # Visual damage stays inside the original 3D scene with the same model.
     check(model!=null and DamageV6.stage(model)==0,
         "shared Studio starts with undamaged reconnaissance UAV")
@@ -289,7 +305,7 @@ func _run()->void:
         await process_frame
         var active:=studio.get("model_root") as Node3D
         var faction_picker:=studio.get("faction_picker") as OptionButton
-        check(active!=null and AeroV4.has_model(active) and TailV5.has_model(active) and NoseV10.has_model(active) and AirframeV11.has_model(active),
+        check(active!=null and AeroV4.has_model(active) and TailV5.has_model(active) and NoseV10.has_model(active) and AirframeV11.has_model(active) and WingRootV12.has_model(active),
             "A01 V8 model stays native after changing to team %d" % team)
         check(faction_picker!=null and faction_picker.visible and
             faction_picker.selected==team,
