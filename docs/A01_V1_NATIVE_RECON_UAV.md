@@ -177,15 +177,22 @@ El primer modelo se genera en `scripts/ui/A01ReconDroneV1.gd`, conectado al cons
 
 **Problema corregido:** el modelo V11 preservaba dos elipsoides V4 `A01_V4_SmoothCompositeWingRoot_*` sobre la unión entre fuselaje y ala, cuya silueta parecía una pieza adicional adherida. El problema es visual, no de estadísticas.
 
-**Nueva construcción:** `scripts/ui/A01ReconWingRootV12.gd` genera una malla propia para cada raíz alar, con secciones de perfil cerrado en cuatro posiciones transversales (tres estaciones para Android LOD8). Los perfiles se conectan con triángulos físicos orientados hacia afuera y **dos tapas cerradas**, sin planchas transparentes ni trucos de doble cara. La primera estación penetra físicamente en el casco compuesto V11; la última termina dentro del perfil alar V4. Se conserva el exterior gris compuesto y la pintura de las ocho facciones, en lugar de bandas nuevas encima de la articulación.
+**Nueva construcción:** `scripts/ui/A01ReconWingRootV12.gd` genera una malla propia para cada raíz alar, con secciones de perfil cerrado en seis posiciones transversales para LOD13 (cuatro estaciones para Android LOD8). Los perfiles se conectan con triángulos físicos orientados hacia afuera y **dos tapas cerradas**, sin planchas transparentes ni trucos de doble cara. La primera estación penetra físicamente en el casco compuesto V11; la última termina dentro del perfil alar V4. Se conserva el exterior gris compuesto y la pintura de las ocho facciones, en lugar de bandas nuevas encima de la articulación.
 
 Los dos elipsoides V4 dejan de ser visibles, pero permanecen como nodos históricos; en la variante detallada también se ocultan los soportes rectangulares heredados que estaban parcialmente superpuestos. **Se conserva el mismo inventario de mallas activas en la raíz: dos sustituyen a dos.**
 
 **Criterios de pruebas:**
-- Dos mallas `ArrayMesh` individuales y cerradas con 32 triángulos por lado en LOD8, 44 en LOD13. Validar aristas compartidas con orientación opuesta y ausencia de triángulos degenerados.
+- Dos mallas `ArrayMesh` individuales y cerradas con 44 triángulos por lado en LOD8, 68 en LOD13. Validar aristas compartidas con orientación opuesta y ausencia de triángulos degenerados.
 - Comprobar ambas alas y envolvente espacial; ocho facciones × dos LOD, presupuestos de geometría D0/D4, daño y reparación; sin cambiar el perfil de ModernArsenal.
 - Seis capturas **nativas Godot** desde frontal, ambos laterales, isometría, superior y Android, exportadas en `build/qa/a01-v12`.
 - Validación dentro del **mismo** `UnitArtStudioWeb` — no visor secundario. QA debe proteger LOD8/13, cámara, colores y D3.
 - CI nativa y la compilación Pages exigen `PASS A01 V12 WING ROOTS:`; no aprobar la publicación hasta verificar la nueva captura y el informe real de GitHub Actions.
 
 El resultado sigue siendo **arte en desarrollo**, no prueba de FPS en móvil. El A01 continúa siendo UAV desarmado de reconocimiento y no modifica al helicóptero HAT-29 ni las reglas de combate.
+
+
+### Ajuste V12.1: inspección de ocho vistas y eliminación de juntas sobredimensionadas
+
+Tras revisar las ocho vistas Godot de `run 45212686166` (prueba nativa superada), se corrigió la transición angular de ambas raíces: ahora los extremos se ocultan **dentro** del fuselaje V11 y del ala V4, con estaciones intermedias y normales suavizadas. El acabado utiliza el mismo material opaco del fuselaje. Los registros oscuros `A01_V3_WingServiceHatch_L/R` dejan de proyectarse como aberturas sobre el ala. QA comprueba cierre 2-manifold de 44/68 triángulos, tapas enterradas, presupuesto D0–D4 y genera seis vistas generales más dos acercamientos.
+
+La compilación inicial del Studio de este cambio falló porque `main` añadió durante el desarrollo `InfantryEngineerSmoothV13.gd`, ausente de la rama antigua. Este commit de integración incorpora **todo el árbol actualizado de main** como segundo padre del merge, conservando explícitamente G05 V13 y sin modificar sus contenidos. Todavía se exige CI del Studio sobre este nuevo árbol antes de integrar a la rama principal.

@@ -12,6 +12,7 @@ const FinishV9=preload("res://scripts/ui/InfantryEngineerFinishV9.gd")
 const AnatomyV10=preload("res://scripts/ui/InfantryEngineerAnatomyV10.gd")
 const MechanicsV11=preload("res://scripts/ui/InfantryEngineerMechanicsV11.gd")
 const DorsalV12=preload("res://scripts/ui/InfantryEngineerDorsalV12.gd")
+const SmoothV13=preload("res://scripts/ui/InfantryEngineerSmoothV13.gd")
 const UNITS := ["line","infantry_commando","infantry_sniper",
     "infantry_engineer","infantry_logistic","infantry_medic"]
 var errors: int=0
@@ -154,6 +155,16 @@ func _run() -> void:
                 DorsalV12.is_visible(final_soldier) and
                 DorsalV12.has_seals(final_soldier),
                 "V12.3 opaque helmet, face, torso and animated joint closures visible")
+            must(SmoothV13.has_model(final_soldier),
+                "V13 real smoothed armor, helmet and articulated limbs loaded")
+            studio.call("_engineer_v13_compare",false)
+            must(not bool(final_soldier.get_meta(
+                "tarvoka_engineer_v13_smoothed_visible",true)),
+                "V12.3 old polygonal mesh genuinely restored in Studio")
+            studio.call("_engineer_v13_compare",true)
+            must(bool(final_soldier.get_meta(
+                "tarvoka_engineer_v13_smoothed_visible",false)),
+                "V13 smoothed geometry restored on identical viewer and rig")
             studio.call("_engineer_v123_compare",false)
             must(not bool(final_soldier.get_meta(
                 "tarvoka_engineer_v123_seals_visible",true)) and

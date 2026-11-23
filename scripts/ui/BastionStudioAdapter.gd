@@ -9,6 +9,7 @@ const EngineerFinishV6 = preload("res://scripts/ui/InfantryEngineerFinishV6.gd")
 const EngineerFinishV9 = preload("res://scripts/ui/InfantryEngineerFinishV9.gd")
 const EngineerMechanicsV11 = preload("res://scripts/ui/InfantryEngineerMechanicsV11.gd")
 const EngineerDorsalV12 = preload("res://scripts/ui/InfantryEngineerDorsalV12.gd")
+const EngineerSmoothV13 = preload("res://scripts/ui/InfantryEngineerSmoothV13.gd")
 const InfantryRoster = preload("res://scripts/ui/InfantryCampRosterV1.gd")
 const P06Visual = preload("res://scripts/ui/APCVisualRigV1.gd")
 const P06Finish = preload("res://scripts/ui/APCFinishV3.gd")
@@ -502,6 +503,9 @@ func _install_unified_studio_navigation() -> void:
     _add_paired(infantry_360_panel,"V12.2 · ver antes",
         func(): _engineer_v123_compare(false),
         "V12.3 · modelo sellado",func(): _engineer_v123_compare(true))
+    _add_paired(infantry_360_panel,"V12.3 · poligonal",
+        func(): _engineer_v13_compare(false),
+        "V13 · curvas suaves",func(): _engineer_v13_compare(true))
     _add_paired(infantry_360_panel,"LOD13 · detalle",func(): _infantry_review_lod(13),
         "LOD8 · vista táctica",func(): _infantry_review_lod(8))
     _add_paired(infantry_360_panel,"Cuerpo completo",func(): _infantry_review_focus(false),
@@ -1489,6 +1493,20 @@ func _engineer_v123_compare(sealed: bool) -> void:
             "Ingeniero V12.3 · casco, cuello, torso y articulaciones sellados en 3D"
             if sealed else
             "Ingeniero V12.2 · comparativa sin sellado interior")
+
+
+# Identical camera, paint and real native mesh: toggle the smooth V13
+# vertices/normals, not a flat stand-in or new separate scene.
+func _engineer_v13_compare(smooth: bool) -> void:
+    if _role!="infantry_engineer" or model_root==null:
+        return
+    if not EngineerDorsalV12.is_visible(model_root):
+        EngineerDorsalV12.show_finish(model_root,true)
+    if EngineerSmoothV13.show_smoothing(model_root,smooth):
+        status_label.text=(
+            "Ingeniero V13 · blindaje curvo, casco y extremidades suavizados"
+            if smooth else
+            "Ingeniero V12.3 · mallas poligonales originales")
 
 
 func _infantry_review_look(yaw: float, perspective: String) -> void:
