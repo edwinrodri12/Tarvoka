@@ -10,6 +10,7 @@ const V17=preload("res://scripts/ui/InfantryEngineerOuterArmorV17.gd")
 const OUT: String="res://build/qa/engineer-v17"
 var failed: int=0
 var photos: int=0
+var mobile_triangles: int=0
 
 func check(ok: bool, message: String) -> void:
     if not ok:
@@ -59,6 +60,23 @@ func closed_outward(mesh: Mesh) -> bool:
     return true
 
 
+
+func face_count(mesh: Mesh) -> int:
+    if mesh==null:
+        return 0
+    var triangles: int=0
+    for surface in range(mesh.get_surface_count()):
+        var arrays: Array=mesh.surface_get_arrays(surface)
+        var raw_indices: Variant=arrays[Mesh.ARRAY_INDEX]
+        var indices: PackedInt32Array=(
+            raw_indices if raw_indices is PackedInt32Array
+            else PackedInt32Array())
+        if indices.size()>0:
+            triangles+=indices.size()/3
+        else:
+            var vertices: PackedVector3Array=arrays[Mesh.ARRAY_VERTEX]
+            triangles+=vertices.size()/3
+    return triangles
 
 func mesh_count(n: Node) -> int:
     var result: int=1 if n is MeshInstance3D else 0
@@ -165,6 +183,25 @@ func _run() -> void:
                         knee_faction.has_meta(V17.OLD) and
                         knee_faction.position.z<(-0.22),
                         "Android knee identity remains outside metal shell")
+            # Enforce real Android LOD reduction instead of just claiming
+            # that keeping mesh nodes constant guarantees mobile performance.
+            if faction==0:
+                var sculpt_triangles: int=face_count(chest.mesh)
+                for side in [-1,1]:
+                    var suffix: String="_%d"%side
+                    for label in [V17.SHOULDER+suffix,
+                            V17.KNEE+suffix,V17.POCKET+suffix,
+                            V17.SOLE+suffix]:
+                        var part: MeshInstance3D=model.find_child(
+                            label,true,false) as MeshInstance3D
+                        sculpt_triangles+=face_count(part.mesh)
+                if lod==8:
+                    mobile_triangles=sculpt_triangles
+                else:
+                    check(mobile_triangles>0 and
+                        sculpt_triangles>mobile_triangles and
+                        sculpt_triangles<=mobile_triangles*3.6,
+                        "LOD8 external armor uses fewer triangles than hero")
             var current_mesh: Mesh=chest.mesh
             check(V17.show_finish(model,false) and
                 chest.mesh!=current_mesh,
