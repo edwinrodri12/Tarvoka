@@ -160,6 +160,57 @@ static func apply(model: Node3D, hero: bool) -> bool:
                 Vector3(-float(side)*0.009,-0.006,0.0)):
             return false
 
+    # Visual audit revealed that the previous deltoid/collar adjustment
+    # was barely noticeable: the real front camera is dominated by V5's
+    # square construction brow, V7's square respirator and a broad V6
+    # rectangular folding shield behind the head. Replace these SOURCE
+    # objects in-place with fully capped curved geometry. No fake overlays.
+    var shield: Node3D=model.find_child(
+        "V6_BarreraArticuladaRig",true,false) as Node3D
+    if shield==null or shield.get_parent()!=torso:
+        return false
+    var face_parts: Array=[
+        ["V5_ViseraObraIngeniero",0.59,0.15,0.16,0.041,0.020],
+        ["V5_InsigniaCascoIngeniero",0.37,0.075,0.026,0.019,0.008],
+        ["V7_MascaraResistenciaIngeniero",0.35,0.21,0.095,0.050,0.015],
+        ["V7_FiltroCentralRespirador",0.16,0.105,0.038,0.022,0.007],
+        ["V2_BordeFrontalCasco",0.50,0.09,0.13,0.025,0.010]
+    ]
+    for entry in face_parts:
+        var face_mesh: MeshInstance3D=_find(model,str(entry[0]))
+        if face_mesh==null or face_mesh.get_parent()!=head:
+            return false
+        if not _morph(face_mesh,SmoothV13._rounded_press(
+                float(entry[1]),float(entry[2]),float(entry[3]),
+                float(entry[4]),float(entry[5]),hero),
+                face_mesh.scale,face_mesh.position):
+            return false
+    var rear_parts: Array=[
+        ["V6_PlacaPrincipalDeAcero",1.12,0.68,0.12,0.124,0.015],
+        ["V6_CostraBlindajeExterior",0.93,0.45,0.037,0.088,0.010]
+    ]
+    for entry in rear_parts:
+        var plate: MeshInstance3D=_find(model,str(entry[0]))
+        if plate==null or plate.get_parent()!=shield:
+            return false
+        if not _morph(plate,SmoothV13._rounded_press(
+                float(entry[1]),float(entry[2]),float(entry[3]),
+                float(entry[4]),float(entry[5]),hero),
+                plate.scale,plate.position):
+            return false
+    for side in [-1,1]:
+        var wing: Node3D=model.find_child(
+            "V6_AlaIzquierdaRig" if side<0 else "V6_AlaDerechaRig",
+            true,false) as Node3D
+        var wing_plate: MeshInstance3D=_find(model,
+            "V6_AlaMetal_%d"%side)
+        if wing==null or wing_plate==null or wing_plate.get_parent()!=wing:
+            return false
+        if not _morph(wing_plate,SmoothV13._rounded_press(
+                0.18,0.70,0.11,0.049,0.012,hero),
+                wing_plate.scale,wing_plate.position):
+            return false
+
     # Anatomy changes are strictly on existing visible geometry; count of
     # mesh nodes/draw calls does not increase in either tactical or hero LOD.
     model.set_meta(FLAG,true)
