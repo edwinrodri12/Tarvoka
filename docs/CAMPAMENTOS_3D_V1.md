@@ -193,3 +193,38 @@ acumuladas; la ejecución verde confirma el arreglo.
 aún pendiente de aprobación artística definitiva, incorporación al
 visor online original y prueba de rendimiento en Android. Ninguna
 regla de combate se cambió.
+
+## Médico V2 — estación sanitaria desplegable (23-nov-2026)
+
+Última de las cuatro esculturas acordadas. `scripts/ui/CampMedicalFinishV2.gd`
+sustituye íntegramente la geometría temporal de la carpa sanitaria V1,
+sin crear una nueva clase ni escena paralela. Se conecta a
+`CampModels3DV1.build("medico",faccion,lod,damage)`.
+
+- Carpa desmontable de paredes macizas, entrada real abierta, cubierta
+  reforzada de dos hojas **articuladas** con bisagras, cuerdas y color
+  de facción en techo y laterales.
+- Camilla médica claramente reconocible desde la cámara de batalla:
+  colchón macizo, respaldo inclinado, almohadilla, barandas y patas;
+  ruedas y herrajes en LOD13.
+- Gabinete de medicinas estanco, cruz **turquesa ficticia** elevada,
+  soporte clínico para bolsas de suero y monitor de seguimiento
+  **opaco**. Nunca se representa el emblema protegido de Cruz Roja.
+- Marcas grandes y visibles de las ocho facciones en el acceso, puerta
+  del botiquín, camilla, cubierta y laterales.
+- D0 intacto, D1 con desgaste, D2 con hoja del techo caída y daños
+  adicionales, D3 únicamente plataforma y restos. LOD8 Android
+  reduce herrajes; LOD13 aporta costuras y piezas pequeñas.
+- `pose_deploy` rota físicamente los dos paneles del techo en D0–D1 y
+  la hoja superviviente en D2. Todas las piezas usan sólidos cerrados
+  (`BoxMesh` y `CylinderMesh`) y materiales opacos.
+- Constructor exclusivo `infantry_medic`. No altera en absoluto
+  reglas de curación, créditos, selección de unidades, ocupación,
+  defensa, combate, IA o efectos de partida.
+- `tests/test_camp_medical_v2.gd` valida 64 ensamblajes
+  (8 facciones × 2 LOD × 4 niveles de daño) y requiere 24 renders
+  reales (cuatro ángulos, estados plegados, daños y vista superior).
+
+**Estado inicial:** esperando importación Godot 4.3, ejecución del workflow
+y evaluación de las imágenes reales; no afirmar integración al visor
+online existente ni al juego principal.
