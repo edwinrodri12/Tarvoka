@@ -137,3 +137,14 @@ Tras la integración y revisión visual de V14, el principal aspecto restante ex
 **Reversibilidad:** el mismo visor Godot muestra una comparación `V14 · equipo previo / V15 · equipo redondeado` intercambiando la malla real original, sin crear otro modelo ni cambiar la cámara. El G05 jugable utiliza V15 LOD8 directamente a través de `UnitModels3D.gd`.
 
 **QA obligatoria:** `tests/test_engineer_v15_rounded_gear.gd` comprueba 8 facciones × LOD8/13, cadenas V12–V15 cargadas, materiales opacos, cero nodos añadidos, articulación del escudo, cinco modelos de infantería no modificados y diez capturas de Godot comparando cinco ángulos idénticos. Mantener en revisión hasta confirmar CI nativa, web y fotos; no afirmar actualización de APK ni publicación en Pages antes de comprobarla.
+
+
+### Ingeniero V16 — silueta corporal completa (23 noviembre 2026)
+
+**Nueva prioridad tras V15:** el Ingeniero se veía como una colección de piezas redondeadas en vez de tener una anatomía unificada. `scripts/ui/InfantryEngineerSilhouetteV16.gd` es una nueva pasada de escultura **sobre las mallas reales existentes**, posterior a V15, que sustituye la forma genérica del tronco `PetoBase` y la cadera `CinturaEquipo` por cuerpos cerrados de perfiles interpolados, con pecho más amplio, transición real a una cintura más estrecha y pelvis solapada físicamente con el torso. Rediseña las mallas de muslos, pantorrillas y botas de ambas piernas para crear volúmenes anatómicos continuos. Ajusta las rodilleras y pantorrillas de V8 manteniendo las uniones opacas originales de V12.3.
+
+**Mismo rendimiento y movimientos:** `TorsoRig`, `CaderaRig`, ambos `PiernaRig`, ambos `BrazoRig`, cabeza, fusil y escudo conservan sus pivotes, escalas de hitbox y estado de gameplay. No se añaden objetos 3D, colliders, materiales, lógica de juego ni draw calls. Los perfiles siguen las subdivisiones `LOD8/LOD13` de V13. El equipo V15, la pintura de facciones, las poses y las uniones selladas V12.3 permanecen intactos.
+
+**Comparación real en el Estudio:** los botones `V15 · silueta previa / V16 · anatomía integral` alternan la malla y transformación verdaderas de las piezas, desde la misma cámara del único visor de Godot. `test_engineer_v16_silhouette.gd` valida topología cerrada/orientación de superficies, ocho facciones × LOD8/13, cero nuevos MeshInstance3D, las poses del escudo, cinco otros tipos de infantería intactos y diez capturas Godot de cinco cámaras antes/después. El test de batalla G05 confirma este cuerpo real en LOD8 y preserva reglas/niebla.
+
+**Estado:** esperando CI, exportación y revisión visual; no considerar V16 finalizada, publicada en Pages ni instalada en un APK hasta que se confirme.

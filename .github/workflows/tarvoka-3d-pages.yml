@@ -93,6 +93,7 @@ on:
       - "scripts/ui/InfantryEngineerSmoothV13.gd"
       - "scripts/ui/InfantryEngineerContourV14.gd"
       - "scripts/ui/InfantryEngineerGearV15.gd"
+      - "scripts/ui/InfantryEngineerSilhouetteV16.gd"
       - "tests/test_infantry_family_v2.gd"
       - "scripts/ui/InfantrySculptFinishV2.gd"
       - "tests/test_bastion_v16_joint_finish.gd"
@@ -230,6 +231,7 @@ on:
       - "scripts/ui/InfantryEngineerSmoothV13.gd"
       - "scripts/ui/InfantryEngineerContourV14.gd"
       - "scripts/ui/InfantryEngineerGearV15.gd"
+      - "scripts/ui/InfantryEngineerSilhouetteV16.gd"
       - "tests/test_infantry_studio_v2_review.gd"
   workflow_dispatch:
   workflow_run:
@@ -306,7 +308,7 @@ jobs:
           # The publisher keeps the complete HQ/Airbase/G09 web studio from its
           # release branch. Only P06 model/animation files and an additive
           # subclass adapter come from main; no building assets are replaced.
-          for item in UnitModels3D.gd InfantryFamilyV1.gd InfantrySculptFinishV2.gd InfantryVariantsV4.gd InfantryEngineerSilhouetteV5.gd InfantryEngineerFinishV6.gd InfantryEngineerCompletenessV7.gd InfantryEngineerPremiumV8.gd InfantryEngineerFinishV9.gd InfantryEngineerAnatomyV10.gd InfantryEngineerMechanicsV11.gd InfantryEngineerDorsalV12.gd InfantryEngineerSmoothV13.gd InfantryEngineerContourV14.gd InfantryEngineerGearV15.gd InfantryCampRosterV1.gd AttackHelicopterV1.gd AttackHelicopterCabinV2.gd AttackHelicopterRotorV3.gd AttackHelicopterEnginesV4.gd AttackHelicopterLandingV5.gd AttackHelicopterLandingFinishV6.gd AttackHelicopterReadabilityV7.gd AttackHelicopterSilhouetteV8.gd AttackHelicopterFinishV10.gd AttackHelicopterTailV11.gd AttackHelicopterNoseV12.gd AttackHelicopterDamageV13.gd AttackHelicopterFactionV14.gd AttackHelicopterCombatFXV14.gd AttackHelicopterNightStudioV144.gd AttackHelicopterRotorMountV145.gd AttackHelicopterRotorDampersV146.gd AttackHelicopterDamperFinishV147.gd AttackHelicopterPitchHingesV148.gd AttackHelicopterRotorAnchorsV149.gd AttackHelicopterRotorContactV1410.gd AttackHelicopterBladeRootsV1411.gd AttackHelicopterBladeSeamV1412.gd AttackHelicopterHubCrownV1413.gd AttackHelicopterHubWreckV1414.gd AttackHelicopterHubCutFinishV1415.gd BastionVisualRig3D.gd BastionDamage3D.gd BastionStudioAdapter.gd APCArtV1.gd APCArmorV2.gd APCBatchingV4.gd APCFinishV3.gd APCDetailV5.gd APCFinishV6.gd APCMachineGunV7.gd APCDamageV7.gd APCRearDesignV10.gd APCExteriorV11.gd APCTurretV12.gd APCSurfaceV13.gd APCWheelV14.gd APCUndercarriageV15.gd APCJointFinishV16.gd APCContourV17.gd APCWheelwellV18.gd APCUnifiedFlankV19.gd APCMicrodetailV20.gd APCMaterialFinishV21.gd APCWeatherFinishV22.gd APCTireFinishV23.gd APCRubberArchV24.gd APCClosedTiresV25.gd APCTacticalLOD8.gd APCDistanceLODControllerV9.gd APCWeaponAudioV8.gd APCVisualRigV1.gd G11Art3D.gd G11VisualRig3D.gd G11FinishV2.gd G11SurfaceV3.gd G11GeometryV4.gd G11MechanicsV5.gd G11DamageSculptV6.gd G11DamageAtmosphereV7.gd G11SequentialSalvoV8.gd G11ExhaustV9.gd G11CooldownV10.gd G11ArmorFinishV11.gd G11CabChassisV12.gd G11TracksFactionV13.gd G11MechanicalDetailV14.gd G11AftPodFinishV15.gd G11FrontFrameV16.gd G11SurfaceWeatherV17.gd G11TrackAssemblyV18.gd G11TrackFinishV19.gd G11WheelSuspensionV20.gd G11ShockMountFinishV21.gd G11SuspensionJointsV22.gd G11JointFinishV23.gd G11MobileLOD.gd G11TacticalReadabilityV24.gd G11BattleLODControllerV25.gd G11BattleContextV25.gd G11RocketFaceReadabilityV25.gd G11TacticalPaintReadabilityV27.gd G11CameraIdentityV28.gd G11BattleActionsV29.gd G11RearUndercarriageV30.gd G11RocketTrailsV30.gd G11RocketFlightV31.gd G11RunningGearV32.gd G11FinalAuditV33.gd G13MobileAirDefenseV1.gd G13DetailV2.gd G13GroundAirFinishV4.gd G13UndercarriageV6.gd G13WheelFinishV7.gd G13SurfaceFinishV8.gd G13SilhouetteV10.gd InfantryBarracksBattle3D.gd InfantryBarracksWindowShadeV11.gd VisualStyle.gd FactionIdentity.gd CommandCityArtV14.gd HeadquartersBattle3D.gd HeadquartersCurvedRoof3D.gd HeadquartersBattleAccents3D.gd HeadquartersMapLOD3D.gd BattleTerrain3D.gd TerrainVisualMapBridge3D.gd TerrainSurfaceFinish3D.gd TerrainSurfaceSampler3D.gd TerrainStudioRoadShore3D.gd TerrainStudioSnowPaletteV15.gd WinterBattleBiome.gd; do
+          for item in UnitModels3D.gd InfantryFamilyV1.gd InfantrySculptFinishV2.gd InfantryVariantsV4.gd InfantryEngineerSilhouetteV5.gd InfantryEngineerFinishV6.gd InfantryEngineerCompletenessV7.gd InfantryEngineerPremiumV8.gd InfantryEngineerFinishV9.gd InfantryEngineerAnatomyV10.gd InfantryEngineerMechanicsV11.gd InfantryEngineerDorsalV12.gd InfantryEngineerSmoothV13.gd InfantryEngineerContourV14.gd InfantryEngineerGearV15.gd InfantryEngineerSilhouetteV16.gd InfantryCampRosterV1.gd AttackHelicopterV1.gd AttackHelicopterCabinV2.gd AttackHelicopterRotorV3.gd AttackHelicopterEnginesV4.gd AttackHelicopterLandingV5.gd AttackHelicopterLandingFinishV6.gd AttackHelicopterReadabilityV7.gd AttackHelicopterSilhouetteV8.gd AttackHelicopterFinishV10.gd AttackHelicopterTailV11.gd AttackHelicopterNoseV12.gd AttackHelicopterDamageV13.gd AttackHelicopterFactionV14.gd AttackHelicopterCombatFXV14.gd AttackHelicopterNightStudioV144.gd AttackHelicopterRotorMountV145.gd AttackHelicopterRotorDampersV146.gd AttackHelicopterDamperFinishV147.gd AttackHelicopterPitchHingesV148.gd AttackHelicopterRotorAnchorsV149.gd AttackHelicopterRotorContactV1410.gd AttackHelicopterBladeRootsV1411.gd AttackHelicopterBladeSeamV1412.gd AttackHelicopterHubCrownV1413.gd AttackHelicopterHubWreckV1414.gd AttackHelicopterHubCutFinishV1415.gd BastionVisualRig3D.gd BastionDamage3D.gd BastionStudioAdapter.gd APCArtV1.gd APCArmorV2.gd APCBatchingV4.gd APCFinishV3.gd APCDetailV5.gd APCFinishV6.gd APCMachineGunV7.gd APCDamageV7.gd APCRearDesignV10.gd APCExteriorV11.gd APCTurretV12.gd APCSurfaceV13.gd APCWheelV14.gd APCUndercarriageV15.gd APCJointFinishV16.gd APCContourV17.gd APCWheelwellV18.gd APCUnifiedFlankV19.gd APCMicrodetailV20.gd APCMaterialFinishV21.gd APCWeatherFinishV22.gd APCTireFinishV23.gd APCRubberArchV24.gd APCClosedTiresV25.gd APCTacticalLOD8.gd APCDistanceLODControllerV9.gd APCWeaponAudioV8.gd APCVisualRigV1.gd G11Art3D.gd G11VisualRig3D.gd G11FinishV2.gd G11SurfaceV3.gd G11GeometryV4.gd G11MechanicsV5.gd G11DamageSculptV6.gd G11DamageAtmosphereV7.gd G11SequentialSalvoV8.gd G11ExhaustV9.gd G11CooldownV10.gd G11ArmorFinishV11.gd G11CabChassisV12.gd G11TracksFactionV13.gd G11MechanicalDetailV14.gd G11AftPodFinishV15.gd G11FrontFrameV16.gd G11SurfaceWeatherV17.gd G11TrackAssemblyV18.gd G11TrackFinishV19.gd G11WheelSuspensionV20.gd G11ShockMountFinishV21.gd G11SuspensionJointsV22.gd G11JointFinishV23.gd G11MobileLOD.gd G11TacticalReadabilityV24.gd G11BattleLODControllerV25.gd G11BattleContextV25.gd G11RocketFaceReadabilityV25.gd G11TacticalPaintReadabilityV27.gd G11CameraIdentityV28.gd G11BattleActionsV29.gd G11RearUndercarriageV30.gd G11RocketTrailsV30.gd G11RocketFlightV31.gd G11RunningGearV32.gd G11FinalAuditV33.gd G13MobileAirDefenseV1.gd G13DetailV2.gd G13GroundAirFinishV4.gd G13UndercarriageV6.gd G13WheelFinishV7.gd G13SurfaceFinishV8.gd G13SilhouetteV10.gd InfantryBarracksBattle3D.gd InfantryBarracksWindowShadeV11.gd VisualStyle.gd FactionIdentity.gd CommandCityArtV14.gd HeadquartersBattle3D.gd HeadquartersCurvedRoof3D.gd HeadquartersBattleAccents3D.gd HeadquartersMapLOD3D.gd BattleTerrain3D.gd TerrainVisualMapBridge3D.gd TerrainSurfaceFinish3D.gd TerrainSurfaceSampler3D.gd TerrainStudioRoadShore3D.gd TerrainStudioSnowPaletteV15.gd WinterBattleBiome.gd; do
             if [ ! -s "hq-android-v15/scripts/ui/${item}" ]; then echo "::error::Missing combined Studio file: ${item}"; exit 1; fi
             cp "hq-android-v15/scripts/ui/${item}" "scripts/ui/${item}"
           done
@@ -356,6 +358,7 @@ jobs:
           test -s scripts/ui/InfantryEngineerSmoothV13.gd
           test -s scripts/ui/InfantryEngineerContourV14.gd
           test -s scripts/ui/InfantryEngineerGearV15.gd
+          test -s scripts/ui/InfantryEngineerSilhouetteV16.gd
           test -s scripts/ui/InfantryCampRosterV1.gd
           test -s hq-android-v15/tests/test_infantry_family_v2.gd
           cp hq-android-v15/tests/test_infantry_family_v2.gd tests/test_infantry_family_v2.gd
@@ -372,6 +375,7 @@ jobs:
           grep -Fq "InfantryEngineerV10.apply" scripts/ui/UnitModels3D.gd
           grep -Fq "InfantryEngineerV11.apply" scripts/ui/UnitModels3D.gd
           grep -Fq "InfantryEngineerV12.apply" scripts/ui/UnitModels3D.gd
+          grep -Fq "InfantryEngineerV16.apply" scripts/ui/UnitModels3D.gd
           grep -Fq "InfantryEngineerV9.sync" scripts/ui/UnitModels3D.gd
           grep -Fq "EngineerFinishV6.pose" scripts/ui/BastionStudioAdapter.gd
           grep -Fq "InfantryV1.supports" scripts/ui/BastionStudioAdapter.gd
@@ -1664,7 +1668,7 @@ jobs:
           fi
           grep -F 'PASS A01 V13 TAIL EOIR:' /tmp/a01-v13-tail-eoir.log
           test "$(find build/qa/a01-v13 -maxdepth 1 -name 'a01-v13-*.png' | wc -l)" -eq 8
-          # V14 physical three-blade pusher motor, two LODs and repair.
+          # Native V14 physical three-blade pusher motor, two LODs and repair.
           timeout 190s xvfb-run -a -s '-screen 0 1280x720x24' env LIBGL_ALWAYS_SOFTWARE=1 \
             /tmp/Godot_v4.3-stable_linux.x86_64 \
             --rendering-method gl_compatibility --audio-driver Dummy --path . \

@@ -15,6 +15,7 @@ const DorsalV12=preload("res://scripts/ui/InfantryEngineerDorsalV12.gd")
 const SmoothV13=preload("res://scripts/ui/InfantryEngineerSmoothV13.gd")
 const ContourV14=preload("res://scripts/ui/InfantryEngineerContourV14.gd")
 const GearV15=preload("res://scripts/ui/InfantryEngineerGearV15.gd")
+const SilhouetteV16=preload("res://scripts/ui/InfantryEngineerSilhouetteV16.gd")
 const UNITS := ["line","infantry_commando","infantry_sniper",
     "infantry_engineer","infantry_logistic","infantry_medic"]
 var errors: int=0
@@ -159,10 +160,28 @@ func _run() -> void:
                 "V12.3 opaque helmet, face, torso and animated joint closures visible")
             must(SmoothV13.has_model(final_soldier) and
                 ContourV14.has_model(final_soldier) and
-                GearV15.has_model(final_soldier),
-                "V15 physical rounded gear over V14 closed anatomy")
+                GearV15.has_model(final_soldier) and
+                SilhouetteV16.has_model(final_soldier),
+                "V16 anatomical profile retains V15 equipment and sealed armor")
+            must(str(studio.call("_infantry_review_edition"))=="V16",
+                "unified Studio identifies the real current engineer V16")
+            var native_torso: MeshInstance3D=final_soldier.find_child(
+                SilhouetteV16.CORE,true,false) as MeshInstance3D
+            var sculpted_torso: Mesh=(
+                native_torso.mesh if native_torso!=null else null)
+            studio.call("_engineer_v16_compare",false)
+            must(native_torso!=null and
+                native_torso.mesh!=sculpted_torso and
+                native_torso.mesh is SphereMesh and
+                str(studio.call("_infantry_review_edition"))=="V15",
+                "V15 real rounded torso restores in same Studio viewport")
+            studio.call("_engineer_v16_compare",true)
+            must(native_torso.mesh==sculpted_torso and
+                str(studio.call("_infantry_review_edition"))=="V16",
+                "V16 real closed anatomical torso restored without a new model")
+            studio.call("_engineer_v16_compare",false)
             must(str(studio.call("_infantry_review_edition"))=="V15",
-                "unified Studio identifies the latest approved engineer V15")
+                "older V15 comparison starts from its original native mesh")
             var rifle: MeshInstance3D=final_soldier.find_child(
                 "V8_CarcasaFusilIngeniero",true,false) as MeshInstance3D
             var sculpted: Mesh=rifle.mesh if rifle!=null else null
@@ -224,6 +243,10 @@ func _run() -> void:
             studio.call("_engineer_v14_compare",true)
             must(str(studio.call("_infantry_review_edition"))=="V14",
                 "V14 restored after all legacy finish comparisons")
+            studio.call("_engineer_v16_compare",true)
+            must(str(studio.call("_infantry_review_edition"))=="V16"
+                and SilhouetteV16.has_model(final_soldier),
+                "restore complete V16 after all previous comparisons")
             var v11_belly: MeshInstance3D=final_soldier.find_child(
                 MechanicsV11.LOWER,true,false) as MeshInstance3D
             var v11_hinge_axle: Node3D=final_soldier.find_child(
