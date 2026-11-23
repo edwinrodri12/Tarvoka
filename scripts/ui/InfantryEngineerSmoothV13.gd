@@ -11,6 +11,7 @@ const FLAG: String="tarvoka_engineer_smooth_v13"
 const ROLE: String="infantry_engineer"
 const OLD_MESH: String="tarvoka_engineer_v13_previous_mesh"
 const NEW_MESH: String="tarvoka_engineer_v13_smooth_mesh"
+const TRIM_PREFIX: String="V12_V13_BiselFisico"
 
 static func _emit(st: SurfaceTool, p: Vector3, n: Vector3) -> void:
     st.set_normal(n)
@@ -89,6 +90,17 @@ static func _rounded_press(w: float, h: float, thick: float,
         for vertex in [Vector3(0,0,rear_z),rear_a,rear_b]:
             _emit(st,vertex,Vector3(0,0,1))
     return st.commit()
+
+static func _trim(parent: Node3D, name: String, at: Vector3,
+        size: Vector2, radius: float, paint: Material,
+        hero: bool) -> void:
+    var part:=MeshInstance3D.new()
+    part.name=TRIM_PREFIX+name
+    part.mesh=_rounded_press(size.x,size.y,0.029,radius,0.009,hero)
+    part.material_override=paint
+    part.rotation_degrees.y=180.0
+    part.position=at
+    parent.add_child(part)
 
 static func _catmull(a: float, b: float, c: float,
         d: float, t: float) -> float:
@@ -189,6 +201,10 @@ static func show_smoothing(model: Node3D, enabled: bool) -> bool:
         if node.has_meta(OLD_MESH) and node.has_meta(NEW_MESH):
             node.mesh=(node.get_meta(NEW_MESH) if enabled
                 else node.get_meta(OLD_MESH))
+    # Extra physical metal bezels belong to V13, not the V12.3 baseline.
+    for item in model.find_children(TRIM_PREFIX+"*","MeshInstance3D",
+            true,false):
+        (item as MeshInstance3D).visible=enabled and V12.is_visible(model)
     model.set_meta("tarvoka_engineer_v13_smoothed_visible",enabled)
     return true
 
@@ -287,6 +303,26 @@ static func apply(model: Node3D, hero: bool) -> bool:
             node.set_meta(OLD_MESH,sphere)
             node.set_meta(NEW_MESH,rounded)
             node.mesh=rounded
+    if hero:
+        # The first V13 render was smoother but lost the V12.3 panel's
+        # mechanical relief. Add four real CLOSED rounded metal bezels
+        # BEHIND its existing faction strips, never a see-through overlay.
+        # Keep draw-call cost out of tactical Android LOD8.
+        var shield: Node3D=model.find_child(
+            "V6_BarreraArticuladaRig",true,false) as Node3D
+        var dark_frame: MeshInstance3D=model.find_child(
+            V12.FRAME,true,false) as MeshInstance3D
+        if shield==null or dark_frame==null:
+            return false
+        var trim: Material=dark_frame.material_override
+        _trim(shield,"Superior",Vector3(0,0.177,0.448),
+            Vector2(0.922,0.151),0.034,trim,hero)
+        for side in [-1,1]:
+            _trim(shield,"Ranura_%d"%side,
+                Vector3(float(side)*0.284,-0.123,0.505),
+                Vector2(0.312,0.158),0.045,trim,hero)
+        _trim(shield,"UnionCentral",Vector3(0,-0.137,0.467),
+            Vector2(0.053,0.182),0.016,trim,hero)
     model.set_meta(FLAG,true)
     model.set_meta("tarvoka_engineer_v13_hero",hero)
     model.set_meta("tarvoka_engineer_v13_smoothed_visible",true)
