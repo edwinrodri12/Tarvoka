@@ -1512,9 +1512,15 @@ func _engineer_v13_compare(smooth: bool) -> void:
         return
     if not EngineerDorsalV12.is_visible(model_root):
         EngineerDorsalV12.show_finish(model_root,true)
-    if EngineerSmoothV13.show_smoothing(model_root,smooth):
-        # The V13 comparison is deliberately V13, not an unnoticed V14.
+    # V14 snapshots are V13 meshes, so toggles must happen IN ORDER:
+    # V14->V13->V12.3 when hiding; V12.3->V13 when showing.
+    # Otherwise a last-step V14 reset would accidentally restore V13's
+    # helmet while the status claimed the true polygonal V12.3 comparison.
+    if not smooth:
         EngineerContourV14.show_contours(model_root,false)
+    if EngineerSmoothV13.show_smoothing(model_root,smooth):
+        if smooth:
+            EngineerContourV14.show_contours(model_root,false)
         status_label.text=(
             "Ingeniero V13 · blindaje curvo, casco y extremidades suavizados"
             if smooth else
