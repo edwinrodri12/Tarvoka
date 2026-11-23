@@ -42,5 +42,22 @@ class OfflineSurfaceTests(unittest.TestCase):
             self.assertEqual(scan(root), [])
 
 
+    def test_detects_webrtc_upnp_and_tls_without_substring_false_positives(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            (root / "Network.gd").write_text(
+                "var a = WebRTCPeerConnection.new()\n"
+                "var b = WebRTCDataChannel\n"
+                "var c = UPNP.new()\n"
+                "var d = PacketPeerDTLS.new()\n"
+                "var e = StreamPeerTLS.new()\n"
+                "var f = MultiplayerPeerExtension\n"
+                "var safe = MyUPNPWrapper\n",
+                encoding="utf-8",
+            )
+            findings = scan(root)
+            self.assertEqual(len(findings), 6)
+            self.assertFalse(any("MyUPNPWrapper" in item for item in findings))
+
 if __name__ == "__main__":
     unittest.main()
