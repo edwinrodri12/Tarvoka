@@ -59,5 +59,24 @@ class OfflineSurfaceTests(unittest.TestCase):
             self.assertEqual(len(findings), 6)
             self.assertFalse(any("MyUPNPWrapper" in item for item in findings))
 
+    def test_does_not_follow_symlinked_source_outside_checkout(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder) / "repo"
+            root.mkdir()
+            outside = Path(folder) / "external.gd"
+            outside.write_text("var client = HTTPRequest.new()\\n", encoding="utf-8")
+            (root / "External.gd").symlink_to(outside)
+            (root / "Safe.gd").write_text("extends Node\\n", encoding="utf-8")
+            self.assertEqual(scan(root), [])
+
+    def test_does_not_follow_symlinked_source_inside_checkout(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            (root / "Real.gd").write_text("var client = HTTPRequest.new()\\n", encoding="utf-8")
+            (root / "Alias.gd").symlink_to(root / "Real.gd")
+            findings = scan(root)
+            self.assertEqual(len(findings), 1)
+            self.assertIn("Real.gd", findings[0])
+
 if __name__ == "__main__":
     unittest.main()
