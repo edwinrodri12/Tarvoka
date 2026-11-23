@@ -160,7 +160,7 @@ jobs:
           grep -F 'PASS A01 V10 NOSE OPTICS:' /tmp/a01-v10-nose.log
           test "$(find build/qa/a01-v10 -maxdepth 1 -name 'a01-v10-*.png' | wc -l)" -eq 13
 
-      - name: V11 sculpted airframe, sealed paint and six native Godot views
+      - name: V11 sculpted airframe, sealed paint and eight native Godot views incl. root closeups
         shell: bash
         run: |
           set -euo pipefail
@@ -177,7 +177,7 @@ jobs:
           grep -F 'PASS A01 V11 AERODYNAMIC BODY:' /tmp/a01-v11-airframe.log
           test "$(find build/qa/a01-v11 -maxdepth 1 -name 'a01-v11-*.png' | wc -l)" -eq 6
 
-      - name: V12 watertight left and right wing root fairings and six Godot angles
+      - name: V12 watertight left and right wing root fairings and eight Godot angles incl. two root closeups
         shell: bash
         run: |
           set -euo pipefail
@@ -192,7 +192,7 @@ jobs:
             exit 1
           fi
           grep -F 'PASS A01 V12 WING ROOTS:' /tmp/a01-v12-wings.log
-          test "$(find build/qa/a01-v12 -maxdepth 1 -name 'a01-v12-*.png' | wc -l)" -eq 6
+          test "$(find build/qa/a01-v12 -maxdepth 1 -name 'a01-v12-*.png' | wc -l)" -eq 8
 
       # This CI job deliberately validates ONLY the model and 21 actual
       # Godot renders. The shared Studio has many pinned building source
