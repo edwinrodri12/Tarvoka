@@ -160,7 +160,7 @@ jobs:
           grep -F 'PASS A01 V10 NOSE OPTICS:' /tmp/a01-v10-nose.log
           test "$(find build/qa/a01-v10 -maxdepth 1 -name 'a01-v10-*.png' | wc -l)" -eq 13
 
-      - name: V11 deep visual audit: sealed tapered body, conformal team paint and six Godot shots
+      - name: V11 sculpted airframe, sealed paint and six native Godot views
         shell: bash
         run: |
           set -euo pipefail
