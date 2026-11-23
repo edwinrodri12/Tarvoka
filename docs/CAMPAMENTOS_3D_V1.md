@@ -228,3 +228,46 @@ sin crear una nueva clase ni escena paralela. Se conecta a
 **Estado inicial:** esperando importación Godot 4.3, ejecución del workflow
 y evaluación de las imágenes reales; no afirmar integración al visor
 online existente ni al juego principal.
+
+## Integración al ÚNICO Estudio 3D de TARVOKA (23-nov-2026)
+
+Se añadió una integración **aditiva** al pipeline real de publicación
+`.github/workflows/tarvoka-3d-pages.yml`, sin construir un segundo
+visualizador ni modificar los catálogos existentes.
+
+- `scripts/publishing/CampUnifiedStudioAdapterV1.gd.txt`: subclase
+  del **último** adaptador actual en el pipeline,
+  `HeadquartersV24SharedStudioAdapter.gd`. Se copia temporalmente como
+  `scripts/ui/CampUnifiedStudioAdapterV1.gd` en la misma exportación de Pages.
+  El archivo fuente es `.gd.txt` porque los adaptadores heredados sólo
+  están completos al ensamblar la publicación y no existen en `main`.
+- El workflow copia los módulos nativos **desde el SHA del PR/main actual**,
+  no desde una rama vieja, a la única escena existente
+  `scenes/UnitArtStudioWeb.tscn`, que ya contiene el catálogo de
+  unidades, Cuartel General, Base Aérea, Base Naval, Cuartel de
+  Infantería, Ciudades, Central Eléctrica heredada y Taller de Blindados.
+- El selector **EDIFICIOS** conserva los siete índices originales 0–6,
+  y agrega únicamente los cuatro campamentos temporales en los índices
+  7–10: Suministros, Reconocimiento, Defensivo, Médico. No reemplaza
+  el visor de unidades ni el `SubViewport` real de la escena.
+- Nuevas opciones que **sí funcionan** con la factoría de arte:
+  elección de ocho facciones o neutral, LOD8/LOD13, daño D0–D3,
+  desplegar/replegar, rotación y zoom. La escena sigue siendo un único
+  motor Godot 4.3 y una sola cámara.
+- `scripts/publishing/TestFourCampsSharedStudio.gd.txt` se materializa
+  en el propio ensamblaje como test nativo; exige que los cuatro
+  modelos sean seleccionables, que los siete edificios anteriores y
+  las unidades sigan funcionando, y que cuatro campamentos aparezcan
+  con mallas reales en el **mismo** `SubViewport`. Captura siete
+  imágenes de evidencia del visor real y prueba selector de facción,
+  daños, detalle Android y montaje.
+- Pipeline en PR: primero valida el mismo visor y, tras la exportación
+  completa, adjunta **el build/web del mismo Estudio** como artefacto
+  `tarvoka-mismo-estudio-3d-cuatro-campamentos` para revisión.
+  Por seguridad, el PR **no despliega GitHub Pages ni fusiona a main**
+  hasta que las pruebas de integración y el acabado estén aprobados.
+
+**Distinción:** modelos nativos aislados ya aprobados (136 PNG de cuatro
+modelos y versiones). Integración al **visor compartido en preparación
+y CI pendiente**, no anunciar como publicado mientras no se compruebe
+el smoke test con la escena real ni la salida web.
