@@ -297,3 +297,9 @@ Problema: el total de victorias por relés oculta si la condición territorial s
 - **NO EJECUTADO** after this fix: full Python test suite and complete resource audit; wait for CI evidence before marking PASS. Android physical: **NO EJECUTADO EN DISPOSITIVO**. No gameplay or visual changes.
 
 2026-11-22 — PR #673: corregido `test_nul_in_external_resource_path_is_diagnostic_not_crash` para insertar `chr(0)` real en el fixture, en vez de los cuatro caracteres literales `\\x00`. Commit de prueba `b32035d0e0c44abb175ce10bd2beabe9e9a880c9`. La prueba ahora ejercita la ruta `ValueError` de `pathlib` prevista por el auditor; no se alteran reglas de juego. CI del nuevo commit: NO CONFIRMADO; Android físico: NO EJECUTADO EN DISPOSITIVO.
+
+## 2026-11-22 — Resource auditor CI syntax regression
+- GitHub Actions run 45086794087 FAILED before collecting tests: `SyntaxError` in `tools/test_check_resource_paths.py:213` (two adjacent expressions, not two literal strings, in NUL-path fixture).
+- Fixed by explicitly concatenating the generated NUL-path declaration and the following missing-path declaration (`+`). Commit `7fa959763973f1ebb46456b5376938ca084859ee` on draft PR #673.
+- Prior Android export and Godot headless checks on the preceding PR head passed (runs 45086794058 and 45086794065); those do **not** validate this new test edit.
+- PENDING: rerun 16 Python tests and full resource audit on new commit; Android physical **NO EJECUTADO EN DISPOSITIVO**. Do not merge until CI green.
