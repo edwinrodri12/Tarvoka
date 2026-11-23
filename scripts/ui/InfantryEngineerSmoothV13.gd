@@ -95,7 +95,7 @@ static func _catmull(a: float, b: float, c: float,
         (2.0*a-5.0*b+4.0*c-d)*t*t+
         (-a+3.0*b-3.0*c+d)*t*t*t)
 
-static func _lathe(rings: Array[Vector3], hero: bool,
+static func _lathe(rings: Array, hero: bool,
         z_shift: float=0.0) -> ArrayMesh:
     var sections: int=3 if hero else 2
     var slices: int=24 if hero else 14
@@ -209,7 +209,6 @@ static func apply(model: Node3D, hero: bool) -> bool:
             name,true,false) as MeshInstance3D
         if base==null:
             return false
-        var old: Mesh=base.mesh
         var thick: float=0.035
         if name.begins_with("V11_"):
             # Keep original V11 thickness without changing front orientation.
@@ -219,8 +218,6 @@ static func apply(model: Node3D, hero: bool) -> bool:
             float(data[3]),float(data[4]),hero)
         if not _replace(model,name,mesh):
             return false
-        base.set_meta("tarvoka_v13_original_triangles",
-            old.get_faces().size()/3)
         base.set_meta("tarvoka_v13_rounded",true)
 
     var profiles: Dictionary={
