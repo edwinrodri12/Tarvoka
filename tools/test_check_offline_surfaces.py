@@ -108,5 +108,21 @@ class OfflineSurfaceTests(unittest.TestCase):
             self.assertEqual(len(findings), 1)
             self.assertIn("Real.gd", findings[0])
 
+    def test_inline_comments_do_not_trigger_network_findings(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            (root / "Comments.gd").write_text(
+                'extends Node # HTTPRequest.new()\n'
+                'var value = 42 # OS.execute("curl", [])\n'
+                'var fragment = "# HTTPClient"\n'
+                'var actual = HTTPRequest.new() # WebSocketPeer.new()\n',
+                encoding="utf-8",
+            )
+            findings = scan(root)
+            self.assertEqual(len(findings), 2)
+            self.assertTrue(any("fragment" in finding for finding in findings))
+            self.assertTrue(any("actual" in finding for finding in findings))
+            self.assertFalse(any("value = 42" in finding for finding in findings))
+
 if __name__ == "__main__":
     unittest.main()
