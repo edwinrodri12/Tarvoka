@@ -196,3 +196,18 @@ El resultado sigue siendo **arte en desarrollo**, no prueba de FPS en móvil. El
 Tras revisar las ocho vistas Godot de `run 45212686166` (prueba nativa superada), se corrigió la transición angular de ambas raíces: ahora los extremos se ocultan **dentro** del fuselaje V11 y del ala V4, con estaciones intermedias y normales suavizadas. El acabado utiliza el mismo material opaco del fuselaje. Los registros oscuros `A01_V3_WingServiceHatch_L/R` dejan de proyectarse como aberturas sobre el ala. QA comprueba cierre 2-manifold de 44/68 triángulos, tapas enterradas, presupuesto D0–D4 y genera seis vistas generales más dos acercamientos.
 
 La compilación inicial del Studio de este cambio falló porque `main` añadió durante el desarrollo `InfantryEngineerSmoothV13.gd`, ausente de la rama antigua. Este commit de integración incorpora **todo el árbol actualizado de main** como segundo padre del merge, conservando explícitamente G05 V13 y sin modificar sus contenidos. Todavía se exige CI del Studio sobre este nuevo árbol antes de integrar a la rama principal.
+
+
+## A01 V13 — pintura de estabilizadores y guarda óptica inferior (23 noviembre 2026)
+
+La V12.1 está integrada en `main` tras pasar Godot 4.3 nativo y el compilador completo del Estudio 3D. La siguiente inspección de la cola y del gimbal bajo el morro reveló acabados todavía construidos como rectángulos en V3/V5. No es necesario reconstruir las mecánicas; los defectos son visuales.
+
+**Nuevo módulo `A01ReconTailOpticsV13.gd`:**
+
+- Dos esmaltes físicos `ArrayMesh` cerrados de 12 triángulos cada uno, siguiendo exactamente la cara superior de los perfiles V5. El LOD13 interpola la estación media adicional; Android usa las secciones equivalentes y la misma silueta.
+- Se ocultan las cajas V5 de pintura, los rectángulos antiguos de bisagra y los conductos V3 que sobresalían por encima de la cola. Dos articulaciones de casco redondeadas reemplazan las antiguas cajas.
+- El rectángulo `A01_V3_GimbalLowerProtection` se sustituye por una protección física elipsoidal opaca y cerrada, hija del **mismo pivote EO/IR**. Se conserva el motor de escaneo, el Stop, la lente azul, el anillo V10, los daños y la reparación.
+- Una nueva prueba comprueba colores de ocho facciones × LOD8/13, topología cerrada, estados D0–D4, límite de polígonos, giro real del sensor y **ocho capturas Godot** (incluyendo dos acercamientos a la cola y uno al sensor). Las pruebas originales V1–V12 siguen siendo obligatorias.
+- `UnitModels3D` agrega V13 al final de la cadena existente; `BastionStudioAdapter` mantiene el mismo visor online y los cambios de facción y LOD, sin páginas ni unidades alternativas.
+
+**Puerta de calidad:** no integrar en `main` hasta que el nuevo workflow nativo y la compilación completa del visor de Godot 4.3 se completen con éxito, y las ocho imágenes se inspeccionen. Sin alteraciones de visión de niebla, movimiento, combustible, economía, ataques ni helicópteros. La medida de FPS y temperatura en Android físico sigue pendiente.

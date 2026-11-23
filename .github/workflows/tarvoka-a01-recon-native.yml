@@ -1,4 +1,4 @@
-name: TARVOKA A01 Recon UAV V12 Native Visual QA
+name: TARVOKA A01 Recon UAV V13 Native Visual QA
 
 on:
   pull_request:
@@ -15,7 +15,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: a01-recon-v12-native-${{ github.event.pull_request.number || github.ref }}
+  group: a01-recon-v13-native-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -194,6 +194,23 @@ jobs:
           grep -F 'PASS A01 V12 WING ROOTS:' /tmp/a01-v12-wings.log
           test "$(find build/qa/a01-v12 -maxdepth 1 -name 'a01-v12-*.png' | wc -l)" -eq 8
 
+      - name: V13 tail and EOIR physical surfaces with eight original Godot captures
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout 190s xvfb-run -a -s "-screen 0 1280x720x24" \
+            env LIBGL_ALWAYS_SOFTWARE=1 \
+            /tmp/Godot_v4.3-stable_linux.x86_64 \
+            --rendering-method gl_compatibility --audio-driver Dummy \
+            --path . --script res://tests/test_a01_recon_tail_optics_v13.gd \
+            2>&1 | tee /tmp/a01-v13-tail-eoir.log
+          if grep -E 'SCRIPT ERROR:|Parse Error:|ERROR:|Assertion failed' /tmp/a01-v13-tail-eoir.log; then
+            echo "::error::A01 V13 optical skirt, V-tail topology or tactical safety failed"
+            exit 1
+          fi
+          grep -F 'PASS A01 V13 TAIL EOIR:' /tmp/a01-v13-tail-eoir.log
+          test "$(find build/qa/a01-v13 -maxdepth 1 -name 'a01-v13-*.png' | wc -l)" -eq 8
+
       # This CI job deliberately validates ONLY the model and 21 actual
       # Godot renders. The shared Studio has many pinned building source
       # dependencies not contained in main; copying one scene here would
@@ -213,6 +230,9 @@ jobs:
           grep -Fq "test_a01_recon_airframe_v11.gd" .github/workflows/tarvoka-3d-pages.yml
           grep -Fq "test_a01_recon_wing_root_v12.gd" .github/workflows/tarvoka-3d-pages.yml
           grep -Fq "A01WingRootV12.apply" scripts/ui/UnitModels3D.gd
+          grep -Fq "A01TailOpticsV13.apply" scripts/ui/UnitModels3D.gd
+          grep -Fq "test_a01_recon_tail_optics_v13.gd" .github/workflows/tarvoka-3d-pages.yml
+          grep -Fq "PASS A01 V13 SHARED STUDIO:" .github/workflows/tarvoka-3d-pages.yml
           grep -Fq "A01AirframeV11.apply" scripts/ui/UnitModels3D.gd
           grep -Fq "test_a01_recon_damage_v6.gd" .github/workflows/tarvoka-3d-pages.yml
           grep -Fq 'faction_picker.select(_faction)' scripts/ui/BastionStudioAdapter.gd
@@ -221,7 +241,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: tarvoka-a01-v12-wingroot-visual-evidence
+          name: tarvoka-a01-v13-tail-optics-visual-evidence
           path: |
             build/qa/a01-v1/*.png
             build/qa/a01-v6/*.png
@@ -231,5 +251,6 @@ jobs:
             build/qa/a01-v10/*.png
             build/qa/a01-v11/*.png
             build/qa/a01-v12/*.png
+            build/qa/a01-v13/*.png
           if-no-files-found: warn
           retention-days: 14
