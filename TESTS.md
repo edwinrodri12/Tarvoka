@@ -251,3 +251,10 @@ Problema: el total de victorias por relés oculta si la condición territorial s
 - `tools/test_check_offline_surfaces.py` define cuatro pruebas: clases de red, comentarios/directorios excluidos, nodo HTTPRequest en escena y escena sin red.
 - **PASÓ:** escritura de fuentes en rama independiente. **NO EJECUTADO:** pruebas Python, auditoría real del árbol, CI Godot/Android, tráfico real de dispositivo. El análisis estático NO demuestra ausencia de tráfico ni sustituye una prueba de red con Android desconectado.
 - No altera reglas, IA, guardados, arte ni configuración Android; no agregar como gate obligatorio sin revisar hallazgos existentes.
+
+### 2026-11-22 — Offline surface auditor: expanded network APIs (PR #680)
+- Added detection of WebRTCPeerConnection, WebRTCDataChannel, UPNP, PacketPeerDTLS, StreamPeerTLS and MultiplayerPeerExtension in `tools/check_offline_surfaces.py`.
+- Added positive/adversarial regression to `tools/test_check_offline_surfaces.py`: six network APIs detected, similarly named MyUPNPWrapper ignored.
+- **NO EJECUTADO**: Python test suite, complete source audit, Godot/Android CI and physical Android; commit publication is not test success.
+- Command: `python3 -m unittest discover -s tools -p 'test_check_offline_surfaces.py' -v && python3 tools/check_offline_surfaces.py .`
+- Static inspection is heuristic; it does not prove absence of actual network traffic. No gameplay rules changed.
