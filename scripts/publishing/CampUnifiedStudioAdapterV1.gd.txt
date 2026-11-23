@@ -143,6 +143,15 @@ func _camp_display() -> void:
         return
     if not _camp_selected(building_picker.selected):
         return
+    # Keep the user's close-up inspection angle when swapping faction,
+    # mobile LOD or damage on the SAME camp. Switching camp type resets it.
+    var previous_kind: String = str(model_root.get_meta(
+        "camp_kind", "")) if model_root != null else ""
+    var same_camp: bool = previous_kind == camp_kind
+    var previous_yaw: float = _yaw
+    var previous_zoom: float = _zoom
+    var previous_deploy: float = float(model_root.get_meta(
+        "visual_deploy_progress", 1.0)) if same_camp else 1.0
     _stop_animation()
     if model_root != null:
         if model_root.get_parent() != null:
@@ -161,9 +170,11 @@ func _camp_display() -> void:
     model_root.name = "CampamentoUnificado_" + camp_kind
     model_root.set_meta("camp_shared_studio", true)
     preview.add_child(model_root)
-    _yaw = -32.0
-    _zoom = 1.0
+    _yaw = previous_yaw if same_camp else -32.0
+    _zoom = previous_zoom if same_camp else 1.0
     model_root.rotation_degrees.y = _yaw
+    if same_camp and not CampArt.pose_deploy(model_root, previous_deploy):
+        push_error("CAMP STUDIO: cannot restore current deployment state")
     camp_controls.visible = true
     _camp_hide_prior_controls()
     _update_camera()
