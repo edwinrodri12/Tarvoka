@@ -87,6 +87,21 @@ class PairedInitiativeTests(unittest.TestCase):
                     with self.assertRaises(ValueError):
                         summarize([row, {"pair_id": "x", "starter": "red", "winner": "blue"}])
 
+    def test_pair_id_whitespace_normalized(self):
+        result = summarize([
+            {"pair_id": " map-a ", "starter": "blue", "winner": "blue"},
+            {"pair_id": "map-a", "starter": "red", "winner": "red"},
+        ])
+        self.assertEqual(result["pairs"], 1)
+        self.assertEqual(result["pair_patterns"]["starter_sweep"], 1)
+
+    def test_pair_id_whitespace_duplicate_rejected(self):
+        with self.assertRaises(ValueError):
+            summarize([
+                {"pair_id": "map-a", "starter": "blue", "winner": "blue"},
+                {"pair_id": " map-a ", "starter": "blue", "winner": "red"},
+            ])
+
     def test_invalid_winner_rejected(self):
         with self.assertRaises(ValueError):
             summarize([
