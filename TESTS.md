@@ -277,3 +277,7 @@ Problema: el total de victorias por relés oculta si la condición territorial s
 - PR remains draft; no gameplay or export changes.
 
 2026-11-23 — PR #680: el auditor offline ahora descarta comentarios GDScript al final de líneas sin truncar cadenas que contengan `#`; se añadió la décima regresión con comentarios, cadenas y una llamada real. Código publicado; ejecución Python/Godot/Android NO EJECUTADA al escribir esta nota. Comandos: `python3 -m unittest discover -s tools -p 'test_check_offline_surfaces.py'` y `python3 tools/check_offline_surfaces.py .`. El análisis estático no prueba ausencia de tráfico real.
+
+## 2026-11-23 — Auditor offline: sincronización multijugador (PR #680)
+Se amplió `tools/check_offline_surfaces.py` para señalar `MultiplayerAPI`, `SceneMultiplayer`, `MultiplayerSpawner`, `MultiplayerSynchronizer` y `ENetConnection`, superficies potenciales de red en Godot 4.3. La nueva regresión `test_multiplayer_sync_surfaces_and_identifier_boundaries` comprueba cinco detecciones y descarta un identificador de nombre parecido y un comentario. El auditor es informativo y no demuestra ausencia de tráfico.
+**PASÓ:** publicación de código y test en la rama de PR #680. **NO EJECUTADO:** batería Python completa, auditoría sobre checkout, Godot/CI Android y teléfono físico. Mantener PR en borrador hasta validación.
