@@ -31,3 +31,15 @@ classification smoke checks PASSED (all nine winner combinations and five-patter
 fixture). The complete repository unittest suite, Godot CI and Android device
 were NOT EXECUTED in this run because local GitHub DNS resolution failed.
 Do not treat isolated smoke checks as execution of repository tests.
+
+## Uncertainty reporting (2026-11-23)
+The CLI now returns `starter_win_rate_wilson95`: a two-element Wilson-score
+95% interval for starter wins among **decisive matches**, or `null` when all
+matches draw. This interval is descriptive and assumes independent Bernoulli
+observations; two legs of one seed are correlated, so it must **not** be treated
+as a statistically valid independent-sample confidence claim for paired matches.
+For decisions, inspect pair patterns and multiple independent seeds/maps; avoid
+balance adjustments based on a narrow interval or a tiny deterministic sample.
+Two added unittests cover 0%, 50%, 100% and all-draw cases.
+Status: GitHub publication verified; full Python test suite, Godot CI and
+Android device **NOT EXECUTED** during this update (local GitHub DNS failed).
