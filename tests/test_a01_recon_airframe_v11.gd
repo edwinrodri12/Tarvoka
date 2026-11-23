@@ -153,7 +153,8 @@ func _run()->void:
     vp.add_child(light)
     var camera:=Camera3D.new()
     camera.projection=Camera3D.PROJECTION_ORTHOGONAL
-    camera.size=6.4
+    # Frame 3.5 m wingspan tightly enough for meaningful visual review.
+    camera.size=4.5
     vp.add_child(camera)
     camera.current=true
     var shots:Array=[
