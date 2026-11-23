@@ -6,9 +6,11 @@ on:
       - "scripts/ui/CampModels3DV1.gd"
       - "scripts/ui/CampSupplyFinishV2.gd"
       - "scripts/ui/CampSupplyReadabilityV3.gd"
+      - "scripts/ui/CampReconFinishV2.gd"
       - "tests/test_camp_models_v1.gd"
       - "tests/test_camp_supply_v2.gd"
       - "tests/test_camp_supply_v3.gd"
+      - "tests/test_camp_recon_v2.gd"
       - ".github/workflows/camp-art-native-qa.yml"
   push:
     branches: [main]
@@ -16,9 +18,11 @@ on:
       - "scripts/ui/CampModels3DV1.gd"
       - "scripts/ui/CampSupplyFinishV2.gd"
       - "scripts/ui/CampSupplyReadabilityV3.gd"
+      - "scripts/ui/CampReconFinishV2.gd"
       - "tests/test_camp_models_v1.gd"
       - "tests/test_camp_supply_v2.gd"
       - "tests/test_camp_supply_v3.gd"
+      - "tests/test_camp_recon_v2.gd"
       - ".github/workflows/camp-art-native-qa.yml"
   workflow_dispatch:
 
@@ -102,6 +106,22 @@ jobs:
           fi
           grep -F 'PASS SUPPLY CAMP V3 NATIVE QA: 64 audits, 18 views' /tmp/camp-v3-native.log
           test "$(find build/qa/camps-supply-v3 -name '*.png' | wc -l)" -eq 18
+      - name: Inspect native Recon V2 64 models, 25 real views, optical scan and folding
+        run: |
+          set -euo pipefail
+          mkdir -p build/qa/recon-camp-v2
+          timeout --signal=TERM --kill-after=5s 300s \
+            xvfb-run -a -s '-screen 0 1280x720x24' \
+            env LIBGL_ALWAYS_SOFTWARE=1 \
+            /tmp/Godot_v4.3-stable_linux.x86_64 \
+            --rendering-method gl_compatibility --audio-driver Dummy --path . \
+            --script res://tests/test_camp_recon_v2.gd \
+            2>&1 | tee /tmp/camp-recon-v2-native.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Parse Error:|Assertion failed' /tmp/camp-recon-v2-native.log; then
+            exit 1
+          fi
+          grep -F 'PASS RECON CAMP V2 NATIVE: 64 audits, 25 PNGs' /tmp/camp-recon-v2-native.log
+          test "$(find build/qa/recon-camp-v2 -name '*.png' | wc -l)" -eq 25
       - name: Upload actual Godot screenshots for visual review
         if: always()
         uses: actions/upload-artifact@v4
@@ -111,5 +131,6 @@ jobs:
             build/qa/camps-v1/*.png
             build/qa/supply-camp-v2/*.png
             build/qa/camps-supply-v3/*.png
+            build/qa/recon-camp-v2/*.png
           if-no-files-found: warn
           retention-days: 14
