@@ -287,7 +287,7 @@ jobs:
       - name: Retrieve the exact nine V15 sprites shipped by Android
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || 'main' }}
+          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.event_name == 'workflow_dispatch' && github.ref || 'main' }}
           path: hq-android-v15
           persist-credentials: false
       - name: Include V15 source PNGs in the HQ 3D showroom before import
@@ -2481,7 +2481,7 @@ jobs:
           retention-days: 14
 
       - name: Downloadable shared TARVOKA Web Studio preview for camp review
-        if: github.event_name == 'pull_request' && github.event.pull_request.head.ref == 'feat/campamentos-3d-v1-20261122'
+        if: (github.event_name == 'pull_request' && github.event.pull_request.head.ref == 'feat/campamentos-3d-v1-20261122') || (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/feat/campamentos-3d-v1-20261122')
         uses: actions/upload-artifact@v4
         with:
           name: tarvoka-mismo-estudio-3d-cuatro-campamentos
@@ -2495,7 +2495,9 @@ jobs:
           path: build/web/
 
   deploy:
-    if: github.event_name != 'pull_request'
+    # Manual feature-branch review must NEVER overwrite public GitHub Pages.
+    # Only pushes, approved workflow_run, or explicit manual MAIN can deploy.
+    if: github.event_name != 'pull_request' && (github.event_name != 'workflow_dispatch' || github.ref == 'refs/heads/main')
     needs: build
     runs-on: ubuntu-22.04
     environment:
