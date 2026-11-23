@@ -126,3 +126,14 @@ El usuario revisó V12.3 en el visor y señaló que la silueta seguía excesivam
 Se utiliza la función de contorneado hermético de V13; los nuevos nodos de geometría son **cero**, porque se sustituyen solamente `mesh`, `scale` y `position` de las piezas existentes. Los perfiles LOD8 y LOD13 retienen su presupuesto original. El visor compartido añade una comparación física **V13 · proporciones previas / V14 · anatomía refinada**, guardando mallas y transformaciones anteriores del mismo modelo y cámara.
 
 **QA requerida antes de fusionar:** `tests/test_engineer_v14_anatomic_finish.gd` comprueba 8 facciones × 2 LODs, volúmenes sellados de casco/hombreras/peto, 10 imágenes de cinco ángulos, anclajes de armadura en sus propios rigs, conservación del tope de unidades detalladas y reversibilidad V13/V14. Deben pasar el Godot nativo, humo de interfaz, mapa táctico G05 y exportación web. **No está aprobada ni publicada hasta verificar CI y fotos**; sin modificaciones a jugabilidad ni a una APK existente.
+
+
+### Ingeniero V15 — equipo y fusil con superficies curvas
+
+Tras la integración y revisión visual de V14, el principal aspecto restante excesivamente cuadrado se concentra en el **fusil técnico, el guardamanos, las correas y las aristas del equipo dorsal**. V15 sustituye las mallas de esas partes por volúmenes físicos cerrados con bordes redondeados usando el constructor hermético V13, sin superponer geometría.
+
+**Alcance:** `scripts/ui/InfantryEngineerGearV15.gd` reconstruye con mallas originales `ArrayMesh` la carcasa y guardamanos del fusil V8, riel óptico, empuñadura, apoyo de mano, arnés de construcción V5, bancada trasera de bisagra V6 y cuatro accesorios laterales por lado (correas, cierres de caucho, escuadras). En LOD13, dos pequeños detalles por lado reciben el mismo tratamiento; LOD8 no recibe esos triángulos adicionales. La función es exclusivamente visual y preserva nombre, material opaco, transform, padre del rig, pose de escudo y archivos de juego. No añade nuevos `MeshInstance3D` ni draw calls.
+
+**Reversibilidad:** el mismo visor Godot muestra una comparación `V14 · equipo previo / V15 · equipo redondeado` intercambiando la malla real original, sin crear otro modelo ni cambiar la cámara. El G05 jugable utiliza V15 LOD8 directamente a través de `UnitModels3D.gd`.
+
+**QA obligatoria:** `tests/test_engineer_v15_rounded_gear.gd` comprueba 8 facciones × LOD8/13, cadenas V12–V15 cargadas, materiales opacos, cero nodos añadidos, articulación del escudo, cinco modelos de infantería no modificados y diez capturas de Godot comparando cinco ángulos idénticos. Mantener en revisión hasta confirmar CI nativa, web y fotos; no afirmar actualización de APK ni publicación en Pages antes de comprobarla.

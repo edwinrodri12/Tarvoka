@@ -11,6 +11,7 @@ const EngineerMechanicsV11 = preload("res://scripts/ui/InfantryEngineerMechanics
 const EngineerDorsalV12 = preload("res://scripts/ui/InfantryEngineerDorsalV12.gd")
 const EngineerSmoothV13 = preload("res://scripts/ui/InfantryEngineerSmoothV13.gd")
 const EngineerContourV14 = preload("res://scripts/ui/InfantryEngineerContourV14.gd")
+const EngineerGearV15 = preload("res://scripts/ui/InfantryEngineerGearV15.gd")
 const InfantryRoster = preload("res://scripts/ui/InfantryCampRosterV1.gd")
 const P06Visual = preload("res://scripts/ui/APCVisualRigV1.gd")
 const P06Finish = preload("res://scripts/ui/APCFinishV3.gd")
@@ -510,6 +511,9 @@ func _install_unified_studio_navigation() -> void:
     _add_paired(infantry_360_panel,"V13 · proporciones previas",
         func(): _engineer_v14_compare(false),
         "V14 · anatomía refinada",func(): _engineer_v14_compare(true))
+    _add_paired(infantry_360_panel,"V14 · equipo previo",
+        func(): _engineer_v15_compare(false),
+        "V15 · equipo redondeado",func(): _engineer_v15_compare(true))
     _add_paired(infantry_360_panel,"LOD13 · detalle",func(): _infantry_review_lod(13),
         "LOD8 · vista táctica",func(): _infantry_review_lod(8))
     _add_paired(infantry_360_panel,"Cuerpo completo",func(): _infantry_review_focus(false),
@@ -1470,6 +1474,9 @@ func _infantry_review_edition() -> String:
         return "V1"
     if _role=="infantry_engineer" and model_root!=null:
         if EngineerDorsalV12.is_visible(model_root):
+            if EngineerGearV15.has_model(model_root) and bool(
+                    model_root.get_meta("tarvoka_engineer_gear_v15_visible",false)):
+                return "V15"
             if EngineerContourV14.has_model(model_root) and bool(
                     model_root.get_meta(
                     "tarvoka_engineer_v14_contours_visible",false)):
@@ -1538,11 +1545,27 @@ func _engineer_v14_compare(refined: bool) -> void:
     if not EngineerDorsalV12.is_visible(model_root):
         EngineerDorsalV12.show_finish(model_root,true)
     EngineerSmoothV13.show_smoothing(model_root,true)
+    # Prevent the gear revision from leaking into a pure V13/V14 comparison.
+    EngineerGearV15.show_finish(model_root,false)
     if EngineerContourV14.show_contours(model_root,refined):
         status_label.text=(
             "Ingeniero V14 · casco, cuello, hombros y peto anatómicos"
             if refined else
             "Ingeniero V13 · comparación con proporciones anteriores")
+
+
+func _engineer_v15_compare(refined: bool) -> void:
+    if _role!="infantry_engineer" or model_root==null:
+        return
+    if not EngineerDorsalV12.is_visible(model_root):
+        EngineerDorsalV12.show_finish(model_root,true)
+    EngineerSmoothV13.show_smoothing(model_root,true)
+    EngineerContourV14.show_contours(model_root,true)
+    if EngineerGearV15.show_finish(model_root,refined):
+        status_label.text=(
+            "Ingeniero V15 · fusil y equipo con contornos redondeados"
+            if refined else
+            "Ingeniero V14 · equipo táctico anterior")
 
 
 func _infantry_review_look(yaw: float, perspective: String) -> void:

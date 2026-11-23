@@ -29,6 +29,7 @@ const InfantryEngineerV11 = preload("res://scripts/ui/InfantryEngineerMechanicsV
 const InfantryEngineerV12 = preload("res://scripts/ui/InfantryEngineerDorsalV12.gd")
 const InfantryEngineerV13 = preload("res://scripts/ui/InfantryEngineerSmoothV13.gd")
 const InfantryEngineerV14 = preload("res://scripts/ui/InfantryEngineerContourV14.gd")
+const InfantryEngineerV15 = preload("res://scripts/ui/InfantryEngineerGearV15.gd")
 const G16LogisticsV1 = preload("res://scripts/ui/G16ArmoredLogisticsV1.gd")
 const G16ExteriorV2 = preload("res://scripts/ui/G16LogisticsExteriorV2.gd")
 const G16MechanicsV3 = preload("res://scripts/ui/G16LogisticsMechanicsDamageV3.gd")
@@ -1064,6 +1065,8 @@ static func build(role: String, faction: int = -1, finish_enabled: bool = true, 
                         push_warning("Engineer V13 smooth and sealed rounded surfaces missing")
                     elif not InfantryEngineerV14.apply(model,art_level>=13):
                         push_warning("Engineer V14 anatomical helmet/shoulder/neck/chest contours missing")
+                    elif not InfantryEngineerV15.apply(model,art_level>=13):
+                        push_warning("Engineer V15 rounded rifle, straps and shield-edge art missing")
         "apc":
             # Art level 8 is a separate native lightweight *same silhouette*
             # profile for eight-player Android boards. Older art-level 6
