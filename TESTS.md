@@ -258,3 +258,6 @@ Problema: el total de victorias por relés oculta si la condición territorial s
 - **NO EJECUTADO**: Python test suite, complete source audit, Godot/Android CI and physical Android; commit publication is not test success.
 - Command: `python3 -m unittest discover -s tools -p 'test_check_offline_surfaces.py' -v && python3 tools/check_offline_surfaces.py .`
 - Static inspection is heuristic; it does not prove absence of actual network traffic. No gameplay rules changed.
+
+
+2026-11-23 — Auditor offline PR #680: no seguir enlaces simbólicos `.gd`/`.tscn`, ni externos ni internos, para impedir lectura fuera del checkout y recuentos duplicados. Dos regresiones nuevas (`test_does_not_follow_symlinked_source_outside_checkout`, `test_does_not_follow_symlinked_source_inside_checkout`); total 7 pruebas definidas. Cambios publicados en rama de borrador; ejecución Python/Godot/Android NO EJECUTADA en esta ejecución; Android físico NO EJECUTADO EN DISPOSITIVO. Ejecutar `python3 -m unittest discover -s tools -p 'test_check_offline_surfaces.py'` y `python3 tools/check_offline_surfaces.py .` antes de considerar revisión. Los enlaces a fuentes que solo existan como symlink quedan deliberadamente excluidos; documentar si el proyecto adopta tal patrón.
