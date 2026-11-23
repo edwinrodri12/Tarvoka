@@ -150,3 +150,24 @@ El primer modelo se genera en `scripts/ui/A01ReconDroneV1.gd`, conectado al cons
 - Se añadió el rótulo en vivo `A01_LodActivo` con `Calidad activa: LOD13 · detalle` o `Calidad activa: LOD8 · Android`. Se sincroniza tanto al pulsar un botón LOD como al reconstruir el A01 tras un cambio de facción. No modifica mallas ni jugabilidad.
 - `tests/test_a01_recon_shared_studio.gd` ahora exige que ambos botones estén colocados **antes** de la fila «Frente/Trasera», que la etiqueta muestre el nivel real tras cada cambio y que las verificaciones anteriores de daño, zoom, foco y facciones permanezcan intactas.
 - Último cambio de UI **pendiente de CI**. El flujo de publicación de Pages en PR compila y archiva pruebas, pero el despliegue se omite; el modelo V10.5 no está marcado como publicado públicamente ni fusionado hasta la aceptación visual del usuario y las pruebas Android.
+
+
+## A01 V11 — auditoría visual profunda y corrección aerodinámica (22 noviembre 2026)
+
+**Evidencia inspeccionada:** 54 PNG originales de Godot 4.3 del Studio publicado en `main` (run `45057047901`), incluidas cinco cámaras de V10, ocho facciones tácticas, daños D0-D4, y comparativas del visor único. No son concept arts generadas. La prueba V10 anterior arrojó 56/68 mallas visibles D0/D4 en LOD8 y 79/88 en LOD13 (máximos 70 y 95 respectivamente). Estas cifras son **anteriores** a V11 y no representan FPS Android.
+
+### Hallazgos concretos de la revisión
+- El fuselaje V1 seguía visible como elipsoide genérico de gran volumen, mientras que la nariz V10 ya utilizaba malla cerrada. La unión longitudinal era poco consistente.
+- Persistían sobre las alas las dos `A01_V2_LargeFactionWingBand` como cajas sobresalientes, junto a marcas V1 redundantes. Las franjas V9 del extremo alar ya eran conformadas y se conservan.
+- El mástil dorsal rectangular y su punta V3 recordaban una construcción por bloques y duplicaban elementos.
+- El LOD8 y el LOD13 tenían silueta compartida y QA geométrico, pero faltaba una prueba específica que garantizara **cuerpo completo** sellado y pinturas superiores realmente conformadas en ambos niveles.
+
+### Cambios de código aplicados en la rama V11
+- Nuevo `scripts/ui/A01ReconAirframeV11.gd`: fuselaje longitudinal cerrado con ocho estaciones de sección elíptica, tapas reales, mallas `ArrayMesh`, normales y material PBR sólido. Emplea 10 segmentos radiales Android y 14 hero.
+- Crestón dorsal y dos secciones de esmalte alar de facción como **sólidos finos de 12 triángulos**, asentados sobre superficies reales, no cajas flotantes. Los colores provienen del catálogo oficial de ocho facciones.
+- Antena estilizada cónica, con base físicamente incrustada. Los diez objetos previos de geometría superpuesta son retirados de la *vista*, conservados como nodos históricos para compatibilidad de pruebas y comparación; no se duplican visualmente.
+- V11 se añade tras V10 en `UnitModels3D.build("uav_recon", ...)`, tanto LOD8 como 13, y se confirma en `BastionStudioAdapter.gd` antes de cambiar calidad del mismo visor. No se sustituye al HAT-29 `attack_heli`.
+- Prueba nueva `tests/test_a01_recon_airframe_v11.gd`: topología sin bordes abiertos ni caras degeneradas, materiales completamente opacos, posición exterior de esmaltes, ocho facciones × dos LOD, presupuesto visible D0/D4, reparación y seis renders nativos. Prueba del mismo Studio refuerza cambio de facción, LOD y pintura real.
+- Workflows nativo y de publicación conjunta incorporan este módulo y exigen **PASS V11 + seis PNG antes de publicar**.
+
+**Criterio de avance:** nueva CI verde Godot 4.3 y revisión visual de los seis renders V11 antes de integrar a `main`; después comprobar publicación real del Studio único. En Android físico siguen pendientes temperatura, FPS, memoria y draw calls. No se altera movimiento, coste, rango de visión, niebla ni ataques. No se marca A01 como arte final hasta revisión en el dispositivo.
