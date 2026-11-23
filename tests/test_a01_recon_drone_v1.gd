@@ -6,6 +6,7 @@ const Models=preload("res://scripts/ui/UnitModels3D.gd")
 const Drone=preload("res://scripts/ui/A01ReconDroneV1.gd")
 const Finish=preload("res://scripts/ui/A01ReconFinishV2.gd")
 const HardwareV3=preload("res://scripts/ui/A01ReconFinishV3.gd")
+const PusherV14=preload("res://scripts/ui/A01ReconPusherV14.gd")
 const AeroV4=preload("res://scripts/ui/A01ReconAirfoilV4.gd")
 const TailV5=preload("res://scripts/ui/A01ReconTailV5.gd")
 const Arsenal=preload("res://scripts/core/ModernArsenal.gd")
@@ -180,8 +181,20 @@ func _run()->void:
                         HardwareV3.BLADE_PREFIX+str(blade_index),true,false) as MeshInstance3D
                     var old_blade:=prop_v3.find_child(
                         "A01_V1_PusherBlade_"+str(blade_index),true,false) as MeshInstance3D
-                    check(real_blade!=null and real_blade.visible and real_blade.mesh is BoxMesh,
-                        "V3 has exactly three single-ended physical blades")
+                    # V3's original node is kept for backwards-compatible
+                    # hierarchy/animation, but V14 replaces its box VISUALLY.
+                    var pivot:=prop_v3.find_child(
+                        "A01_V3_PusherBladePivot_"+str(blade_index),
+                        true,false) as Node3D
+                    var finished:=prop_v3.find_child(
+                        PusherV14.BLADE_PREFIX+str(blade_index),
+                        true,false) as MeshInstance3D
+                    check(PusherV14.has_model(model) and
+                        real_blade!=null and not real_blade.visible and
+                        finished!=null and finished.visible and
+                        finished.mesh is ArrayMesh and pivot!=null and
+                        absf(pivot.rotation_degrees.z-120.0*float(blade_index))<0.001,
+                        "exactly 3 real V14 aerodynamic blades replace hidden V3 boxes")
                     check(old_blade!=null and not old_blade.visible,
                         "V1 centered six-spoke silhouette is not rendered")
             check(int(model.get_meta("tarvoka_a01_v2_lod",0))==lod,
