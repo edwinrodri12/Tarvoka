@@ -149,3 +149,36 @@ Inspección visual confirmada desde las cuatro diagonales y en modo replegado.
 de revisión estética final e integración en el visor 3D unificado. No se ha
 publicado en APK Android ni modificado la lógica de niebla de guerra; PR en
 borrador hasta integrar y aprobar.
+
+## Defensivo V2 — fortificación desplegable del ingeniero (23-nov-2026)
+
+Tercera de las cuatro esculturas aprobadas. Se crea
+`scripts/ui/CampDefenseFinishV2.gd` como sustitución de la malla
+defensiva provisional mediante `CampModels3DV1.build("defensivo",faccion,lod,damage)`.
+
+- Dos barreras **volumétricas** de acero con blindaje, bordes, bisagras,
+  puntales y amplias marcas del color de facción. Ambas giran físicamente
+  hasta su posición defensiva y dejan espacio delante para ingresar.
+- Protección posterior con dos o tres hileras de sacos de arena estancos
+  (según LOD), columnas, soportes y franja superior de la facción.
+- Refuerzos bajos en los flancos, pequeñas cajas de material, marcas en
+  el piso y balizas del acceso frontal.
+- El centro tiene suelo definido y permanece libre: no hay torre de
+  tiro, soldado, arma automática, ametralladora o generador de recursos.
+  El ingeniero es el constructor exclusivo `infantry_engineer`.
+- D0: íntegro; D1: rayaduras/desgaste del kit visual global; D2: barrera
+  derecha caída, varios sacos desplazados y roturas; D3: sin fortificación
+  intacta, plataforma y restos visibles.
+- LOD8 para mapa Android y LOD13 de inspección. Todas las piezas son
+  `BoxMesh` o `CylinderMesh` cerrados, con materiales opacos.
+- Animación `pose_deploy` articula ambas defensas. **No** se implementa
+  aún un bonus táctico, reducción de daño, colisiones ni reglas de
+  ocupación, ni se modifican la IA y los datos guardados.
+- Prueba `tests/test_camp_defense_v2.gd`: 64 variantes
+  (8 facciones × 2 LOD × 4 niveles de daño), inspección del centro libre,
+  materiales cerrados, plegado y 24 PNG reales de Godot (360°, recogido,
+  daños y vista cenital).
+
+**Estado:** código y automatización de verificación incorporados; queda
+pendiente revisar el resultado real de CI y las imágenes antes de aprobar
+el acabado, integrar el visor online y validar Android.
