@@ -244,3 +244,8 @@ Problema: el total de victorias por relés oculta si la condición territorial s
 - El panel de estadísticas de la unidad seleccionada explica los tres colores. Se conserva el sistema de doble toque o Confirmar para ataques reales y la inspección de enemigos visibles que ya funciona. El motor, la economía, el balance v0.1 y los guardados no se modifican.
 - Pruebas nuevas: `tests/test_friendly_weapon_coverage.gd` verifica artillería, infantería, objetivos terrestres/aéreos/navales, límites, ammo y niebla. `tests/test_friendly_weapon_ui.gd` verifica selección táctil, panel, tres capas, confirmación, cancelación e inspección enemiga. Integrar solo después de CI completo Godot y exportación Android ARM64.
 - La integración visual isométrica se desarrolla en PR independiente #139; esta adición utiliza el render rectangular actual y una función de reglas reutilizable. Al integrar el renderizador isométrico deberá dibujar también `selected_weapon_coverage()` sin confundir la cobertura con órdenes atacables.
+
+## 2026-11-23 — Ally transit and enemy blockade (proposed)
+- `tests/test_rules.gd`: adds a single-lane road corridor test: two friendly-occupied cells remain traversable but are excluded as destinations; an enemy in the corridor blocks traversal and cells beyond; motorized road distance uses half-point costs, rounded for UI; source terrain stays unchanged.
+- Code commit `49c2dabca8b7df092f8c12c1f2a221d67f093050` on `qa/ally-transit-endpoint-20261123` (NOT in main).
+- Godot 4.3 headless: NO EJECUTADO pending CI; Android export: NO EJECUTADO; Android physical: NO EJECUTADO EN DISPOSITIVO. Does not alter gameplay or faction balance.

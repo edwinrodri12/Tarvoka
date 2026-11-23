@@ -50,5 +50,25 @@ func _initialize() -> void:
     assert(best[Vector2i(2, 0)] == 4)
     assert(best[Vector2i(2, 1)] == 3)
     assert(best[Vector2i(1, 1)] == 2)
+    # Friendly occupied tiles may be crossed, never selected as final positions.
+    # Enemy blockers remain completely impassable, even for transit.
+    var corridor: Array = terrain.duplicate(true)
+    for y in range(8):
+        for x in range(10):
+            corridor[y][x] = "water"
+    for x in range(5):
+        corridor[3][x] = "road"
+    var allies: Array[Vector2i] = [Vector2i(1, 3), Vector2i(2, 3)]
+    var through_allies: Dictionary = rules.reachable(Vector2i(0, 3), 3, corridor, no_blocked, "ground", true, allies)
+    assert(not through_allies.has(Vector2i(1, 3)))
+    assert(not through_allies.has(Vector2i(2, 3)))
+    assert(through_allies.has(Vector2i(3, 3)))
+    assert(through_allies[Vector2i(3, 3)] == 2)
+    var enemies: Array[Vector2i] = [Vector2i(2, 3)]
+    var enemy_wall: Dictionary = rules.reachable(Vector2i(0, 3), 3, corridor, enemies, "ground", true, allies)
+    assert(not enemy_wall.has(Vector2i(2, 3)))
+    assert(not enemy_wall.has(Vector2i(3, 3)))
+    # Neither occupancy filtering nor road discounts mutate the terrain input.
+    assert(corridor[3][2] == "road")
     print("PASS: movement rules and terrain integrity")
     quit()
