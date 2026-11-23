@@ -118,6 +118,19 @@ func _run() -> void:
                 vest!=null and vest.get_parent()==torso and
                 closed_outward(vest.mesh),
                 "closed smooth helmet/vest have real outward surfaces")
+            # Replace what users actually saw as angular: the V5 brow,
+            # V7 respirator and rectangular V6 folding shield / wings.
+            for name in ["V5_ViseraObraIngeniero",
+                    "V7_MascaraResistenciaIngeniero",
+                    "V7_FiltroCentralRespirador",
+                    "V6_PlacaPrincipalDeAcero",
+                    "V6_CostraBlindajeExterior",
+                    "V6_AlaMetal_-1","V6_AlaMetal_1"]:
+                var source: MeshInstance3D=engineer.find_child(
+                    name,true,false) as MeshInstance3D
+                check(source!=null and source.mesh is ArrayMesh and
+                    closed_outward(source.mesh) and source.has_meta(V14.OLD),
+                    "V14 replaces actual visible boxy exterior with closed curved "+name)
             var arms: Array=[]
             for side in [-1,1]:
                 var arm: Node3D=engineer.find_child(
