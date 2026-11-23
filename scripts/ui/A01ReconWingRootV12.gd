@@ -13,18 +13,24 @@ const V11=preload("res://scripts/ui/A01ReconAirframeV11.gd")
 
 # X distance to centre, vertical centre, front/rear chord bounds,
 # upper and lower thickness. Same physical outer silhouette for LOD8/13.
+# V12.1: the inboard cap is embedded INSIDE V11 hull; the far cap
+# disappears INSIDE the V4 wing. No visible angular end walls. The old
+# outboard 0.68 shell stood ABOVE the wing and read as a pasted-on block.
 const STATIONS=[
-    [0.205,1.055,-0.355,0.265,0.125,0.088],
-    [0.310,1.049,-0.355,0.273,0.133,0.080],
-    [0.460,1.046,-0.346,0.249,0.106,0.071],
-    [0.680,1.047,-0.327,0.222,0.074,0.058]
+    [0.175,1.016,-0.336,0.240,0.102,0.075],
+    [0.270,1.026,-0.357,0.265,0.126,0.082],
+    [0.370,1.036,-0.351,0.254,0.108,0.075],
+    [0.480,1.041,-0.347,0.241,0.092,0.067],
+    [0.600,1.045,-0.336,0.229,0.081,0.061],
+    [0.750,1.050,-0.319,0.206,0.060,0.052]
 ]
 
 static func _material()->StandardMaterial3D:
     var m:=StandardMaterial3D.new()
-    m.albedo_color=Color("#bbc9cf")
-    m.metallic=0.29
-    m.roughness=0.47
+    # Match the actual V11 composite shell instead of using a bright patch.
+    m.albedo_color=Color("#bfcbd2")
+    m.metallic=0.31
+    m.roughness=0.48
     m.transparency=BaseMaterial3D.TRANSPARENCY_DISABLED
     m.cull_mode=BaseMaterial3D.CULL_BACK
     return m
@@ -50,10 +56,14 @@ static func _ring(side:float,station:Array)->Array:
 
 static func _loft(body:Node3D,tag:String,side:float,hero:bool,
         paint:Material)->MeshInstance3D:
+    # Retain identical span/silhouette on both devices; HERO has three
+    # additional intermediate profile sections for smoother transitions.
     var ring_stations:Array=[STATIONS[0],STATIONS[1]]
     if hero:
         ring_stations.append(STATIONS[2])
-    ring_stations.append(STATIONS[3])
+        ring_stations.append(STATIONS[3])
+    ring_stations.append(STATIONS[4])
+    ring_stations.append(STATIONS[5])
     var cross_sections:Array=[]
     for station in ring_stations:
         cross_sections.append(_ring(side,station))
@@ -80,6 +90,9 @@ static func _loft(body:Node3D,tag:String,side:float,hero:bool,
             Vector3(-side,0,0))
         V4._triangle(t,tip_cap[0],tip_cap[i],tip_cap[i+1],
             Vector3(side,0,0))
+    # Index shared corners BEFORE generating normals so faceted triangular
+    # cross-sections do not cause hard lighting seams between span stations.
+    t.index()
     t.generate_normals()
     var node:=MeshInstance3D.new()
     node.name=tag
@@ -107,12 +120,14 @@ static func apply(root:Node3D,hero:bool)->bool:
         if old_root==null:
             return false
         legacy.append(old_root)
-        # Hero inherited protruding black rectangular spar/fasteners.
+        # Hero inherited raised dark rectangular spar, fasteners and V3
+        # service hatches that looked like open black holes from above.
         # Hide after the new physical fillet is successfully built.
         if hero:
             for name in ["A01_V1_WingSparJoint_"+str(side),
                     "A01_V2_WingRootFastener_"+(
-                    "Port" if side<0 else "Starboard")]:
+                    "Port" if side<0 else "Starboard"),
+                    "A01_V3_WingServiceHatch"+tag]:
                 var original:=body.find_child(name,false,false) as MeshInstance3D
                 if original!=null:
                     legacy.append(original)
@@ -127,4 +142,5 @@ static func apply(root:Node3D,hero:bool)->bool:
     root.set_meta(FLAG,true)
     root.set_meta("tarvoka_a01_v12_lod",13 if hero else 8)
     root.set_meta("tarvoka_a01_v12_visual_only",true)
+    root.set_meta("tarvoka_a01_v12_smooth_embedded_roots",true)
     return has_model(root)
