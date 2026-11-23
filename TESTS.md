@@ -263,3 +263,9 @@ Problema: el total de victorias por relés oculta si la condición territorial s
 2026-11-23 — Auditor offline PR #680: no seguir enlaces simbólicos `.gd`/`.tscn`, ni externos ni internos, para impedir lectura fuera del checkout y recuentos duplicados. Dos regresiones nuevas (`test_does_not_follow_symlinked_source_outside_checkout`, `test_does_not_follow_symlinked_source_inside_checkout`); total 7 pruebas definidas. Cambios publicados en rama de borrador; ejecución Python/Godot/Android NO EJECUTADA en esta ejecución; Android físico NO EJECUTADO EN DISPOSITIVO. Ejecutar `python3 -m unittest discover -s tools -p 'test_check_offline_surfaces.py'` y `python3 tools/check_offline_surfaces.py .` antes de considerar revisión. Los enlaces a fuentes que solo existan como symlink quedan deliberadamente excluidos; documentar si el proyecto adopta tal patrón.
 
 2026-11-23 — PR #680: Auditor offline ahora marca `OS.execute(...)` y `JavaScriptBridge` como superficies de revisión (no demuestra tráfico de red); regresión adversarial de 2 hallazgos y 2 controles inocuos. Test Python nuevo: NO EJECUTADO al publicar; Godot/Android físico: NO EJECUTADO EN DISPOSITIVO. No se cambian reglas de juego.
+
+
+## 2026-11-23 — Offline audit fixture correction (PR #680)
+- `tools/test_check_offline_surfaces.py`: replace literal `\\n` fixture text with real newline escape sequences (`\n`) in shell/browser bridge and symlink tests. Previously the shell/bridge assertions could pass from a single concatenated source line and miss per-line reporting; the updated fixture tests separate physical lines.
+- Commit `da8ac450764b8d289f1e6ede696be566af6e53ae` on PR #680 branch; this is **not merged**.
+- Run `python3 -m unittest discover -s tools -p 'test_check_offline_surfaces.py'` and `python3 tools/check_offline_surfaces.py .`; CI/Android physical **NO EJECUTADO** for this commit at documentation time. Static audit is not proof of offline behavior.
