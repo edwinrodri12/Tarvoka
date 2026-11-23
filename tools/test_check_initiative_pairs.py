@@ -134,5 +134,32 @@ class PairedInitiativeTests(unittest.TestCase):
             ])
 
 
+    def test_aggregate_accounting_invariants(self):
+        rows = [
+            {"pair_id": "starter", "starter": "blue", "winner": "blue"},
+            {"pair_id": "starter", "starter": "red", "winner": "red"},
+            {"pair_id": "faction", "starter": "blue", "winner": "blue"},
+            {"pair_id": "faction", "starter": "red", "winner": "blue"},
+            {"pair_id": "draw", "starter": "blue", "winner": "draw"},
+            {"pair_id": "draw", "starter": "red", "winner": "red"},
+        ]
+        result = summarize(rows)
+        self.assertEqual(result["matches"], 2 * result["pairs"])
+        self.assertEqual(result["starter_wins"] + result["second_wins"] + result["draws"], result["matches"])
+        self.assertEqual(result["blue_wins"] + result["red_wins"] + result["draws"], result["matches"])
+        self.assertEqual(sum(result["pair_patterns"].values()), result["pairs"])
+
+    def test_summarize_does_not_mutate_input(self):
+        rows = [
+            {"pair_id": " map-a ", "starter": "blue", "winner": "blue"},
+            {"pair_id": "map-a", "starter": "red", "winner": "red"},
+        ]
+        original = [row.copy() for row in rows]
+        first = summarize(rows)
+        second = summarize(rows)
+        self.assertEqual(rows, original)
+        self.assertEqual(first, second)
+
+
 if __name__ == "__main__":
     unittest.main()
