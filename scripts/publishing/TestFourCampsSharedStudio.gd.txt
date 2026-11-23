@@ -1,0 +1,248 @@
+extends SceneTree
+
+# Smoke test of the EXACT one existing Godot Pages scene/EDIFICIOS menu.
+# No duplicate scene or fake mocked asset. Uses all original seven entries,
+# the four appended camps, official faction picker, camera and live SubViewport.
+const CAMP = preload("res://scripts/ui/CampModels3DV1.gd")
+const EXPECTED := [
+    "suministros", "reconocimiento", "defensivo", "medico"
+]
+const OUTPUT := "res://build/qa/camps-shared-studio"
+var issues: int = 0
+var snapshots: int = 0
+
+func _check(value: bool, what: String) -> void:
+    if not value:
+        issues += 1
+        push_error("CAMP SHARED STUDIO: " + what)
+
+func _initialize() -> void:
+    call_deferred("_run")
+
+func _frames(count: int = 8) -> void:
+    for i in range(count):
+        await process_frame
+
+func _meshes(node: Node, arr: Array[MeshInstance3D]) -> void:
+    if node is MeshInstance3D:
+        arr.append(node as MeshInstance3D)
+    for child in node.get_children():
+        _meshes(child, arr)
+
+func _shot(studio: Control, file_name: String) -> Image:
+    await _frames(9)
+    var preview: SubViewport = studio.get("preview") as SubViewport
+    _check(preview != null, "Same native Godot viewport survives selection")
+    if preview == null:
+        return null
+    var img: Image = preview.get_texture().get_image()
+    _check(img != null and not img.is_empty(),
+        "Nonempty original viewport image")
+    if img == null or img.is_empty():
+        return null
+    var bright: int = 0
+    for y in range(45, img.get_height() - 30, 25):
+        for x in range(75, img.get_width() - 75, 25):
+            if img.get_pixel(x, y).get_luminance() > 0.25:
+                bright += 1
+    _check(bright > 10, "Real 3D render has sufficient contrast " + file_name)
+    # A lit background/ground may also contain bright pixels. Prove that
+    # the actual selected 3D camp contributed pixels to this SAME viewport.
+    var active_model: Node3D = studio.get("model_root") as Node3D
+    _check(active_model != null, "The original Studio has a selected model")
+    if active_model != null:
+        active_model.visible = false
+        await _frames(8)
+        var background: Image = preview.get_texture().get_image()
+        active_model.visible = true
+        _check(background != null and background.get_size() == img.get_size(),
+            "Before/after native viewport comparison dimensions")
+        if background != null and background.get_size() == img.get_size():
+            var changed_pixels: int = 0
+            for y in range(40, img.get_height() - 35, 8):
+                for x in range(45, img.get_width() - 45, 8):
+                    var before: Color = img.get_pixel(x, y)
+                    var after: Color = background.get_pixel(x, y)
+                    if (absf(before.r - after.r) +
+                            absf(before.g - after.g) +
+                            absf(before.b - after.b)) > 0.16:
+                        changed_pixels += 1
+            _check(changed_pixels > 65,
+                "Real camp meshes visibly changed original Web Studio "
+                + "render, not just lit background: " + file_name)
+        await _frames(3)
+    _check(img.save_png(ProjectSettings.globalize_path(
+        OUTPUT + "/" + file_name)) == OK, "Genuine native PNG saved")
+    snapshots += 1
+    return img
+
+func _run() -> void:
+    root.content_scale_size = Vector2i(1280, 720)
+    _check(DirAccess.make_dir_recursive_absolute(
+        ProjectSettings.globalize_path(OUTPUT)) == OK, "QA output path")
+    var packed: PackedScene = load(
+        "res://scenes/UnitArtStudioWeb.tscn") as PackedScene
+    _check(packed != null, "SAME pre-existing Studio scene loads")
+    if packed == null:
+        quit(1)
+        return
+    var studio: Control = packed.instantiate() as Control
+    _check(studio != null, "Same scene instantiates")
+    if studio == null:
+        quit(1)
+        return
+    root.add_child(studio)
+    await _frames(8)
+    var category: OptionButton = studio.get(
+        "category_picker") as OptionButton
+    var buildings: OptionButton = studio.get(
+        "building_picker") as OptionButton
+    var units: OptionButton = studio.get(
+        "role_picker") as OptionButton
+    var factions: OptionButton = studio.get(
+        "camp_faction_picker") as OptionButton
+    var lods: OptionButton = studio.get(
+        "camp_lod_picker") as OptionButton
+    var damage: OptionButton = studio.get(
+        "camp_damage_picker") as OptionButton
+    var original_viewport: SubViewport = studio.get(
+        "preview") as SubViewport
+    var original_camera: Camera3D = studio.get(
+        "camera") as Camera3D
+    _check(category != null and buildings != null and units != null,
+        "Original main unit/building selectors survive")
+    _check(factions != null and lods != null and damage != null,
+        "Added native camp controls exist")
+    _check(original_camera != null and original_viewport != null,
+        "Original scene camera and one Godot viewport survive")
+    if buildings == null or category == null or factions == null:
+        quit(1)
+        return
+    _check(buildings.item_count == 11,
+        "EXACTLY seven original buildings + four temporary camps")
+    for index in range(7):
+        _check(not str(buildings.get_item_metadata(index)).begins_with(
+            "camp:"), "Existing building at original index unchanged")
+    category.select(1)
+    category.item_selected.emit(1)
+    await _frames(4)
+    _check(category.selected == 1, "Existing EDIFICIOS mode still selected")
+    var visited: Dictionary = {}
+    for i in range(4):
+        var which: int = 7 + i
+        _check(str(buildings.get_item_metadata(which)) == (
+            "camp:" + EXPECTED[i]), "Canonical item metadata for " +
+            EXPECTED[i])
+        buildings.select(which)
+        buildings.item_selected.emit(which)
+        await _frames(6)
+        var camp: Node3D = studio.get("model_root") as Node3D
+        _check(camp != null, "Actual mesh exists on selection " +
+            EXPECTED[i])
+        if camp == null:
+            continue
+        _check(camp.get_parent() == original_viewport,
+            "Selected model is rendered in the ORIGINAL SubViewport")
+        _check(camp.get_meta("camp_shared_studio", false) == true,
+            "Actual unified adapter assembled model")
+        _check(str(camp.get_meta("camp_kind", "")) == EXPECTED[i],
+            "Distinct appropriate camp type loaded")
+        _check(str(camp.get_meta("builder_role", "")) ==
+            str(CAMP.BUILDERS[EXPECTED[i]]),
+            "Original specialist builder identity preserved")
+        _check(int(camp.get_meta("visual_lod", -1)) == 13,
+            "High detail inspection in same original Studio")
+        var parts: Array[MeshInstance3D] = []
+        _meshes(camp, parts)
+        _check(parts.size() > 15, "Not a blank placeholder model")
+        for item in parts:
+            if item.material_override is StandardMaterial3D:
+                var mat: StandardMaterial3D = item.material_override
+                _check(mat.transparency ==
+                    BaseMaterial3D.TRANSPARENCY_DISABLED,
+                    "Fully opaque geometry in actual shared viewport")
+        visited[EXPECTED[i]] = true
+        await _shot(studio, EXPECTED[i] + "_in_same_studio.png")
+        if i == 0:
+            var before_faction: Node3D = camp
+            studio.call("_rotate", 84.0)
+            studio.call("_change_zoom", 1)
+            studio.call("_camp_pose", 0.0)
+            var inspection_yaw: float = float(studio.get("_yaw"))
+            var inspection_zoom: float = float(studio.get("_zoom"))
+            factions.select(5)
+            factions.item_selected.emit(5)
+            await _frames(5)
+            camp = studio.get("model_root") as Node3D
+            _check(camp != null and
+                int(camp.get_meta("visual_faction", -1)) == 4,
+                "Faction selector actually changes 3D material identity")
+            _check(camp != before_faction,
+                "Faction switch actually rebuilds native art")
+            _check(absf(float(studio.get("_yaw")) - inspection_yaw) < 0.01
+                and absf(float(studio.get("_zoom")) - inspection_zoom) < 0.01,
+                "Faction changes preserve the active camera and zoom")
+            _check(float(camp.get_meta(
+                "visual_deploy_progress", 1.0)) < 0.01,
+                "Switching faction preserves manually folded camp state")
+            lods.select(0)
+            lods.item_selected.emit(0)
+            await _frames(4)
+            camp = studio.get("model_root") as Node3D
+            _check(camp != null and
+                int(camp.get_meta("visual_lod", -1)) == 8,
+                "Android tactical LOD actually loads")
+            _check(absf(float(studio.get("_yaw")) - inspection_yaw) < 0.01,
+                "LOD changes must not reset camera angle")
+            await _shot(studio, "suministros_android_lod8.png")
+            lods.select(1)
+            lods.item_selected.emit(1)
+            damage.select(2)
+            damage.item_selected.emit(2)
+            await _frames(4)
+            camp = studio.get("model_root") as Node3D
+            _check(camp != null and
+                int(camp.get_meta("visual_damage", -1)) == 2,
+                "Actual native D2 damage selectable in same viewport")
+            await _shot(studio, "suministros_damage_d2.png")
+            damage.select(0)
+            damage.item_selected.emit(0)
+            factions.select(1)
+            factions.item_selected.emit(1)
+        if i == 3:
+            studio.call("_camp_pose", 0.0)
+            await _shot(studio, "medico_plegado_en_visor_unificado.png")
+            studio.call("_camp_pose", 1.0)
+    _check(visited.size() == 4, "All four camps reachable in old selector")
+    _check(studio.get("preview") == original_viewport
+        and studio.get("camera") == original_camera,
+        "No new camera, viewport, canvas or cloned viewer")
+    # Existing seventh workshop, first HQ and original unit catalogue must
+    # still load when leaving temporary camps.
+    buildings.select(6)
+    buildings.item_selected.emit(6)
+    await _frames(6)
+    _check(str(studio.get("_role")) == "armored_workshop"
+        and studio.get("model_root") != null,
+        "Existing armored workshop survives camp selection")
+    buildings.select(0)
+    buildings.item_selected.emit(0)
+    await _frames(6)
+    _check(str(studio.get("_role")) == "headquarters"
+        and studio.get("model_root") != null,
+        "Existing headquarters survives camp selection")
+    category.select(0)
+    category.item_selected.emit(0)
+    await _frames(5)
+    _check(units != null and units.visible,
+        "Original seven-building additions never hide units permanently")
+    _check(snapshots == 7,
+        "Four intact + Android + D2 + packed = seven visual snapshots")
+    studio.queue_free()
+    await _frames(2)
+    if issues > 0:
+        printerr("FAIL FOUR CAMPS SHARED STUDIO: %d issues" % issues)
+        quit(1)
+        return
+    print("PASS FOUR CAMPS SHARED STUDIO: 4 models in original scene, 7 PNGs")
+    quit(0)

@@ -1,0 +1,254 @@
+extends "res://scripts/ui/HeadquartersV24SharedStudioAdapter.gd"
+
+# Final additive layer of the EXISTING TARVOKA Godot Web Studio.
+# Four temporary camps appear in the same EDIFICIOS picker, preview viewport,
+# camera, faction palette and catalogue as the approved seven buildings.
+# This .gd is supplied ONLY during Pages assembly; main stores a .gd.txt
+# because the upstream HQ/Workshop viewer scripts live in pinned source branches.
+const CampArt = preload("res://scripts/ui/CampModels3DV1.gd")
+const CampStyle = preload("res://scripts/ui/VisualStyle.gd")
+const CampRoster = preload("res://scripts/ui/InfantryCampRosterV1.gd")
+const FIRST_CAMP_INDEX: int = 7
+const CAMP_KEYS := ["suministros", "reconocimiento", "defensivo", "medico"]
+const CAMP_LABELS := [
+    "Campamento de Suministros · V3",
+    "Campamento de Reconocimiento · V2",
+    "Campamento Defensivo · V2",
+    "Campamento Médico · V2"
+]
+var camp_controls: VBoxContainer
+var camp_faction_picker: OptionButton
+var camp_lod_picker: OptionButton
+var camp_damage_picker: OptionButton
+var camp_status: Label
+var camp_kind: String = "suministros"
+var _camp_saved_visibility: Dictionary = {}
+
+func _ready() -> void:
+    super._ready()
+    if building_picker == null or building_controls == null or preview == null:
+        push_error("CAMP STUDIO: original unified EDIFICIOS/viewport missing")
+        return
+    if building_picker.item_count != FIRST_CAMP_INDEX:
+        push_error("CAMP STUDIO: seven existing buildings changed; refusing to replace catalogue")
+        return
+    for i in range(CAMP_KEYS.size()):
+        building_picker.add_item(CAMP_LABELS[i])
+        building_picker.set_item_metadata(FIRST_CAMP_INDEX + i,
+            "camp:" + CAMP_KEYS[i])
+    _camp_create_controls()
+    camp_controls.visible = false
+    # Deep links open a camp INSIDE the one original Pages 3D scene:
+    # ?campamento=medico (also suministros, reconocimiento, defensivo).
+    if OS.has_feature("web"):
+        call_deferred("_camp_select_from_url")
+
+func _camp_select_from_url() -> void:
+    if not OS.has_feature("web"):
+        return
+    var requested: Variant = JavaScriptBridge.eval(
+        "(new URLSearchParams(window.location.search)).get('campamento') || ''",
+        true)
+    var key: String = str(requested).to_lower().strip_edges()
+    if not key in CAMP_KEYS:
+        return
+    if category_picker == null or building_picker == null:
+        return
+    var item_index: int = FIRST_CAMP_INDEX + CAMP_KEYS.find(key)
+    category_picker.select(1)
+    _switch_category(1)
+    building_picker.select(item_index)
+    _change_selected_building(item_index)
+
+func _camp_create_controls() -> void:
+    camp_controls = VBoxContainer.new()
+    camp_controls.name = "TARVOKA_CuatroCampamentos_ControlesVisorUnificado"
+    camp_controls.add_theme_constant_override("separation", 6)
+    building_controls.add_child(camp_controls)
+    _title(camp_controls, "CAMPAMENTOS DESPLEGABLES · GODOT 3D", 14)
+    _title(camp_controls,
+        "Los construye únicamente la infantería especialista. "
+        + "Esta vista es arte 3D; las reglas de batalla se programan aparte.", 11)
+    _title(camp_controls, "Facción / colores oficiales", 12)
+    camp_faction_picker = OptionButton.new()
+    camp_faction_picker.name = "CampamentosFaccionOchoColores"
+    camp_faction_picker.custom_minimum_size.y = 44
+    camp_faction_picker.add_item("Neutral (sin facción)")
+    for i in range(8):
+        camp_faction_picker.add_item(str(CampStyle.FACTIONS[i]["name"]))
+    camp_faction_picker.select(1)
+    camp_faction_picker.item_selected.connect(_camp_option_changed)
+    camp_controls.add_child(camp_faction_picker)
+    _title(camp_controls, "Nivel de detalle 3D", 12)
+    camp_lod_picker = OptionButton.new()
+    camp_lod_picker.name = "CampamentosLODNativoAndroid"
+    camp_lod_picker.add_item("LOD 8 · Android táctico")
+    camp_lod_picker.add_item("LOD 13 · Inspección cercana")
+    camp_lod_picker.select(1)
+    camp_lod_picker.item_selected.connect(_camp_option_changed)
+    camp_controls.add_child(camp_lod_picker)
+    _title(camp_controls, "Estado de daño", 12)
+    camp_damage_picker = OptionButton.new()
+    camp_damage_picker.name = "CampamentosCuatroEstadosDanio"
+    for title in ["D0 · Intacto", "D1 · Desgaste",
+            "D2 · Daño grave", "D3 · Destruido"]:
+        camp_damage_picker.add_item(title)
+    camp_damage_picker.select(0)
+    camp_damage_picker.item_selected.connect(_camp_option_changed)
+    camp_controls.add_child(camp_damage_picker)
+    _add_paired(camp_controls, "DESPLEGAR",
+        func(): _camp_pose(1.0), "REPLEGAR",
+        func(): _camp_pose(0.0))
+    _add_paired(camp_controls, "GIRAR −90°",
+        func(): _rotate(-90.0), "GIRAR +90°",
+        func(): _rotate(90.0))
+    _add_paired(camp_controls, "ACERCAR",
+        func(): _change_zoom(1), "ALEJAR",
+        func(): _change_zoom(-1))
+    _button(camp_controls, "Restablecer cámara", _reset_camera)
+    camp_status = _title(camp_controls, "Modelo aún no seleccionado", 11)
+
+func _camp_selected(index: int) -> bool:
+    return index >= FIRST_CAMP_INDEX and (
+        index < FIRST_CAMP_INDEX + CAMP_KEYS.size())
+
+func _camp_hide_prior_controls() -> void:
+    if not _camp_saved_visibility.is_empty():
+        return
+    for item in building_controls.get_children():
+        if item is Control and item != camp_controls:
+            var control: Control = item as Control
+            if control == building_picker or control.is_ancestor_of(building_picker):
+                continue
+            _camp_saved_visibility[control] = control.visible
+            control.visible = false
+    camp_controls.visible = true
+    if faction_picker != null:
+        faction_picker.visible = false
+
+func _camp_restore_prior_controls() -> void:
+    for item in _camp_saved_visibility.keys():
+        if is_instance_valid(item):
+            var control: Control = item as Control
+            control.visible = bool(_camp_saved_visibility[item])
+    _camp_saved_visibility.clear()
+    if camp_controls != null:
+        camp_controls.visible = false
+
+func _change_selected_building(index: int) -> void:
+    if _camp_selected(index) and camp_controls != null:
+        camp_kind = CAMP_KEYS[index - FIRST_CAMP_INDEX]
+        _camp_hide_prior_controls()
+        _camp_display()
+        return
+    _camp_restore_prior_controls()
+    super._change_selected_building(index)
+
+func _switch_category(index: int) -> void:
+    super._switch_category(index)
+    if camp_controls == null or building_picker == null:
+        return
+    if index == 1 and _camp_selected(building_picker.selected):
+        camp_kind = CAMP_KEYS[building_picker.selected - FIRST_CAMP_INDEX]
+        _camp_hide_prior_controls()
+        _camp_display()
+    else:
+        _camp_restore_prior_controls()
+
+func _camp_option_changed(_index: int) -> void:
+    if _role.begins_with("camp_"):
+        _camp_display()
+
+func _camp_display() -> void:
+    if preview == null or building_picker == null or camp_controls == null:
+        return
+    if not _camp_selected(building_picker.selected):
+        return
+    # Keep the user's close-up inspection angle when swapping faction,
+    # mobile LOD or damage on the SAME camp. Switching camp type resets it.
+    var previous_kind: String = str(model_root.get_meta(
+        "camp_kind", "")) if model_root != null else ""
+    var same_camp: bool = previous_kind == camp_kind
+    var previous_yaw: float = _yaw
+    var previous_zoom: float = _zoom
+    var previous_deploy: float = float(model_root.get_meta(
+        "visual_deploy_progress", 1.0)) if same_camp else 1.0
+    _stop_animation()
+    if model_root != null:
+        if model_root.get_parent() != null:
+            model_root.get_parent().remove_child(model_root)
+        model_root.queue_free()
+        model_root = null
+    _role = "camp_" + camp_kind
+    var faction: int = camp_faction_picker.selected - 1
+    var lod: int = 8 if camp_lod_picker.selected == 0 else 13
+    var damage: int = camp_damage_picker.selected
+    model_root = CampArt.build(camp_kind, faction, lod, damage)
+    if model_root == null:
+        push_error("CAMP STUDIO: cannot assemble actual camp " + camp_kind)
+        camp_status.text = "ERROR: modelo nativo no disponible"
+        return
+    model_root.name = "CampamentoUnificado_" + camp_kind
+    model_root.set_meta("camp_shared_studio", true)
+    preview.add_child(model_root)
+    _yaw = previous_yaw if same_camp else -32.0
+    _zoom = previous_zoom if same_camp else 1.0
+    model_root.rotation_degrees.y = _yaw
+    if same_camp and not CampArt.pose_deploy(model_root, previous_deploy):
+        push_error("CAMP STUDIO: cannot restore current deployment state")
+    camp_controls.visible = true
+    _camp_hide_prior_controls()
+    _update_camera()
+    _update_details()
+    _refresh_unified_studio_navigation()
+
+func _camp_pose(progress: float) -> void:
+    if model_root == null or not _role.begins_with("camp_"):
+        return
+    if not CampArt.pose_deploy(model_root, progress):
+        push_error("CAMP STUDIO: physical deployment pose failed")
+        return
+    _update_details()
+
+func _update_camera() -> void:
+    if _role.begins_with("camp_") and model_root != null and camera != null:
+        var focus_y: float = 1.55 if camp_kind == "reconocimiento" else 0.95
+        var base_size: float = 11.9 if camp_kind == "reconocimiento" else 9.8
+        camera.projection = Camera3D.PROJECTION_ORTHOGONAL
+        camera.size = base_size / clampf(_zoom, 0.65, 2.8)
+        camera.position = Vector3(9.6, 8.1, -10.2)
+        camera.look_at(Vector3(0, focus_y, 0), Vector3.UP)
+        return
+    super._update_camera()
+
+func _reset_camera() -> void:
+    if _role.begins_with("camp_"):
+        _yaw = -32.0
+        _zoom = 1.0
+        if model_root != null:
+            model_root.rotation_degrees.y = _yaw
+        _update_camera()
+        return
+    super._reset_camera()
+
+func _update_details() -> void:
+    if _role.begins_with("camp_") and model_root != null:
+        var faction: int = int(model_root.get_meta("visual_faction", -1))
+        var lod: int = int(model_root.get_meta("visual_lod", 13))
+        var damage: int = int(model_root.get_meta("visual_damage", 0))
+        var builder: String = str(CampArt.BUILDERS.get(camp_kind, ""))
+        var faction_name: String = "Neutral" if faction < 0 else (
+            str(CampStyle.FACTIONS[faction]["name"]))
+        var progress: float = float(model_root.get_meta(
+            "visual_deploy_progress", 1.0))
+        if camp_status != null:
+            camp_status.text = ("MODELO 3D REAL · %s · %s · LOD%d · D%d · %s"
+                % [camp_kind.capitalize(), faction_name, lod, damage,
+                    "Desplegado" if progress >= 0.99 else "Recogido"])
+        if detail_label != null:
+            detail_label.text = "Campamento temporal · constructor " + builder
+        if status_label != null:
+            status_label.text = ("Sólidos Godot opacos · Sin nuevas reglas "
+                + "de curación, defensa, visión o abastecimiento")
+        return
+    super._update_details()
