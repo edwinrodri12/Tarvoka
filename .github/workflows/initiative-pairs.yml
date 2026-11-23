@@ -1,0 +1,26 @@
+name: TARVOKA Initiative Pair QA
+
+on:
+  pull_request:
+    paths:
+      - 'tools/check_initiative_pairs.py'
+      - 'tools/test_check_initiative_pairs.py'
+      - '.github/workflows/initiative-pairs.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  initiative-pairs:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run paired initiative regressions
+        run: python3 -m unittest discover -s tools -p 'test_check_initiative_pairs.py' -v
+      - name: Check CLI with a valid mirrored fixture
+        run: |
+          printf '%s\n' '[{"pair_id":"ci-a","starter":"blue","winner":"blue"},{"pair_id":"ci-a","starter":"red","winner":"red"}]' > /tmp/tarvoka-pairs.json
+          python3 tools/check_initiative_pairs.py /tmp/tarvoka-pairs.json > /tmp/tarvoka-summary.json
+          python3 -c 'import json; r=json.load(open("/tmp/tarvoka-summary.json")); assert r["pairs"] == 1 and r["starter_wins"] == 2'
