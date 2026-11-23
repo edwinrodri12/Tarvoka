@@ -23,6 +23,8 @@ def summarize(rows):
         if (not isinstance(starter, str) or starter not in ("blue", "red")
                 or not isinstance(winner, str) or winner not in ("blue", "red", "draw")):
             raise ValueError(f"match {index}: invalid starter/winner")
+        # Normalize surrounding whitespace so one logical scenario cannot split into two pairs.
+        pair_id = pair_id.strip()
         if starter in pairs[pair_id]:
             raise ValueError(f"pair {pair_id}: duplicate {starter} starter")
         pairs[pair_id][starter] = winner
