@@ -14,6 +14,7 @@ const NoseV10=preload("res://scripts/ui/A01ReconNoseOpticsV10.gd")
 const AirframeV11=preload("res://scripts/ui/A01ReconAirframeV11.gd")
 const WingRootV12=preload("res://scripts/ui/A01ReconWingRootV12.gd")
 const TailOpticsV13=preload("res://scripts/ui/A01ReconTailOpticsV13.gd")
+const PusherV14=preload("res://scripts/ui/A01ReconPusherV14.gd")
 const OUT="res://build/qa/a01-v1/a01-unified-studio.png"
 var failures:int=0
 
@@ -46,14 +47,14 @@ func _run()->void:
         "recon drone added to the SAME unit selector")
     if picker!=null and index>=0 and index<picker.item_count:
         check(picker.get_item_text(index).contains("A01") and
-            picker.get_item_text(index).contains("V13 EN DESARROLLO"),
+            picker.get_item_text(index).contains("V14 EN DESARROLLO"),
             "A01 correctly remains an unapproved first art revision")
         picker.select(index)
     studio.call("_display_role","uav_recon")
     await process_frame
     var model:=studio.get("model_root") as Node3D
     check(model!=null and Drone.has_model(model) and Finish.has_model(model) and
-        HardwareV3.has_model(model) and AeroV4.has_model(model) and TailV5.has_model(model) and DamageV6.has_model(model) and NoseV10.has_model(model) and AirframeV11.has_model(model) and WingRootV12.has_model(model) and TailOpticsV13.has_model(model),
+        HardwareV3.has_model(model) and AeroV4.has_model(model) and TailV5.has_model(model) and DamageV6.has_model(model) and NoseV10.has_model(model) and AirframeV11.has_model(model) and WingRootV12.has_model(model) and TailOpticsV13.has_model(model) and PusherV14.has_model(model),
         "native A01 V5 airframe, sealed optics and three-blade motor in original SubViewport")
     check(factions!=null and factions.visible,"same eight-faction selector")
     var panel:=studio.get("a01_360_panel") as VBoxContainer
@@ -118,7 +119,7 @@ func _run()->void:
         "visible active-quality label changes to Android LOD8")
     var android:Node3D=studio.get("model_root") as Node3D
     check(android!=null and android!=hero_before and
-        NoseV10.has_model(android) and AirframeV11.has_model(android) and WingRootV12.has_model(android) and TailOpticsV13.has_model(android) and
+        NoseV10.has_model(android) and AirframeV11.has_model(android) and WingRootV12.has_model(android) and TailOpticsV13.has_model(android) and PusherV14.has_model(android) and
         int(android.get_meta("tarvoka_a01_v10_lod",0))==8,
         "low-poly A01 V10 geometry is the actual Android LOD8 rig")
     check(DamageV6.stage(android)==3,
@@ -133,7 +134,7 @@ func _run()->void:
     studio.call("_on_faction",6)
     await process_frame
     android=studio.get("model_root") as Node3D
-    check(android!=null and NoseV10.has_model(android) and AirframeV11.has_model(android) and WingRootV12.has_model(android) and TailOpticsV13.has_model(android) and
+    check(android!=null and NoseV10.has_model(android) and AirframeV11.has_model(android) and WingRootV12.has_model(android) and TailOpticsV13.has_model(android) and PusherV14.has_model(android) and
         int(android.get_meta("tarvoka_a01_v10_lod",0))==8 and
         DamageV6.stage(android)==3,
         "faction change inside Android LOD8 preserves LOD and damage D3")
@@ -159,7 +160,7 @@ func _run()->void:
     check(lod_label!=null and lod_label.text.contains("LOD13"),
         "visible active-quality label returns to high-detail LOD13")
     var hero_after:Node3D=studio.get("model_root") as Node3D
-    check(hero_after!=null and NoseV10.has_model(hero_after) and AirframeV11.has_model(hero_after) and WingRootV12.has_model(hero_after) and TailOpticsV13.has_model(hero_after) and
+    check(hero_after!=null and NoseV10.has_model(hero_after) and AirframeV11.has_model(hero_after) and WingRootV12.has_model(hero_after) and TailOpticsV13.has_model(hero_after) and PusherV14.has_model(hero_after) and
         int(hero_after.get_meta("tarvoka_a01_v10_lod",0))==13 and
         DamageV6.stage(hero_after)==3,
         "LOD13 restores details without losing faction paint or D3")
@@ -215,7 +216,7 @@ func _run()->void:
     await process_frame
     model=studio.get("model_root") as Node3D
     check(model!=null and Drone.has_model(model) and Finish.has_model(model) and
-        HardwareV3.has_model(model) and AeroV4.has_model(model) and TailV5.has_model(model) and DamageV6.has_model(model) and NoseV10.has_model(model) and AirframeV11.has_model(model) and WingRootV12.has_model(model) and TailOpticsV13.has_model(model),
+        HardwareV3.has_model(model) and AeroV4.has_model(model) and TailV5.has_model(model) and DamageV6.has_model(model) and NoseV10.has_model(model) and AirframeV11.has_model(model) and WingRootV12.has_model(model) and TailOpticsV13.has_model(model) and PusherV14.has_model(model),
         "changing faction rebuilds A01 V8 sealed PBR wingtip model")
     check(factions!=null and factions.visible and factions.selected==6,
         "A01 keeps the same visible faction selector after repainting")
@@ -288,6 +289,23 @@ func _run()->void:
         v13_guard.mesh is SphereMesh and
         v13_guard.get_parent()==model.find_child(Drone.SENSOR,true,false),
         "same original animated optical gimbal contains physical V13 lower guard")
+    # The original Studio must display the actual V14 THREE tapered 3D blades,
+    # while preserving the existing V1 spinning rig and D4 selection.
+    var shared_prop:=model.find_child(Drone.PROPELLER,true,false) as Node3D
+    check(shared_prop!=null and PusherV14.has_model(model),
+        "shared Godot Studio uses genuine new rear engine model")
+    if shared_prop!=null:
+        for blade_i in range(3):
+            var new_blade:=shared_prop.find_child(
+                PusherV14.BLADE_PREFIX+str(blade_i),true,false) as MeshInstance3D
+            check(new_blade!=null and new_blade.visible and
+                new_blade.mesh is ArrayMesh,
+                "same Studio renders one of exactly 3 V14 sculpted propeller blades")
+        var shared_spinner:=shared_prop.find_child(
+            PusherV14.SPINNER,false,false) as MeshInstance3D
+        check(shared_spinner!=null and shared_spinner.mesh is CylinderMesh and
+            shared_spinner.visible,
+            "the same animated propeller uses a longitudinal conical spinner")
     # Visual damage stays inside the original 3D scene with the same model.
     check(model!=null and DamageV6.stage(model)==0,
         "shared Studio starts with undamaged reconnaissance UAV")
@@ -322,7 +340,7 @@ func _run()->void:
         await process_frame
         var active:=studio.get("model_root") as Node3D
         var faction_picker:=studio.get("faction_picker") as OptionButton
-        check(active!=null and AeroV4.has_model(active) and TailV5.has_model(active) and NoseV10.has_model(active) and AirframeV11.has_model(active) and WingRootV12.has_model(active) and TailOpticsV13.has_model(active),
+        check(active!=null and AeroV4.has_model(active) and TailV5.has_model(active) and NoseV10.has_model(active) and AirframeV11.has_model(active) and WingRootV12.has_model(active) and TailOpticsV13.has_model(active) and PusherV14.has_model(active),
             "A01 V8 model stays native after changing to team %d" % team)
         check(faction_picker!=null and faction_picker.visible and
             faction_picker.selected==team,
@@ -367,4 +385,5 @@ func _run()->void:
     else:
         print("PASS A01 V10 SHARED STUDIO: native A01, V8 swept fins, 8 colors, D0-D4/repair, unarmed gimbal, 360 cameras")
         print("PASS A01 V13 SHARED STUDIO: original Godot viewer renders sealed tail pigments and moving round EOIR underguard")
+        print("PASS A01 V14 SHARED STUDIO: three real tapered rotating blades, axial spinner and intact 360 LOD controls")
         quit(0)
