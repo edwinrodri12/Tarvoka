@@ -271,3 +271,32 @@ visualizador ni modificar los catálogos existentes.
 modelos y versiones). Integración al **visor compartido en preparación
 y CI pendiente**, no anunciar como publicado mientras no se compruebe
 el smoke test con la escena real ni la salida web.
+
+### Integración del visor: robustecimiento de revisión (23-nov-2026)
+
+- El adaptador preserva el ángulo, zoom y apertura/plegado cuando se
+  cambia la facción, LOD Android o daños **del mismo campamento**; al
+  pasar a otro campamento inicia una cámara de inspección normal.
+- La misma escena web permite acceso por parámetro opcional
+  `?campamento=suministros`, `?campamento=reconocimiento`,
+  `?campamento=defensivo` o `?campamento=medico`. Solo se interpreta
+  en exportación HTML5 y valida que el nombre esté entre los cuatro
+  aprobados antes de seleccionar un índice.
+- La prueba `TestFourCampsSharedStudio.gd.txt` ahora compara los
+  píxeles de la escena real con el modelo visible/oculto. Esto impide
+  declarar aprobado un visor con una captura vacía o solo iluminación
+  de fondo. También comprueba persistencia de cámara, facción y estado
+  replegado durante reconstrucción y retorno a modelos anteriores.
+- El workflow `tarvoka-3d-pages.yml` admite
+  `workflow_dispatch` directamente sobre
+  `feat/campamentos-3d-v1-20261122`. El checkout de modelos usa esa
+  rama en ejecución manual; publica un artefacto de vista previa.
+  **Seguridad:** ejecutar manualmente la rama experimental NO puede
+  sustituir GitHub Pages público. Solo `main` o los eventos
+  permitidos previamente pueden realizar despliegue.
+
+**Bloqueo pendiente comprobado:** la API de GitHub no reporta
+ningún workflow de Pages ni de QA asociado al último SHA de esta
+rama, aunque hay ejecuciones satisfactorias de los modelos en SHA
+anteriores. El workflow del Studio sigue sin validación integrada.
+Los 136 PNG de la QA de modelos NO prueban carga en el visor publicado.
