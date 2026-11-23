@@ -14,6 +14,7 @@ const MechanicsV11=preload("res://scripts/ui/InfantryEngineerMechanicsV11.gd")
 const DorsalV12=preload("res://scripts/ui/InfantryEngineerDorsalV12.gd")
 const SmoothV13=preload("res://scripts/ui/InfantryEngineerSmoothV13.gd")
 const ContourV14=preload("res://scripts/ui/InfantryEngineerContourV14.gd")
+const GearV15=preload("res://scripts/ui/InfantryEngineerGearV15.gd")
 const UNITS := ["line","infantry_commando","infantry_sniper",
     "infantry_engineer","infantry_logistic","infantry_medic"]
 var errors: int=0
@@ -157,10 +158,26 @@ func _run() -> void:
                 DorsalV12.has_seals(final_soldier),
                 "V12.3 opaque helmet, face, torso and animated joint closures visible")
             must(SmoothV13.has_model(final_soldier) and
-                ContourV14.has_model(final_soldier),
-                "V14 anatomy built on V13 closed native model")
-            must(str(studio.call("_infantry_review_edition"))=="V14",
-                "unified Studio identifies the current engineer V14")
+                ContourV14.has_model(final_soldier) and
+                GearV15.has_model(final_soldier),
+                "V15 physical rounded gear over V14 closed anatomy")
+            must(str(studio.call("_infantry_review_edition"))=="V15",
+                "unified Studio identifies the latest approved engineer V15")
+            var rifle: MeshInstance3D=final_soldier.find_child(
+                "V8_CarcasaFusilIngeniero",true,false) as MeshInstance3D
+            var sculpted: Mesh=rifle.mesh if rifle!=null else null
+            studio.call("_engineer_v15_compare",false)
+            must(rifle!=null and rifle.mesh!=sculpted and
+                not bool(final_soldier.get_meta(
+                "tarvoka_engineer_gear_v15_visible",true)) and
+                str(studio.call("_infantry_review_edition"))=="V14",
+                "V15 comparison restores actual V14 rifle on same 3D model")
+            studio.call("_engineer_v15_compare",true)
+            must(rifle.mesh==sculpted and
+                bool(final_soldier.get_meta(
+                "tarvoka_engineer_gear_v15_visible",false)) and
+                str(studio.call("_infantry_review_edition"))=="V15",
+                "V15 comparison restores rounded firearm on same camera")
             studio.call("_engineer_v14_compare",false)
             must(not bool(final_soldier.get_meta(
                 "tarvoka_engineer_v14_contours_visible",true)) and
