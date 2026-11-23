@@ -49,3 +49,6 @@ Android device **NOT EXECUTED** during this update (local GitHub DNS failed).
 
 ## 2026-11-23 — Canonicalización de identificadores de pareja
 El analizador elimina espacios iniciales/finales de `pair_id` antes de agrupar. `"map-a"` y `" map-a "` son el mismo escenario, no dos escenarios independientes; dos registros con el mismo iniciador tras normalización se rechazan como duplicados. Dos regresiones nuevas cubren la pareja válida y la duplicada. Estado: código publicado; batería Python completa NO EJECUTADA, Godot/Android físico NO EJECUTADO. No se modifica el motor ni el balance.
+
+## 2026-11-23 — Métrica de pares direccionales
+El reporte incluye `directional_sweep_pairs` y `starter_sweep_share_directional_pairs` (nulo cuando no existen barridos direccionales). Esta métrica usa **pares** completos y excluye barridos de facción y pares con empates; complementa, no reemplaza, la tasa por partida ni constituye evidencia suficiente de equilibrio. Dos pruebas cubren el denominador y la ausencia de pares direccionales. La ejecución CI del commit previo feac0972 registró SUCCESS en la batería de iniciativa, Godot y exportación Android; los cambios nuevos requieren CI independiente. Android físico: NO EJECUTADO EN DISPOSITIVO.
