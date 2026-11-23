@@ -371,8 +371,14 @@ func _run() -> void:
                 Engineer.PANEL,true,false) as MeshInstance3D
             var paint: MeshInstance3D=model.find_child(
                 Engineer.COLOR,true,false) as MeshInstance3D
-            check(board!=null and board.mesh is BoxMesh and board.visible,
-                "sealed articulated broad steel back panel")
+            var v14_board: bool=(board!=null and
+                ContourV14.has_model(model) and
+                board.mesh is ArrayMesh and _watertight(board.mesh))
+            var v6_board: bool=(board!=null and
+                not ContourV14.has_model(model) and board.mesh is BoxMesh)
+            check((v14_board or v6_board) and board.visible and
+                board.get_parent().name==Engineer.RIG,
+                "V6 folding shield preserves sealed physical volume and live rig")
             check(paint!=null and paint.material_override is StandardMaterial3D,
                 "physical faction panel in Godot mesh")
             if paint!=null:
