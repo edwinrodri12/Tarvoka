@@ -275,3 +275,5 @@ Problema: el total de victorias por relés oculta si la condición territorial s
 - Added regression for three launch-call spellings, a similarly named identifier and a commented call (9 Python tests defined in this branch).
 - **NO EJECUTADO:** updated Python unittest suite, full-project scan, Godot/Android CI, physical Android. Run `python3 -m unittest discover -s tools -p 'test_check_offline_surfaces.py'` and `python3 tools/check_offline_surfaces.py .` before review.
 - PR remains draft; no gameplay or export changes.
+
+2026-11-23 — PR #680: el auditor offline ahora descarta comentarios GDScript al final de líneas sin truncar cadenas que contengan `#`; se añadió la décima regresión con comentarios, cadenas y una llamada real. Código publicado; ejecución Python/Godot/Android NO EJECUTADA al escribir esta nota. Comandos: `python3 -m unittest discover -s tools -p 'test_check_offline_surfaces.py'` y `python3 tools/check_offline_surfaces.py .`. El análisis estático no prueba ausencia de tráfico real.
