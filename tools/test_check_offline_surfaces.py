@@ -63,10 +63,10 @@ class OfflineSurfaceTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as folder:
             root = Path(folder)
             (root / "Escape.gd").write_text(
-                'OS.execute("curl", ["https://example.invalid"])\\n'
-                'var browser = JavaScriptBridge\\n'
-                'var safe = OS.execute_not_a_call\\n'
-                '# OS.execute("ignored", [])\\n',
+                'OS.execute("curl", ["https://example.invalid"])\n'
+                'var browser = JavaScriptBridge\n'
+                'var safe = OS.execute_not_a_call\n'
+                '# OS.execute("ignored", [])\n',
                 encoding="utf-8",
             )
             findings = scan(root)
@@ -79,15 +79,15 @@ class OfflineSurfaceTests(unittest.TestCase):
             root = Path(folder) / "repo"
             root.mkdir()
             outside = Path(folder) / "external.gd"
-            outside.write_text("var client = HTTPRequest.new()\\n", encoding="utf-8")
+            outside.write_text("var client = HTTPRequest.new()\n", encoding="utf-8")
             (root / "External.gd").symlink_to(outside)
-            (root / "Safe.gd").write_text("extends Node\\n", encoding="utf-8")
+            (root / "Safe.gd").write_text("extends Node\n", encoding="utf-8")
             self.assertEqual(scan(root), [])
 
     def test_does_not_follow_symlinked_source_inside_checkout(self):
         with tempfile.TemporaryDirectory() as folder:
             root = Path(folder)
-            (root / "Real.gd").write_text("var client = HTTPRequest.new()\\n", encoding="utf-8")
+            (root / "Real.gd").write_text("var client = HTTPRequest.new()\n", encoding="utf-8")
             (root / "Alias.gd").symlink_to(root / "Real.gd")
             findings = scan(root)
             self.assertEqual(len(findings), 1)
