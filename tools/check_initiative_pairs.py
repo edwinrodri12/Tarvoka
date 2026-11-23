@@ -20,7 +20,8 @@ def summarize(rows):
         pair_id, starter, winner = (row.get(k) for k in ("pair_id", "starter", "winner"))
         if not isinstance(pair_id, str) or not pair_id.strip():
             raise ValueError(f"match {index}: missing pair_id")
-        if starter not in ("blue", "red") or winner not in ("blue", "red", "draw"):
+        if (not isinstance(starter, str) or starter not in ("blue", "red")
+                or not isinstance(winner, str) or winner not in ("blue", "red", "draw")):
             raise ValueError(f"match {index}: invalid starter/winner")
         if starter in pairs[pair_id]:
             raise ValueError(f"pair {pair_id}: duplicate {starter} starter")
