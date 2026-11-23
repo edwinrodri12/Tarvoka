@@ -30,7 +30,12 @@ func closed_outward(mesh: Mesh) -> bool:
         var arrays: Array=mesh.surface_get_arrays(surface)
         var verts: PackedVector3Array=arrays[Mesh.ARRAY_VERTEX]
         var normals: PackedVector3Array=arrays[Mesh.ARRAY_NORMAL]
-        var index: PackedInt32Array=arrays[Mesh.ARRAY_INDEX]
+        # SurfaceTool emits unindexed triangles on Godot 4.3. For those
+        # meshes ARRAY_INDEX is null, not a PackedInt32Array.
+        var raw_index: Variant=arrays[Mesh.ARRAY_INDEX]
+        var index: PackedInt32Array=(
+            raw_index if raw_index is PackedInt32Array
+            else PackedInt32Array())
         var size: int=index.size() if index.size()>0 else verts.size()
         if size<30 or size%3!=0 or verts.size()!=normals.size():
             return false
