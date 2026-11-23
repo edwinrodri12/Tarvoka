@@ -148,3 +148,14 @@ Tras la integración y revisión visual de V14, el principal aspecto restante ex
 **Comparación real en el Estudio:** los botones `V15 · silueta previa / V16 · anatomía integral` alternan la malla y transformación verdaderas de las piezas, desde la misma cámara del único visor de Godot. `test_engineer_v16_silhouette.gd` valida topología cerrada/orientación de superficies, ocho facciones × LOD8/13, cero nuevos MeshInstance3D, las poses del escudo, cinco otros tipos de infantería intactos y diez capturas Godot de cinco cámaras antes/después. El test de batalla G05 confirma este cuerpo real en LOD8 y preserva reglas/niebla.
 
 **Estado:** esperando CI, exportación y revisión visual; no considerar V16 finalizada, publicada en Pages ni instalada en un APK hasta que se confirme.
+
+
+### Ingeniero V17 — coraza exterior anatómica
+
+**Prioridad visual después de V16:** el remodelado anatómico de torso/pelvis/piernas pasó QA, pero las placas exteriores anteriores cubrían casi toda la nueva silueta y el soldado aún se veía como piezas aisladas. V17 reemplaza la **geometría exterior verdadera** en los nodos V8 y V1 existentes; no se limita a modificar normales o añadir superposiciones.
+
+**Escultura nueva:** `scripts/ui/InfantryEngineerOuterArmorV17.gd` construye un peto tridimensional cerrado de sección variable, ancho en el pecho y más estrecho al bajar al abdomen; reajusta la insignia original a la superficie frontal conservando el material y color de la facción. Las hombreras V8 pasan a ser cascos deltoideos mayores, cerrados y continuos desde la raíz hasta el bíceps, y sus insignias se desplazan a la superficie exterior. Sustituye las antiguas cajas `Rodillera`, `BolsilloPierna` y `V2_Suela` por volúmenes cerrados con contorno curvo, manteniendo las cinchas y los sellos internos V12.3. Las marcas tácticas de rodilla de LOD8 se recolocan fuera del nuevo blindaje. **No crea nuevos nodos de malla ni draw calls**.
+
+**Integración:** sobre la cadena V12.3→V13→V14→V15→V16, `UnitModels3D.gd` activa V17 en el Ingeniero G05 jugable y en el Estudio 3D nativo. `BastionStudioAdapter.gd` añade comparación reversible `V16 · coraza anterior / V17 · blindaje anatómico` sobre las mallas originales, conservando los anteriores comparadores y las animaciones del escudo y del arma. Las reglas, daño, capturas, IA, materiales de facción, colisiones y estadísticas no cambian.
+
+**Puertas de calidad:** `tests/test_engineer_v17_outer_armor.gd` valida 8 facciones × LOD8 y LOD13, topología hermética/orientación de normales, posición de los indicadores de facción, articulaciones, ausencia de nuevos nodos y diez imágenes renderizadas por Godot desde cinco cámaras antes/después. Además se exigen CI del G05 en mapa, UI y exportación web del Estudio compartido. Hasta pasar esas verificaciones y revisar las capturas, V17 queda en revisión, sin publicación ni APK.
