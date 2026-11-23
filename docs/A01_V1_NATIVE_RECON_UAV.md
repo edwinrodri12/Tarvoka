@@ -171,3 +171,21 @@ El primer modelo se genera en `scripts/ui/A01ReconDroneV1.gd`, conectado al cons
 - Workflows nativo y de publicación conjunta incorporan este módulo y exigen **PASS V11 + seis PNG antes de publicar**.
 
 **Criterio de avance:** nueva CI verde Godot 4.3 y revisión visual de los seis renders V11 antes de integrar a `main`; después comprobar publicación real del Studio único. En Android físico siguen pendientes temperatura, FPS, memoria y draw calls. No se altera movimiento, coste, rango de visión, niebla ni ataques. No se marca A01 como arte final hasta revisión en el dispositivo.
+
+
+## A01 V12 — continuidad física ala/fuselaje (23 noviembre 2026)
+
+**Problema corregido:** el modelo V11 preservaba dos elipsoides V4 `A01_V4_SmoothCompositeWingRoot_*` sobre la unión entre fuselaje y ala, cuya silueta parecía una pieza adicional adherida. El problema es visual, no de estadísticas.
+
+**Nueva construcción:** `scripts/ui/A01ReconWingRootV12.gd` genera una malla propia para cada raíz alar, con secciones de perfil cerrado en cuatro posiciones transversales (tres estaciones para Android LOD8). Los perfiles se conectan con triángulos físicos orientados hacia afuera y **dos tapas cerradas**, sin planchas transparentes ni trucos de doble cara. La primera estación penetra físicamente en el casco compuesto V11; la última termina dentro del perfil alar V4. Se conserva el exterior gris compuesto y la pintura de las ocho facciones, en lugar de bandas nuevas encima de la articulación.
+
+Los dos elipsoides V4 dejan de ser visibles, pero permanecen como nodos históricos; en la variante detallada también se ocultan los soportes rectangulares heredados que estaban parcialmente superpuestos. **Se conserva el mismo inventario de mallas activas en la raíz: dos sustituyen a dos.**
+
+**Criterios de pruebas:**
+- Dos mallas `ArrayMesh` individuales y cerradas con 32 triángulos por lado en LOD8, 44 en LOD13. Validar aristas compartidas con orientación opuesta y ausencia de triángulos degenerados.
+- Comprobar ambas alas y envolvente espacial; ocho facciones × dos LOD, presupuestos de geometría D0/D4, daño y reparación; sin cambiar el perfil de ModernArsenal.
+- Seis capturas **nativas Godot** desde frontal, ambos laterales, isometría, superior y Android, exportadas en `build/qa/a01-v12`.
+- Validación dentro del **mismo** `UnitArtStudioWeb` — no visor secundario. QA debe proteger LOD8/13, cámara, colores y D3.
+- CI nativa y la compilación Pages exigen `PASS A01 V12 WING ROOTS:`; no aprobar la publicación hasta verificar la nueva captura y el informe real de GitHub Actions.
+
+El resultado sigue siendo **arte en desarrollo**, no prueba de FPS en móvil. El A01 continúa siendo UAV desarmado de reconocimiento y no modifica al helicóptero HAT-29 ni las reglas de combate.
