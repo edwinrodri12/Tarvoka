@@ -211,7 +211,7 @@ class ResourcePathAuditTests(unittest.TestCase):
             root = pathlib.Path(temp)
             (root / "sample.tscn").write_text(
                 ('[ext_resource type="Script" path="res://bad' + chr(0) + 'name.gd" id="1"]\n')
-                '[ext_resource type="Script" path="res://missing.gd" id="2"]\n'
+                + '[ext_resource type="Script" path="res://missing.gd" id="2"]\n'
             )
             errors = audit(root)
             self.assertEqual(len(errors), 2, errors)
