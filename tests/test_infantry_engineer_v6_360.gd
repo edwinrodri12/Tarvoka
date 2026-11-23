@@ -6,6 +6,7 @@ const Models = preload("res://scripts/ui/UnitModels3D.gd")
 const Engineer = preload("res://scripts/ui/InfantryEngineerFinishV6.gd")
 const ClosureV7 = preload("res://scripts/ui/InfantryEngineerCompletenessV7.gd")
 const PremiumV8 = preload("res://scripts/ui/InfantryEngineerPremiumV8.gd")
+const ContourV14 = preload("res://scripts/ui/InfantryEngineerContourV14.gd")
 const FinishV9 = preload("res://scripts/ui/InfantryEngineerFinishV9.gd")
 const AnatomyV10 = preload("res://scripts/ui/InfantryEngineerAnatomyV10.gd")
 const MechanicsV11 = preload("res://scripts/ui/InfantryEngineerMechanicsV11.gd")
@@ -305,9 +306,20 @@ func _run() -> void:
                 gun_detail.get_parent().name=="ArmamentoRig" and
                 _watertight(gun_detail.mesh),
                 "V8 sealed rifle receiver follows real weapon rig")
-            check(shoulder!=null and shoulder.mesh is SphereMesh and
+            # V8 originally replaced a box with an opaque SphereMesh.
+            # V14 further sculpts that SAME live shoulder as a closed,
+            # outward-facing anatomical ArrayMesh, not a regression.
+            var v14_shoulder: bool=(shoulder!=null and
+                ContourV14.has_model(model) and
+                shoulder.mesh is ArrayMesh and
+                _watertight(shoulder.mesh) and
+                shoulder.get_parent().name=="BrazoRig_1")
+            var v8_shoulder: bool=(shoulder!=null and
+                not ContourV14.has_model(model) and
+                shoulder.mesh is SphereMesh)
+            check((v14_shoulder or v8_shoulder) and
                 old_shoulder!=null and not old_shoulder.visible,
-                "anatomical moving shoulder replaces cuboid prototype")
+                "anatomical moving shoulder stays sealed and rig-bound, never cuboid")
             for side in [-1,1]:
                 var kneeseal: MeshInstance3D=model.find_child(
                     "V8_JuntaRodillaCerrada_%d"%side,true,false) as MeshInstance3D
@@ -359,8 +371,14 @@ func _run() -> void:
                 Engineer.PANEL,true,false) as MeshInstance3D
             var paint: MeshInstance3D=model.find_child(
                 Engineer.COLOR,true,false) as MeshInstance3D
-            check(board!=null and board.mesh is BoxMesh and board.visible,
-                "sealed articulated broad steel back panel")
+            var v14_board: bool=(board!=null and
+                ContourV14.has_model(model) and
+                board.mesh is ArrayMesh and _watertight(board.mesh))
+            var v6_board: bool=(board!=null and
+                not ContourV14.has_model(model) and board.mesh is BoxMesh)
+            check((v14_board or v6_board) and board.visible and
+                board.get_parent().name==Engineer.RIG,
+                "V6 folding shield preserves sealed physical volume and live rig")
             check(paint!=null and paint.material_override is StandardMaterial3D,
                 "physical faction panel in Godot mesh")
             if paint!=null:

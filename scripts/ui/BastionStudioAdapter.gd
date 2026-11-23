@@ -10,6 +10,7 @@ const EngineerFinishV9 = preload("res://scripts/ui/InfantryEngineerFinishV9.gd")
 const EngineerMechanicsV11 = preload("res://scripts/ui/InfantryEngineerMechanicsV11.gd")
 const EngineerDorsalV12 = preload("res://scripts/ui/InfantryEngineerDorsalV12.gd")
 const EngineerSmoothV13 = preload("res://scripts/ui/InfantryEngineerSmoothV13.gd")
+const EngineerContourV14 = preload("res://scripts/ui/InfantryEngineerContourV14.gd")
 const InfantryRoster = preload("res://scripts/ui/InfantryCampRosterV1.gd")
 const P06Visual = preload("res://scripts/ui/APCVisualRigV1.gd")
 const P06Finish = preload("res://scripts/ui/APCFinishV3.gd")
@@ -506,6 +507,9 @@ func _install_unified_studio_navigation() -> void:
     _add_paired(infantry_360_panel,"V12.3 · poligonal",
         func(): _engineer_v13_compare(false),
         "V13 · curvas suaves",func(): _engineer_v13_compare(true))
+    _add_paired(infantry_360_panel,"V13 · proporciones previas",
+        func(): _engineer_v14_compare(false),
+        "V14 · anatomía refinada",func(): _engineer_v14_compare(true))
     _add_paired(infantry_360_panel,"LOD13 · detalle",func(): _infantry_review_lod(13),
         "LOD8 · vista táctica",func(): _infantry_review_lod(8))
     _add_paired(infantry_360_panel,"Cuerpo completo",func(): _infantry_review_focus(false),
@@ -1466,6 +1470,14 @@ func _infantry_review_edition() -> String:
         return "V1"
     if _role=="infantry_engineer" and model_root!=null:
         if EngineerDorsalV12.is_visible(model_root):
+            if EngineerContourV14.has_model(model_root) and bool(
+                    model_root.get_meta(
+                    "tarvoka_engineer_v14_contours_visible",false)):
+                return "V14"
+            if EngineerSmoothV13.has_model(model_root) and bool(
+                    model_root.get_meta(
+                    "tarvoka_engineer_v13_smoothed_visible",false)):
+                return "V13"
             return "V12"
         if EngineerMechanicsV11.has_model(model_root):
             return "V11"
@@ -1502,11 +1514,35 @@ func _engineer_v13_compare(smooth: bool) -> void:
         return
     if not EngineerDorsalV12.is_visible(model_root):
         EngineerDorsalV12.show_finish(model_root,true)
+    # V14 snapshots are V13 meshes, so toggles must happen IN ORDER:
+    # V14->V13->V12.3 when hiding; V12.3->V13 when showing.
+    # Otherwise a last-step V14 reset would accidentally restore V13's
+    # helmet while the status claimed the true polygonal V12.3 comparison.
+    if not smooth:
+        EngineerContourV14.show_contours(model_root,false)
     if EngineerSmoothV13.show_smoothing(model_root,smooth):
+        if smooth:
+            EngineerContourV14.show_contours(model_root,false)
         status_label.text=(
             "Ingeniero V13 · blindaje curvo, casco y extremidades suavizados"
             if smooth else
             "Ingeniero V12.3 · mallas poligonales originales")
+
+
+# Change only real mesh resources and transforms on the SAME Godot scene.
+# The helmet's eye alignment, eight faction paints and animated bones remain
+# on the original unit; no additional character is instantiated.
+func _engineer_v14_compare(refined: bool) -> void:
+    if _role!="infantry_engineer" or model_root==null:
+        return
+    if not EngineerDorsalV12.is_visible(model_root):
+        EngineerDorsalV12.show_finish(model_root,true)
+    EngineerSmoothV13.show_smoothing(model_root,true)
+    if EngineerContourV14.show_contours(model_root,refined):
+        status_label.text=(
+            "Ingeniero V14 · casco, cuello, hombros y peto anatómicos"
+            if refined else
+            "Ingeniero V13 · comparación con proporciones anteriores")
 
 
 func _infantry_review_look(yaw: float, perspective: String) -> void:

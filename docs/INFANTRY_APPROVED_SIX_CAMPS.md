@@ -115,3 +115,14 @@ El usuario revisó V12.3 en el visor y señaló que la silueta seguía excesivam
 **QA exigida antes de publicar:** `tests/test_engineer_v13_smooth_finish.gd` comprueba las ocho facciones × LOD8/13, normales explícitas, cierres de malla, volumen exterior, rig y escudo móvil sin regresiones, ausencia de transparencias, diez imágenes de Godot de cinco vistas con y sin suavizado, además de las pruebas de batalla y de interfaz. No se modifican atributos, reglas de combate, IA, economía, capturas, guardados ni colisiones.
 
 **Estado:** trabajo en revisión; no confundir con una versión ya desplegada en GitHub Pages o una APK compilada.
+
+
+### Ingeniero V14 — proporciones anatómicas, hombros y cuello
+
+**Prioridad tras V13:** reducir la apariencia de hombreras esféricas, mejorar la unión entre casco, cuello y torso, conservar la identidad del Ingeniero y evitar superficies poligonales visibles. La nueva intervención es sobre **mallas auténticas de los nodos existentes**, no una ilustración ni el cambio de un material de doble cara.
+
+`scripts/ui/InfantryEngineerContourV14.gd` reconstruye el casco V9 con una corona de perfil anatómico y normales suaves, reemplaza la hombrera esférica V8 por una cápsula deltoidea cónica cerrada, redondea de verdad el peto rígido frontal V8 y corrige el ajuste entre cuello V9 y sello interno V12.3. Los rellenos de axila y las uniones móviles de hombro permanecen dentro del torso/rig de brazos original, sin cambiar pivotes, manos, armas, transformaciones de combate o tamaño de colisiones. El color de cada facción sigue usando los mismos materiales.
+
+Se utiliza la función de contorneado hermético de V13; los nuevos nodos de geometría son **cero**, porque se sustituyen solamente `mesh`, `scale` y `position` de las piezas existentes. Los perfiles LOD8 y LOD13 retienen su presupuesto original. El visor compartido añade una comparación física **V13 · proporciones previas / V14 · anatomía refinada**, guardando mallas y transformaciones anteriores del mismo modelo y cámara.
+
+**QA requerida antes de fusionar:** `tests/test_engineer_v14_anatomic_finish.gd` comprueba 8 facciones × 2 LODs, volúmenes sellados de casco/hombreras/peto, 10 imágenes de cinco ángulos, anclajes de armadura en sus propios rigs, conservación del tope de unidades detalladas y reversibilidad V13/V14. Deben pasar el Godot nativo, humo de interfaz, mapa táctico G05 y exportación web. **No está aprobada ni publicada hasta verificar CI y fotos**; sin modificaciones a jugabilidad ni a una APK existente.

@@ -9,6 +9,7 @@ const Identity = preload("res://scripts/ui/FactionIdentity.gd")
 const Context = preload("res://scripts/ui/G11BattleContextV25.gd")
 const Biomes = preload("res://scripts/ui/WinterBattleBiome.gd")
 const Engineer = preload("res://scripts/ui/InfantryEngineerDorsalV12.gd")
+const ContourV14 = preload("res://scripts/ui/InfantryEngineerContourV14.gd")
 const Models = preload("res://scripts/ui/UnitModels3D.gd")
 var failures: int = 0
 
@@ -62,8 +63,13 @@ func _run() -> void:
         "G05 consumes one of eight Android detailed-unit slots")
     if soldier!=null:
         check(Engineer.has_model(soldier) and Engineer.is_visible(soldier)
-            and Engineer.has_seals(soldier),
-            "playable G05 LOD8 loads V12.3 opaque closed helmet and all joints")
+            and Engineer.has_seals(soldier) and ContourV14.has_model(soldier),
+            "playable G05 LOD8 loads V14 anatomy over V12.3 closed soldier")
+        var shoulder: MeshInstance3D=soldier.find_child(
+            ContourV14.SHOULDER+"_1",true,false) as MeshInstance3D
+        check(shoulder!=null and shoulder.mesh is ArrayMesh and
+            shoulder.get_parent().name=="BrazoRig_1",
+            "LOD8 battle engineer uses actual tapered anatomical shoulder")
         check(int(soldier.get_meta("tarvoka_infantry_lod",0))==8,
             "LOD8 lightweight native soldier, not LOD13 hero or fallback disc")
         check(str(soldier.get_meta("tarvoka_engineer_game_role",""))=="engineer"
@@ -97,7 +103,7 @@ func _run() -> void:
         "both playable engineers visible with approved Android LOD")
     var red: Node3D=both.find_child("Unidad3D_G05-R",false,false) as Node3D
     check(red!=null and Engineer.has_model(red) and
-        Engineer.has_seals(red) and
+        Engineer.has_seals(red) and ContourV14.has_model(red) and
         int(red.get_meta("tarvoka_engineer_visual_faction",-1))==7 and
         int(red.get_meta("faction",-1))==1,
         "enemy G05 uses onyx visual faction with engine team unchanged")
