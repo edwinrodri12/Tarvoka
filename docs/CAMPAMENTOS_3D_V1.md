@@ -139,6 +139,13 @@ factoría `CampModels3DV1.build("reconocimiento",faction,lod,damage)`.
   25 PNG auténticos Godot desde cuatro ángulos, replegado, escaneo,
   daño y vista superior.
 
-**Estado inicial:** a la espera del resultado GitHub Actions para calificar
-el modelado como probado. Sin integración confirmada en el visor web original
-o en el juego Android. El PR seguirá en borrador hasta revisión de arte.
+**Godot 4.3 CI verificado:** [workflow 45102805530](https://github.com/edwinrodri12/Tarvoka/actions/runs/45102805530),
+estado SUCCESS; importación Godot, V1 256 modelos/20 PNG, suministros V2
+64/25, suministros V3 64/18 y reconocimiento V2 **64 variantes y 25 PNG**.
+Total: 88 imágenes nativas de revisión subidas como artefacto GitHub.
+Inspección visual confirmada desde las cuatro diagonales y en modo replegado.
+
+**Estado:** Reconocimiento V2 modelado y validado automáticamente, pendiente
+de revisión estética final e integración en el visor 3D unificado. No se ha
+publicado en APK Android ni modificado la lógica de niebla de guerra; PR en
+borrador hasta integrar y aprobar.
