@@ -235,17 +235,16 @@ static func apply(model: Node3D, hero: bool) -> bool:
             return false
         base.set_meta("tarvoka_v13_rounded",true)
 
-    var profiles: Dictionary={
-        V9.HELMET:[
-            Vector3(0.17,0.135,0.185),Vector3(0.250,0.190,0.235),
-            Vector3(0.282,0.300,0.272),Vector3(0.286,0.415,0.284),
-            Vector3(0.252,0.525,0.253),Vector3(0.164,0.605,0.160),
-            Vector3(0.060,0.636,0.055)],
-        "V2_MochilaOrganica":[
-            Vector3(0.17,-0.35,0.08),Vector3(0.26,-0.27,0.155),
-            Vector3(0.29,0.06,0.18),Vector3(0.25,0.31,0.13),
-            Vector3(0.13,0.35,0.075)]
-    }
+    var profiles: Dictionary={}
+    profiles[V9.HELMET]=[
+        Vector3(0.17,0.135,0.185),Vector3(0.250,0.190,0.235),
+        Vector3(0.282,0.300,0.272),Vector3(0.286,0.415,0.284),
+        Vector3(0.252,0.525,0.253),Vector3(0.164,0.605,0.160),
+        Vector3(0.060,0.636,0.055)]
+    profiles["V2_MochilaOrganica"]=[
+        Vector3(0.17,-0.35,0.08),Vector3(0.26,-0.27,0.155),
+        Vector3(0.29,0.06,0.18),Vector3(0.25,0.31,0.13),
+        Vector3(0.13,0.35,0.075)]
     for side in [-1,1]:
         profiles["V2_MusloTaper_%d"%side]=[
             Vector3(0.13,-0.50,0.135),Vector3(0.145,-0.42,0.165),
