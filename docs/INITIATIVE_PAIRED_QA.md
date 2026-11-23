@@ -43,3 +43,6 @@ balance adjustments based on a narrow interval or a tiny deterministic sample.
 Two added unittests cover 0%, 50%, 100% and all-draw cases.
 Status: GitHub publication verified; full Python test suite, Godot CI and
 Android device **NOT EXECUTED** during this update (local GitHub DNS failed).
+
+## Malformed-input regression (2026-11-23)
+`starter` and `winner` must be strings, not JSON arrays or objects. Invalid collection values now raise `ValueError` with a match index rather than an uncaught `TypeError` during dictionary lookup. `test_unhashable_input_rejected_as_value_error` covers six malformed values. GitHub commits published; full Python/Godot/Android CI NOT EXECUTED, Android physical NO EJECUTADO EN DISPOSITIVO. No gameplay changes.
