@@ -21,7 +21,13 @@ EXCLUDED = {".git", ".godot", ".import", "__pycache__"}
 def scan(root: Path) -> list[str]:
     findings: list[str] = []
     for path in sorted(root.rglob("*")):
-        if not path.is_file() or path.suffix not in {".gd", ".tscn"}:
+        # Never follow links outside the checkout (including links to other repos).
+        # Resolve only candidate sources, avoiding unnecessary filesystem work.
+        if path.suffix not in {".gd", ".tscn"}:
+            continue
+        if path.is_symlink():
+            continue
+        if not path.is_file():
             continue
         if any(part in EXCLUDED for part in path.relative_to(root).parts):
             continue
