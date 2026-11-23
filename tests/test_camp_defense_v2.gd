@@ -87,9 +87,9 @@ func _audit(faction: int, lod: int, damage: int) -> Node3D:
         var parts: Array[MeshInstance3D] = []
         _meshes(core, parts)
         for item in parts:
-            if item.name == "V2_SueloCentralOcupable" or
+            if (item.name == "V2_SueloCentralOcupable" or
                     item.name == "V2_DelimitacionCentroFaccion" or
-                    item.name.begins_with("V2_UnionPiso_"):
+                    item.name.begins_with("V2_UnionPiso_")):
                 continue
             var global_pos: Vector3 = item.global_position
             if absf(global_pos.x) < 1.0 and absf(global_pos.z) < 1.0:
