@@ -44,6 +44,29 @@ class PairedInitiativeTests(unittest.TestCase):
         })
         self.assertEqual(sum(patterns.values()), 5)
 
+    def test_wilson_uncertainty_small_samples(self):
+        for winners, expected_rate in [
+            (("blue", "red"), 1.0),
+            (("red", "blue"), 0.0),
+            (("blue", "blue"), 0.5),
+        ]:
+            with self.subTest(winners=winners):
+                result = summarize([
+                    {"pair_id": "x", "starter": "blue", "winner": winners[0]},
+                    {"pair_id": "x", "starter": "red", "winner": winners[1]},
+                ])
+                lower, upper = result["starter_win_rate_wilson95"]
+                self.assertLessEqual(lower, expected_rate)
+                self.assertGreaterEqual(upper, expected_rate)
+                self.assertGreater(upper - lower, 0.3)
+
+    def test_wilson_null_for_draws(self):
+        result = summarize([
+            {"pair_id": "x", "starter": "blue", "winner": "draw"},
+            {"pair_id": "x", "starter": "red", "winner": "draw"},
+        ])
+        self.assertIsNone(result["starter_win_rate_wilson95"])
+
     def test_missing_leg_rejected(self):
         with self.assertRaises(ValueError):
             summarize([{"pair_id": "a", "starter": "blue", "winner": "red"}])
