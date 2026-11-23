@@ -15,13 +15,16 @@ const V4=preload("res://scripts/ui/A01ReconAirfoilV4.gd")
 
 # distance from shaft, half chord, half thickness, twisting pitch degrees.
 # The tip is physically rounded by reduced chord, NOT left open.
+# V14.1: flight-propeller proportions refined from actual rear/side
+# Godot screenshots; old V14 blade silhouettes read as wide paddles.
+# Maintain 0.515 m span / 3 blades / 44 or 92 sealed faces per blade.
 const STATIONS=[
-    [0.060,0.045,0.028,-14.0],
-    [0.130,0.074,0.023,-10.0],
-    [0.245,0.107,0.018,-3.0],
-    [0.365,0.092,0.015,6.0],
-    [0.470,0.049,0.011,14.0],
-    [0.515,0.014,0.007,18.0]
+    [0.060,0.038,0.025,-14.0],
+    [0.130,0.060,0.020,-10.0],
+    [0.245,0.078,0.015,-3.0],
+    [0.365,0.071,0.012,6.0],
+    [0.470,0.036,0.009,14.0],
+    [0.515,0.009,0.005,18.0]
 ]
 
 static func _mat(color:Color,metallic:float,roughness:float)->StandardMaterial3D:
@@ -162,7 +165,7 @@ static func apply(root:Node3D,hero:bool)->bool:
             false,false) as MeshInstance3D
         if old_steel!=null:
             retired.append(old_steel)
-    var blades_mat:=_mat(Color("#242b33"),0.21,0.62)
+    var blades_mat:=_mat(Color("#2d3944"),0.25,0.57)
     var body_mat:=_mat(Color("#a5b6be"),0.42,0.44)
     var spinner_mat:=_mat(Color("#617580"),0.57,0.40)
     if _cowling(body,hero,body_mat).mesh==null:
@@ -179,5 +182,6 @@ static func apply(root:Node3D,hero:bool)->bool:
         original.visible=false
     root.set_meta(FLAG,true)
     root.set_meta("tarvoka_a01_v14_lod",13 if hero else 8)
+    root.set_meta("tarvoka_a01_v14_1_slim_pitched_prop",true)
     root.set_meta("tarvoka_a01_v14_unarmed_visual_only",true)
     return has_model(root)
