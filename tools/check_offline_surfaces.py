@@ -14,7 +14,7 @@ TOKENS = re.compile(
     r"\b(?:HTTPRequest|HTTPClient|WebSocketPeer|WebSocketMultiplayerPeer|"
     r"ENetMultiplayerPeer|PacketPeerUDP|TCPServer|StreamPeerTCP|UPNP|WebRTCPeerConnection|WebRTCDataChannel|PacketPeerDTLS|StreamPeerTLS|MultiplayerPeerExtension)\b"
 )
-SCENE_NODE = re.compile(r'^\s*\[node\b[^\]]*\btype="HTTPRequest"')
+SHELL_EXEC = re.compile(r"\bOS\s*\.\s*execute\s*\(")\nSCENE_NODE = re.compile(r'^\s*\[node\b[^\]]*\btype="HTTPRequest"')
 EXCLUDED = {".git", ".godot", ".import", "__pycache__"}
 
 
@@ -42,7 +42,7 @@ def scan(root: Path) -> list[str]:
                 continue
             # Strings containing documentation examples are not definitive proof
             # of network use; findings require manual review.
-            if TOKENS.search(line) or (path.suffix == ".tscn" and SCENE_NODE.search(line)):
+            if TOKENS.search(line) or SHELL_EXEC.search(line) or (path.suffix == ".tscn" and SCENE_NODE.search(line)):
                 findings.append(f"{path.relative_to(root)}:{number}: {line.strip()[:180]}")
     return findings
 
