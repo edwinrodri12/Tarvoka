@@ -150,3 +150,49 @@ El primer modelo se genera en `scripts/ui/A01ReconDroneV1.gd`, conectado al cons
 - Se añadió el rótulo en vivo `A01_LodActivo` con `Calidad activa: LOD13 · detalle` o `Calidad activa: LOD8 · Android`. Se sincroniza tanto al pulsar un botón LOD como al reconstruir el A01 tras un cambio de facción. No modifica mallas ni jugabilidad.
 - `tests/test_a01_recon_shared_studio.gd` ahora exige que ambos botones estén colocados **antes** de la fila «Frente/Trasera», que la etiqueta muestre el nivel real tras cada cambio y que las verificaciones anteriores de daño, zoom, foco y facciones permanezcan intactas.
 - Último cambio de UI **pendiente de CI**. El flujo de publicación de Pages en PR compila y archiva pruebas, pero el despliegue se omite; el modelo V10.5 no está marcado como publicado públicamente ni fusionado hasta la aceptación visual del usuario y las pruebas Android.
+
+
+## A01 V11 — auditoría visual profunda y corrección aerodinámica (22 noviembre 2026)
+
+**Evidencia inspeccionada:** 54 PNG originales de Godot 4.3 del Studio publicado en `main` (run `45057047901`), incluidas cinco cámaras de V10, ocho facciones tácticas, daños D0-D4, y comparativas del visor único. No son concept arts generadas. La prueba V10 anterior arrojó 56/68 mallas visibles D0/D4 en LOD8 y 79/88 en LOD13 (máximos 70 y 95 respectivamente). Estas cifras son **anteriores** a V11 y no representan FPS Android.
+
+### Hallazgos concretos de la revisión
+- El fuselaje V1 seguía visible como elipsoide genérico de gran volumen, mientras que la nariz V10 ya utilizaba malla cerrada. La unión longitudinal era poco consistente.
+- Persistían sobre las alas las dos `A01_V2_LargeFactionWingBand` como cajas sobresalientes, junto a marcas V1 redundantes. Las franjas V9 del extremo alar ya eran conformadas y se conservan.
+- El mástil dorsal rectangular y su punta V3 recordaban una construcción por bloques y duplicaban elementos.
+- El LOD8 y el LOD13 tenían silueta compartida y QA geométrico, pero faltaba una prueba específica que garantizara **cuerpo completo** sellado y pinturas superiores realmente conformadas en ambos niveles.
+
+### Cambios de código aplicados en la rama V11
+- Nuevo `scripts/ui/A01ReconAirframeV11.gd`: fuselaje longitudinal cerrado con ocho estaciones de sección elíptica, tapas reales, mallas `ArrayMesh`, normales y material PBR sólido. Emplea 10 segmentos radiales Android y 14 hero.
+- Crestón dorsal y dos secciones de esmalte alar de facción como **sólidos finos de 12 triángulos**, asentados sobre superficies reales, no cajas flotantes. Los colores provienen del catálogo oficial de ocho facciones.
+- Antena estilizada cónica, con base físicamente incrustada. Los diez objetos previos de geometría superpuesta son retirados de la *vista*, conservados como nodos históricos para compatibilidad de pruebas y comparación; no se duplican visualmente.
+- V11 se añade tras V10 en `UnitModels3D.build("uav_recon", ...)`, tanto LOD8 como 13, y se confirma en `BastionStudioAdapter.gd` antes de cambiar calidad del mismo visor. No se sustituye al HAT-29 `attack_heli`.
+- Prueba nueva `tests/test_a01_recon_airframe_v11.gd`: topología sin bordes abiertos ni caras degeneradas, materiales completamente opacos, posición exterior de esmaltes, ocho facciones × dos LOD, presupuesto visible D0/D4, reparación y seis renders nativos. Prueba del mismo Studio refuerza cambio de facción, LOD y pintura real.
+- Workflows nativo y de publicación conjunta incorporan este módulo y exigen **PASS V11 + seis PNG antes de publicar**.
+
+**Criterio de avance:** nueva CI verde Godot 4.3 y revisión visual de los seis renders V11 antes de integrar a `main`; después comprobar publicación real del Studio único. En Android físico siguen pendientes temperatura, FPS, memoria y draw calls. No se altera movimiento, coste, rango de visión, niebla ni ataques. No se marca A01 como arte final hasta revisión en el dispositivo.
+
+
+## A01 V12 — continuidad física ala/fuselaje (23 noviembre 2026)
+
+**Problema corregido:** el modelo V11 preservaba dos elipsoides V4 `A01_V4_SmoothCompositeWingRoot_*` sobre la unión entre fuselaje y ala, cuya silueta parecía una pieza adicional adherida. El problema es visual, no de estadísticas.
+
+**Nueva construcción:** `scripts/ui/A01ReconWingRootV12.gd` genera una malla propia para cada raíz alar, con secciones de perfil cerrado en seis posiciones transversales para LOD13 (cuatro estaciones para Android LOD8). Los perfiles se conectan con triángulos físicos orientados hacia afuera y **dos tapas cerradas**, sin planchas transparentes ni trucos de doble cara. La primera estación penetra físicamente en el casco compuesto V11; la última termina dentro del perfil alar V4. Se conserva el exterior gris compuesto y la pintura de las ocho facciones, en lugar de bandas nuevas encima de la articulación.
+
+Los dos elipsoides V4 dejan de ser visibles, pero permanecen como nodos históricos; en la variante detallada también se ocultan los soportes rectangulares heredados que estaban parcialmente superpuestos. **Se conserva el mismo inventario de mallas activas en la raíz: dos sustituyen a dos.**
+
+**Criterios de pruebas:**
+- Dos mallas `ArrayMesh` individuales y cerradas con 44 triángulos por lado en LOD8, 68 en LOD13. Validar aristas compartidas con orientación opuesta y ausencia de triángulos degenerados.
+- Comprobar ambas alas y envolvente espacial; ocho facciones × dos LOD, presupuestos de geometría D0/D4, daño y reparación; sin cambiar el perfil de ModernArsenal.
+- Seis capturas **nativas Godot** desde frontal, ambos laterales, isometría, superior y Android, exportadas en `build/qa/a01-v12`.
+- Validación dentro del **mismo** `UnitArtStudioWeb` — no visor secundario. QA debe proteger LOD8/13, cámara, colores y D3.
+- CI nativa y la compilación Pages exigen `PASS A01 V12 WING ROOTS:`; no aprobar la publicación hasta verificar la nueva captura y el informe real de GitHub Actions.
+
+El resultado sigue siendo **arte en desarrollo**, no prueba de FPS en móvil. El A01 continúa siendo UAV desarmado de reconocimiento y no modifica al helicóptero HAT-29 ni las reglas de combate.
+
+
+### Ajuste V12.1: inspección de ocho vistas y eliminación de juntas sobredimensionadas
+
+Tras revisar las ocho vistas Godot de `run 45212686166` (prueba nativa superada), se corrigió la transición angular de ambas raíces: ahora los extremos se ocultan **dentro** del fuselaje V11 y del ala V4, con estaciones intermedias y normales suavizadas. El acabado utiliza el mismo material opaco del fuselaje. Los registros oscuros `A01_V3_WingServiceHatch_L/R` dejan de proyectarse como aberturas sobre el ala. QA comprueba cierre 2-manifold de 44/68 triángulos, tapas enterradas, presupuesto D0–D4 y genera seis vistas generales más dos acercamientos.
+
+La compilación inicial del Studio de este cambio falló porque `main` añadió durante el desarrollo `InfantryEngineerSmoothV13.gd`, ausente de la rama antigua. Este commit de integración incorpora **todo el árbol actualizado de main** como segundo padre del merge, conservando explícitamente G05 V13 y sin modificar sus contenidos. Todavía se exige CI del Studio sobre este nuevo árbol antes de integrar a la rama principal.

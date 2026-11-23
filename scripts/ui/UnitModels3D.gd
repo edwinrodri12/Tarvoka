@@ -43,6 +43,8 @@ const A01DamageV6 = preload("res://scripts/ui/A01ReconDamageV6.gd")
 const A01WingletV8 = preload("res://scripts/ui/A01ReconWingletV8.gd")
 const A01WingletV9 = preload("res://scripts/ui/A01ReconWingletV9.gd")
 const A01NoseOpticsV10 = preload("res://scripts/ui/A01ReconNoseOpticsV10.gd")
+const A01AirframeV11 = preload("res://scripts/ui/A01ReconAirframeV11.gd")
+const A01WingRootV12 = preload("res://scripts/ui/A01ReconWingRootV12.gd")
 const G15SculptV2 = preload("res://scripts/ui/G15ChassisAndMastFinishV2.gd")
 const G15ShellV3 = preload("res://scripts/ui/G15ShelterCabFinishV3.gd")
 const G15AntennaV4 = preload("res://scripts/ui/G15AntennaMechanicsV4.gd")
@@ -1106,6 +1108,10 @@ static func build(role: String, faction: int = -1, finish_enabled: bool = true, 
                     push_warning("A01 V9 conformal winglet enamel or root fairings failed")
                 elif not A01NoseOpticsV10.apply(model,faction_paint_color(faction),art_level>=13):
                     push_warning("A01 V10 sealed sculpt nose or moving gimbal optics failed")
+                elif not A01AirframeV11.apply(model,faction_paint_color(faction),art_level>=13):
+                    push_warning("A01 V11 sealed tapered body and conformal faction panels failed")
+                elif not A01WingRootV12.apply(model,art_level>=13):
+                    push_warning("A01 V12 closed sculpted wing shoulders failed")
         "fighter":
             _fighter(model)
         "destroyer":

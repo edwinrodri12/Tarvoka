@@ -1,4 +1,4 @@
-name: TARVOKA A01 Recon UAV V10 Native Visual QA
+name: TARVOKA A01 Recon UAV V12 Native Visual QA
 
 on:
   pull_request:
@@ -15,7 +15,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: a01-recon-v10-native-${{ github.event.pull_request.number || github.ref }}
+  group: a01-recon-v12-native-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -160,6 +160,40 @@ jobs:
           grep -F 'PASS A01 V10 NOSE OPTICS:' /tmp/a01-v10-nose.log
           test "$(find build/qa/a01-v10 -maxdepth 1 -name 'a01-v10-*.png' | wc -l)" -eq 13
 
+      - name: V11 sculpted airframe, sealed paint and eight native Godot views incl. root closeups
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout 190s xvfb-run -a -s "-screen 0 1280x720x24" \
+            env LIBGL_ALWAYS_SOFTWARE=1 \
+            /tmp/Godot_v4.3-stable_linux.x86_64 \
+            --rendering-method gl_compatibility --audio-driver Dummy \
+            --path . --script res://tests/test_a01_recon_airframe_v11.gd \
+            2>&1 | tee /tmp/a01-v11-airframe.log
+          if grep -E 'SCRIPT ERROR:|Parse Error:|ERROR:|Assertion failed' /tmp/a01-v11-airframe.log; then
+            echo "::error::A01 V11 closed fuselage, exterior paint or geometry budget failed"
+            exit 1
+          fi
+          grep -F 'PASS A01 V11 AERODYNAMIC BODY:' /tmp/a01-v11-airframe.log
+          test "$(find build/qa/a01-v11 -maxdepth 1 -name 'a01-v11-*.png' | wc -l)" -eq 6
+
+      - name: V12 watertight left and right wing root fairings and eight Godot angles incl. two root closeups
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout 190s xvfb-run -a -s "-screen 0 1280x720x24" \
+            env LIBGL_ALWAYS_SOFTWARE=1 \
+            /tmp/Godot_v4.3-stable_linux.x86_64 \
+            --rendering-method gl_compatibility --audio-driver Dummy \
+            --path . --script res://tests/test_a01_recon_wing_root_v12.gd \
+            2>&1 | tee /tmp/a01-v12-wings.log
+          if grep -E 'SCRIPT ERROR:|Parse Error:|ERROR:|Assertion failed' /tmp/a01-v12-wings.log; then
+            echo "::error::A01 V12 root geometry, mirrored normals, LOD or damage regression"
+            exit 1
+          fi
+          grep -F 'PASS A01 V12 WING ROOTS:' /tmp/a01-v12-wings.log
+          test "$(find build/qa/a01-v12 -maxdepth 1 -name 'a01-v12-*.png' | wc -l)" -eq 8
+
       # This CI job deliberately validates ONLY the model and 21 actual
       # Godot renders. The shared Studio has many pinned building source
       # dependencies not contained in main; copying one scene here would
@@ -176,6 +210,10 @@ jobs:
           grep -Fq "test_a01_recon_winglet_v8.gd" .github/workflows/tarvoka-3d-pages.yml
           grep -Fq "test_a01_recon_winglet_v9.gd" .github/workflows/tarvoka-3d-pages.yml
           grep -Fq "test_a01_recon_nose_optics_v10.gd" .github/workflows/tarvoka-3d-pages.yml
+          grep -Fq "test_a01_recon_airframe_v11.gd" .github/workflows/tarvoka-3d-pages.yml
+          grep -Fq "test_a01_recon_wing_root_v12.gd" .github/workflows/tarvoka-3d-pages.yml
+          grep -Fq "A01WingRootV12.apply" scripts/ui/UnitModels3D.gd
+          grep -Fq "A01AirframeV11.apply" scripts/ui/UnitModels3D.gd
           grep -Fq "test_a01_recon_damage_v6.gd" .github/workflows/tarvoka-3d-pages.yml
           grep -Fq 'faction_picker.select(_faction)' scripts/ui/BastionStudioAdapter.gd
 
@@ -183,7 +221,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: tarvoka-a01-v10-nose-optics-evidence
+          name: tarvoka-a01-v12-wingroot-visual-evidence
           path: |
             build/qa/a01-v1/*.png
             build/qa/a01-v6/*.png
@@ -191,5 +229,7 @@ jobs:
             build/qa/a01-v8/*.png
             build/qa/a01-v9/*.png
             build/qa/a01-v10/*.png
+            build/qa/a01-v11/*.png
+            build/qa/a01-v12/*.png
           if-no-files-found: warn
           retention-days: 14
