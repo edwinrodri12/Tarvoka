@@ -9,6 +9,8 @@ const V11=preload("res://scripts/ui/InfantryEngineerMechanicsV11.gd")
 const V12=preload("res://scripts/ui/InfantryEngineerDorsalV12.gd")
 const FLAG: String="tarvoka_engineer_smooth_v13"
 const ROLE: String="infantry_engineer"
+const OLD_MESH: String="tarvoka_engineer_v13_previous_mesh"
+const NEW_MESH: String="tarvoka_engineer_v13_smooth_mesh"
 
 static func _emit(st: SurfaceTool, p: Vector3, n: Vector3) -> void:
     st.set_normal(n)
@@ -165,17 +167,30 @@ static func _lathe_normal(rings: Array[Vector3], i: int,
     return rise.cross(sweep).normalized()
 
 static func _replace(model: Node3D, name: String,
-        mesh: ArrayMesh) -> bool:
+        mesh: Mesh) -> bool:
     var part:=model.find_child(name,true,false) as MeshInstance3D
     if part==null:
         return false
-    # The exact original rig, animation, material, transform and node name
-    # remain untouched. Replace mesh data in-place, never duplicate solids.
+    # Preserve previous real geometry (not a fake image overlay) for
+    # inspection on precisely the same rig, camera and PBR material.
+    part.set_meta(OLD_MESH,part.mesh)
+    part.set_meta(NEW_MESH,mesh)
     part.mesh=mesh
     return true
 
 static func has_model(model: Node3D) -> bool:
     return model!=null and bool(model.get_meta(FLAG,false))
+
+static func show_smoothing(model: Node3D, enabled: bool) -> bool:
+    if not has_model(model):
+        return false
+    for item in model.find_children("*","MeshInstance3D",true,false):
+        var node: MeshInstance3D=item as MeshInstance3D
+        if node.has_meta(OLD_MESH) and node.has_meta(NEW_MESH):
+            node.mesh=(node.get_meta(NEW_MESH) if enabled
+                else node.get_meta(OLD_MESH))
+    model.set_meta("tarvoka_engineer_v13_smoothed_visible",enabled)
+    return true
 
 static func apply(model: Node3D, hero: bool) -> bool:
     if model==null or has_model(model) or (
@@ -265,8 +280,15 @@ static func apply(model: Node3D, hero: bool) -> bool:
         var node: MeshInstance3D=item as MeshInstance3D
         if node.mesh is SphereMesh:
             var sphere: SphereMesh=node.mesh as SphereMesh
-            sphere.radial_segments=24 if hero else 14
-            sphere.rings=14 if hero else 8
+            # Retain the exact V12.3 original for same-camera comparison;
+            # only the replacement primitive has denser rounded topology.
+            var rounded:=sphere.duplicate() as SphereMesh
+            rounded.radial_segments=24 if hero else 14
+            rounded.rings=14 if hero else 8
+            node.set_meta(OLD_MESH,sphere)
+            node.set_meta(NEW_MESH,rounded)
+            node.mesh=rounded
     model.set_meta(FLAG,true)
     model.set_meta("tarvoka_engineer_v13_hero",hero)
+    model.set_meta("tarvoka_engineer_v13_smoothed_visible",true)
     return true
