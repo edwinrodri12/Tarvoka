@@ -172,7 +172,8 @@ func _run()->void:
             continue
         vp.add_child(model)
         camera.position=shot[1]
-        camera.look_at(Vector3(0,0.98,0),Vector3.UP)
+        camera.look_at(Vector3(0,0.98,0),
+            Vector3.FORWARD if str(shot[0])=="superior" else Vector3.UP)
         await process_frame
         await process_frame
         await process_frame
