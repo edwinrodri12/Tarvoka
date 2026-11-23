@@ -38,12 +38,34 @@ def scan(root: Path) -> list[str]:
             findings.append(f"{path.relative_to(root)}: unreadable ({type(exc).__name__})")
             continue
         for number, line in enumerate(lines, 1):
-            stripped = line.lstrip()
-            if stripped.startswith("#") or stripped.startswith(";"):
+            # Remove GDScript comments without mistaking # inside quoted strings
+            # for a comment delimiter. This is a conservative lexical filter,
+            # not a complete GDScript parser.
+            code = []
+            quote = None
+            escaped = False
+            for char in line:
+                if quote is not None:
+                    code.append(char)
+                    if escaped:
+                        escaped = False
+                    elif char == "\\":
+                        escaped = True
+                    elif char == quote:
+                        quote = None
+                elif char in ("\u0027", '"'):
+                    quote = char
+                    code.append(char)
+                elif char == "#":
+                    break
+                else:
+                    code.append(char)
+            line_to_check = "".join(code)
+            if not line_to_check.strip() or line_to_check.lstrip().startswith(";"):
                 continue
             # Strings containing documentation examples are not definitive proof
             # of network use; findings require manual review.
-            if TOKENS.search(line) or SHELL_EXEC.search(line) or (path.suffix == ".tscn" and SCENE_NODE.search(line)):
+            if TOKENS.search(line_to_check) or SHELL_EXEC.search(line_to_check) or (path.suffix == ".tscn" and SCENE_NODE.search(line_to_check)):
                 findings.append(f"{path.relative_to(root)}:{number}: {line.strip()[:180]}")
     return findings
 
