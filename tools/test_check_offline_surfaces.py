@@ -59,6 +59,21 @@ class OfflineSurfaceTests(unittest.TestCase):
             self.assertEqual(len(findings), 6)
             self.assertFalse(any("MyUPNPWrapper" in item for item in findings))
 
+    def test_flags_shell_execution_and_browser_bridge_escape_hatches(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            (root / "Escape.gd").write_text(
+                'OS.execute("curl", ["https://example.invalid"])\\n'
+                'var browser = JavaScriptBridge\\n'
+                'var safe = OS.execute_not_a_call\\n'
+                '# OS.execute("ignored", [])\\n',
+                encoding="utf-8",
+            )
+            findings = scan(root)
+            self.assertEqual(len(findings), 2)
+            self.assertTrue(any("OS.execute" in item for item in findings))
+            self.assertTrue(any("JavaScriptBridge" in item for item in findings))
+
     def test_does_not_follow_symlinked_source_outside_checkout(self):
         with tempfile.TemporaryDirectory() as folder:
             root = Path(folder) / "repo"
