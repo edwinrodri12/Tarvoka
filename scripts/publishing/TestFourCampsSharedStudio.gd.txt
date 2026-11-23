@@ -140,6 +140,11 @@ func _run() -> void:
         await _shot(studio, EXPECTED[i] + "_in_same_studio.png")
         if i == 0:
             var before_faction: Node3D = camp
+            studio.call("_rotate", 84.0)
+            studio.call("_change_zoom", 1)
+            studio.call("_camp_pose", 0.0)
+            var inspection_yaw: float = float(studio.get("_yaw"))
+            var inspection_zoom: float = float(studio.get("_zoom"))
             factions.select(5)
             factions.item_selected.emit(5)
             await _frames(5)
@@ -149,6 +154,12 @@ func _run() -> void:
                 "Faction selector actually changes 3D material identity")
             _check(camp != before_faction,
                 "Faction switch actually rebuilds native art")
+            _check(absf(float(studio.get("_yaw")) - inspection_yaw) < 0.01
+                and absf(float(studio.get("_zoom")) - inspection_zoom) < 0.01,
+                "Faction changes preserve the active camera and zoom")
+            _check(float(camp.get_meta(
+                "visual_deploy_progress", 1.0)) < 0.01,
+                "Switching faction preserves manually folded camp state")
             lods.select(0)
             lods.item_selected.emit(0)
             await _frames(4)
@@ -156,6 +167,8 @@ func _run() -> void:
             _check(camp != null and
                 int(camp.get_meta("visual_lod", -1)) == 8,
                 "Android tactical LOD actually loads")
+            _check(absf(float(studio.get("_yaw")) - inspection_yaw) < 0.01,
+                "LOD changes must not reset camera angle")
             await _shot(studio, "suministros_android_lod8.png")
             lods.select(1)
             lods.item_selected.emit(1)
