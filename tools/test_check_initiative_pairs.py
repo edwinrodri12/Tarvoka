@@ -78,6 +78,15 @@ class PairedInitiativeTests(unittest.TestCase):
                 {"pair_id": "a", "starter": "blue", "winner": "red"},
             ])
 
+    def test_unhashable_input_rejected_as_value_error(self):
+        for field in ("starter", "winner"):
+            for invalid in ([], {}, ["blue"]):
+                with self.subTest(field=field, invalid=invalid):
+                    row = {"pair_id": "x", "starter": "blue", "winner": "red"}
+                    row[field] = invalid
+                    with self.assertRaises(ValueError):
+                        summarize([row, {"pair_id": "x", "starter": "red", "winner": "blue"}])
+
     def test_invalid_winner_rejected(self):
         with self.assertRaises(ValueError):
             summarize([
