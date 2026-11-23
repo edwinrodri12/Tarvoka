@@ -211,3 +211,14 @@ La V12.1 está integrada en `main` tras pasar Godot 4.3 nativo y el compilador c
 - `UnitModels3D` agrega V13 al final de la cadena existente; `BastionStudioAdapter` mantiene el mismo visor online y los cambios de facción y LOD, sin páginas ni unidades alternativas.
 
 **Puerta de calidad:** no integrar en `main` hasta que el nuevo workflow nativo y la compilación completa del visor de Godot 4.3 se completen con éxito, y las ocho imágenes se inspeccionen. Sin alteraciones de visión de niebla, movimiento, combustible, economía, ataques ni helicópteros. La medida de FPS y temperatura en Android físico sigue pendiente.
+
+
+## A01 V14 — motor impulsor y tres palas aerodinámicas físicas (23 noviembre 2026)
+
+La V13 del A01 se fusionó en el repositorio principal tras pasar QA nativa y exportación del Estudio compartido. La V14 corrige tres deficiencias de las piezas V1/V3: palas como cajas rectas, placas cilíndricas orientadas de lado y carcasas de motor superpuestas.
+
+**`scripts/ui/A01ReconPusherV14.gd`** preserva exactamente los pivotes originales `A01_V3_PusherBladePivot_0/1/2`, a 120°. Cada pala nueva es un `ArrayMesh` cerrado, de perfil elíptico, anchura y espesor progresivos, torsión variable y extremo afinado. Android LOD8 utiliza 4 estaciones de seis vértices de sección y 44 triángulos por pala; LOD13 utiliza 6 estaciones de ocho vértices y 92 triángulos por pala. Las tapas radiales son superficies físicas, con normales orientadas; no se usan placas transparentes ni texturas fingidas.
+
+El carenado posterior fijo se construye dentro del casco V11 como un volumen opaco de una sola malla (hijo de BODY); el cono de la hélice sigue montado en el nodo PROPELLER y su eje longitudinal apunta a Z. Las antiguas cajas V3, el conjunto cilíndrico transversal y la esfera V1 solo quedan **ocultos** después de construir correctamente sus sustitutos. No se duplican palas ni se interrumpe `V1.pose('move')`, `V1.restore`, `Damage.set_stage(4)` o `Damage.repair`.
+
+**Prueba nativa `tests/test_a01_recon_pusher_v14.gd`:** 8 facciones × LOD8/13, cierre de cada pala con dos caras compartidas por arista, exactamente tres palas, presupuesto Android de mallas y triángulos, movimiento real del motor, conservación de D0/D4 y restauración, y ocho capturas Godot (motor desde atrás y ambos lados, superior, inferior, movimiento, D4 y Android). El Estudio 3D original exige el nuevo modelo al cambiar LOD y conserva los controles de cámara/facción. No hay modificaciones de ataque, visión, niebla, movimiento, combustible ni economía. No se afirma haber comprobado FPS/temperatura en un teléfono físico hasta realizar la prueba.
