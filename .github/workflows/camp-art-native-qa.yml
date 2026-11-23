@@ -16,6 +16,9 @@ on:
       - "tests/test_camp_defense_v2.gd"
       - "tests/test_camp_medical_v2.gd"
       - ".github/workflows/camp-art-native-qa.yml"
+      - "scripts/publishing/CampUnifiedStudioAdapterV1.gd.txt"
+      - "scripts/publishing/TestFourCampsSharedStudio.gd.txt"
+      - ".github/workflows/tarvoka-3d-pages.yml"
   push:
     branches: [main]
     paths:
@@ -32,6 +35,9 @@ on:
       - "tests/test_camp_defense_v2.gd"
       - "tests/test_camp_medical_v2.gd"
       - ".github/workflows/camp-art-native-qa.yml"
+      - "scripts/publishing/CampUnifiedStudioAdapterV1.gd.txt"
+      - "scripts/publishing/TestFourCampsSharedStudio.gd.txt"
+      - ".github/workflows/tarvoka-3d-pages.yml"
   workflow_dispatch:
 
 permissions:
@@ -51,6 +57,24 @@ jobs:
             -o /tmp/godot.zip
           unzip -q /tmp/godot.zip -d /tmp
           chmod +x /tmp/Godot_v4.3-stable_linux.x86_64
+      - name: Guard single-studio publishing wiring and seven original buildings
+        run: |
+          set -euo pipefail
+          test -s scripts/publishing/CampUnifiedStudioAdapterV1.gd.txt
+          test -s scripts/publishing/TestFourCampsSharedStudio.gd.txt
+          grep -Fq 'extends "res://scripts/ui/HeadquartersV24SharedStudioAdapter.gd"' \
+            scripts/publishing/CampUnifiedStudioAdapterV1.gd.txt
+          grep -Fq 'FIRST_CAMP_INDEX: int = 7' \
+            scripts/publishing/CampUnifiedStudioAdapterV1.gd.txt
+          grep -Fq 'func _change_selected_building(index: int)' \
+            scripts/publishing/CampUnifiedStudioAdapterV1.gd.txt
+          grep -Fq 'scenes/UnitArtStudioWeb.tscn' \
+            .github/workflows/tarvoka-3d-pages.yml
+          grep -Fq 'TestFourCampsSharedStudio.gd.txt' \
+            .github/workflows/tarvoka-3d-pages.yml
+          grep -Fq 'PASS FOUR CAMPS SHARED STUDIO:' \
+            scripts/publishing/TestFourCampsSharedStudio.gd.txt
+          echo 'PASS SINGLE STUDIO PUBLISH WIRING: four camps additive'
       - name: Import native camp art
         run: |
           set -euo pipefail
