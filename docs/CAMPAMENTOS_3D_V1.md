@@ -300,3 +300,31 @@ ningún workflow de Pages ni de QA asociado al último SHA de esta
 rama, aunque hay ejecuciones satisfactorias de los modelos en SHA
 anteriores. El workflow del Studio sigue sin validación integrada.
 Los 136 PNG de la QA de modelos NO prueban carga en el visor publicado.
+
+## Desbloqueo de compilación automática de la web (23-nov-2026)
+
+**Antes:** los últimos commits de `PR #676` no tenían ninguna
+ejecución Actions para el nuevo adaptador. Se necesitaba lanzar
+manualmente `workflow_dispatch`.
+
+**Corregido:** `.github/workflows/tarvoka-3d-pages.yml` tiene ahora
+`push` sobre `feat/campamentos-3d-v1-20261122` (solo los archivos
+afectados), mantiene una cola de concurrencia específica y obtiene
+los módulos desde el **SHA real de esa rama**, no de `main`.
+La vista previa es un artifact del mismo sitio Godot y está
+**expresamente prohibido desplegarla a GitHub Pages desde la rama
+experimental**. Se mantiene también la ejecución manual opcional.
+
+- GitHub registró una ejecución real de compilación del visor compartido:
+  **[Actions #45242472804](https://github.com/edwinrodri12/Tarvoka/actions/runs/45242472804)**.
+- El mismo cambio activó el test nativo completo en la rama:
+  **[Actions #45242496321](https://github.com/edwinrodri12/Tarvoka/actions/runs/45242496321)**,
+  estado **SUCCESS**. Verifica todos los modelos y fotos reales
+  anteriores sin alterar mecánicas.
+- El build compartido pasó preparación del repositorio/escena y
+  añadidura del adaptador de los cuatro campamentos antes de llegar
+  a la fase `Export native Godot 3D browser studio`, que ejecuta el
+  smoke test de selección y visibilidad. **Todavía no se debe afirmar
+  que este último test ha pasado** sin observar la conclusión final.
+
+No hay despliegue del visor público ni fusión de la rama.
