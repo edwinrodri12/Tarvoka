@@ -153,7 +153,7 @@ static func apply(model: Node3D, hero: bool) -> bool:
         # Native spherical caps are closed; keeping them beneath the mesh
         # avoids any reintroduction of see-through seams in Android LOD8.
         if not _round(model,"V8_JuntaRodillaCerrada"+suffix,
-                Vector3(0.292,0.300,0.376)):
+                Vector3(0.292,0.300,0.405)):
             return false
         if not _round(model,"V8_CantoneraRodillaPosterior"+suffix,
                 Vector3(0.240,0.226,0.130)):
