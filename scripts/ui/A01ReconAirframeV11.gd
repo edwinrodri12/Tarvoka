@@ -93,6 +93,61 @@ static func _body_surface(z:float,angle_deg:float)->Vector3:
     var a:float=deg_to_rad(angle_deg)
     return Vector3(d.x*cos(a),CENTER_Y+d.y*sin(a),z)
 
+static func _dorsal_skin(body:Node3D,paint:Material)->MeshInstance3D:
+    # A four-corner flat decal would sink INSIDE the curved fuselage near
+    # its highest centerline. Sample the REAL ellipse at angular and axial
+    # stations and close every boundary with opposite winding.
+    var stations_z:Array=[-0.360,-0.040,0.550]
+    var angles:Array=[68.0,80.0,100.0,112.0]
+    var outer:Array=[]
+    var inner:Array=[]
+    for z in stations_z:
+        var outer_row:Array=[]
+        var inner_row:Array=[]
+        var dims:Vector2=_body_dimensions(float(z))
+        for angle in angles:
+            var a:float=deg_to_rad(float(angle))
+            var normal:=Vector3(cos(a)/dims.x,sin(a)/dims.y,0.0).normalized()
+            var base:Vector3=_body_surface(float(z),float(angle))
+            outer_row.append(base+normal*0.008)
+            inner_row.append(base+normal*0.003)
+        outer.append(outer_row)
+        inner.append(inner_row)
+    var t:=SurfaceTool.new()
+    t.begin(Mesh.PRIMITIVE_TRIANGLES)
+    for z_index in range(stations_z.size()-1):
+        for i in range(angles.size()-1):
+            var angle_mid:float=deg_to_rad((
+                float(angles[i])+float(angles[i+1]))*0.5)
+            var normal:=Vector3(cos(angle_mid),sin(angle_mid),0)
+            V10._face(t,outer[z_index][i],outer[z_index+1][i],
+                outer[z_index+1][i+1],normal)
+            V10._face(t,outer[z_index][i],outer[z_index+1][i+1],
+                outer[z_index][i+1],normal)
+            V10._face(t,inner[z_index][i],inner[z_index][i+1],
+                inner[z_index+1][i+1],-normal)
+            V10._face(t,inner[z_index][i],inner[z_index+1][i+1],
+                inner[z_index+1][i],-normal)
+    for i in range(angles.size()-1):
+        for j in [0,stations_z.size()-1]:
+            var facing:Vector3=Vector3.FORWARD if j==0 else Vector3.BACK
+            V10._face(t,outer[j][i],inner[j][i],inner[j][i+1],facing)
+            V10._face(t,outer[j][i],inner[j][i+1],outer[j][i+1],facing)
+    for j in range(stations_z.size()-1):
+        for i in [0,angles.size()-1]:
+            var angle:float=deg_to_rad(float(angles[i]))
+            var tangent:=Vector3(-sin(angle),cos(angle),0)
+            var facing:Vector3=-tangent if i==0 else tangent
+            V10._face(t,outer[j][i],inner[j][i],inner[j+1][i],facing)
+            V10._face(t,outer[j][i],inner[j+1][i],outer[j+1][i],facing)
+    t.generate_normals()
+    var mesh:=MeshInstance3D.new()
+    mesh.name=CREST
+    mesh.mesh=t.commit()
+    mesh.material_override=paint
+    body.add_child(mesh)
+    return mesh
+
 static func _wing_surface(side:float,x:float,t:float,hero:bool)->Vector3:
     # Follows the ACTUAL top chord between V4 profile vertices 1 and 2,
     # rather than placing an axis-aligned box above a swept wing.
@@ -207,10 +262,7 @@ static func apply(root:Node3D,faction_color:Color,hero:bool)->bool:
     var paint:=_mat(faction_color,0.24,0.41)
     var graphite:=_mat(Color("#344853"),0.34,0.57)
     var hull:=_fuselage(body,hero,shell)
-    var dorsal:=_closed_patch(body,CREST,[
-        _body_surface(-0.360,68.0),_body_surface(-0.360,112.0),
-        _body_surface(0.550,112.0),_body_surface(0.550,68.0)
-    ],Vector3.UP,paint)
+    var dorsal:=_dorsal_skin(body,paint)
     for side in [-1,1]:
         var s:float=float(side)
         _closed_patch(body,WING_L if side<0 else WING_R,[
