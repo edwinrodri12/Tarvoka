@@ -124,5 +124,22 @@ class OfflineSurfaceTests(unittest.TestCase):
             self.assertTrue(any("actual" in finding for finding in findings))
             self.assertFalse(any("value = 42" in finding for finding in findings))
 
+    def test_multiplayer_sync_surfaces_and_identifier_boundaries(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            (root / "Sync.gd").write_text(
+                "var api = MultiplayerAPI\n"
+                "var scene = SceneMultiplayer.new()\n"
+                "var peer = ENetConnection.new()\n"
+                "var spawner = MultiplayerSpawner.new()\n"
+                "var sync = MultiplayerSynchronizer.new()\n"
+                "var harmless = MyMultiplayerSpawnerHelper\n"
+                "# SceneMultiplayer.new()\n",
+                encoding="utf-8",
+            )
+            findings = scan(root)
+            self.assertEqual(len(findings), 5)
+            self.assertFalse(any("Helper" in item for item in findings))
+
 if __name__ == "__main__":
     unittest.main()
