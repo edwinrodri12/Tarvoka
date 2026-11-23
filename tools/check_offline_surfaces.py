@@ -14,7 +14,7 @@ TOKENS = re.compile(
     r"\b(?:HTTPRequest|HTTPClient|WebSocketPeer|WebSocketMultiplayerPeer|"
     r"ENetMultiplayerPeer|PacketPeerUDP|TCPServer|StreamPeerTCP|UPNP|WebRTCPeerConnection|WebRTCDataChannel|PacketPeerDTLS|StreamPeerTLS|MultiplayerPeerExtension|JavaScriptBridge)\b"
 )
-SHELL_EXEC = re.compile(r"\bOS\s*\.\s*execute\s*\(")
+SHELL_EXEC = re.compile(r"\bOS\s*\.\s*(?:execute|create_process|create_instance)\s*\(")
 SCENE_NODE = re.compile(r'^\s*\[node\b[^\]]*\btype="HTTPRequest"')
 EXCLUDED = {".git", ".godot", ".import", "__pycache__"}
 
