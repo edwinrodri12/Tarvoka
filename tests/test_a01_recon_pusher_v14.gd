@@ -117,8 +117,10 @@ func _run()->void:
             for i in range(3):
                 var pivot:=prop.find_child("A01_V3_PusherBladePivot_"+str(i),
                     false,false) as Node3D
-                var b:=pivot.find_child(V14.BLADE_PREFIX+str(i),
-                    false,false) as MeshInstance3D if pivot!=null else null
+                var b:MeshInstance3D=null
+                if pivot!=null:
+                    b=pivot.find_child(V14.BLADE_PREFIX+str(i),
+                        false,false) as MeshInstance3D
                 check(pivot!=null and b!=null and b.visible and
                     b.mesh is ArrayMesh,"exact original 120° rotating blade pivot "+str(i))
                 if b==null or b.mesh==null:
