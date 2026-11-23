@@ -88,6 +88,8 @@ func _run()->void:
             check(int(craft.get_meta("tarvoka_a01_v14_lod",-1))==lod and
                 bool(craft.get_meta("tarvoka_a01_v14_unarmed_visual_only",false)),
                 "V14 preserves role/LOD/tactical flags")
+            check(bool(craft.get_meta("tarvoka_a01_v14_1_slim_pitched_prop",false)),
+                "V14.1 final slim prop profile in BOTH LOD8 and LOD13")
             var prop:=craft.find_child(V1.PROPELLER,true,false) as Node3D
             var body:=craft.find_child(V1.BODY,true,false) as Node3D
             check(prop!=null and body!=null,"original V1 body and prop pivots intact")
@@ -132,11 +134,15 @@ func _run()->void:
                 var pts:PackedVector3Array=b.mesh.get_faces()
                 var min_r:float=INF
                 var max_r:float=-INF
+                var max_chord_offset:float=0.0
                 for v in pts:
                     min_r=minf(min_r,v.y)
                     max_r=maxf(max_r,v.y)
+                    max_chord_offset=maxf(max_chord_offset,absf(v.x))
                 check(min_r>0.059 and max_r>0.514 and max_r<0.516,
                     "span from existing motor shaft to aerodynamic rounded tip")
+                check(max_chord_offset>0.05 and max_chord_offset<0.105,
+                    "V14.1 slim physical propeller profile, not a wide flat paddle")
                 var old:=pivot.find_child(V3.BLADE_PREFIX+str(i),
                     false,false) as MeshInstance3D
                 check(old!=null and not old.visible,
