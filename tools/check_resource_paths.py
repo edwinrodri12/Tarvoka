@@ -60,7 +60,7 @@ def audit(root: pathlib.Path) -> list[str]:
             # Preserve raw segments: PurePosixPath normalizes "." and repeated
             # separators before validation, hiding malformed declarations.
             parts = raw.split("/")
-            if not raw or any(part in ("", ".", "..") for part in parts) or "\\" in raw:
+            if not raw or any(part in ("", ".", "..") for part in parts) or "\\" in raw or any(ord(char) < 32 or ord(char) == 127 for char in raw):
                 errors.append(f"{location}: invalid resource path {match.group(1)}")
                 continue
             target = root.joinpath(*parts)
