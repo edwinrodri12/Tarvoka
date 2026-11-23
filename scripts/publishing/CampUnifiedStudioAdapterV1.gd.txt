@@ -38,6 +38,27 @@ func _ready() -> void:
             "camp:" + CAMP_KEYS[i])
     _camp_create_controls()
     camp_controls.visible = false
+    # Deep links open a camp INSIDE the one original Pages 3D scene:
+    # ?campamento=medico (also suministros, reconocimiento, defensivo).
+    if OS.has_feature("web"):
+        call_deferred("_camp_select_from_url")
+
+func _camp_select_from_url() -> void:
+    if not OS.has_feature("web"):
+        return
+    var requested: Variant = JavaScriptBridge.eval(
+        "(new URLSearchParams(window.location.search)).get('campamento') || ''",
+        true)
+    var key: String = str(requested).to_lower().strip_edges()
+    if not key in CAMP_KEYS:
+        return
+    if category_picker == null or building_picker == null:
+        return
+    var item_index: int = FIRST_CAMP_INDEX + CAMP_KEYS.find(key)
+    category_picker.select(1)
+    _switch_category(1)
+    building_picker.select(item_index)
+    _change_selected_building(item_index)
 
 func _camp_create_controls() -> void:
     camp_controls = VBoxContainer.new()
