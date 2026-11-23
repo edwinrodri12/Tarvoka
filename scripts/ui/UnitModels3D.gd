@@ -46,6 +46,7 @@ const A01WingletV9 = preload("res://scripts/ui/A01ReconWingletV9.gd")
 const A01NoseOpticsV10 = preload("res://scripts/ui/A01ReconNoseOpticsV10.gd")
 const A01AirframeV11 = preload("res://scripts/ui/A01ReconAirframeV11.gd")
 const A01WingRootV12 = preload("res://scripts/ui/A01ReconWingRootV12.gd")
+const A01TailOpticsV13 = preload("res://scripts/ui/A01ReconTailOpticsV13.gd")
 const G15SculptV2 = preload("res://scripts/ui/G15ChassisAndMastFinishV2.gd")
 const G15ShellV3 = preload("res://scripts/ui/G15ShelterCabFinishV3.gd")
 const G15AntennaV4 = preload("res://scripts/ui/G15AntennaMechanicsV4.gd")
@@ -1115,6 +1116,8 @@ static func build(role: String, faction: int = -1, finish_enabled: bool = true, 
                     push_warning("A01 V11 sealed tapered body and conformal faction panels failed")
                 elif not A01WingRootV12.apply(model,art_level>=13):
                     push_warning("A01 V12 closed sculpted wing shoulders failed")
+                elif not A01TailOpticsV13.apply(model,faction_paint_color(faction),art_level>=13):
+                    push_warning("A01 V13 conformal V-tail and moving EOIR guard failed")
         "fighter":
             _fighter(model)
         "destroyer":
