@@ -2,9 +2,18 @@ name: Publish TARVOKA native 3D art studio
 
 on:
   push:
-    branches: [main]
+    # Compile a disposable, non-deploying preview on the camp feature branch.
+    branches: [main, feat/campamentos-3d-v1-20261122]
     paths:
       - ".github/workflows/tarvoka-3d-pages.yml"
+      - "scripts/publishing/CampUnifiedStudioAdapterV1.gd.txt"
+      - "scripts/publishing/TestFourCampsSharedStudio.gd.txt"
+      - "scripts/ui/CampModels3DV1.gd"
+      - "scripts/ui/CampSupplyFinishV2.gd"
+      - "scripts/ui/CampSupplyReadabilityV3.gd"
+      - "scripts/ui/CampReconFinishV2.gd"
+      - "scripts/ui/CampDefenseFinishV2.gd"
+      - "scripts/ui/CampMedicalFinishV2.gd"
       - "scripts/ui/UnitModels3D.gd"
       - "scripts/ui/G15*.gd"
       - "scripts/ui/G16*.gd"
@@ -266,11 +275,14 @@ permissions:
 concurrency:
   # Native Godot studio exports and independently scheduled city previews
   # must not evict one another from GitHub's single pending concurrency slot.
+  # Isolate the development preview from the publicly deployed main build.
+  # GitHub queueing a preview must never cancel or starve the main web release.
+  # Keep the seven-building Studio on one public deployment.
   # Keep distinct queued builds; github-pages environment serializes final
   # deployment, and the city preview's workflow_run follows native success.
   # Preserve the dedicated city V16 publish slot and ignored-check isolation.
   group: >-
-    ${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref == 'feat/hq-v24-live-shared-pages-integration-20261121' && 'tarvoka-hq-v24-actual-pages-check' || github.event_name == 'pull_request' && github.event.pull_request.head.ref == 'art/engineer-v11-integrated-hq-v24-20261121' && 'tarvoka-engineer-v11-hq24-pages-review' || github.event_name == 'pull_request' && github.event.pull_request.head.ref == 'art/engineer-v10-anatomic-arms-workhand-20261121' && 'tarvoka-engineer-v10-native-pages-review' || github.event_name == 'pull_request' && github.event.pull_request.head.ref == 'fix/infantry-engineer-v6-360-hinge-continuity-20261121' && 'tarvoka-engineer-v6-hinge-pages-review' || github.event_name == 'pull_request' && github.event.pull_request.head.ref == 'feat/infantry-six-core-camps-20261120' && 'tarvoka-infantry-six-camps-pages-review' || github.event_name == 'pull_request' && github.event.pull_request.head.ref == 'feat/infantry-v3-tactical-color-lod-studio-20261120' && 'tarvoka-infantry-v3-tactical-pages-review' || github.event_name == 'pull_request' && github.event.pull_request.head.ref == 'feat/infantry-v2-in-one-studio-20261120' && 'tarvoka-infantry-v2-native-pages-review' || github.event_name == 'pull_request' && github.event.pull_request.head.ref == 'feat/g16-v6-consolidated-service-hardware-20261120' && 'tarvoka-g16-v6-native-pages-review' || github.event_name == 'pull_request' && github.event.pull_request.head.ref == 'feat/g16-v5-materials-glazing-damage-20261120' && 'tarvoka-g16-v5-native-pages-review' || github.event_name == 'pull_request' && github.event.pull_request.head.ref == 'feat/g16-v4-body-sculpt-wreck-studio-20261119' && 'tarvoka-g16-v4-pages-review' || github.event_name == 'pull_request' && github.event.pull_request.head.ref == 'feat/g16-v1-armored-logistics-studio-20261119' && 'tarvoka-g16-v3-pages-review' || github.event_name == 'pull_request' && github.event.pull_request.head.ref == 'feat/g15-v11-wheel-sidewall-cab-360-20261119' && 'tarvoka-g15-v11-pages-review' || github.event_name == 'pull_request' && github.event.pull_request.head.ref == 'fix/g15-v11b-physical-contour-closure-20261119' && 'tarvoka-g15-v11b-pages-review' || github.event_name == 'push' && startsWith(github.event.head_commit.message, 'ci(studio): ship civilian city V16 unified buildings') && 'tarvoka-city-v16-native-publish' || github.event_name == 'workflow_run' && (github.event.workflow_run.conclusion != 'success' || github.event.workflow_run.event != 'push') && 'tarvoka-pages-ignored-checks' || github.event_name == 'push' && startsWith(github.event.head_commit.message, 'art(infantry): integrate Engineer V11') && 'tarvoka-engineer-v11-hq24-publish' || github.event_name == 'push' && startsWith(github.event.head_commit.message, 'ci(workshop-pages):') && 'tarvoka-workshop-auto-lod-publish' || github.event_name == 'push' && startsWith(github.event.head_commit.message, 'ci(g16-pages):') && 'tarvoka-g16-v3-verified-main-publish' || github.event_name == 'push' && startsWith(github.event.head_commit.message, 'ci(g16-v4-pages):') && 'tarvoka-g16-v4-verified-main-deploy' || github.event_name == 'push' && startsWith(github.event.head_commit.message, 'ci(g16-v5-pages):') && 'tarvoka-g16-v5-verified-main-publish' || 'tarvoka-native-3d-studio-build' }}
+    ${{ (github.event_name == 'push' && github.ref == 'refs/heads/feat/campamentos-3d-v1-20261122') && 'tarvoka-four-camps-web-preview' || github.event_name == 'pull_request' && github.event.pull_request.head.ref == 'feat/hq-v24-live-shared-pages-integration-20261121' && 'tarvoka-hq-v24-actual-pages-check' || github.event_name == 'pull_request' && github.event.pull_request.head.ref == 'art/engineer-v11-integrated-hq-v24-20261121' && 'tarvoka-engineer-v11-hq24-pages-review' || github.event_name == 'pull_request' && github.event.pull_request.head.ref == 'art/engineer-v10-anatomic-arms-workhand-20261121' && 'tarvoka-engineer-v10-native-pages-review' || github.event_name == 'pull_request' && github.event.pull_request.head.ref == 'fix/infantry-engineer-v6-360-hinge-continuity-20261121' && 'tarvoka-engineer-v6-hinge-pages-review' || github.event_name == 'pull_request' && github.event.pull_request.head.ref == 'feat/infantry-six-core-camps-20261120' && 'tarvoka-infantry-six-camps-pages-review' || github.event_name == 'pull_request' && github.event.pull_request.head.ref == 'feat/infantry-v3-tactical-color-lod-studio-20261120' && 'tarvoka-infantry-v3-tactical-pages-review' || github.event_name == 'pull_request' && github.event.pull_request.head.ref == 'feat/infantry-v2-in-one-studio-20261120' && 'tarvoka-infantry-v2-native-pages-review' || github.event_name == 'pull_request' && github.event.pull_request.head.ref == 'feat/g16-v6-consolidated-service-hardware-20261120' && 'tarvoka-g16-v6-native-pages-review' || github.event_name == 'pull_request' && github.event.pull_request.head.ref == 'feat/g16-v5-materials-glazing-damage-20261120' && 'tarvoka-g16-v5-native-pages-review' || github.event_name == 'pull_request' && github.event.pull_request.head.ref == 'feat/g16-v4-body-sculpt-wreck-studio-20261119' && 'tarvoka-g16-v4-pages-review' || github.event_name == 'pull_request' && github.event.pull_request.head.ref == 'feat/g16-v1-armored-logistics-studio-20261119' && 'tarvoka-g16-v3-pages-review' || github.event_name == 'pull_request' && github.event.pull_request.head.ref == 'feat/g15-v11-wheel-sidewall-cab-360-20261119' && 'tarvoka-g15-v11-pages-review' || github.event_name == 'pull_request' && github.event.pull_request.head.ref == 'fix/g15-v11b-physical-contour-closure-20261119' && 'tarvoka-g15-v11b-pages-review' || github.event_name == 'push' && startsWith(github.event.head_commit.message, 'ci(studio): ship civilian city V16 unified buildings') && 'tarvoka-city-v16-native-publish' || github.event_name == 'workflow_run' && (github.event.workflow_run.conclusion != 'success' || github.event.workflow_run.event != 'push') && 'tarvoka-pages-ignored-checks' || github.event_name == 'push' && startsWith(github.event.head_commit.message, 'art(infantry): integrate Engineer V11') && 'tarvoka-engineer-v11-hq24-publish' || github.event_name == 'push' && startsWith(github.event.head_commit.message, 'ci(workshop-pages):') && 'tarvoka-workshop-auto-lod-publish' || github.event_name == 'push' && startsWith(github.event.head_commit.message, 'ci(g16-pages):') && 'tarvoka-g16-v3-verified-main-publish' || github.event_name == 'push' && startsWith(github.event.head_commit.message, 'ci(g16-v4-pages):') && 'tarvoka-g16-v4-verified-main-deploy' || github.event_name == 'push' && startsWith(github.event.head_commit.message, 'ci(g16-v5-pages):') && 'tarvoka-g16-v5-verified-main-publish' || 'tarvoka-native-3d-studio-build' }}
   cancel-in-progress: false
 
 jobs:
@@ -287,7 +299,7 @@ jobs:
       - name: Retrieve the exact nine V15 sprites shipped by Android
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.event_name == 'workflow_dispatch' && github.ref || 'main' }}
+          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || (github.event_name == 'workflow_dispatch' || github.event_name == 'push') && github.ref == 'refs/heads/feat/campamentos-3d-v1-20261122' && github.sha || github.event_name == 'workflow_dispatch' && github.ref || 'main' }}
           path: hq-android-v15
           persist-credentials: false
       - name: Include V15 source PNGs in the HQ 3D showroom before import
@@ -2481,7 +2493,7 @@ jobs:
           retention-days: 14
 
       - name: Downloadable shared TARVOKA Web Studio preview for camp review
-        if: (github.event_name == 'pull_request' && github.event.pull_request.head.ref == 'feat/campamentos-3d-v1-20261122') || (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/feat/campamentos-3d-v1-20261122')
+        if: (github.event_name == 'pull_request' && github.event.pull_request.head.ref == 'feat/campamentos-3d-v1-20261122') || (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/feat/campamentos-3d-v1-20261122') || (github.event_name == 'push' && github.ref == 'refs/heads/feat/campamentos-3d-v1-20261122')
         uses: actions/upload-artifact@v4
         with:
           name: tarvoka-mismo-estudio-3d-cuatro-campamentos
@@ -2497,7 +2509,7 @@ jobs:
   deploy:
     # Manual feature-branch review must NEVER overwrite public GitHub Pages.
     # Only pushes, approved workflow_run, or explicit manual MAIN can deploy.
-    if: github.event_name != 'pull_request' && (github.event_name != 'workflow_dispatch' || github.ref == 'refs/heads/main')
+    if: (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && github.ref == 'refs/heads/main' || github.event_name == 'workflow_run'
     needs: build
     runs-on: ubuntu-22.04
     environment:
