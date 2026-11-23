@@ -179,6 +179,17 @@ defensiva provisional mediante `CampModels3DV1.build("defensivo",faccion,lod,dam
   materiales cerrados, plegado y 24 PNG reales de Godot (360°, recogido,
   daños y vista cenital).
 
-**Estado:** código y automatización de verificación incorporados; queda
-pendiente revisar el resultado real de CI y las imágenes antes de aprobar
-el acabado, integrar el visor online y validar Android.
+**QA validada:** GitHub Actions [45204420347](https://github.com/edwinrodri12/Tarvoka/actions/runs/45204420347),
+Godot 4.3 importación SUCCESS; Defensa V2 aprobó **64 variantes**
+y **24 capturas nativas**, incluidas 4 diagonales, 4 posiciones recogidas,
+D1/D2/D3 y vista superior del centro libre. También pasaron las baterías
+anteriores de 4 campamentos, Suministros V2/V3 y Reconocimiento V2.
+Se generaron **112 PNG de revisión** en total. Primera ejecución diagnosticó
+un falso error de QA al consultar `global_position` antes de insertar
+el modelo en SceneTree; se corrigió usando transformaciones locales
+acumuladas; la ejecución verde confirma el arreglo.
+
+**Estado:** modelo defensivo V2 validado técnicamente y revisado en 360°,
+aún pendiente de aprobación artística definitiva, incorporación al
+visor online original y prueba de rendimiento en Android. Ninguna
+regla de combate se cambió.
