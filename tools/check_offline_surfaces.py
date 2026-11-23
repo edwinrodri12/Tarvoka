@@ -12,7 +12,7 @@ import re
 
 TOKENS = re.compile(
     r"\b(?:HTTPRequest|HTTPClient|WebSocketPeer|WebSocketMultiplayerPeer|"
-    r"ENetMultiplayerPeer|PacketPeerUDP|TCPServer|StreamPeerTCP|UPNP|WebRTCPeerConnection|WebRTCDataChannel|PacketPeerDTLS|StreamPeerTLS|MultiplayerPeerExtension|JavaScriptBridge)\b"
+    r"ENetMultiplayerPeer|PacketPeerUDP|TCPServer|StreamPeerTCP|UPNP|WebRTCPeerConnection|WebRTCDataChannel|PacketPeerDTLS|StreamPeerTLS|MultiplayerPeerExtension|MultiplayerAPI|SceneMultiplayer|MultiplayerSpawner|MultiplayerSynchronizer|ENetConnection|JavaScriptBridge)\b"
 )
 SHELL_EXEC = re.compile(r"\bOS\s*\.\s*(?:execute|create_process|create_instance)\s*\(")
 SCENE_NODE = re.compile(r'^\s*\[node\b[^\]]*\btype="HTTPRequest"')
