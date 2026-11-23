@@ -74,6 +74,21 @@ class OfflineSurfaceTests(unittest.TestCase):
             self.assertTrue(any("OS.execute" in item for item in findings))
             self.assertTrue(any("JavaScriptBridge" in item for item in findings))
 
+    def test_flags_process_launch_variants_without_similar_identifiers(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            (root / "Process.gd").write_text(
+                'OS.create_process("curl", [])\n'
+                'OS.create_instance(["--flag"])\n'
+                'OS . create_process ("other", [])\n'
+                'var harmless = OS.create_process_wrapper\n'
+                '# OS.create_instance(["ignored"])\n',
+                encoding="utf-8",
+            )
+            findings = scan(root)
+            self.assertEqual(len(findings), 3)
+            self.assertFalse(any("wrapper" in item for item in findings))
+
     def test_does_not_follow_symlinked_source_outside_checkout(self):
         with tempfile.TemporaryDirectory() as folder:
             root = Path(folder) / "repo"
