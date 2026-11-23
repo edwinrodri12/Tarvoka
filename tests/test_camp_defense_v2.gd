@@ -31,6 +31,16 @@ func _meshes(node: Node, output: Array[MeshInstance3D]) -> void:
     for child in node.get_children():
         _meshes(child, output)
 
+func _part_position_in_core(part: Node3D, core: Node3D) -> Vector3:
+    # Built sculptures are intentionally not inside SceneTree until capture.
+    # Using global_position here logs engine errors and produces false (0,0,0).
+    var full_transform := Transform3D.IDENTITY
+    var current: Node3D = part
+    while current != null and current != core:
+        full_transform = current.transform * full_transform
+        current = current.get_parent() as Node3D
+    return full_transform.origin
+
 func _audit(faction: int, lod: int, damage: int) -> Node3D:
     var camp: Node3D = Art.build("defensivo", faction, lod, damage)
     check(camp != null, "A defensive camp must build")
@@ -91,9 +101,9 @@ func _audit(faction: int, lod: int, damage: int) -> Node3D:
                     item.name == "V2_DelimitacionCentroFaccion" or
                     item.name.begins_with("V2_UnionPiso_")):
                 continue
-            var global_pos: Vector3 = item.global_position
-            if absf(global_pos.x) < 1.0 and absf(global_pos.z) < 1.0:
-                check(global_pos.y < 0.14,
+            var core_pos: Vector3 = _part_position_in_core(item, core)
+            if absf(core_pos.x) < 1.0 and absf(core_pos.z) < 1.0:
+                check(core_pos.y < 0.14,
                     "No tall object blocks central occupiable footprint")
     else:
         check(CampPose(camp, 0.0), "Destroyed rubble pose stable")
