@@ -54,6 +54,10 @@ def summarize(rows):
             patterns["blue_sweep"] += 1
         else:
             patterns["red_sweep"] += 1
+    # Pair-level directional signal: excludes faction sweeps and draw-involved pairs.
+    directional_sweeps = patterns["starter_sweep"] + patterns["second_sweep"]
+    starter_sweep_share = (patterns["starter_sweep"] / directional_sweeps
+                           if directional_sweeps else None)
     decisive = starter_wins + second_wins
     # Wilson 95% interval: descriptive uncertainty, not proof of fairness.
     # Report null for all-draw samples rather than inventing a 50% estimate.
@@ -65,7 +69,9 @@ def summarize(rows):
         center = (p + z * z / (2 * decisive)) / denom
         radius = z * sqrt(p * (1 - p) / decisive + z * z / (4 * decisive * decisive)) / denom
         interval = [max(0.0, center - radius), min(1.0, center + radius)]
-    return {"starter_win_rate_wilson95": interval, "pair_patterns": patterns, "pairs": len(pairs), "matches": len(pairs) * 2,
+    return {"starter_sweep_share_directional_pairs": starter_sweep_share,
+            "directional_sweep_pairs": directional_sweeps,
+            "starter_win_rate_wilson95": interval, "pair_patterns": patterns, "pairs": len(pairs), "matches": len(pairs) * 2,
             "starter_wins": starter_wins, "second_wins": second_wins,
             "draws": draws, "blue_wins": blue_wins, "red_wins": red_wins,
             "starter_win_rate_decisive": (
