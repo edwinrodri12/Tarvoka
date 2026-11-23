@@ -397,6 +397,7 @@ jobs:
           test -s hq-android-v15/scripts/ui/A01ReconWingletV8.gd
           test -s hq-android-v15/scripts/ui/A01ReconWingletV9.gd
           test -s hq-android-v15/scripts/ui/A01ReconNoseOpticsV10.gd
+          test -s hq-android-v15/scripts/ui/A01ReconAirframeV11.gd
           cp hq-android-v15/scripts/ui/A01ReconDroneV1.gd scripts/ui/
           cp hq-android-v15/scripts/ui/A01ReconFinishV2.gd scripts/ui/
           cp hq-android-v15/scripts/ui/A01ReconFinishV3.gd scripts/ui/
@@ -406,6 +407,7 @@ jobs:
           cp hq-android-v15/scripts/ui/A01ReconWingletV8.gd scripts/ui/
           cp hq-android-v15/scripts/ui/A01ReconWingletV9.gd scripts/ui/
           cp hq-android-v15/scripts/ui/A01ReconNoseOpticsV10.gd scripts/ui/
+          cp hq-android-v15/scripts/ui/A01ReconAirframeV11.gd scripts/ui/
           test -s hq-android-v15/tests/test_a01_recon_drone_v1.gd
           cp hq-android-v15/tests/test_a01_recon_drone_v1.gd tests/
           test -s hq-android-v15/tests/test_a01_recon_shared_studio.gd
@@ -420,6 +422,8 @@ jobs:
           cp hq-android-v15/tests/test_a01_recon_winglet_v9.gd tests/
           test -s hq-android-v15/tests/test_a01_recon_nose_optics_v10.gd
           cp hq-android-v15/tests/test_a01_recon_nose_optics_v10.gd tests/
+          test -s hq-android-v15/tests/test_a01_recon_airframe_v11.gd
+          cp hq-android-v15/tests/test_a01_recon_airframe_v11.gd tests/
           grep -Fq 'A01Recon.build' scripts/ui/UnitModels3D.gd
           grep -Fq 'A01Finish.apply' scripts/ui/UnitModels3D.gd
           grep -Fq 'A01HardwareV3.apply' scripts/ui/UnitModels3D.gd
@@ -429,8 +433,9 @@ jobs:
           grep -Fq 'A01WingletV8.apply' scripts/ui/UnitModels3D.gd
           grep -Fq 'A01WingletV9.apply' scripts/ui/UnitModels3D.gd
           grep -Fq 'A01NoseOpticsV10.apply' scripts/ui/UnitModels3D.gd
+          grep -Fq 'A01AirframeV11.apply' scripts/ui/UnitModels3D.gd
           grep -Fq 'func _a01_review_look' scripts/ui/BastionStudioAdapter.gd
-          grep -Fq 'A01 · Dron de reconocimiento · V10 EN DESARROLLO' scripts/ui/BastionStudioAdapter.gd
+          grep -Fq 'A01 · Dron de reconocimiento · V11 EN DESARROLLO' scripts/ui/BastionStudioAdapter.gd
           test -s scripts/ui/G16ArmoredLogisticsV1.gd
           test -s scripts/ui/G16LogisticsExteriorV2.gd
           test -s scripts/ui/G16LogisticsMechanicsDamageV3.gd
@@ -1600,6 +1605,17 @@ jobs:
           fi
           grep -F 'PASS A01 V10 NOSE OPTICS:' /tmp/a01-v10-nose.log
           test "$(find build/qa/a01-v10 -maxdepth 1 -name 'a01-v10-*.png' | wc -l)" -eq 13
+          # V11 must pass native Godot BEFORE exposing the web build.
+          timeout 190s xvfb-run -a -s '-screen 0 1280x720x24' env LIBGL_ALWAYS_SOFTWARE=1 \
+            /tmp/Godot_v4.3-stable_linux.x86_64 \
+            --rendering-method gl_compatibility --audio-driver Dummy --path . \
+            --script res://tests/test_a01_recon_airframe_v11.gd \
+            2>&1 | tee /tmp/a01-v11-airframe.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Assertion failed|Parse Error:' /tmp/a01-v11-airframe.log; then
+            echo '::error::A01 V11 watertight fuselage or conformal faction skin failed' >&2; exit 1
+          fi
+          grep -F 'PASS A01 V11 AERODYNAMIC BODY:' /tmp/a01-v11-airframe.log
+          test "$(find build/qa/a01-v11 -maxdepth 1 -name 'a01-v11-*.png' | wc -l)" -eq 6
           timeout 180s xvfb-run -a -s '-screen 0 1280x720x24' env LIBGL_ALWAYS_SOFTWARE=1 \
             /tmp/Godot_v4.3-stable_linux.x86_64 \
             --rendering-method gl_compatibility --audio-driver Dummy --path . \
@@ -2467,8 +2483,8 @@ jobs:
                    '?unidad=g16', 'G16 V6 · REVISAR LOGÍSTICA 3D',
                    'Ver manguera, rueda, facción y animaciones de G16 V6', 256)
           add_link(Path('build/web/index.html'),
-                   '?unidad=a01', 'A01 V10 · DRON DE RECONOCIMIENTO',
-                   'Revisar nuevo dron sin armas, sensores y ocho facciones', 316)
+                   '?unidad=a01', 'A01 V11 · DRON DE RECONOCIMIENTO',
+                   'Revisar V11: cuerpo aerodinámico sellado y pintura conformada de ocho facciones', 316)
           add_link(Path('build/web/tanque/index.html'),
                    '../apc/', 'BASTIÓN P06 V25 · ACTUAL',
                    'Inspeccionar Bastión V25 sin alterar G09 V32', 196)
@@ -2501,7 +2517,7 @@ jobs:
           grep -q 'BASTIÓN P06 V25 · MODELO ACTUAL' build/web/index.html
           grep -Fq 'href="?unidad=g16"' build/web/index.html
           grep -Fq 'href="?unidad=a01"' build/web/index.html
-          grep -Fq 'A01 V10 · DRON DE RECONOCIMIENTO' build/web/index.html
+          grep -Fq 'A01 V11 · DRON DE RECONOCIMIENTO' build/web/index.html
           grep -Fq 'G16 V6 · REVISAR LOGÍSTICA 3D' build/web/index.html
           grep -Fq "URLSearchParams(window.location.search)" scripts/ui/BastionStudioAdapter.gd
           grep -Fq 'G16ServiceV6.has_model(model_root)' scripts/ui/BastionStudioAdapter.gd
@@ -2535,6 +2551,7 @@ jobs:
             build/qa/a01-v8/*.png
             build/qa/a01-v9/*.png
             build/qa/a01-v10/*.png
+            build/qa/a01-v11/*.png
           if-no-files-found: warn
           retention-days: 14
 
