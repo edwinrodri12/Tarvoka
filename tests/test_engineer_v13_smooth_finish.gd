@@ -120,17 +120,38 @@ func _run() -> void:
                         material.transparency==
                         BaseMaterial3D.TRANSPARENCY_DISABLED,
                         "approved opaque material reused unchanged")
+            if lod==13:
+                var shield_parent: Node3D=soldier.find_child(
+                    V6.RIG,true,false) as Node3D
+                for suffix in ["Superior","Ranura_-1","Ranura_1",
+                        "UnionCentral"]:
+                    var trim: MeshInstance3D=soldier.find_child(
+                        Smooth.TRIM_PREFIX+suffix,true,false) as MeshInstance3D
+                    check(trim!=null and trim.visible and
+                        trim.get_parent()==shield_parent and
+                        _outward_watertight(trim.mesh),
+                        "V13 physical closed dark relief on hero shield")
             if main!=null:
                 var round_mesh: Mesh=main.mesh
                 check(Smooth.show_smoothing(soldier,false),
                     "V12.3 actual previous polygon mesh restored")
                 check(main.mesh!=round_mesh,
                     "same physical shield mesh changes, not a UI label")
+                if lod==13:
+                    var old_trim: MeshInstance3D=soldier.find_child(
+                        Smooth.TRIM_PREFIX+"Superior",true,false) as MeshInstance3D
+                    check(old_trim!=null and not old_trim.visible,
+                        "V12.3 comparison hides V13 hero-only detailed bezels")
                 check(Smooth.show_smoothing(soldier,true) and
                     main.mesh==round_mesh and
                     bool(soldier.get_meta(
                         "tarvoka_engineer_v13_smoothed_visible",false)),
                     "same rig renders refined V13 mesh without rebuild")
+                if lod==13:
+                    var current_trim: MeshInstance3D=soldier.find_child(
+                        Smooth.TRIM_PREFIX+"Superior",true,false) as MeshInstance3D
+                    check(current_trim!=null and current_trim.visible,
+                        "V13 comparison restores shield-depth metal bezels")
             var shield: Node3D=soldier.find_child(
                 V6.RIG,true,false) as Node3D
             check(V6.pose(soldier,"inspect",1.0) and
