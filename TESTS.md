@@ -303,3 +303,8 @@ Problema: el total de victorias por relés oculta si la condición territorial s
 - Fixed by explicitly concatenating the generated NUL-path declaration and the following missing-path declaration (`+`). Commit `7fa959763973f1ebb46456b5376938ca084859ee` on draft PR #673.
 - Prior Android export and Godot headless checks on the preceding PR head passed (runs 45086794058 and 45086794065); those do **not** validate this new test edit.
 - PENDING: rerun 16 Python tests and full resource audit on new commit; Android physical **NO EJECUTADO EN DISPOSITIVO**. Do not merge until CI green.
+
+## 2026-11-22 — Resource path control-character validation (PR #673)
+- `tools/check_resource_paths.py` now classifies ASCII control characters (including NUL, tab, DEL) in `res://` paths as `invalid resource path` before filesystem resolution. This is a static validation change, not gameplay or rendering.
+- `tools/test_check_resource_paths.py` adds positive/negative coverage: invalid NUL/tab declarations must produce two diagnostics; a valid script path in the same scene must remain accepted.
+- Commits: `29c1e41c` (auditor), `14f5ae1c` (regression). **CI for these commits: NOT YET VERIFIED**; run Python unittest and full project resource audit. **Android device: NO EJECUTADO EN DISPOSITIVO.**
