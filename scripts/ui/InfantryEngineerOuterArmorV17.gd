@@ -105,7 +105,7 @@ static func apply(model: Node3D, hero: bool) -> bool:
     if chest_mark==null or chest_mark.get_parent()!=torso:
         return false
     if not _place(model,INSIGNIA,
-            Vector3(0.0,0.128,-0.506)):
+            Vector3(0.0,0.128,-0.495)):
         return false
 
     # The V14 rounded shoulder was physically undersized and looked like
@@ -141,7 +141,7 @@ static func apply(model: Node3D, hero: bool) -> bool:
         if stripe==null or stripe.get_parent()!=arm:
             return false
         if not _place(model,stripe.name,
-                Vector3(float(side)*0.370,-0.074,-0.091)):
+                Vector3(float(side)*0.350,-0.074,-0.091)):
             return false
 
         var leg: Node3D=model.find_child(
