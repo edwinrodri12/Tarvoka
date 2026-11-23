@@ -269,3 +269,9 @@ Problema: el total de victorias por relés oculta si la condición territorial s
 - `tools/test_check_offline_surfaces.py`: replace literal `\\n` fixture text with real newline escape sequences (`\n`) in shell/browser bridge and symlink tests. Previously the shell/bridge assertions could pass from a single concatenated source line and miss per-line reporting; the updated fixture tests separate physical lines.
 - Commit `da8ac450764b8d289f1e6ede696be566af6e53ae` on PR #680 branch; this is **not merged**.
 - Run `python3 -m unittest discover -s tools -p 'test_check_offline_surfaces.py'` and `python3 tools/check_offline_surfaces.py .`; CI/Android physical **NO EJECUTADO** for this commit at documentation time. Static audit is not proof of offline behavior.
+
+## 2026-11-23 — PR #680 process launch escape hatches
+- Added static matches for `OS.create_process(...)` and `OS.create_instance(...)` alongside `OS.execute(...)`; these are potential indirect network surfaces, not proof of network activity.
+- Added regression for three launch-call spellings, a similarly named identifier and a commented call (9 Python tests defined in this branch).
+- **NO EJECUTADO:** updated Python unittest suite, full-project scan, Godot/Android CI, physical Android. Run `python3 -m unittest discover -s tools -p 'test_check_offline_surfaces.py'` and `python3 tools/check_offline_surfaces.py .` before review.
+- PR remains draft; no gameplay or export changes.
