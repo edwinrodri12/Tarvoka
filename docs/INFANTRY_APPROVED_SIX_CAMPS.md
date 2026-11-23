@@ -100,3 +100,16 @@ El nuevo puente en `BattleTerrain3D.gd` asigna exclusivamente en la capa visual 
 **QA obligatoria en Godot real:** `tests/test_engineer_v123_opaque_closure.gd` comprueba las ocho facciones en LOD8 y LOD13, el anclaje correcto a `CabezaRig`, `TorsoRig`, `BrazoRig`, `PiernaRig` y `V6_BarreraArticuladaRig`; opacidad total de todas las nuevas piezas; que los `ArrayMesh` de V9, V11 y V12 sean herméticos y tengan volumen firmado exterior; y diez fotografías 3D en cinco cámaras iguales **con y sin el sellado**. `test_infantry_studio_v2_review.gd` valida el nuevo comparador dentro del Estudio web original; `test_engineer_v12_live_battle.gd` asegura el mismo modelo físico en G05 LOD8 jugable. Los registros de CI y las imágenes deben revisarse antes de integrar.
 
 **Alcance estricto:** arte 3D solamente; sin cambios en balance, economía, capturas, daño lógico, IA, guardados, niebla, rutas o facciones.
+
+
+### Ingeniero V13 — superficies curvadas y normales suaves (23 noviembre 2026)
+
+El usuario revisó V12.3 en el visor y señaló que la silueta seguía excesivamente poligonal. La reparación de huecos y el suavizado son problemas distintos: V12.3 aporta volúmenes opacos; V13 mejora la **curvatura auténtica de las mallas** sin volver a abrirlas.
+
+**Código nuevo:** `scripts/ui/InfantryEngineerSmoothV13.gd` se aplica después de `InfantryEngineerDorsalV12.gd` exclusivamente en `infantry_engineer` (y por tanto en el G05 jugable mediante el puente visual existente). Sustituye el `ArrayMesh` de placas octogonales rígidas por un panel **redondeado y totalmente cerrado**, con contorno de arcos, bisel físico y normales calculadas para superficies curvas. Refina el casco, la mochila, los estuches dorsales y los cuerpos de brazos y piernas con perfiles interpolados y normales suaves. Refina también `SphereMesh` de articulaciones sin cambiar materiales o transforms.
+
+**Presupuesto Android:** los perímetros usan menos subdivisiones en LOD8 que en LOD13; las superficies no añaden nuevos `MeshInstance3D`, sino que reemplazan datos de malla de las piezas ya existentes. Se conserva el límite de ocho soldados detallados en el mapa de batalla y los modelos no ingenieros permanecen intactos. La nueva comparativa `V12.3 · poligonal / V13 · curvas suaves` del Estudio 3D restaura recursos de malla reales **sobre la misma cámara y esqueleto**, no imágenes simuladas.
+
+**QA exigida antes de publicar:** `tests/test_engineer_v13_smooth_finish.gd` comprueba las ocho facciones × LOD8/13, normales explícitas, cierres de malla, volumen exterior, rig y escudo móvil sin regresiones, ausencia de transparencias, diez imágenes de Godot de cinco vistas con y sin suavizado, además de las pruebas de batalla y de interfaz. No se modifican atributos, reglas de combate, IA, economía, capturas, guardados ni colisiones.
+
+**Estado:** trabajo en revisión; no confundir con una versión ya desplegada en GitHub Pages o una APK compilada.
