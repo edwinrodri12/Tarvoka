@@ -1631,7 +1631,7 @@ jobs:
             echo '::error::A01 V12 wing root physical geometry or D4 recovery failed' >&2; exit 1
           fi
           grep -F 'PASS A01 V12 WING ROOTS:' /tmp/a01-v12-wings.log
-          test "$(find build/qa/a01-v12 -maxdepth 1 -name 'a01-v12-*.png' | wc -l)" -eq 6
+          test "$(find build/qa/a01-v12 -maxdepth 1 -name 'a01-v12-*.png' | wc -l)" -eq 8
           timeout 180s xvfb-run -a -s '-screen 0 1280x720x24' env LIBGL_ALWAYS_SOFTWARE=1 \
             /tmp/Godot_v4.3-stable_linux.x86_64 \
             --rendering-method gl_compatibility --audio-driver Dummy --path . \
