@@ -35,7 +35,22 @@ def summarize(rows):
     draws = sum(winner == "draw" for legs in pairs.values() for winner in legs.values())
     blue_wins = sum(winner == "blue" for legs in pairs.values() for winner in legs.values())
     red_wins = sum(winner == "red" for legs in pairs.values() for winner in legs.values())
-    return {"pairs": len(pairs), "matches": len(pairs) * 2,
+    # Separate initiative sweeps from faction sweeps in mirrored games.
+    patterns = {"starter_sweep": 0, "second_sweep": 0,
+                "blue_sweep": 0, "red_sweep": 0, "draw_involved": 0}
+    for legs in pairs.values():
+        blue_start, red_start = legs["blue"], legs["red"]
+        if "draw" in (blue_start, red_start):
+            patterns["draw_involved"] += 1
+        elif blue_start == "blue" and red_start == "red":
+            patterns["starter_sweep"] += 1
+        elif blue_start == "red" and red_start == "blue":
+            patterns["second_sweep"] += 1
+        elif blue_start == red_start == "blue":
+            patterns["blue_sweep"] += 1
+        else:
+            patterns["red_sweep"] += 1
+    return {"pair_patterns": patterns, "pairs": len(pairs), "matches": len(pairs) * 2,
             "starter_wins": starter_wins, "second_wins": second_wins,
             "draws": draws, "blue_wins": blue_wins, "red_wins": red_wins,
             "starter_win_rate_decisive": (
