@@ -86,6 +86,7 @@ const A01WingletV9=preload("res://scripts/ui/A01ReconWingletV9.gd")
 const A01NoseOpticsV10=preload("res://scripts/ui/A01ReconNoseOpticsV10.gd")
 const A01AirframeV11=preload("res://scripts/ui/A01ReconAirframeV11.gd")
 const A01WingRootV12=preload("res://scripts/ui/A01ReconWingRootV12.gd")
+const A01TailOpticsV13=preload("res://scripts/ui/A01ReconTailOpticsV13.gd")
 const G15SculptV2=preload("res://scripts/ui/G15ChassisAndMastFinishV2.gd")
 const G15FinishV3=preload("res://scripts/ui/G15ShelterCabFinishV3.gd")
 const G15AntennaV4=preload("res://scripts/ui/G15AntennaMechanicsV4.gd")
@@ -303,7 +304,7 @@ func _ready() -> void:
         while role_picker.item_count<=recon_index:
             role_picker.add_item(P06Models.ROLES[role_picker.item_count])
         role_picker.set_item_text(recon_index,
-            "A01 · Dron de reconocimiento · V12 EN DESARROLLO")
+            "A01 · Dron de reconocimiento · V13 EN DESARROLLO")
     # Preserve existing roles/indices; these are additional native 3D variants.
     for entry in [
         ["line","★ INFANTERÍA BÁSICA · Guardia"],
@@ -464,7 +465,7 @@ func _install_unified_studio_navigation() -> void:
     a01_360_panel.name="A01V10_InspeccionFisicaMismoVisor"
     a01_360_panel.add_theme_constant_override("separation",6)
     studio_camera_panel.add_child(a01_360_panel)
-    _title(a01_360_panel,"A01 V12 · NARIZ, SENSOR EO/IR Y DAÑO 3D",13)
+    _title(a01_360_panel,"A01 V13 · NARIZ, SENSOR EO/IR Y DAÑO 3D",13)
     # Keep quality controls ABOVE camera presets: 1152x648 landscape
     # screenshots previously clipped both buttons below the visible fold.
     _add_paired(a01_360_panel,"LOD13 · detalle",
@@ -710,7 +711,7 @@ func _studio_animation_specs(role: String) -> Array[Dictionary]:
     match role:
         "uav_recon":
             return [
-                {"group":"A01 V12 · DRON DE RECONOCIMIENTO SIN ARMAMENTO"},
+                {"group":"A01 V13 · DRON DE RECONOCIMIENTO SIN ARMAMENTO"},
                 {"title":"Volar · hélice impulsora", "action":"a01_move"},
                 {"title":"Explorar · girar cámara óptica", "action":"a01_scan"},
                 {"title":"Simular impacto visual", "action":"a01_hit"},
@@ -1340,7 +1341,7 @@ func _a01_review_look(yaw:float,focus:String)->void:
     model_root.rotation_degrees.y=yaw
     _update_camera()
     if status_label!=null:
-        status_label.text="A01 V12 · %s · LOD%d · dron 3D sin armamento" % [
+        status_label.text="A01 V13 · %s · LOD%d · dron 3D sin armamento" % [
             _a01_review_focus,_a01_review_lod]
 
 # Switch REAL Godot LOD in the existing Studio viewport. Preserve the
@@ -1350,7 +1351,7 @@ func _a01_review_set_lod(lod:int)->bool:
     if _role!="uav_recon" or preview==null or model_root==null or (
             lod not in [8,13]):
         return false
-    if not A01NoseOpticsV10.has_model(model_root) or not A01AirframeV11.has_model(model_root) or not A01WingRootV12.has_model(model_root):
+    if not A01NoseOpticsV10.has_model(model_root) or not A01AirframeV11.has_model(model_root) or not A01WingRootV12.has_model(model_root) or not A01TailOpticsV13.has_model(model_root):
         return false
     if lod==_a01_review_lod:
         return true
@@ -1360,7 +1361,7 @@ func _a01_review_set_lod(lod:int)->bool:
     var candidate:Node3D=P06Models.build("uav_recon",_faction,true,lod)
     if candidate==null:
         return false
-    if not A01NoseOpticsV10.has_model(candidate) or not A01AirframeV11.has_model(candidate) or not A01WingRootV12.has_model(candidate) or (
+    if not A01NoseOpticsV10.has_model(candidate) or not A01AirframeV11.has_model(candidate) or not A01WingRootV12.has_model(candidate) or not A01TailOpticsV13.has_model(candidate) or (
             not A01DamageV6.set_stage(candidate,before_damage)):
         candidate.free()
         return false
@@ -1386,7 +1387,7 @@ func _a01_review_set_lod(lod:int)->bool:
     _update_camera()
     _update_details()
     if status_label!=null:
-        status_label.text="A01 V12 · LOD%d · cámara %s · daño D%d · facción conservada" % [
+        status_label.text="A01 V13 · LOD%d · cámara %s · daño D%d · facción conservada" % [
             lod,_a01_review_focus,before_damage]
     return true
 
@@ -1407,7 +1408,7 @@ func _a01_review_spin()->void:
     _a01_review_tween.tween_method(Callable(self,"_a01_review_spin_tick"),
         _yaw,_yaw+360.0,7.0).set_trans(Tween.TRANS_LINEAR)
     if status_label!=null:
-        status_label.text="A01 V12 · giro 360° · LOD%d · visor 3D TARVOKA" % _a01_review_lod
+        status_label.text="A01 V13 · giro 360° · LOD%d · visor 3D TARVOKA" % _a01_review_lod
 
 # G16 V6 native camera presets: same SubViewport and real 3D geometry.
 # These are inspection tools only; the playable logistics rules do not change.
@@ -1581,7 +1582,7 @@ func _a01_play(kind:String)->void:
     if kind not in A01Recon.VALID_POSES:
         return
     if A01DamageV6.has_model(model_root) and A01DamageV6.stage(model_root)==4 and kind in ["move","scan"]:
-        status_label.text="A01 V12 · aeronave destruida, selecciona D0 para reparar."
+        status_label.text="A01 V13 · aeronave destruida, selecciona D0 para reparar."
         return
     if _a01_tween!=null and _a01_tween.is_running():
         _a01_tween.kill()
@@ -1593,7 +1594,7 @@ func _a01_play(kind:String)->void:
     _a01_tween.tween_method(Callable(self,"_a01_tick").bind(art,kind),
         0.0,1.0,2.8 if kind=="scan" else 1.5)
     _a01_tween.tween_callback(Callable(self,"_a01_done").bind(art))
-    status_label.text="A01 V12 · %s · animación óptica 3D, sin alterar niebla" % kind
+    status_label.text="A01 V13 · %s · animación óptica 3D, sin alterar niebla" % kind
 
 func _a01_tick(progress:float,art:Node3D,kind:String)->void:
     if is_instance_valid(art):
@@ -1815,7 +1816,7 @@ func _refresh_unified_studio_navigation() -> void:
             "apc": label="P06 · Bastión · V25"
             "mlrs": label="G11 · Lanzador · V33"
             "attack_heli": label="A01 · Helicóptero HAT-29 · V14"
-            "uav_recon": label="A01 · Dron de reconocimiento · V12 EN DESARROLLO"
+            "uav_recon": label="A01 · Dron de reconocimiento · V13 EN DESARROLLO"
             "logistics_mobile": label="G16 · Logística blindada 6×6 · V6 PBR y suministros articulados"
             "ew_mobile": label="G15 · Guerra electrónica · V11 (neumáticos, óptica y electrónica 3D)"
             "aa_mobile": label="G13 · Antiaéreo · V54 caucho y rodadura 3D"
