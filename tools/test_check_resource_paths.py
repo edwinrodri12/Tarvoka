@@ -218,6 +218,20 @@ class ResourcePathAuditTests(unittest.TestCase):
             self.assertTrue(any("sample.tscn:1:" in e and "missing resource" in e for e in errors), errors)
             self.assertTrue(any("sample.tscn:2:" in e and "missing resource" in e for e in errors), errors)
 
+    def test_control_characters_in_resource_paths_are_invalid(self):
+        # Reject non-printable path names before any filesystem access.
+        with tempfile.TemporaryDirectory() as temp:
+            root = pathlib.Path(temp)
+            (root / "valid.gd").write_text("extends Node\n")
+            (root / "sample.tscn").write_text(
+                '[ext_resource type="Script" path="res://bad' + chr(0) + 'name.gd" id="1"]\n'
+                + '[ext_resource type="Script" path="res://bad' + chr(9) + 'name.gd" id="2"]\n'
+                + '[ext_resource type="Script" path="res://valid.gd" id="3"]\n'
+            )
+            errors = audit(root)
+            self.assertEqual(len(errors), 2, errors)
+            self.assertTrue(all("invalid resource path" in error for error in errors), errors)
+
     def test_unreadable_utf8_resource_is_reported(self):
         with tempfile.TemporaryDirectory() as temp:
             root = pathlib.Path(temp)
