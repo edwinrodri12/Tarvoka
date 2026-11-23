@@ -244,3 +244,67 @@ Problema: el total de victorias por relés oculta si la condición territorial s
 - El panel de estadísticas de la unidad seleccionada explica los tres colores. Se conserva el sistema de doble toque o Confirmar para ataques reales y la inspección de enemigos visibles que ya funciona. El motor, la economía, el balance v0.1 y los guardados no se modifican.
 - Pruebas nuevas: `tests/test_friendly_weapon_coverage.gd` verifica artillería, infantería, objetivos terrestres/aéreos/navales, límites, ammo y niebla. `tests/test_friendly_weapon_ui.gd` verifica selección táctil, panel, tres capas, confirmación, cancelación e inspección enemiga. Integrar solo después de CI completo Godot y exportación Android ARM64.
 - La integración visual isométrica se desarrolla en PR independiente #139; esta adición utiliza el render rectangular actual y una función de reglas reutilizable. Al integrar el renderizador isométrico deberá dibujar también `selected_weapon_coverage()` sin confundir la cobertura con órdenes atacables.
+
+2026-11-22 — PR #673 auditor de recursos: agregadas regresiones de enlace simbólico que escapa del proyecto y recurso .tres con UTF-8 inválido (`tools/test_check_resource_paths.py`, commit 07c8c784). Estado: NO EJECUTADO para nuevas pruebas Python, auditoría completa, Godot y Android físico. Ejecutar `python3 -m unittest discover -s tools -p 'test_check_resource_paths.py'` y `python3 tools/check_resource_paths.py .`; no activar como gate antes de revisar falsos positivos.
+
+2026-11-22 — PR #673: corregida regresión UTF-8 para escribir bytes realmente inválidos (`bytes((0xff, 0xfe, 0x80))`); antes el literal escapado producía texto ASCII y la prueba daba un falso negativo. Commit `307609eb0d7623c27a52744c4ad42651344a96e1`. Python unittest/auditoría completa: NO EJECUTADO (el entorno de ejecución no pudo resolver github.com para clonar la rama); Godot 4.3 y Android físico: NO EJECUTADO. No integrar como gate sin correr pruebas y auditar falsos positivos.
+
+2026-11-22 — PR #673 auditor de recursos: corregidos tres literales de fixtures de enlaces simbólicos en `tools/test_check_resource_paths.py` para usar saltos de línea reales (`\n`) en vez de los caracteres literales barra invertida+n. Esto evita que el analizador ignore la segunda declaración `ext_resource` del caso alias válido + alias roto. Commit de código `80a5251830638bdf9a843bd343fddf79235d0120`. **PASÓ:** escritura GitHub. **NO EJECUTADO:** pruebas Python y auditoría completa (clon local bloqueado por DNS), Godot 4.3, Android físico y revisión visual. No se modifica gameplay ni se fusiona PR.
+
+2026-11-22 — PR #673: el auditor ahora rechaza `ext_resource` con rutas fuera de `res://` (por ejemplo `user://`, rutas absolutas y `res:/` mal escrito) en vez de ignorarlas silenciosamente. Prueba añadida: `test_external_resources_reject_non_project_schemes`. Commits `3417f9ee`, `e23e024b`, `54492d79`. **NO EJECUTADO:** Python unittest, auditoría integral, Godot 4.3 y Android físico; el entorno local no resuelve github.com. Requiere ejecutar `python3 -m unittest discover -s tools -p 'test_check_resource_paths.py'` y `python3 tools/check_resource_paths.py .` antes de integrar; verificar falsos positivos de rutas especiales.
+
+2026-11-22 — Auditor de recursos PR #673: se agregó detección de declaraciones `ext_resource` sin atributo `path` y prueba `test_external_resource_without_path_is_reported` que exige continuar el análisis de las referencias siguientes. Commits `0f81f520` y `b6d86a3d`. PASÓ: publicación de código y prueba mediante GitHub. NO EJECUTADO: unittest Python, auditoría completa, Godot 4.3, Android físico y revisión visual. Bloqueo: entorno local no resuelve github.com para clonar; no equivale a fallo de prueba. Próximo: ejecutar `python3 -m unittest discover -s tools -p 'test_check_resource_paths.py'` y `python3 tools/check_resource_paths.py .`, corregir hallazgos antes de usarlo como gate de CI.
+
+
+2026-11-22 — Auditor de recursos PR #673: diagnóstico de referencias externas ahora incluye línea exacta `archivo.tscn:N` (commit 45c1daed). Nueva regresión `test_errors_include_exact_declaration_lines` para recurso inexistente y declaración sin path (commits 921221ad, 55ec70e9). Estado: código publicado; unittest y auditoría completa NO EJECUTADO (clon local sin DNS); Godot/CI NO CONFIRMADO; Android NO EJECUTADO EN DISPOSITIVO. Ejecutar `python3 -m unittest discover -s tools -p 'test_check_resource_paths.py'` y `python3 tools/check_resource_paths.py .` antes de integrar.
+
+2026-11-22 resource auditor cache exclusion: `.godot/` and `.git/` generated/internal scene files are excluded from source asset scanning; a regression asserts source scenes are still audited. Commits cf97d43c and d56e7008 on PR #673. Python unittest and whole-project audit: NO EJECUTADO (local GitHub DNS unavailable); Godot/Android: NO EJECUTADO EN DISPOSITIVO. Run `python3 -m unittest discover -s tools -p 'test_check_resource_paths.py'` and `python3 tools/check_resource_paths.py .` before merge.
+
+2026-11-22 — PR #673: auditor de recursos ahora señala IDs `ext_resource` duplicados dentro de una misma escena (`archivo:línea`); IDs iguales en escenas distintas son válidos. Prueba unitaria nueva en `tools/test_check_resource_paths.py`. NO EJECUTADO: unittest, auditoría integral, Godot 4.3, Android físico. No activar como gate de CI antes de validar falsos positivos.
+
+2026-11-22 — PR #673: corrección crítica del auditor: `ID_ATTRIBUTE` era utilizado pero nunca definido, provocando `NameError` al inspeccionar cualquier `ext_resource` (commit b043c1c8). Se añadió el patrón para atributos `id` sin depender de su orden. PASÓ: prueba local aislada de dos variantes de orden de atributos con Python 3. NO EJECUTADO: batería completa de 11 pruebas y auditoría integral (clon bloqueado por DNS de github.com), Godot 4.3 y Android físico. Mantener PR en draft hasta ejecutar pruebas sobre rama real; no integrar en CI todavía.
+
+
+## 2026-11-22 — Auditor de recursos: ejecución CI dedicada
+- PR #673: nuevo `.github/workflows/resource-path-audit.yml` en rama de trabajo, commit `d9a6ae60bc33cd3a350ce2b71f969317f4272a8b`.
+- Ejecuta 11 pruebas Python `unittest` y auditoría real de escenas `.tscn`/`.tres` sobre checkout en GitHub Actions; no requiere clonar localmente ni Android.
+- Estado al registrar: NO EJECUTADO / sin workflow run confirmado para el commit. No afirmar éxito hasta inspeccionar conclusión y logs. Si falla la auditoría, revisar recursos generados y falsos positivos antes de integrar.
+- Android físico: NO EJECUTADO EN DISPOSITIVO. No se modifican reglas de juego ni se genera APK.
+
+2026-11-22 — Auditor de recursos, PR #673 (rama sin fusionar): `tools/check_resource_paths.py` ahora informa `ext_resource` con `id` ausente o vacío, incluyendo línea; `tools/test_check_resource_paths.py` añade regresión para ambos casos y un ID válido. Total esperado: 12 pruebas. PASÓ: commits de fuente publicados. NO EJECUTADO: batería Python completa, auditor sobre escenas reales, Godot/CI nuevo y Android físico; el entorno de ejecución no resuelve github.com para clonar. No convertir en gate ni fusionar sin comprobar resultados de Actions. No se cambió gameplay.
+
+2026-11-22 — PR #673: auditor rechaza escenas `.tscn`/`.tres` enlazadas simbólicamente fuera del árbol del proyecto antes de leer su contenido; regresión `test_scene_symlink_outside_project_is_rejected` añadida (13 casos declarados). PASÓ: commits publicados. NO EJECUTADO: batería Python, auditoría de recursos, Godot 4.3, Android físico. No interpretar código publicado como test verde.
+
+
+### 2026-11-22 — Auditor de recursos: cobertura de PR
+- Workflow `.github/workflows/resource-path-audit.yml` actualizado para ejecutar `pull_request` sin filtro `paths`: cambios exclusivos de escenas `.tscn`, recursos `.tres` o assets también deben disparar el auditor una vez que el workflow exista en la rama base. Antes, solo cambios de herramientas/workflow lo activaban, dejando pasar referencias rotas en PR de arte.
+- Commit de workflow `a87b3a723d267e4872e6d92e1bbd5b613f248427`. Publicación: PASÓ. GitHub Actions para ese commit: NO CONFIRMADO (consulta devolvió cero ejecuciones); suite Python y auditoría del checkout: NO EJECUTADO. Android: NO EJECUTADO EN DISPOSITIVO. No fusionar sin CI.
+
+2026-11-22 — Resource path auditor (PR #673): added cyclic `.tscn` symlink handling (report `unresolvable scene symlink` rather than raising `RuntimeError`/`OSError`) and regression `test_cyclic_scene_symlink_does_not_crash_audit` (14 defined tests). Commits 5a181d25 and 8395b9bb. Source publication PASÓ; Python unittest, repository-wide audit and CI on new head NO EJECUTADO at documentation time. Android físico NO EJECUTADO EN DISPOSITIVO; no gameplay or visual change. Do not merge until executable checks pass.
+
+## 2026-11-22 — CI real auditor #673: symlink circular
+- GitHub Actions run `45058684405` (merge ref `78c3f53`): 14 pruebas ejecutadas; **13 PASARON, 1 FALLÓ** (`test_cyclic_scene_symlink_does_not_crash_audit`). El fallo real devolvía `unreadable: [Errno 40] Too many levels of symbolic links` en vez del diagnóstico esperado `unresolvable scene symlink`.
+- Corrección en `tools/check_resource_paths.py`: `scene.resolve(strict=True)` para que el bucle de symlinks genere `OSError` en la resolución y sea capturado por la ruta de diagnóstico ya probada. Commit `c2ec97e9`.
+- **PENDIENTE DE NUEVA CI**: ejecutar las 14 pruebas y auditoría integral sobre el nuevo commit; no afirmar PASS hasta leer el run posterior. Godot/Android físicos NO EJECUTADO EN DISPOSITIVO; sin cambios de jugabilidad.
+
+2026-11-22: Resource audit CI run 45064805400 SUCCESS on commit 8557d265 (14 Python tests and repository audit). Follow-up regression: cyclic `ext_resource` target symlink now reports a missing resource instead of risking an uncaught resolution exception; 15th test added. New commit CI pending. Android physical: NO EJECUTADO EN DISPOSITIVO. Visual QA: PENDIENTE DE REVISIÓN VISUAL.
+
+2026-11-22 17:06 EST — PR #673: auditor de recursos tolera ValueError de rutas externas con NUL, registra diagnóstico y sigue inspeccionando recursos posteriores. Prueba de regresión test_nul_in_external_resource_path_is_diagnostic_not_crash añadida (16 pruebas definidas). Commits 740d21e5 y e6964943. CI posterior: NO EJECUTADO/pendiente de evidencia; Godot 4.3: NO EJECUTADO; Android físico: NO EJECUTADO EN DISPOSITIVO. Sin cambios de gameplay.
+
+### 2026-11-22 — Resource audit NUL regression repair
+- CI run [45075891954](https://github.com/edwinrodri12/Tarvoka/actions/runs/45075891954) failed **1/16** tests: the NUL fixture wrote literal `\\x00` and `\\n` sequences, so the auditor correctly rejected the backslash path and never saw a second declaration.
+- Commit `0eac705536d2ce517dec05604436d65e5d3e9e53` changes the fixture to write an actual NUL character and real line breaks. Expected diagnostics: two missing resources on separate source lines, without a crash.
+- **NO EJECUTADO** after this fix: full Python test suite and complete resource audit; wait for CI evidence before marking PASS. Android physical: **NO EJECUTADO EN DISPOSITIVO**. No gameplay or visual changes.
+
+2026-11-22 — PR #673: corregido `test_nul_in_external_resource_path_is_diagnostic_not_crash` para insertar `chr(0)` real en el fixture, en vez de los cuatro caracteres literales `\\x00`. Commit de prueba `b32035d0e0c44abb175ce10bd2beabe9e9a880c9`. La prueba ahora ejercita la ruta `ValueError` de `pathlib` prevista por el auditor; no se alteran reglas de juego. CI del nuevo commit: NO CONFIRMADO; Android físico: NO EJECUTADO EN DISPOSITIVO.
+
+## 2026-11-22 — Resource auditor CI syntax regression
+- GitHub Actions run 45086794087 FAILED before collecting tests: `SyntaxError` in `tools/test_check_resource_paths.py:213` (two adjacent expressions, not two literal strings, in NUL-path fixture).
+- Fixed by explicitly concatenating the generated NUL-path declaration and the following missing-path declaration (`+`). Commit `7fa959763973f1ebb46456b5376938ca084859ee` on draft PR #673.
+- Prior Android export and Godot headless checks on the preceding PR head passed (runs 45086794058 and 45086794065); those do **not** validate this new test edit.
+- PENDING: rerun 16 Python tests and full resource audit on new commit; Android physical **NO EJECUTADO EN DISPOSITIVO**. Do not merge until CI green.
+
+## 2026-11-22 — Resource path control-character validation (PR #673)
+- `tools/check_resource_paths.py` now classifies ASCII control characters (including NUL, tab, DEL) in `res://` paths as `invalid resource path` before filesystem resolution. This is a static validation change, not gameplay or rendering.
+- `tools/test_check_resource_paths.py` adds positive/negative coverage: invalid NUL/tab declarations must produce two diagnostics; a valid script path in the same scene must remain accepted.
+- Commits: `29c1e41c` (auditor), `14f5ae1c` (regression). **CI for these commits: NOT YET VERIFIED**; run Python unittest and full project resource audit. **Android device: NO EJECUTADO EN DISPOSITIVO.**

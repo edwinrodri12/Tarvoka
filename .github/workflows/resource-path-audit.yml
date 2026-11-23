@@ -1,0 +1,24 @@
+name: Resource path auditor (PR validation)
+
+on:
+  push:
+    branches:
+      - automation/resource-path-audit-20261121
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  resource-audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Python version
+        run: python3 --version
+      - name: Unit regressions
+        run: python3 -m unittest discover -s tools -p 'test_check_resource_paths.py' -v
+      - name: Audit checked-in Godot scenes and resources
+        run: python3 tools/check_resource_paths.py .
