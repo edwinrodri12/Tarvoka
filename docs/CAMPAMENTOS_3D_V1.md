@@ -110,3 +110,35 @@ pero las cajas de munición quedaban detrás de la carpa y el interior parecía 
   Evidencia: https://github.com/edwinrodri12/Tarvoka/actions/runs/45060363207
 - **Estado:** V3 lista para inspección artística del usuario, no aprobada
   todavía como modelo final. Sin integración declarada en web/Android.
+
+## Reconocimiento V2 — torre óptica articulada (22-nov-2026)
+
+El **segundo** campamento aprobado recibe modelo nativo 3D definitivo en
+`scripts/ui/CampReconFinishV2.gd`, conectado directamente a la misma
+factoría `CampModels3DV1.build("reconocimiento",faction,lod,damage)`.
+
+- Torre de vigilancia con cuatro patas volumétricas, riostras cruzadas,
+  zapatas de anclaje, plataforma superior y color de facción.
+- Mástil telescópico operado por transformación física del grupo, cabezal
+  óptico opaco con dos lentes volumétricas y movimiento de barrido angular.
+- Dos paneles de antena abatibles, con articulaciones reales en la pose de
+  montaje, y dos pequeños sensores de apoyo a nivel del suelo.
+- Centro de control cerrado, consola de operaciones, pantalla táctica
+  **opaca** y parasol físico. Acceso central libre. Colores de facción
+  prominentes en el frente, los laterales y el cabezal de observación.
+- Dos calidades: LOD8 ligero en Android y LOD13 para inspección con
+  pequeñas fijaciones adicionales. Cuatro estados D0-D3, con mástil roto
+  para D2 y ruinas sin torre para D3.
+- No existe malla original V1 superpuesta: el modelo nuevo sustituye la
+  fabricación de esa escultura, conservando la identidad de campamento.
+- La animación es sólo visual. **No** modifica la niebla de guerra, el
+  radio de visión, la precisión, la IA, los créditos ni la captura.
+- Constructor aprobado exclusivamente: `infantry_sniper`.
+- QA dedicada: `tests/test_camp_recon_v2.gd` valida 64 variantes,
+  piezas opacas, telescopio, antenas, sensores, color de facción y
+  25 PNG auténticos Godot desde cuatro ángulos, replegado, escaneo,
+  daño y vista superior.
+
+**Estado inicial:** a la espera del resultado GitHub Actions para calificar
+el modelado como probado. Sin integración confirmada en el visor web original
+o en el juego Android. El PR seguirá en borrador hasta revisión de arte.
