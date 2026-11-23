@@ -9,6 +9,7 @@ import argparse
 import json
 from collections import defaultdict
 from pathlib import Path
+from math import sqrt
 
 
 def summarize(rows):
@@ -50,7 +51,18 @@ def summarize(rows):
             patterns["blue_sweep"] += 1
         else:
             patterns["red_sweep"] += 1
-    return {"pair_patterns": patterns, "pairs": len(pairs), "matches": len(pairs) * 2,
+    decisive = starter_wins + second_wins
+    # Wilson 95% interval: descriptive uncertainty, not proof of fairness.
+    # Report null for all-draw samples rather than inventing a 50% estimate.
+    interval = None
+    if decisive:
+        z = 1.959963984540054
+        p = starter_wins / decisive
+        denom = 1 + z * z / decisive
+        center = (p + z * z / (2 * decisive)) / denom
+        radius = z * sqrt(p * (1 - p) / decisive + z * z / (4 * decisive * decisive)) / denom
+        interval = [max(0.0, center - radius), min(1.0, center + radius)]
+    return {"starter_win_rate_wilson95": interval, "pair_patterns": patterns, "pairs": len(pairs), "matches": len(pairs) * 2,
             "starter_wins": starter_wins, "second_wins": second_wins,
             "draws": draws, "blue_wins": blue_wins, "red_wins": red_wins,
             "starter_win_rate_decisive": (
