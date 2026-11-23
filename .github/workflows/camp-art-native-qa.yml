@@ -20,7 +20,7 @@ on:
       - "scripts/publishing/TestFourCampsSharedStudio.gd.txt"
       - ".github/workflows/tarvoka-3d-pages.yml"
   push:
-    branches: [main]
+    branches: [main, feat/campamentos-3d-v1-20261122]
     paths:
       - "scripts/ui/CampModels3DV1.gd"
       - "scripts/ui/CampSupplyFinishV2.gd"
