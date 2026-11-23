@@ -86,6 +86,8 @@ func _run()->void:
                 "correct native A01 quality level")
             check(bool(craft.get_meta("tarvoka_a01_v12_visual_only",false)),
                 "no gameplay modifications")
+            check(bool(craft.get_meta("tarvoka_a01_v12_smooth_embedded_roots",false)),
+                "V12.1 both wing roots blend below V11 hull / V4 airfoil")
             var body:=craft.find_child(V1.BODY,true,false) as Node3D
             for side in [-1,1]:
                 var suffix:String="_L" if side<0 else "_R"
@@ -97,7 +99,7 @@ func _run()->void:
                     continue
                 var faces:PackedVector3Array=shoulder.mesh.get_faces()
                 check(_closed_mesh(shoulder.mesh),"sealed mesh with outward two-manifold orientation")
-                check(faces.size()/3==(44 if lod==13 else 32),
+                check(faces.size()/3==(68 if lod==13 else 44),
                     "two LODs use correct physical 3D polygon budgets")
                 var min_x:float=100.0
                 var max_x:float=-100.0
@@ -112,12 +114,32 @@ func _run()->void:
                     max_y=maxf(max_y,vertex.y)
                     min_z=minf(min_z,vertex.z)
                     max_z=maxf(max_z,vertex.z)
-                check((min_x< -0.20 and max_x<=-0.20) if side<0 else (
-                    min_x>=0.20 and max_x>0.67),
+                check((min_x< -0.17 and max_x<=-0.17) if side<0 else (
+                    min_x>=0.17 and max_x>0.74),
                     "no side inversion or floating cross-fuselage geometry")
                 check(min_y>0.93 and max_y<1.20 and
                     min_z< -0.32 and max_z>0.22,
                     "fillet intersects real wing/airframe envelopes")
+                # A physical cap must remain WITHIN V11 composite hull,
+                # never appear as an exposed rectangular end on top of it.
+                for p in V12._ring(float(side),V12.STATIONS[0]):
+                    var shape:Vector2=V11._body_dimensions(p.z)
+                    var x_normal:float=p.x/shape.x
+                    var y_normal:float=(p.y-V11.CENTER_Y)/shape.y
+                    check(x_normal*x_normal+y_normal*y_normal<0.96,
+                        "inner wing shoulder is physically buried inside V11 shell")
+                # At far cap, the fillet must terminate INSIDE the actual
+                # V4 airfoil, not protrude vertically as a pasted-on block.
+                var final_profile:Vector2=Vector2(
+                    float(V12.STATIONS[V12.STATIONS.size()-1][0]),
+                    float(V12.STATIONS[V12.STATIONS.size()-1][1]))
+                check(final_profile.x>0.70 and final_profile.y<1.07,
+                    "far cap sits within real wing span/height")
+                if lod==13:
+                    var square:=body.find_child("A01_V3_WingServiceHatch"+suffix,
+                        false,false) as MeshInstance3D
+                    check(square!=null and not square.visible,
+                        "obsolete raised black service hatch no longer looks like a hole")
                 var retired:=body.find_child("A01_V4_SmoothCompositeWingRoot"+suffix,
                     false,false) as MeshInstance3D
                 check(retired!=null and not retired.visible,
@@ -174,7 +196,9 @@ func _run()->void:
         ["izquierda",Vector3(-5.0,3.1,-1.5),0,13],
         ["derecha",Vector3(5.0,3.1,-1.5),0,13],
         ["superior",Vector3(0,8,-0.001),0,13],
-        ["android-f7",Vector3(4.5,3.7,5.3),7,8]
+        ["android-f7",Vector3(4.5,3.7,5.3),7,8],
+        ["raiz-izquierda",Vector3(-3.0,2.4,-2.1),0,13],
+        ["raiz-derecha",Vector3(3.0,2.4,-2.1),0,13]
     ]
     for shot in shots:
         var craft:Node3D=Models.build("uav_recon",int(shot[2]),true,int(shot[3]))
@@ -183,7 +207,13 @@ func _run()->void:
             continue
         vp.add_child(craft)
         camera.position=shot[1]
-        camera.look_at(Vector3(0,1.04,0),
+        var is_close:bool=str(shot[0]).begins_with("raiz-")
+        camera.size=2.4 if is_close else 4.5
+        var subject:Vector3=Vector3(
+            -0.47 if str(shot[0])=="raiz-izquierda" else
+             0.47 if str(shot[0])=="raiz-derecha" else 0.0,
+            1.05 if is_close else 1.04,-0.06 if is_close else 0.0)
+        camera.look_at(subject,
             Vector3.FORWARD if str(shot[0])=="superior" else Vector3.UP)
         await process_frame
         await process_frame
@@ -197,12 +227,12 @@ func _run()->void:
         vp.remove_child(craft)
         craft.free()
     check(completed==16,"all eight factions use two real V12 LODs")
-    check(captures==6,"six nonempty physical Godot screenshots saved")
+    check(captures==8,"eight real Godot renders include both close-up wing roots")
     check(Arsenal.profile("uav_recon")==baseline,
         "original unarmed recon stats, resource rules and fog remain unchanged")
     vp.queue_free()
     if failures==0:
-        print("PASS A01 V12 WING ROOTS: 8 faction paints x 2 LODs, closed left/right fillets, D4 repair, 6 native Godot angles")
+        print("PASS A01 V12 WING ROOTS: 8 faction paints x 2 LODs, closed left/right fillets, D4 repair, 8 real Godot views with two wing-root closeups")
         quit(0)
     else:
         printerr("FAIL A01 V12 WING ROOTS: %d issues" % failures)
