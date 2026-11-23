@@ -46,3 +46,6 @@ Android device **NOT EXECUTED** during this update (local GitHub DNS failed).
 
 ## Malformed-input regression (2026-11-23)
 `starter` and `winner` must be strings, not JSON arrays or objects. Invalid collection values now raise `ValueError` with a match index rather than an uncaught `TypeError` during dictionary lookup. `test_unhashable_input_rejected_as_value_error` covers six malformed values. GitHub commits published; full Python/Godot/Android CI NOT EXECUTED, Android physical NO EJECUTADO EN DISPOSITIVO. No gameplay changes.
+
+## 2026-11-23 — Canonicalización de identificadores de pareja
+El analizador elimina espacios iniciales/finales de `pair_id` antes de agrupar. `"map-a"` y `" map-a "` son el mismo escenario, no dos escenarios independientes; dos registros con el mismo iniciador tras normalización se rechazan como duplicados. Dos regresiones nuevas cubren la pareja válida y la duplicada. Estado: código publicado; batería Python completa NO EJECUTADA, Godot/Android físico NO EJECUTADO. No se modifica el motor ni el balance.
