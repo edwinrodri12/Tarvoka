@@ -244,3 +244,42 @@ Problema: el total de victorias por relés oculta si la condición territorial s
 - El panel de estadísticas de la unidad seleccionada explica los tres colores. Se conserva el sistema de doble toque o Confirmar para ataques reales y la inspección de enemigos visibles que ya funciona. El motor, la economía, el balance v0.1 y los guardados no se modifican.
 - Pruebas nuevas: `tests/test_friendly_weapon_coverage.gd` verifica artillería, infantería, objetivos terrestres/aéreos/navales, límites, ammo y niebla. `tests/test_friendly_weapon_ui.gd` verifica selección táctil, panel, tres capas, confirmación, cancelación e inspección enemiga. Integrar solo después de CI completo Godot y exportación Android ARM64.
 - La integración visual isométrica se desarrolla en PR independiente #139; esta adición utiliza el render rectangular actual y una función de reglas reutilizable. Al integrar el renderizador isométrico deberá dibujar también `selected_weapon_coverage()` sin confundir la cobertura con órdenes atacables.
+
+
+## 2026-11-22 — Auditoría estática offline (PR propuesta)
+- `tools/check_offline_surfaces.py` inspecciona `.gd` y `.tscn` para identificar referencias potenciales a clases de red de Godot; ignora directorios generados y comentarios completos. Modo informativo por defecto; `--fail-on-findings` habilita fallo explícito tras revisar la línea base.
+- `tools/test_check_offline_surfaces.py` define cuatro pruebas: clases de red, comentarios/directorios excluidos, nodo HTTPRequest en escena y escena sin red.
+- **PASÓ:** escritura de fuentes en rama independiente. **NO EJECUTADO:** pruebas Python, auditoría real del árbol, CI Godot/Android, tráfico real de dispositivo. El análisis estático NO demuestra ausencia de tráfico ni sustituye una prueba de red con Android desconectado.
+- No altera reglas, IA, guardados, arte ni configuración Android; no agregar como gate obligatorio sin revisar hallazgos existentes.
+
+### 2026-11-22 — Offline surface auditor: expanded network APIs (PR #680)
+- Added detection of WebRTCPeerConnection, WebRTCDataChannel, UPNP, PacketPeerDTLS, StreamPeerTLS and MultiplayerPeerExtension in `tools/check_offline_surfaces.py`.
+- Added positive/adversarial regression to `tools/test_check_offline_surfaces.py`: six network APIs detected, similarly named MyUPNPWrapper ignored.
+- **NO EJECUTADO**: Python test suite, complete source audit, Godot/Android CI and physical Android; commit publication is not test success.
+- Command: `python3 -m unittest discover -s tools -p 'test_check_offline_surfaces.py' -v && python3 tools/check_offline_surfaces.py .`
+- Static inspection is heuristic; it does not prove absence of actual network traffic. No gameplay rules changed.
+
+
+2026-11-23 — Auditor offline PR #680: no seguir enlaces simbólicos `.gd`/`.tscn`, ni externos ni internos, para impedir lectura fuera del checkout y recuentos duplicados. Dos regresiones nuevas (`test_does_not_follow_symlinked_source_outside_checkout`, `test_does_not_follow_symlinked_source_inside_checkout`); total 7 pruebas definidas. Cambios publicados en rama de borrador; ejecución Python/Godot/Android NO EJECUTADA en esta ejecución; Android físico NO EJECUTADO EN DISPOSITIVO. Ejecutar `python3 -m unittest discover -s tools -p 'test_check_offline_surfaces.py'` y `python3 tools/check_offline_surfaces.py .` antes de considerar revisión. Los enlaces a fuentes que solo existan como symlink quedan deliberadamente excluidos; documentar si el proyecto adopta tal patrón.
+
+2026-11-23 — PR #680: Auditor offline ahora marca `OS.execute(...)` y `JavaScriptBridge` como superficies de revisión (no demuestra tráfico de red); regresión adversarial de 2 hallazgos y 2 controles inocuos. Test Python nuevo: NO EJECUTADO al publicar; Godot/Android físico: NO EJECUTADO EN DISPOSITIVO. No se cambian reglas de juego.
+
+
+## 2026-11-23 — Offline audit fixture correction (PR #680)
+- `tools/test_check_offline_surfaces.py`: replace literal `\\n` fixture text with real newline escape sequences (`\n`) in shell/browser bridge and symlink tests. Previously the shell/bridge assertions could pass from a single concatenated source line and miss per-line reporting; the updated fixture tests separate physical lines.
+- Commit `da8ac450764b8d289f1e6ede696be566af6e53ae` on PR #680 branch; this is **not merged**.
+- Run `python3 -m unittest discover -s tools -p 'test_check_offline_surfaces.py'` and `python3 tools/check_offline_surfaces.py .`; CI/Android physical **NO EJECUTADO** for this commit at documentation time. Static audit is not proof of offline behavior.
+
+## 2026-11-23 — PR #680 process launch escape hatches
+- Added static matches for `OS.create_process(...)` and `OS.create_instance(...)` alongside `OS.execute(...)`; these are potential indirect network surfaces, not proof of network activity.
+- Added regression for three launch-call spellings, a similarly named identifier and a commented call (9 Python tests defined in this branch).
+- **NO EJECUTADO:** updated Python unittest suite, full-project scan, Godot/Android CI, physical Android. Run `python3 -m unittest discover -s tools -p 'test_check_offline_surfaces.py'` and `python3 tools/check_offline_surfaces.py .` before review.
+- PR remains draft; no gameplay or export changes.
+
+2026-11-23 — PR #680: el auditor offline ahora descarta comentarios GDScript al final de líneas sin truncar cadenas que contengan `#`; se añadió la décima regresión con comentarios, cadenas y una llamada real. Código publicado; ejecución Python/Godot/Android NO EJECUTADA al escribir esta nota. Comandos: `python3 -m unittest discover -s tools -p 'test_check_offline_surfaces.py'` y `python3 tools/check_offline_surfaces.py .`. El análisis estático no prueba ausencia de tráfico real.
+
+## 2026-11-23 — Auditor offline: sincronización multijugador (PR #680)
+Se amplió `tools/check_offline_surfaces.py` para señalar `MultiplayerAPI`, `SceneMultiplayer`, `MultiplayerSpawner`, `MultiplayerSynchronizer` y `ENetConnection`, superficies potenciales de red en Godot 4.3. La nueva regresión `test_multiplayer_sync_surfaces_and_identifier_boundaries` comprueba cinco detecciones y descarta un identificador de nombre parecido y un comentario. El auditor es informativo y no demuestra ausencia de tráfico.
+**PASÓ:** publicación de código y test en la rama de PR #680. **NO EJECUTADO:** batería Python completa, auditoría sobre checkout, Godot/CI Android y teléfono físico. Mantener PR en borrador hasta validación.
+
+2026-11-23 — PR #680: added subprocess regression for offline auditor CLI: clean tree with `--fail-on-findings` exits 0; finding in advisory mode exits 0; same finding with explicit gate exits 1 and prints file/line. Commit f9c99e6. Source committed; Python suite NO EJECUTADO (local checkout inaccessible due DNS); CI pending confirmation. Android physical NO EJECUTADO EN DISPOSITIVO. Static inspection is not runtime traffic validation.
