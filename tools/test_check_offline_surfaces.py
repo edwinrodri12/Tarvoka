@@ -141,5 +141,22 @@ class OfflineSurfaceTests(unittest.TestCase):
             self.assertEqual(len(findings), 5)
             self.assertFalse(any("Helper" in item for item in findings))
 
+    def test_cli_exit_status_and_opt_in_gate(self):
+        import subprocess
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            script = Path(__file__).with_name("check_offline_surfaces.py")
+            (root / "Safe.gd").write_text("extends Node\\n", encoding="utf-8")
+            clean = subprocess.run([sys.executable, str(script), str(root), "--fail-on-findings"], capture_output=True, text=True)
+            self.assertEqual(clean.returncode, 0, clean.stderr)
+            self.assertIn("0 potential network references", clean.stdout)
+            (root / "Network.gd").write_text("var client = HTTPRequest.new()\\n", encoding="utf-8")
+            advisory = subprocess.run([sys.executable, str(script), str(root)], capture_output=True, text=True)
+            self.assertEqual(advisory.returncode, 0, advisory.stderr)
+            self.assertIn("1 potential network references", advisory.stdout)
+            gated = subprocess.run([sys.executable, str(script), str(root), "--fail-on-findings"], capture_output=True, text=True)
+            self.assertEqual(gated.returncode, 1, gated.stderr)
+            self.assertIn("Network.gd:1:", gated.stdout)
+
 if __name__ == "__main__":
     unittest.main()
