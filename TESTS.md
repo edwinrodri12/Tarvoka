@@ -244,3 +244,10 @@ Problema: el total de victorias por relés oculta si la condición territorial s
 - El panel de estadísticas de la unidad seleccionada explica los tres colores. Se conserva el sistema de doble toque o Confirmar para ataques reales y la inspección de enemigos visibles que ya funciona. El motor, la economía, el balance v0.1 y los guardados no se modifican.
 - Pruebas nuevas: `tests/test_friendly_weapon_coverage.gd` verifica artillería, infantería, objetivos terrestres/aéreos/navales, límites, ammo y niebla. `tests/test_friendly_weapon_ui.gd` verifica selección táctil, panel, tres capas, confirmación, cancelación e inspección enemiga. Integrar solo después de CI completo Godot y exportación Android ARM64.
 - La integración visual isométrica se desarrolla en PR independiente #139; esta adición utiliza el render rectangular actual y una función de reglas reutilizable. Al integrar el renderizador isométrico deberá dibujar también `selected_weapon_coverage()` sin confundir la cobertura con órdenes atacables.
+
+
+## 2026-11-22 — Auditoría estática offline (PR propuesta)
+- `tools/check_offline_surfaces.py` inspecciona `.gd` y `.tscn` para identificar referencias potenciales a clases de red de Godot; ignora directorios generados y comentarios completos. Modo informativo por defecto; `--fail-on-findings` habilita fallo explícito tras revisar la línea base.
+- `tools/test_check_offline_surfaces.py` define cuatro pruebas: clases de red, comentarios/directorios excluidos, nodo HTTPRequest en escena y escena sin red.
+- **PASÓ:** escritura de fuentes en rama independiente. **NO EJECUTADO:** pruebas Python, auditoría real del árbol, CI Godot/Android, tráfico real de dispositivo. El análisis estático NO demuestra ausencia de tráfico ni sustituye una prueba de red con Android desconectado.
+- No altera reglas, IA, guardados, arte ni configuración Android; no agregar como gate obligatorio sin revisar hallazgos existentes.
