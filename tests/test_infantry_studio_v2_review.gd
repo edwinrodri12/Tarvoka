@@ -13,6 +13,7 @@ const AnatomyV10=preload("res://scripts/ui/InfantryEngineerAnatomyV10.gd")
 const MechanicsV11=preload("res://scripts/ui/InfantryEngineerMechanicsV11.gd")
 const DorsalV12=preload("res://scripts/ui/InfantryEngineerDorsalV12.gd")
 const SmoothV13=preload("res://scripts/ui/InfantryEngineerSmoothV13.gd")
+const ContourV14=preload("res://scripts/ui/InfantryEngineerContourV14.gd")
 const UNITS := ["line","infantry_commando","infantry_sniper",
     "infantry_engineer","infantry_logistic","infantry_medic"]
 var errors: int=0
@@ -155,8 +156,21 @@ func _run() -> void:
                 DorsalV12.is_visible(final_soldier) and
                 DorsalV12.has_seals(final_soldier),
                 "V12.3 opaque helmet, face, torso and animated joint closures visible")
-            must(SmoothV13.has_model(final_soldier),
-                "V13 real smoothed armor, helmet and articulated limbs loaded")
+            must(SmoothV13.has_model(final_soldier) and
+                ContourV14.has_model(final_soldier),
+                "V14 anatomy built on V13 closed native model")
+            must(str(studio.call("_infantry_review_edition"))=="V14",
+                "unified Studio identifies the current engineer V14")
+            studio.call("_engineer_v14_compare",false)
+            must(not bool(final_soldier.get_meta(
+                "tarvoka_engineer_v14_contours_visible",true)) and
+                str(studio.call("_infantry_review_edition"))=="V13",
+                "Studio V13 real anatomy comparison moves same meshes")
+            studio.call("_engineer_v14_compare",true)
+            must(bool(final_soldier.get_meta(
+                "tarvoka_engineer_v14_contours_visible",false)) and
+                str(studio.call("_infantry_review_edition"))=="V14",
+                "Studio restores V14 helmet and shoulders in same camera")
             studio.call("_engineer_v13_compare",false)
             must(not bool(final_soldier.get_meta(
                 "tarvoka_engineer_v13_smoothed_visible",true)),
@@ -175,16 +189,19 @@ func _run() -> void:
                 "tarvoka_engineer_v123_seals_visible",false)) and
                 DorsalV12.has_seals(final_soldier),
                 "Studio restores V12.3 physical closures without model reload")
-            must(str(studio.call("_infantry_review_edition"))=="V12",
-                "same online Studio labels latest engineer V12, not stale V11")
+            must(str(studio.call("_infantry_review_edition"))=="V13",
+                "Studio currently shows the true V13 mesh after V13 compare")
             studio.call("_engineer_v12_compare",false)
             must(not DorsalV12.is_visible(final_soldier) and
                 str(studio.call("_infantry_review_edition"))=="V11",
                 "V11 comparison hides only V12 physical details")
             studio.call("_engineer_v12_compare",true)
             must(DorsalV12.is_visible(final_soldier) and
-                str(studio.call("_infantry_review_edition"))=="V12",
-                "V12 comparison restores physical details on SAME model")
+                str(studio.call("_infantry_review_edition"))=="V13",
+                "V12 comparison restores V13 geometry on SAME model")
+            studio.call("_engineer_v14_compare",true)
+            must(str(studio.call("_infantry_review_edition"))=="V14",
+                "V14 restored after all legacy finish comparisons")
             var v11_belly: MeshInstance3D=final_soldier.find_child(
                 MechanicsV11.LOWER,true,false) as MeshInstance3D
             var v11_hinge_axle: Node3D=final_soldier.find_child(
