@@ -8,6 +8,7 @@ const Style = preload("res://scripts/ui/VisualStyle.gd")
 const Roster = preload("res://scripts/ui/InfantryCampRosterV1.gd")
 const SupplyFinishV2 = preload("res://scripts/ui/CampSupplyFinishV2.gd")
 const SupplyReadabilityV3 = preload("res://scripts/ui/CampSupplyReadabilityV3.gd")
+const ReconFinishV2 = preload("res://scripts/ui/CampReconFinishV2.gd")
 const CAMPS := ["suministros", "reconocimiento", "defensivo", "medico"]
 const BUILDERS := {
     "suministros": "infantry_logistic",
@@ -278,7 +279,7 @@ static func build(kind: String, faction: int, lod: int = 13,
             "suministros":
                 _supply(deployable, accent, lod, damage)
             "reconocimiento":
-                _recon(deployable, accent, lod, damage)
+                pass  # Recon V2 now builds one complete sculpt, no ghost V1 meshes.
             "defensivo":
                 _defensive(deployable, accent, lod, damage)
             "medico":
@@ -289,6 +290,10 @@ static func build(kind: String, faction: int, lod: int = 13,
             root.free()
             return null
         if not SupplyReadabilityV3.apply(root, accent, lod, damage):
+            root.free()
+            return null
+    elif kind == "reconocimiento":
+        if not ReconFinishV2.apply(root, accent, lod, damage):
             root.free()
             return null
     return root
@@ -307,6 +312,11 @@ static func pose_deploy(root: Node3D, progress: float) -> bool:
         deployable.visible = true
         deployable.scale = Vector3.ONE
         if not SupplyFinishV2.pose(root, t):
+            return false
+    elif str(root.get_meta("camp_kind", "")) == "reconocimiento":
+        deployable.visible = true
+        deployable.scale = Vector3.ONE
+        if not ReconFinishV2.pose(root, t):
             return false
     else:
         deployable.visible = t > 0.01
