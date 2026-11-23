@@ -193,7 +193,7 @@ static func _tower(assembly: Node3D, accent: Color,
             Vector3(0.73, 0.28, 0.54), MID, 0.52,
             Vector3(0, 17, 13))
         return
-    mast := _group(tower, "V2_MastilDesplegable",
+    var mast := _group(tower, "V2_MastilDesplegable",
         Vector3(0, 3.18, 0))
     _cylinder(mast, "ActuadorCentral",
         Vector3(0, 0.54, 0), 0.19, 1.24, GREY, lod)
