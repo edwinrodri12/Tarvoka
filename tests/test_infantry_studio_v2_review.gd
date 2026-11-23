@@ -171,14 +171,19 @@ func _run() -> void:
                 "tarvoka_engineer_v14_contours_visible",false)) and
                 str(studio.call("_infantry_review_edition"))=="V14",
                 "Studio restores V14 helmet and shoulders in same camera")
+            var current_helmet: MeshInstance3D=final_soldier.find_child(
+                "V9_CascoContinuoBiselado",true,false) as MeshInstance3D
             studio.call("_engineer_v13_compare",false)
             must(not bool(final_soldier.get_meta(
-                "tarvoka_engineer_v13_smoothed_visible",true)),
-                "V12.3 old polygonal mesh genuinely restored in Studio")
+                "tarvoka_engineer_v13_smoothed_visible",true)) and
+                current_helmet!=null and
+                current_helmet.mesh==current_helmet.get_meta(SmoothV13.OLD_MESH),
+                "V12.3 old polygonal helmet REALLY restored in Studio")
             studio.call("_engineer_v13_compare",true)
             must(bool(final_soldier.get_meta(
-                "tarvoka_engineer_v13_smoothed_visible",false)),
-                "V13 smoothed geometry restored on identical viewer and rig")
+                "tarvoka_engineer_v13_smoothed_visible",false)) and
+                current_helmet.mesh==current_helmet.get_meta(SmoothV13.NEW_MESH),
+                "V13 actual smooth helmet restored on identical viewer and rig")
             studio.call("_engineer_v123_compare",false)
             must(not bool(final_soldier.get_meta(
                 "tarvoka_engineer_v123_seals_visible",true)) and
