@@ -17,10 +17,16 @@ const V4=preload("res://scripts/ui/A01ReconAirfoilV4.gd")
 const V10=preload("res://scripts/ui/A01ReconNoseOpticsV10.gd")
 
 # [longitudinal z, semi-width x, semi-height y]. Fixed endpoints on both LODs.
+# Unified longitudinal shell: the V10 nose profile is now part of the
+# SAME closed mesh as the central fuselage, without overlapping end caps.
 const SECTIONS=[
-    [-1.160,0.145,0.111],
-    [-0.960,0.237,0.184],
-    [-0.660,0.299,0.223],
+    [-1.355,0.078,0.064],
+    [-1.230,0.169,0.136],
+    [-1.075,0.236,0.187],
+    [-0.940,0.254,0.2026],
+    [-0.850,0.266,0.213],
+    [-0.700,0.27993,0.21246],
+    [-0.570,0.303,0.226],
     [-0.280,0.333,0.242],
     [0.140,0.344,0.245],
     [0.570,0.296,0.217],
@@ -38,16 +44,19 @@ static func _mat(color:Color,metal:float,rough:float)->StandardMaterial3D:
     material.cull_mode=BaseMaterial3D.CULL_BACK
     return material
 
+static func _center_y(z:float)->float:
+    return lerpf(0.922,CENTER_Y,clampf((z+0.700)/0.130,0.0,1.0))
+
 static func _body_cross_section(station:Array,count:int)->Array:
     var ring:Array=[]
     for index in range(count):
         var angle:float=TAU*float(index)/float(count)
         ring.append(Vector3(cos(angle)*float(station[1]),
-            CENTER_Y+sin(angle)*float(station[2]),float(station[0])))
+            _center_y(float(station[0]))+sin(angle)*float(station[2]),float(station[0])))
     return ring
 
 static func _fuselage(body:Node3D,hero:bool,shell:Material)->MeshInstance3D:
-    var count:int=14 if hero else 10
+    var count:int=16 if hero else 12
     var sections:Array=[]
     for station in SECTIONS:
         sections.append(_body_cross_section(station,count))
@@ -59,7 +68,7 @@ static func _fuselage(body:Node3D,hero:bool,shell:Material)->MeshInstance3D:
         for i in range(count):
             var next:int=(i+1)%count
             var outward:Vector3=(anterior[i]+anterior[next])*0.5-Vector3(
-                0,CENTER_Y,float(SECTIONS[j][0]))
+                0,_center_y(float(SECTIONS[j][0])),float(SECTIONS[j][0]))
             outward.z=0.0
             V10._face(t,anterior[i],anterior[next],posterior[next],outward)
             V10._face(t,anterior[i],posterior[next],posterior[i],outward)
@@ -68,6 +77,7 @@ static func _fuselage(body:Node3D,hero:bool,shell:Material)->MeshInstance3D:
     for i in range(1,count-1):
         V10._face(t,nose[0],nose[i],nose[i+1],Vector3.FORWARD)
         V10._face(t,tail[0],tail[i],tail[i+1],Vector3.BACK)
+    t.index()
     t.generate_normals()
     var result:=MeshInstance3D.new()
     result.name=HULL
@@ -91,14 +101,15 @@ static func _body_dimensions(z:float)->Vector2:
 static func _body_surface(z:float,angle_deg:float)->Vector3:
     var d:Vector2=_body_dimensions(z)
     var a:float=deg_to_rad(angle_deg)
-    return Vector3(d.x*cos(a),CENTER_Y+d.y*sin(a),z)
+    return Vector3(d.x*cos(a),_center_y(z)+d.y*sin(a),z)
 
-static func _dorsal_skin(body:Node3D,paint:Material)->MeshInstance3D:
+static func _dorsal_skin(body:Node3D,paint:Material,hero:bool)->MeshInstance3D:
     # A four-corner flat decal would sink INSIDE the curved fuselage near
     # its highest centerline. Sample the REAL ellipse at angular and axial
     # stations and close every boundary with opposite winding.
-    var stations_z:Array=[-0.360,-0.040,0.550]
-    var angles:Array=[68.0,80.0,100.0,112.0]
+    var stations_z:Array=[-0.360,-0.280,0.140,0.550]
+    # Exact angular vertices of the unified 12/16-sided shell.
+    var angles:Array=[67.5,90.0,112.5] if hero else [60.0,90.0,120.0]
     var outer:Array=[]
     var inner:Array=[]
     for z in stations_z:
@@ -109,8 +120,8 @@ static func _dorsal_skin(body:Node3D,paint:Material)->MeshInstance3D:
             var a:float=deg_to_rad(float(angle))
             var normal:=Vector3(cos(a)/dims.x,sin(a)/dims.y,0.0).normalized()
             var base:Vector3=_body_surface(float(z),float(angle))
-            outer_row.append(base+normal*0.008)
-            inner_row.append(base+normal*0.003)
+            outer_row.append(base+normal*0.004)
+            inner_row.append(base-normal*0.002)
         outer.append(outer_row)
         inner.append(inner_row)
     var t:=SurfaceTool.new()
@@ -188,8 +199,8 @@ static func _closed_patch(body:Node3D,name:String,corners:Array,
     var inner:Array=[]
     for index in order:
         var pos:Vector3=corners[int(index)]
-        outer.append(pos+lift*0.011)
-        inner.append(pos+lift*0.003)
+        outer.append(pos+lift*0.005)
+        inner.append(pos-lift*0.003)
     var t:=SurfaceTool.new()
     t.begin(Mesh.PRIMITIVE_TRIANGLES)
     _triangle(t,outer[0],outer[1],outer[2])
@@ -220,7 +231,7 @@ static func _antenna(body:Node3D,hero:bool,material:Material)->MeshInstance3D:
     node.name=ANTENNA
     node.mesh=mesh
     node.material_override=material
-    node.position=Vector3(0,1.315,0.190)
+    node.position=Vector3(0,1.285,0.190)
     body.add_child(node)
     return node
 
@@ -247,7 +258,7 @@ static func apply(root:Node3D,faction_color:Color,hero:bool)->bool:
         return false
     # Verify all predecessors before changing visibility.
     var obsolete:Array=[
-        "A01_V1_SealedCompositeFuselage",
+        "A01_V1_SealedCompositeFuselage",V10.NOSE,
         "A01_V1_FactionSpine",
         "A01_V1_AntennaSpine",
         V1.COLOR_MARK+"_L",V1.COLOR_MARK+"_R",
@@ -263,7 +274,7 @@ static func apply(root:Node3D,faction_color:Color,hero:bool)->bool:
     var paint:=_mat(faction_color,0.24,0.41)
     var graphite:=_mat(Color("#344853"),0.34,0.57)
     var hull:=_fuselage(body,hero,shell)
-    var dorsal:=_dorsal_skin(body,paint)
+    var dorsal:=_dorsal_skin(body,paint,hero)
     for side in [-1,1]:
         var s:float=float(side)
         _closed_patch(body,WING_L if side<0 else WING_R,[
@@ -278,6 +289,7 @@ static func apply(root:Node3D,faction_color:Color,hero:bool)->bool:
     for name in obsolete:
         if not _retire(body,str(name)):
             return false
+    root.set_meta("tarvoka_a01_unified_nose_shell",true)
     root.set_meta(FLAG,true)
     root.set_meta("tarvoka_a01_v11_lod",13 if hero else 8)
     root.set_meta("tarvoka_a01_v11_visual_only",true)
