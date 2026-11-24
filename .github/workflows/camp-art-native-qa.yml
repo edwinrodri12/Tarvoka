@@ -205,7 +205,7 @@ jobs:
             exit 1
           fi
           grep -F 'PASS SUPPLY CAMP V4 NATIVE' /tmp/camp-v4-native.log
-          test "$(find build/qa/camps-supply-v4 -name '*.png' | wc -l)" -eq 16
+          test "$(find build/qa/camps-supply-v4 -name '*.png' | wc -l)" -eq 18
       - name: Upload actual Godot screenshots for visual review
         if: always()
         uses: actions/upload-artifact@v4

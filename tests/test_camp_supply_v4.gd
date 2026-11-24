@@ -45,7 +45,7 @@ func _audit(faction: int, lod: int, damage: int) -> Node3D:
         return null
     audits += 1
     check(int(model.get_meta("suministros_art_v4", 0)) == 4, "V4 metadata")
-    check(model.get_meta("suministros_art_revision", "") == "4.3", "Latest V4.3 revision")
+    check(model.get_meta("suministros_art_revision", "") == "4.4", "Latest V4.4 revision")
     check(model.get_meta("no_gameplay_effects", false) and model.get_meta("temporary_structure", false), "Art-only temporary structure")
     var meshes: Array[MeshInstance3D] = []
     _collect(model, meshes)
@@ -110,6 +110,22 @@ func _audit(faction: int, lod: int, damage: int) -> Node3D:
             check(Camp.pose_deploy(model, 1.0) and absf(rear.rotation_degrees.x) < 0.01, "Gable reopens")
         check(model.has_node("EquipamientoDesplegable/SupplyV2_PremiumRig/V2_MangueraArticulada/V4_ContinuousHose"), "Continuous hose in moving rig")
         check(model.has_node("EquipamientoDesplegable/SupplyV2_PremiumRig/V2_DepositoCombustibleSellado_0/V4_TankPressureShell"), "Curved tank shell")
+    check(V43.damage_fx_pose(model, "idle", 0.25), "Idle FX")
+    var effects: Node3D = model.get_node("V44_VisualDamageFX") as Node3D
+    check(effects.get_meta("presentation_only", false), "FX presentation only")
+    var particles: Array[MeshInstance3D] = []
+    _collect(effects, particles)
+    check(particles.size() <= (28 if lod == 13 else 14), "Bounded FX geometry")
+    if damage == 3:
+        check(not V43.damage_fx_pose(model, "blast", 0.2), "Wreck not impacted again")
+    else:
+        check(V43.damage_fx_pose(model, "bullet", 0.07), "Light impact")
+        check((effects.get_node("Flash") as Node3D).visible, "Light flash visible")
+        check(V43.damage_fx_pose(model, "blast", 0.25), "Blast effect")
+        check((effects.get_node("Fire/Flame_0") as Node3D).visible and (effects.get_node("Fragments/Chip_0") as Node3D).visible, "Blast flame and fragments")
+        check(V43.damage_fx_pose(model, "blast", 1.0), "Returns to idle")
+    check(int(model.get_meta("visual_damage", -1)) == damage, "FX does not alter damage state")
+    V43.damage_fx_pose(model, "idle", 0.34)
     return model
 func _shot(viewport: SubViewport, name: String) -> void:
     for i in range(5):
@@ -182,6 +198,12 @@ func _run() -> void:
                         camera.look_at(Vector3(0, 1.15, 0), Vector3.UP)
                         Camp.pose_deploy(model, 0.0)
                         await _shot(viewport, "v4_folded")
+                        Camp.pose_deploy(model, 1.0)
+                        V43.damage_fx_pose(model, "bullet", 0.07)
+                        await _shot(viewport, "v44_light_impact")
+                        V43.damage_fx_pose(model, "blast", 0.25)
+                        await _shot(viewport, "v44_explosion")
+                        V43.damage_fx_pose(model, "idle", 0.34)
                     stage.remove_child(model)
                 elif faction == 0 and lod == 13 and damage in [1, 2, 3]:
                     stage.add_child(model)
@@ -203,12 +225,12 @@ func _run() -> void:
         stage.remove_child(baseline)
         baseline.free()
     check(audits == 72, "8 factions plus neutral x LOD x damage")
-    check(captures == 16, "16 actual Godot images")
+    check(captures == 18, "18 actual Godot images")
     viewport.queue_free()
     await process_frame
     if failures > 0:
         printerr("FAIL SUPPLY CAMP V4 NATIVE: %d" % failures)
         quit(1)
         return
-    print("PASS SUPPLY CAMP V4 NATIVE: 72 variants, closed sculpt meshes, 16 images")
+    print("PASS SUPPLY CAMP V4 NATIVE: 72 variants, closed sculpt meshes, 18 images")
     quit(0)

@@ -27,3 +27,7 @@ El CI V4.1 pasó todas las auditorías y la exportación del estudio compartido.
 ## V4.3 — interior, iluminación y animación de servicio
 
 V4.2 pasó el CI nativo. V4.3 reemplaza mobiliario V3 por bancada, cajones, consola y estantería; un difusor sólido emisivo y una luz Omni sin sombras iluminan el interior en LOD13 D0/D1. Los controles VER INTERIOR/CERRAR TECHO y ANIMAR SERVICIO operan bisagras, palanca y aguja reales en el mismo estudio. El servicio es exclusivamente visual y reversible; D2/D3 no operan. D3 tiene chapas cerradas deformadas y bastidores derrumbados. QA mantiene 72 variantes y 16 PNG, incluida inspección interior, más controles del estudio unificado. Pendiente revisar CI y renders antes de integrar.
+
+## V4.4 — impactos y destrucción progresiva
+
+V4.3 pasó las pruebas nativas y exportación web. V4.4 implementa destello, chispas, humo ascendente, llamas y fragmentos estilizados con mallas opacas reutilizables y presupuesto acotado. D1 muestra humo ligero; D2/D3 fuego y humo. El visor unificado ofrece impacto ligero, explosión, animar daño actual, detener efectos y secuencia D0–D3. Cambios de modelo o navegación cancelan tweens y generaciones obsoletas. D3 conserva solo restos. QA 72 variantes y 18 PNG. Sin cambios de combate. Pendiente CI y revisión visual.

@@ -592,7 +592,7 @@ static func _service_rig_v43(v2: Node3D, lod: int) -> void:
 
 # Inspection mode moves real hinges. No transparent walls or second scene.
 static func inspect_interior(root: Node3D, enabled: bool) -> bool:
-    if root == null or root.get_meta("suministros_art_revision", "") != "4.3" or int(root.get_meta("visual_damage", 0)) >= 2:
+    if root == null or root.get_meta("suministros_art_v4", 0) != 4 or int(root.get_meta("visual_damage", 0)) >= 2:
         return false
     var v2: Node3D = root.get_node("EquipamientoDesplegable/SupplyV2_PremiumRig") as Node3D
     var core: Node3D = v2.get_node(CORE) as Node3D
@@ -606,7 +606,7 @@ static func inspect_interior(root: Node3D, enabled: bool) -> bool:
     return true
 
 static func service_pose(root: Node3D, progress: float) -> bool:
-    if root == null or root.get_meta("suministros_art_revision", "") != "4.3" or int(root.get_meta("visual_damage", 0)) >= 2:
+    if root == null or root.get_meta("suministros_art_v4", 0) != 4 or int(root.get_meta("visual_damage", 0)) >= 2:
         return false
     var pump: Node3D = root.get_node("EquipamientoDesplegable/SupplyV2_PremiumRig/V2_EstacionBombeo") as Node3D
     var lever: Node3D = pump.get_node("V43_ServiceLever") as Node3D
@@ -627,11 +627,120 @@ static func _wreck_v43(root: Node3D, lod: int) -> void:
     for i in range(4 if lod == 13 else 2):
         _box(wreck, "V43_BrokenFrame_%d" % i, Vector3(-2.0 + float(i) * 1.15, 0.18, -0.8), Vector3(0.83, 0.16, 0.19), OXIDE if i % 2 == 0 else FRAME, 0.038).rotation_degrees.y = 25.0 + float(i) * 18.0
 
+# Bounded, deterministic, opaque native effect meshes, independent of combat.
+const FX_ROOT := "V44_VisualDamageFX"
+
+static func _fx_blob(parent: Node3D, label: String, tint: Color, glow: float, lod: int) -> MeshInstance3D:
+    var geo := SphereMesh.new()
+    geo.radius = 0.5
+    geo.height = 1.0
+    geo.radial_segments = 12 if lod == 13 else 8
+    geo.rings = 6 if lod == 13 else 4
+    var part: MeshInstance3D = _part(parent, label, geo, Vector3.ZERO, tint, 0.0, 0.92)
+    var mat: StandardMaterial3D = part.material_override as StandardMaterial3D
+    mat.emission_enabled = glow > 0.0
+    mat.emission = tint
+    mat.emission_energy_multiplier = glow
+    part.visible = false
+    return part
+
+static func _fx_group(root: Node3D) -> Node3D:
+    var existing: Node3D = root.get_node_or_null(FX_ROOT) as Node3D
+    if existing != null:
+        return existing
+    var lod: int = int(root.get_meta("visual_lod", 13))
+    var fx: Node3D = _group(root, FX_ROOT)
+    fx.set_meta("presentation_only", true)
+    var smoke: Node3D = _group(fx, "Smoke")
+    var fire: Node3D = _group(fx, "Fire")
+    var sparks: Node3D = _group(fx, "Sparks")
+    var fragments: Node3D = _group(fx, "Fragments")
+    for i in range(9 if lod == 13 else 4):
+        _fx_blob(smoke, "Puff_%d" % i, Color("#465053").lerp(Color("#8B9089"), float(i % 3) * 0.23), 0.0, lod)
+    for i in range(5 if lod == 13 else 3):
+        _fx_blob(fire, "Flame_%d" % i, Color("#E28A39") if i % 2 == 0 else Color("#F6C971"), 0.75, lod)
+    for i in range(8 if lod == 13 else 4):
+        _fx_blob(sparks, "Spark_%d" % i, Color("#F2CC83"), 0.65, lod)
+    for i in range(5 if lod == 13 else 2):
+        var fragment: MeshInstance3D = _box(fragments, "Chip_%d" % i, Vector3.ZERO,
+            Vector3(0.13, 0.075, 0.17), STEEL if i % 2 == 0 else SCORCH, 0.012, 0.45)
+        fragment.visible = false
+    _fx_blob(fx, "Flash", Color("#FFDCA0"), 1.1, lod)
+    return fx
+
+static func damage_fx_pose(root: Node3D, kind: String, progress: float) -> bool:
+    if root == null or root.get_meta("suministros_art_v4", 0) != 4 or kind not in ["idle", "bullet", "blast", "clear"]:
+        return false
+    var stage: int = int(root.get_meta("visual_damage", 0))
+    if stage == 3 and kind in ["bullet", "blast"]:
+        return false
+    var fx: Node3D = _fx_group(root)
+    var phase: float = clampf(progress, 0.0, 1.0)
+    for key in ["Smoke", "Fire", "Sparks", "Fragments"]:
+        for child in fx.get_node(key).get_children():
+            child.visible = false
+    (fx.get_node("Flash") as Node3D).visible = false
+    root.set_meta("suministros_v44_fx_kind", kind)
+    root.set_meta("suministros_v44_fx_phase", phase)
+    if kind == "clear":
+        return true
+    var idle: bool = kind == "idle"
+    if idle and stage == 0:
+        return true
+    if not idle and phase >= 1.0:
+        return damage_fx_pose(root, "idle", 0.0)
+    var blast: bool = kind == "blast"
+    var origin: Vector3 = Vector3(-0.72, 2.19, 0.32) if stage < 3 else Vector3(0.20, 0.24, 0.12)
+    if stage == 2:
+        origin = Vector3(0.75, 1.17, 1.12)
+    if not idle:
+        origin = Vector3(-1.50, 1.70, 0.06) if not blast else Vector3(0.35, 1.25, 0.22)
+    var smoke: Node3D = fx.get_node("Smoke") as Node3D
+    var count: int = smoke.get_child_count()
+    for i in range(count):
+        var p: float = fposmod(phase + float(i) / float(count), 1.0) if idle else clampf(phase * 1.3 - float(i) * 0.035, 0.0, 1.0)
+        var part: Node3D = smoke.get_child(i) as Node3D
+        var intensity: float = (0.70 if stage >= 2 else 0.40) if idle else (0.98 if blast else 0.24)
+        var radius: float = (0.13 + p * 0.53) * intensity * sin(PI * p)
+        part.visible = p > 0.04 and p < 0.96 and (idle or phase > 0.12) and (idle or blast or i < 2) and (not idle or stage >= 2 or i < 3)
+        part.position = origin + Vector3(sin(float(i) * 2.4 + p * 3.5) * radius * 0.68 + p * 0.45, p * 1.85, cos(float(i) * 1.8 + p * 2.0) * radius)
+        part.scale = Vector3(radius * 1.7, radius * 1.35, radius * 1.55)
+    var fire: Node3D = fx.get_node("Fire") as Node3D
+    for i in range(fire.get_child_count()):
+        var part: Node3D = fire.get_child(i) as Node3D
+        var flicker: float = 0.68 + 0.23 * sin(phase * TAU * 3.0 + float(i) * 1.8)
+        var flame_size: float = flicker * (0.62 if idle else maxf(0.0, 1.0 - phase * 1.5))
+        part.visible = (idle and stage >= 2) or (blast and phase > 0.06 and phase < 0.58)
+        part.position = origin + Vector3(sin(float(i) * 2.2) * 0.22, flame_size * 0.35, cos(float(i) * 2.2) * 0.19)
+        part.scale = Vector3(flame_size * 0.44, flame_size * 1.20, flame_size * 0.42)
+        part.rotation_degrees.z = sin(phase * TAU + float(i)) * 14.0
+    if idle:
+        return true
+    var flash: Node3D = fx.get_node("Flash") as Node3D
+    flash.visible = phase > 0.0 and phase < (0.17 if blast else 0.12)
+    flash.position = origin
+    flash.scale = Vector3.ONE * maxf(0.02, (0.95 if blast else 0.22) * sin(PI * clampf(phase / (0.17 if blast else 0.12), 0.0, 1.0)))
+    var sparks: Node3D = fx.get_node("Sparks") as Node3D
+    for i in range(sparks.get_child_count()):
+        var part: Node3D = sparks.get_child(i) as Node3D
+        var direction := Vector3(cos(float(i) * 2.4), 0.45 + float(i % 3) * 0.15, sin(float(i) * 2.4))
+        part.visible = phase > 0.02 and phase < (0.64 if blast else 0.42)
+        part.position = origin + direction * phase * (1.40 if blast else 0.55) - Vector3.UP * phase * phase * 0.54
+        part.scale = Vector3(0.038, 0.13 if blast else 0.08, 0.038) * (1.0 - phase * 0.7)
+        part.rotation_degrees.z = float(i * 39)
+    var fragments: Node3D = fx.get_node("Fragments") as Node3D
+    for i in range(fragments.get_child_count()):
+        var part: Node3D = fragments.get_child(i) as Node3D
+        part.visible = blast and phase > 0.08 and phase < 0.82
+        part.position = origin + Vector3(cos(float(i) * 2.1) * phase * 1.5, sin(PI * phase) * 0.85 - phase * 0.55, sin(float(i) * 2.1) * phase * 1.2)
+        part.rotation_degrees = Vector3(phase * 280.0, float(i) * 37.0 + phase * 190.0, phase * 210.0)
+    return true
+
 static func apply(root: Node3D, accent: Color, lod: int, damage: int) -> bool:
     if root == null or root.get_meta("camp_kind", "") != "suministros":
         return false
     root.set_meta("suministros_art_v4", 4)
-    root.set_meta("suministros_art_revision", "4.3")
+    root.set_meta("suministros_art_revision", "4.4")
     root.set_meta("suministros_v4_no_gameplay_changes", true)
     if not _replace_box(root, "PlataformaDesmontable", 0.045, DECK, 0.08, 0.84):
         return false
@@ -641,7 +750,7 @@ static func apply(root: Node3D, accent: Color, lod: int, damage: int) -> bool:
             if str(child.name).begins_with("RestosDesmontables_"):
                 _replace_box(root, str(child.name), 0.025, STEEL, 0.45, 0.75)
         _wreck_v43(root, lod)
-        return true
+        return damage_fx_pose(root, "idle", 0.34)
     var deployable: Node3D = root.get_node_or_null("EquipamientoDesplegable") as Node3D
     if deployable == null:
         return false
@@ -676,6 +785,8 @@ static func apply(root: Node3D, accent: Color, lod: int, damage: int) -> bool:
     for side in [-1, 1]:
         _box(core, "V4_PalletTieDown_%d" % side, Vector3(float(side) * 3.20, 0.10, 2.94),
             Vector3(0.35, 0.17, 0.45), FRAME, 0.04, 0.55)
+    if damage > 0:
+        damage_fx_pose(root, "idle", 0.34)
     return pose(root, 1.0)
 
 static func pose(root: Node3D, progress: float) -> bool:

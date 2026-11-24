@@ -12,7 +12,7 @@ const CampRoster = preload("res://scripts/ui/InfantryCampRosterV1.gd")
 const FIRST_CAMP_INDEX: int = 7
 const CAMP_KEYS := ["suministros", "reconocimiento", "defensivo", "medico"]
 const CAMP_LABELS := [
-    "Campamento de Suministros · V4.3",
+    "Campamento de Suministros · V4.4",
     "Campamento de Reconocimiento · V2",
     "Campamento Defensivo · V2",
     "Campamento Médico · V2"
@@ -25,6 +25,9 @@ var camp_finish_picker: OptionButton
 var camp_status: Label
 var camp_supply_actions: VBoxContainer
 var _camp_service_tween: Tween
+var camp_damage_actions: VBoxContainer
+var _camp_fx_tween: Tween
+var _camp_fx_generation: int = 0
 var camp_kind: String = "suministros"
 var _camp_saved_visibility: Dictionary = {}
 
@@ -93,7 +96,7 @@ func _camp_create_controls() -> void:
     camp_controls.add_child(camp_lod_picker)
     camp_finish_picker = OptionButton.new()
     camp_finish_picker.name = "SuministrosComparacionV3V4"
-    camp_finish_picker.add_item("Suministros V4.3 · interior y servicio")
+    camp_finish_picker.add_item("Suministros V4.4 · daños y efectos")
     camp_finish_picker.add_item("Suministros V3 · comparación anterior")
     camp_finish_picker.select(0)
     camp_finish_picker.item_selected.connect(_camp_option_changed)
@@ -121,6 +124,13 @@ func _camp_create_controls() -> void:
     camp_controls.add_child(camp_supply_actions)
     _add_paired(camp_supply_actions, "VER INTERIOR", func(): _camp_interior(true), "CERRAR TECHO", func(): _camp_interior(false))
     _button(camp_supply_actions, "ANIMAR SERVICIO", _camp_animate_service)
+    camp_damage_actions = VBoxContainer.new()
+    camp_damage_actions.name = "SuministrosImpactosYDestruccion"
+    camp_controls.add_child(camp_damage_actions)
+    _add_paired(camp_damage_actions, "IMPACTO LIGERO", func(): _camp_play_fx("bullet"), "EXPLOSIÓN", func(): _camp_play_fx("blast"))
+    _button(camp_damage_actions, "ANIMAR DAÑO ACTUAL", func(): _camp_play_fx("idle"))
+    _button(camp_damage_actions, "DESTRUCCIÓN PROGRESIVA", _camp_destroy_sequence)
+    _button(camp_damage_actions, "DETENER EFECTOS", _camp_stop_fx)
     _button(camp_controls, "Restablecer cámara", _reset_camera)
     camp_status = _title(camp_controls, "Modelo aún no seleccionado", 11)
 
@@ -143,6 +153,7 @@ func _camp_hide_prior_controls() -> void:
         faction_picker.visible = false
 
 func _camp_restore_prior_controls() -> void:
+    _camp_stop_fx()
     _camp_stop_service()
     for item in _camp_saved_visibility.keys():
         if is_instance_valid(item):
@@ -190,6 +201,7 @@ func _camp_display() -> void:
     var previous_zoom: float = _zoom
     var previous_deploy: float = float(model_root.get_meta(
         "visual_deploy_progress", 1.0)) if same_camp else 1.0
+    _camp_stop_fx()
     _camp_stop_service()
     _stop_animation()
     if model_root != null:
@@ -202,6 +214,7 @@ func _camp_display() -> void:
     var lod: int = 8 if camp_lod_picker.selected == 0 else 13
     var damage: int = camp_damage_picker.selected
     camp_finish_picker.visible = camp_kind == "suministros"
+    camp_damage_actions.visible = camp_kind == "suministros" and camp_finish_picker.selected == 0
     camp_supply_actions.visible = camp_kind == "suministros" and camp_finish_picker.selected == 0 and damage < 2
     model_root = CampArt.build(camp_kind, faction, lod, damage, camp_finish_picker.selected == 0)
     if model_root == null:
@@ -225,6 +238,7 @@ func _camp_display() -> void:
 func _camp_pose(progress: float) -> void:
     if model_root == null or not _role.begins_with("camp_"):
         return
+    _camp_stop_fx()
     _camp_stop_service()
     if not CampArt.pose_deploy(model_root, progress):
         push_error("CAMP STUDIO: physical deployment pose failed")
@@ -241,6 +255,7 @@ func _camp_stop_service() -> void:
 func _camp_interior(enabled: bool) -> void:
     if model_root == null or _role != "camp_suministros":
         return
+    _camp_stop_fx()
     _camp_stop_service()
     if not CampArt.pose_deploy(model_root, 1.0):
         return
@@ -254,11 +269,62 @@ func _camp_service_frame(progress: float) -> void:
 func _camp_animate_service() -> void:
     if model_root == null or _role != "camp_suministros":
         return
+    _camp_stop_fx()
     if not SupplyV43.service_pose(model_root, 0.0):
         return
     _camp_stop_service()
     _camp_service_tween = create_tween()
     _camp_service_tween.tween_method(_camp_service_frame, 0.0, 1.0, 1.6)
+
+func _camp_stop_fx() -> void:
+    _camp_fx_generation += 1
+    if _camp_fx_tween != null and _camp_fx_tween.is_valid():
+        _camp_fx_tween.kill()
+    _camp_fx_tween = null
+    if model_root != null and _role == "camp_suministros":
+        SupplyV43.damage_fx_pose(model_root, "idle", 0.34)
+
+func _camp_fx_frame(kind: String, progress: float) -> void:
+    if model_root != null and _role == "camp_suministros":
+        SupplyV43.damage_fx_pose(model_root, kind, progress)
+
+func _camp_play_fx(kind: String) -> void:
+    if model_root == null or _role != "camp_suministros" or model_root.get_meta("suministros_art_v4", 0) != 4:
+        return
+    if kind in ["bullet", "blast"] and int(model_root.get_meta("visual_damage", 0)) == 3:
+        return
+    _camp_stop_service()
+    _camp_stop_fx()
+    _camp_fx_tween = create_tween()
+    var duration: float = 2.8 if kind == "idle" else (1.25 if kind == "blast" else 0.65)
+    if kind == "idle":
+        _camp_fx_tween.set_loops()
+    _camp_fx_tween.tween_method(func(value: float): _camp_fx_frame(kind, value), 0.0, 1.0, duration)
+
+func _camp_destroy_sequence() -> void:
+    if model_root == null or _role != "camp_suministros" or model_root.get_meta("suministros_art_v4", 0) != 4:
+        return
+    if int(model_root.get_meta("visual_damage", 0)) >= 3:
+        return
+    _camp_stop_service()
+    _camp_stop_fx()
+    var model_id: int = model_root.get_instance_id()
+    var generation: int = _camp_fx_generation
+    var kind: String = "bullet" if int(model_root.get_meta("visual_damage", 0)) == 0 else "blast"
+    _camp_fx_tween = create_tween()
+    _camp_fx_tween.tween_method(func(value: float): _camp_fx_frame(kind, value), 0.0, 1.0, 1.15)
+    _camp_fx_tween.tween_callback(func(): _camp_advance_damage.call_deferred(model_id, generation))
+
+func _camp_advance_damage(expected_model: int, generation: int) -> void:
+    if model_root == null or _role != "camp_suministros" or model_root.get_instance_id() != expected_model or generation != _camp_fx_generation:
+        return
+    var next: int = mini(3, int(model_root.get_meta("visual_damage", 0)) + 1)
+    camp_damage_picker.select(next)
+    _camp_display()
+    if next < 3:
+        _camp_destroy_sequence()
+    else:
+        _camp_play_fx("idle")
 
 func _update_camera() -> void:
     if _role.begins_with("camp_") and model_root != null and camera != null:
