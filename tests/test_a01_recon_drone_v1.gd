@@ -180,10 +180,21 @@ func _run()->void:
                         HardwareV3.BLADE_PREFIX+str(blade_index),true,false) as MeshInstance3D
                     var old_blade:=prop_v3.find_child(
                         "A01_V1_PusherBlade_"+str(blade_index),true,false) as MeshInstance3D
-                    check(real_blade!=null and real_blade.visible and real_blade.mesh is BoxMesh,
-                        "V3 has exactly three single-ended physical blades")
+                    check(real_blade!=null and real_blade.visible and real_blade.mesh is ArrayMesh,
+                        "V17 has exactly three sculpted single-ended physical blades")
+                    if real_blade!=null and real_blade.mesh is ArrayMesh:
+                        var bounds:AABB=real_blade.mesh.get_aabb()
+                        check(bounds.position.y<0.08 and bounds.end.y>0.50,
+                            "V17 blade connects hub to swept tip")
+                        check(real_blade.mesh.get_faces().size()/3==(92 if lod==13 else 56),
+                            "V17 bounded closed blade geometry per LOD")
                     check(old_blade!=null and not old_blade.visible,
                         "V1 centered six-spoke silhouette is not rendered")
+            var housing:=model.find_child("A01_V17_FixedMotorHousing",true,false) as MeshInstance3D
+            check(housing!=null and housing.mesh is ArrayMesh and housing.get_parent()!=prop_v3,
+                "V17 static motor housing is independent of rotor")
+            check(bool(model.get_meta("tarvoka_a01_v17_sculpted_propulsion",false)),
+                "V17 native propulsion upgrade is present")
             check(int(model.get_meta("tarvoka_a01_v2_lod",0))==lod,
                 "V2 true native LOD8/13 consistency")
             check(bool(model.get_meta("tarvoka_a01_v2_no_fog_or_damage_rules",false)),
