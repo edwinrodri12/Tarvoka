@@ -38,12 +38,10 @@ static func _color(height:float,flame:bool,angle:float)->Color:
     return dark.lerp(ash,clampf(0.13+0.67*height+0.11*sin(angle*3.0),0.0,1.0))
 
 static func _face(t:SurfaceTool,a:Vector3,b:Vector3,c:Vector3,
-        outward:Vector3,flame:bool,maximum:float)->void:
-    # Same outward winding convention as the original aircraft airfoil.
-    var vertices:Array[Vector3]=[a,b,c]
-    if (b-a).cross(c-a).dot(outward)<0.0:
-        vertices=[a,c,b]
-    for p in vertices:
+        flame:bool,maximum:float)->void:
+    # Explicit topology: no independent normal-based reordering of faces.
+    # Adjacent rings share edges; clockwise winding faces out in Godot.
+    for p in [a,b,c]:
         t.set_color(_color(clampf(p.y/maximum,0.0,1.0),flame,atan2(p.z,p.x)))
         t.add_vertex(p)
 
@@ -80,15 +78,22 @@ static func _sculpt(parent:Node3D,tag:String,anchor:Vector3,
         var hi:Array=rings[j+1]
         for i in range(count):
             var next:int=(i+1)%count
-            var angle:float=TAU*(float(i)+0.5)/float(count)
-            var outward:=Vector3(cos(angle),0,sin(angle))
-            _face(t,lo[i],lo[next],hi[next],outward,flame,height)
-            _face(t,lo[i],hi[next],hi[i],outward,flame,height)
+            _face(t,lo[i],lo[next],hi[next],flame,height)
+            _face(t,lo[i],hi[next],hi[i],flame,height)
     var first:Array=rings[0]
     var last:Array=rings[rings.size()-1]
-    for i in range(1,count-1):
-        _face(t,first[0],first[i],first[i+1],Vector3.DOWN,flame,height)
-        _face(t,last[0],last[i],last[i+1],Vector3.UP,flame,height)
+    var low_center:=Vector3.ZERO
+    var high_center:=Vector3.ZERO
+    for i in range(count):
+        low_center+=first[i]
+        high_center+=last[i]
+    low_center/=float(count)
+    high_center/=float(count)
+    # Center fans keep even the irregular lobes closed without crossings.
+    for i in range(count):
+        var j:int=(i+1)%count
+        _face(t,low_center,first[j],first[i],flame,height)
+        _face(t,high_center,last[i],last[j],flame,height)
     t.index()
     t.generate_normals()
     var node:=MeshInstance3D.new()
