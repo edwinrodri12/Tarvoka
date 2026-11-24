@@ -8,6 +8,7 @@ const Drone=preload("res://scripts/ui/A01ReconDroneV1.gd")
 const Aero=preload("res://scripts/ui/A01ReconAirfoilV4.gd")
 const Damage=preload("res://scripts/ui/A01ReconDamageV6.gd")
 const Finish=preload("res://scripts/ui/A01ReconDamageFinishV14.gd")
+const Atmosphere=preload("res://scripts/ui/A01ReconAtmosphereV15.gd")
 const Arsenal=preload("res://scripts/core/ModernArsenal.gd")
 const OUT="res://build/qa/a01-v14"
 var failures:int=0
@@ -109,6 +110,22 @@ func _run()->void:
                     verify(mat!=null and mat.transparency==
                         BaseMaterial3D.TRANSPARENCY_DISABLED,
                         "no transparent/hollow damage part")
+            verify(Atmosphere.has_model(craft),"V15 six closed effect meshes")
+            var effects:Array=craft.get_meta(Atmosphere.CACHE,[])
+            verify(effects.size()==6,"exact six legacy effects replaced")
+            for entry in effects:
+                var effect:=entry[0] as MeshInstance3D
+                verify(effect!=null and effect.mesh!=null and _closed(effect.mesh),
+                    "organic smoke or fire is truly watertight")
+                if effect==null or effect.mesh==null:
+                    continue
+                var paint:=effect.material_override as StandardMaterial3D
+                verify(paint!=null and paint.vertex_color_use_as_albedo and
+                    paint.emission_enabled==bool(entry[2]),
+                    "smoke and flame use distinct vertex palettes and flame emission")
+                verify(effect.mesh.get_faces().size()/3==(140 if lod==13 else 92),
+                    "bounded fixed six-ring LOD geometry")
+                verify(not effect.is_visible_in_tree(),"intact aircraft has no plume")
             var intact:Dictionary=_stats(craft)
             verify(Damage.stage(craft)==0 and real_wing.visible and
                 not broken.is_visible_in_tree(),"D0 shows untouched full wing")
@@ -118,6 +135,23 @@ func _run()->void:
                 verify(real_wing.visible==(stage<4) and
                     broken.is_visible_in_tree()==(stage==4) and
                     left_wing.visible,"physical D4 swap never damages left wing")
+                for entry in effects:
+                    var effect:=entry[0] as MeshInstance3D
+                    verify(effect.is_visible_in_tree()==(stage>=int(entry[1])),
+                        "D0-D4 effect stage visibility")
+                    var anchor:Vector3=effect.position
+                    var mesh_before:Mesh=effect.mesh
+                    if stage>=int(entry[1]):
+                        Damage.animate(craft,0.24)
+                        var before:Vector3=effect.scale
+                        Damage.animate(craft,1.13)
+                        verify(not before.is_equal_approx(effect.scale),
+                            "real time-varying effect shape")
+                        verify(effect.position.is_equal_approx(anchor) and effect.mesh==mesh_before,
+                            "animation anchors never translate or allocate new meshes")
+                    else:
+                        verify(effect.scale.is_equal_approx(Vector3.ONE),
+                            "inactive effect stays in baseline pose")
                 var pieces:Dictionary=_stats(craft)
                 verify(int(pieces["meshes"])<=(70 if lod==8 else 95) and
                     int(pieces["triangles"])<=(12000 if lod==8 else 24000),
@@ -129,6 +163,10 @@ func _run()->void:
             verify(Damage.repair(craft) and Damage.stage(craft)==0 and
                 real_wing.visible and not broken.is_visible_in_tree(),
                 "D4->D0 fully restores real unbroken wing and fins")
+            for entry in effects:
+                var effect:=entry[0] as MeshInstance3D
+                verify(not effect.is_visible_in_tree() and effect.scale.is_equal_approx(Vector3.ONE) and
+                    effect.rotation.is_equal_approx(Vector3.ZERO),"repair resets all V15 effects")
             verify(_stats(craft)==intact,
                 "restored D0 returns exactly same visible mesh workload")
             var crest:=craft.find_child(
@@ -187,6 +225,8 @@ func _run()->void:
         verify(Damage.repair(craft) if str(shot[0])=="repair" else
             Damage.set_stage(craft,int(shot[1])),
             "set native scene state for "+str(shot[0]))
+        if int(shot[1])>=2:
+            Damage.animate(craft,0.82)
         camera.position=shot[2]
         camera.size=float(shot[4])
         camera.look_at(shot[3],Vector3.UP)
@@ -204,6 +244,7 @@ func _run()->void:
     verify(Arsenal.profile("uav_recon")==catalog,"cost/vision/fog/combat unchanged")
     vp.queue_free()
     if failures==0:
+        print("PASS A01 V15 ORGANIC EFFECTS: six sealed gradient volumes; fixed anchors; stage visibility; animation and full repair; both LODs")
         print("PASS A01 V14 REAL DAMAGE: eight factions, two LODs, sealed organic D1-D4, physically fractured right wing, genuine repair, 8 Godot renders")
         quit(0)
     else:
