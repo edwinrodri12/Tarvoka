@@ -159,13 +159,14 @@ func _run() -> void:
                 check(shoulder!=null and shoulder.get_parent()==arm and
                     closed_outward(shoulder.mesh) and
                     shoulder.has_meta(V17.OLD) and
-                    shoulder.scale.x>0.7,
+                    shoulder.scale.x>=0.65 and shoulder.scale.x<=0.72,
                     "real anatomically broadened shoulder still on arm rig")
                 var stripe: MeshInstance3D=model.find_child(
                     "V8_FaccionHombrera"+suffix,true,false) as MeshInstance3D
                 check(stripe!=null and stripe.get_parent()==arm
                     and stripe.has_meta(V17.OLD) and
-                    absf(stripe.position.x)>0.34,
+                    absf(stripe.position.x)>0.29 and
+                    absf(stripe.position.x)<0.32,
                     "faction arm identifier moved outside new armor")
                 for label in [V17.KNEE+suffix,V17.POCKET+suffix,
                         V17.SOLE+suffix]:
