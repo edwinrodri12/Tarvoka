@@ -164,6 +164,20 @@ func _run() -> void:
         visited[EXPECTED[i]] = true
         await _shot(studio, EXPECTED[i] + "_in_same_studio.png")
         if i == 0:
+            var finish: OptionButton = studio.get("camp_finish_picker") as OptionButton
+            _check(finish != null and finish.visible, "Supply V3/V4 comparison in same Studio")
+            _check(int(camp.get_meta("suministros_art_v4", 0)) == 4, "V4 supply default selected")
+            if finish != null:
+                finish.select(1)
+                finish.item_selected.emit(1)
+                await _frames(4)
+                camp = studio.get("model_root") as Node3D
+                _check(camp != null and not camp.has_meta("suministros_art_v4"), "V3 baseline restored")
+                finish.select(0)
+                finish.item_selected.emit(0)
+                await _frames(4)
+                camp = studio.get("model_root") as Node3D
+                _check(camp != null and int(camp.get_meta("suministros_art_v4", 0)) == 4, "V4 restored")
             var before_faction: Node3D = camp
             studio.call("_rotate", 84.0)
             studio.call("_change_zoom", 1)
