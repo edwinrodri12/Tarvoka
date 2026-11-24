@@ -359,6 +359,35 @@ func _run() -> void:
                         sculpt_triangles>mobile_triangles and
                         sculpt_triangles<=mobile_triangles*3.6,
                         "LOD8 external armor uses fewer triangles than hero")
+            # Verify actual posed sleeve endpoints against the hand rig,
+            # including the A/B switch while the arm is in a work pose.
+            for pose in ["idle","attack","repair","capture","idle"]:
+                check(V9.sync(model,pose),"native contact sync "+pose)
+                for side in [-1,1]:
+                    var link: MeshInstance3D=model.find_child(
+                        V17.LINK_PREFIX+"_%d"%side,true,false) as MeshInstance3D
+                    var arm: Node3D=model.find_child("BrazoRig_%d"%side,true,false) as Node3D
+                    var working: bool=side>0 and pose in ["repair","capture"]
+                    var hand: MeshInstance3D=model.find_child(
+                        V17.HAND_PALMS[2] if working else
+                        V17.HAND_PALMS[1 if side>0 else 0],true,false) as MeshInstance3D
+                    check(link!=null and arm!=null and hand!=null and
+                        link.get_parent()==arm and link.has_meta(V17.LINK_NEW) and
+                        closed_outward(link.mesh),"closed dynamic forearm "+pose)
+                    if link==null or arm==null or hand==null:
+                        continue
+                    var wrist: Vector3=arm.transform*link.transform*Vector3(0,0.5,0)
+                    var target: Vector3=hand.get_parent().transform*hand.position
+                    var elbow: Vector3=link.transform*Vector3(0,-0.5,0)
+                    check(wrist.distance_to(target)<0.04 and
+                        elbow.distance_to(Vector3(0,-0.58,-0.10))<0.04,
+                        "sleeve reaches real wrist and elbow "+pose)
+                    var saved: Transform3D=link.transform
+                    var sculpt: Mesh=link.mesh
+                    check(V17.show_finish(model,false) and link.mesh!=sculpt and
+                        link.transform==saved,"A/B preserves animated contact transform")
+                    check(V17.show_finish(model,true) and link.mesh==sculpt and
+                        link.transform==saved,"restore new sleeve without snapping pose")
             var material_kinds: Dictionary={}
             for item in model.find_children("*","MeshInstance3D",true,false):
                 var part: MeshInstance3D=item as MeshInstance3D
@@ -409,11 +438,23 @@ func _run() -> void:
                 var new_arrays: Array=part.mesh.surface_get_arrays(0)
                 var colors: PackedColorArray=new_arrays[Mesh.ARRAY_COLOR]
                 var vertices: PackedVector3Array=new_arrays[Mesh.ARRAY_VERTEX]
-                check(old_arrays[Mesh.ARRAY_VERTEX]==vertices and
-                    old_arrays[Mesh.ARRAY_NORMAL]==new_arrays[Mesh.ARRAY_NORMAL] and
-                    old_arrays[Mesh.ARRAY_INDEX]==new_arrays[Mesh.ARRAY_INDEX] and
+                # Godot repacks normals into octahedral encodings when
+                # rebuilding an ArrayMesh. Compare the decoded direction,
+                # not raw floating-point equality after a second encoding.
+                var normals_before: PackedVector3Array=old_arrays[Mesh.ARRAY_NORMAL]
+                var normals_after: PackedVector3Array=new_arrays[Mesh.ARRAY_NORMAL]
+                var normals_ok: bool=normals_before.size()==normals_after.size()
+                if normals_ok:
+                    for i in range(normals_before.size()):
+                        if normals_before[i].normalized().dot(normals_after[i].normalized())<0.99999:
+                            normals_ok=false
+                            break
+                check(old_arrays[Mesh.ARRAY_VERTEX]==vertices,
+                    "wear preserves exact vertex positions "+str(part.name))
+                check(normals_ok,"wear preserves normal direction within encoding precision "+str(part.name))
+                check(old_arrays[Mesh.ARRAY_INDEX]==new_arrays[Mesh.ARRAY_INDEX] and
                     face_count(source)==face_count(part.mesh) and closed_outward(part.mesh),
-                    "wear leaves geometry, normals and triangle budget intact "+str(part.name))
+                    "wear preserves topology and outward closure "+str(part.name))
                 var darkest: float=1.0
                 var lightest: float=0.0
                 var valid: bool=colors.size()==vertices.size()

@@ -435,7 +435,7 @@ static func surface_kind(label: String) -> String:
             return "ceramic"
     for prefix in [CASE,POCKET,"V2_CinchaPortaequipo",
             "V12_CinchaCargaDorsal","V5_SujecionBarreraIngeniero",
-            "V9_ArnesDorsalFijo"]:
+            "V9_ArnesDorsalFijo",LINK_PREFIX]:
         if label.begins_with(prefix+"_"):
             return "fabric"
     for prefix in [SOLE,TOE,"V9_DedosCerrados","V10_DedoHerramienta"]:
@@ -536,11 +536,41 @@ static func _surface_finish(model: Node3D,hero: bool) -> bool:
         part.material_override=cache[key] as StandardMaterial3D
     return true
 
+# The original V9 contact link is an animated cylinder. Replace only
+# its mesh with a tapered fabric sleeve; V9 still computes its exact
+# position, quaternion and length on every pose. The comparison must
+# never restore a stale pose transform.
+const LINK_PREFIX: String="V9_AntebrazoHaciaEmpunadura"
+const LINK_OLD: String="tarvoka_v17_link_original"
+const LINK_NEW: String="tarvoka_v17_link_anatomic"
+
+static func _sculpt_contact_links(model: Node3D, hero: bool) -> bool:
+    var sleeve: ArrayMesh=V13._lathe([
+        Vector3(0.067,-0.5,0.071),
+        Vector3(0.076,-0.37,0.075),
+        Vector3(0.073,-0.20,0.071),
+        Vector3(0.059,-0.04,0.063),
+        Vector3(0.063,0.12,0.066),
+        Vector3(0.053,0.29,0.055),
+        Vector3(0.050,0.5,0.052)
+    ],hero)
+    for side in [-1,1]:
+        var link: MeshInstance3D=_find(model,LINK_PREFIX+"_%d"%side)
+        var arm: Node3D=model.find_child("BrazoRig_%d"%side,true,false) as Node3D
+        if link==null or arm==null or link.get_parent()!=arm:
+            return false
+        link.set_meta(LINK_OLD,link.mesh)
+        link.set_meta(LINK_NEW,sleeve)
+        link.mesh=sleeve
+    return true
+
 static func show_finish(model: Node3D, enabled: bool) -> bool:
     if not has_model(model):
         return false
     for item in model.find_children("*","MeshInstance3D",true,false):
         var part: MeshInstance3D=item as MeshInstance3D
+        if part.has_meta(LINK_OLD) and part.has_meta(LINK_NEW):
+            part.mesh=part.get_meta(LINK_NEW if enabled else LINK_OLD)
         if part.has_meta(FOLD_VISIBLE):
             part.visible=false if enabled else bool(part.get_meta(FOLD_VISIBLE))
         if part.has_meta(FINISH_OLD) and part.has_meta(FINISH_NEW):
@@ -770,6 +800,8 @@ static func apply(model: Node3D, hero: bool) -> bool:
                 return false
 
     if not _sculpt_hands(model,hero) or not _sculpt_uniform(model,hero):
+        return false
+    if not _sculpt_contact_links(model,hero):
         return false
     if not _sculpt_harness(model,hero):
         return false
