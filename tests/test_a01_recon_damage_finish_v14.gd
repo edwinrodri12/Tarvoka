@@ -48,6 +48,40 @@ func _closed(mesh:Mesh)->bool:
             return false
     return true
 
+# A closed surface can still be completely inside-out. Signed volume
+# must be NEGATIVE in Godot's clockwise front-face convention.
+func _exterior(mesh:Mesh)->bool:
+    var faces:PackedVector3Array=mesh.get_faces()
+    if faces.size()<12:
+        return false
+    var center:Vector3=mesh.get_aabb().get_center()
+    var volume:float=0.0
+    for i in range(0,faces.size(),3):
+        var a:Vector3=faces[i]-center
+        var b:Vector3=faces[i+1]-center
+        var c:Vector3=faces[i+2]-center
+        volume+=a.dot(b.cross(c))/6.0
+    return volume < -0.00000000001
+
+func _audit_exterior(craft:Node3D)->void:
+    for node in craft.find_children("*","MeshInstance3D",true,false):
+        var part:=node as MeshInstance3D
+        if part==null or not part.is_visible_in_tree():
+            continue
+        var mat:=part.material_override as StandardMaterial3D
+        verify(mat!=null and mat.albedo_color.a>=0.999 and
+            mat.transparency==BaseMaterial3D.TRANSPARENCY_DISABLED and
+            mat.cull_mode==BaseMaterial3D.CULL_BACK,
+            "opaque single-sided exterior: "+str(part.name))
+        if part.mesh is ArrayMesh:
+            verify(_closed(part.mesh),"no open or mismatched edges: "+str(part.name))
+            verify(_exterior(part.mesh),"CLOCKWISE exterior: "+str(part.name))
+            for surface in range(part.mesh.get_surface_count()):
+                var arrays:Array=part.mesh.surface_get_arrays(surface)
+                if arrays[Mesh.ARRAY_COLOR]!=null:
+                    for color in arrays[Mesh.ARRAY_COLOR]:
+                        verify(color.a>=0.999,"opaque vertex color "+str(part.name))
+
 func _stats(craft:Node3D)->Dictionary:
     var meshes:int=0
     var triangles:int=0
@@ -123,9 +157,25 @@ func _run()->void:
                 verify(paint!=null and paint.vertex_color_use_as_albedo and
                     paint.emission_enabled==bool(entry[2]),
                     "smoke and flame use distinct vertex palettes and flame emission")
-                verify(effect.mesh.get_faces().size()/3==(140 if lod==13 else 92),
+                verify(effect.mesh.get_faces().size()/3==(144 if lod==13 else 96),
                     "bounded fixed six-ring LOD geometry")
                 verify(not effect.is_visible_in_tree(),"intact aircraft has no plume")
+            var hull:=craft.find_child("A01_V11_ClosedTaperedCompositeFuselage",true,false) as MeshInstance3D
+            var old_nose:=craft.find_child("A01_V10_SealedCompositeNoseLoft",true,false) as MeshInstance3D
+            verify(hull!=null and hull.visible and old_nose!=null and not old_nose.visible,
+                "one continuous visible shell, legacy overlapping nose hidden")
+            if hull!=null:
+                var bounds:AABB=hull.mesh.get_aabb()
+                verify(bounds.position.z<-1.34 and bounds.end.z>1.16,
+                    "one closed hull spans entire nose and tail")
+            for tag in ["A01_V5_SmoothTailBoom_Left","A01_V5_SmoothTailBoom_Right"]:
+                var boom:=craft.find_child(tag,true,false) as MeshInstance3D
+                verify(boom!=null and boom.visible and boom.mesh is ArrayMesh,
+                    "structural boom sculpt replaces disconnected ellipsoid")
+                if boom!=null:
+                    var bounds:AABB=boom.mesh.get_aabb()
+                    verify(bounds.position.z<-0.21 and bounds.end.z>1.46 and bounds.end.y>1.08,
+                        "boom physically reaches wing spar and tail hinge")
             var intact:Dictionary=_stats(craft)
             verify(Damage.stage(craft)==0 and real_wing.visible and
                 not broken.is_visible_in_tree(),"D0 shows untouched full wing")
@@ -152,6 +202,7 @@ func _run()->void:
                     else:
                         verify(effect.scale.is_equal_approx(Vector3.ONE),
                             "inactive effect stays in baseline pose")
+                _audit_exterior(craft)
                 var pieces:Dictionary=_stats(craft)
                 verify(int(pieces["meshes"])<=(70 if lod==8 else 95) and
                     int(pieces["triangles"])<=(12000 if lod==8 else 24000),
@@ -244,6 +295,7 @@ func _run()->void:
     verify(Arsenal.profile("uav_recon")==catalog,"cost/vision/fog/combat unchanged")
     vp.queue_free()
     if failures==0:
+        print("PASS A01 V16 SOLID EXTERIOR: closed clockwise visible meshes, opaque vertices, continuous nose shell, rooted tail booms")
         print("PASS A01 V15 ORGANIC EFFECTS: six sealed gradient volumes; fixed anchors; stage visibility; animation and full repair; both LODs")
         print("PASS A01 V14 REAL DAMAGE: eight factions, two LODs, sealed organic D1-D4, physically fractured right wing, genuine repair, 8 Godot renders")
         quit(0)
