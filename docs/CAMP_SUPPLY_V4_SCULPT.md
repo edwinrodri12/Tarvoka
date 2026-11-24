@@ -31,3 +31,7 @@ V4.2 pasó el CI nativo. V4.3 reemplaza mobiliario V3 por bancada, cajones, cons
 ## V4.4 — impactos y destrucción progresiva
 
 V4.3 pasó las pruebas nativas y exportación web. V4.4 implementa destello, chispas, humo ascendente, llamas y fragmentos estilizados con mallas opacas reutilizables y presupuesto acotado. D1 muestra humo ligero; D2/D3 fuego y humo. El visor unificado ofrece impacto ligero, explosión, animar daño actual, detener efectos y secuencia D0–D3. Cambios de modelo o navegación cancelan tweens y generaciones obsoletas. D3 conserva solo restos. QA 72 variantes y 18 PNG. Sin cambios de combate. Pendiente CI y revisión visual.
+
+## V4.5 — revisión integral de capturas y ergonomía
+
+V4.4 superó la QA nativa y generó 18 capturas. En ellas, el impacto ligero y la explosión aparecían demasiado pequeños u ocultos por el techo. Se trasladan a la fachada exterior visible, con humo y llamas mejor escalados. La cubierta de inspección gira hacia arriba, evitando atravesar el equipo lateral; la luminaria se fija a una viga real con ménsulas. D2 incorpora chapa caída y D3 un depósito deformado cerrado, armario derrumbado y restos del bastidor. El visor conserva la inspección interior al cambiar facción/LOD y adapta la cámara. Se extienden las comprobaciones geométricas y de la escena original. La publicación requiere QA de esta revisión y exportación web.

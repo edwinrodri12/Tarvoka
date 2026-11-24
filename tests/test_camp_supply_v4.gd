@@ -45,7 +45,7 @@ func _audit(faction: int, lod: int, damage: int) -> Node3D:
         return null
     audits += 1
     check(int(model.get_meta("suministros_art_v4", 0)) == 4, "V4 metadata")
-    check(model.get_meta("suministros_art_revision", "") == "4.4", "Latest V4.4 revision")
+    check(model.get_meta("suministros_art_revision", "") == "4.5", "Latest V4.5 revision")
     check(model.get_meta("no_gameplay_effects", false) and model.get_meta("temporary_structure", false), "Art-only temporary structure")
     var meshes: Array[MeshInstance3D] = []
     _collect(model, meshes)
@@ -74,12 +74,14 @@ func _audit(faction: int, lod: int, damage: int) -> Node3D:
     if damage == 3:
         check(core == null, "Destroyed camp cannot resurrect")
         check(model.has_node("V43_DestroyedRemains"), "Detailed collapsed wreck")
+        check(model.has_node("V43_DestroyedRemains/V45_CrushedEquipmentShell"), "Closed crushed equipment remains")
         check(not V43.service_pose(model, 0.5), "Destroyed equipment cannot animate")
     else:
         check(core != null, "V4 built within V2 original hierarchy")
         if core != null:
             var rear: Node3D = core.get_node("V4_RearGablePivot") as Node3D
             check(rear.has_node("V4_GableClosedPanel"), "Actual rear closure")
+            check(core.has_node("V43_InteriorService/V45_LampSupportBeam"), "Interior light physically supported")
             check(core.has_node("V43_InteriorService/V43_ServiceDesk/V43_ConsoleScreen") and core.has_node("V43_InteriorService/V43_StorageRack"), "Real interior furniture and equipment")
             var interior_light: OmniLight3D = core.get_node("V43_InteriorService/V43_InteriorLamp/V43_InteriorLight") as OmniLight3D
             check(interior_light.visible == (damage < 2 and lod == 13), "LOD-aware light and damaged blackout")
@@ -98,7 +100,7 @@ func _audit(faction: int, lod: int, damage: int) -> Node3D:
             if damage < 2:
                 check(V43.inspect_interior(model, true), "Interior inspection uses hinges")
                 var open_leaf: Node3D = v2.get_node("V2_ArticulacionCubierta_-1") as Node3D
-                check(absf(open_leaf.rotation_degrees.z) > 100.0, "Roof physically opens")
+                check(open_leaf.rotation_degrees.z > 90.0 and open_leaf.rotation_degrees.z < 95.0, "Left roof swings upward instead of through side equipment")
                 check(V43.inspect_interior(model, false), "Roof inspection reversible")
                 check(V43.service_pose(model, 0.5), "Service midpoint")
                 var lever: Node3D = v2.get_node("V2_EstacionBombeo/V43_ServiceLever") as Node3D
@@ -120,9 +122,11 @@ func _audit(faction: int, lod: int, damage: int) -> Node3D:
         check(not V43.damage_fx_pose(model, "blast", 0.2), "Wreck not impacted again")
     else:
         check(V43.damage_fx_pose(model, "bullet", 0.07), "Light impact")
-        check((effects.get_node("Flash") as Node3D).visible, "Light flash visible")
+        var flash: Node3D = effects.get_node("Flash") as Node3D
+        check(flash.visible and flash.position.z < -0.20 and flash.position.x > 1.5, "Light flash outside front wall")
         check(V43.damage_fx_pose(model, "blast", 0.25), "Blast effect")
         check((effects.get_node("Fire/Flame_0") as Node3D).visible and (effects.get_node("Fragments/Chip_0") as Node3D).visible, "Blast flame and fragments")
+        check((effects.get_node("Fire/Flame_0") as Node3D).position.z < -0.45, "Blast visible outside roof shadow")
         check(V43.damage_fx_pose(model, "blast", 1.0), "Returns to idle")
     check(int(model.get_meta("visual_damage", -1)) == damage, "FX does not alter damage state")
     V43.damage_fx_pose(model, "idle", 0.34)

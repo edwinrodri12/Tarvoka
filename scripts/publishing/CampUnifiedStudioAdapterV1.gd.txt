@@ -12,7 +12,7 @@ const CampRoster = preload("res://scripts/ui/InfantryCampRosterV1.gd")
 const FIRST_CAMP_INDEX: int = 7
 const CAMP_KEYS := ["suministros", "reconocimiento", "defensivo", "medico"]
 const CAMP_LABELS := [
-    "Campamento de Suministros · V4.4",
+    "Campamento de Suministros · V4.5",
     "Campamento de Reconocimiento · V2",
     "Campamento Defensivo · V2",
     "Campamento Médico · V2"
@@ -96,7 +96,7 @@ func _camp_create_controls() -> void:
     camp_controls.add_child(camp_lod_picker)
     camp_finish_picker = OptionButton.new()
     camp_finish_picker.name = "SuministrosComparacionV3V4"
-    camp_finish_picker.add_item("Suministros V4.4 · daños y efectos")
+    camp_finish_picker.add_item("Suministros V4.5 · revisión integral")
     camp_finish_picker.add_item("Suministros V3 · comparación anterior")
     camp_finish_picker.select(0)
     camp_finish_picker.item_selected.connect(_camp_option_changed)
@@ -197,6 +197,7 @@ func _camp_display() -> void:
     var previous_kind: String = str(model_root.get_meta(
         "camp_kind", "")) if model_root != null else ""
     var same_camp: bool = previous_kind == camp_kind
+    var previous_interior: bool = same_camp and bool(model_root.get_meta("suministros_v43_interior_open", false))
     var previous_yaw: float = _yaw
     var previous_zoom: float = _zoom
     var previous_deploy: float = float(model_root.get_meta(
@@ -229,6 +230,8 @@ func _camp_display() -> void:
     model_root.rotation_degrees.y = _yaw
     if same_camp and not CampArt.pose_deploy(model_root, previous_deploy):
         push_error("CAMP STUDIO: cannot restore current deployment state")
+    if previous_interior and damage < 2 and camp_kind == "suministros" and camp_finish_picker.selected == 0:
+        SupplyV43.inspect_interior(model_root, true)
     camp_controls.visible = true
     _camp_hide_prior_controls()
     _update_camera()
@@ -260,6 +263,7 @@ func _camp_interior(enabled: bool) -> void:
     if not CampArt.pose_deploy(model_root, 1.0):
         return
     if SupplyV43.inspect_interior(model_root, enabled):
+        _update_camera()
         _update_details()
 
 func _camp_service_frame(progress: float) -> void:
@@ -330,6 +334,9 @@ func _update_camera() -> void:
     if _role.begins_with("camp_") and model_root != null and camera != null:
         var focus_y: float = 1.55 if camp_kind == "reconocimiento" else 0.95
         var base_size: float = 11.9 if camp_kind == "reconocimiento" else 9.8
+        if camp_kind == "suministros" and model_root.get_meta("suministros_v43_interior_open", false):
+            focus_y = 1.70
+            base_size = 11.0
         camera.projection = Camera3D.PROJECTION_ORTHOGONAL
         camera.size = base_size / clampf(_zoom, 0.65, 2.8)
         camera.position = Vector3(9.6, 8.1, -10.2)
