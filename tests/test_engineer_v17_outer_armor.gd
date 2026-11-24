@@ -238,6 +238,27 @@ func _run() -> void:
                     var stripe: MeshInstance3D=model.find_child(label,true,false) as MeshInstance3D
                     check(stripe!=null and stripe.has_meta(V17.FOLD_VISIBLE) and
                         not stripe.visible,"obsolete floating strip hidden "+label)
+            for label in V17.harness_labels(lod==13):
+                var gear: MeshInstance3D=model.find_child(label,true,false) as MeshInstance3D
+                check(gear!=null and gear.has_meta(V17.OLD) and
+                    closed_outward(gear.mesh) and
+                    gear.material_override is StandardMaterial3D and
+                    (gear.material_override as StandardMaterial3D).transparency==
+                        BaseMaterial3D.TRANSPARENCY_DISABLED,
+                    "closed textile strap or fitting "+label)
+                if gear==null or not gear.has_meta(V17.OLD):
+                    continue
+                var old: Dictionary=gear.get_meta(V17.OLD)
+                check(gear.mesh!=old["mesh"] and
+                    gear.position.distance_to(old["position"])<0.060,
+                    "fitting remains at original anchor "+label)
+                if label=="V5_ArnesDiagonalIngeniero":
+                    check(gear.position.z<(-0.48),
+                        "faction harness sits in front of new breastplate")
+                if label.begins_with("V12_CinchaCargaDorsal"):
+                    check(gear.get_parent()==torso and
+                        gear.mesh.get_aabb().size.x>gear.mesh.get_aabb().size.z,
+                        "flat dorsal ribbon remains on torso rig")
             var hand_labels: Array[String]=[]
             hand_labels.append_array(V17.HAND_PALMS)
             hand_labels.append_array(V17.HAND_CUFFS)
@@ -288,6 +309,10 @@ func _run() -> void:
                     var hand: MeshInstance3D=model.find_child(label,true,false) as MeshInstance3D
                     if hand!=null:
                         sculpt_triangles+=face_count(hand.mesh)
+                for label in V17.harness_labels(lod==13):
+                    var gear: MeshInstance3D=model.find_child(label,true,false) as MeshInstance3D
+                    if gear!=null:
+                        sculpt_triangles+=face_count(gear.mesh)
                 if lod==8:
                     mobile_triangles=sculpt_triangles
                 else:

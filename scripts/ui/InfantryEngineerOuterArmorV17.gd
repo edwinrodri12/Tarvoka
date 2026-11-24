@@ -241,6 +241,89 @@ static func _sculpt_uniform(model: Node3D, hero: bool) -> bool:
             stripe.visible=false
     return true
 
+# Woven straps must bend along their length, not resemble rigid beams.
+# Starting from a closed press keeps the rim and underside real.
+static func _strap_press(w: float,h: float,d: float,bow: float,
+        hero: bool) -> ArrayMesh:
+    var base: ArrayMesh=V13._rounded_press(w,h,d,w*0.24,d*0.16,hero)
+    var arrays: Array=base.surface_get_arrays(0)
+    var points: PackedVector3Array=arrays[Mesh.ARRAY_VERTEX]
+    var normals: PackedVector3Array=arrays[Mesh.ARRAY_NORMAL]
+    var raw: Variant=arrays[Mesh.ARRAY_INDEX]
+    var indices: PackedInt32Array=(raw if raw is PackedInt32Array
+        else PackedInt32Array())
+    var out:=SurfaceTool.new()
+    out.begin(Mesh.PRIMITIVE_TRIANGLES)
+    var half: float=h*0.5
+    var count: int=indices.size() if not indices.is_empty() else points.size()
+    for i in range(count):
+        var ix: int=indices[i] if not indices.is_empty() else i
+        var p: Vector3=points[ix]
+        var n: Vector3=normals[ix]
+        var slope: float=2.0*bow*p.y/(half*half)
+        p.z+=bow*pow(p.y/half,2.0)
+        out.set_normal(Vector3(n.x,n.y-slope*n.z,n.z).normalized())
+        out.add_vertex(p)
+    return out.commit()
+
+# All entries reuse real existing nodes and their materials. The dorsal
+# load straps replace cylindrical rods with broad textile ribbons; their
+# original rotation is preserved, so both endpoints stay near the carrier.
+static func harness_labels(hero: bool) -> Array[String]:
+    var labels: Array[String]=["V5_ArnesDiagonalIngeniero"]
+    for side in [-1,1]:
+        var suffix: String="_%d"%side
+        for prefix in ["V2_CinchaPortaequipo","V5_SujecionBarreraIngeniero",
+                "V12_CinchaCargaDorsal","V2_FaccionCincha"]:
+            labels.append(prefix+suffix)
+        if hero:
+            for prefix in ["V9_BrocheArnesFijo","V12_CierrePouchMetalico",
+                    "V8_CosturaHombrera"]:
+                labels.append(prefix+suffix)
+            for row in range(2):
+                labels.append("V12_CosturaEstuche_%d_%d"%[side,row])
+    return labels
+
+static func _sculpt_harness(model: Node3D,hero: bool) -> bool:
+    for label in harness_labels(hero):
+        var part: MeshInstance3D=_find(model,label)
+        if part==null or part.mesh==null:
+            return false
+        var dims: Vector3=part.mesh.get_aabb().size
+        var pos: Vector3=part.position
+        var replacement: ArrayMesh
+        var scale: Vector3=Vector3.ONE
+        if label=="V5_ArnesDiagonalIngeniero":
+            # The enlarged V17 breastplate protrudes beyond V15's strap.
+            # Lay the strap across its front, curling ends toward the body.
+            replacement=_strap_press(0.108,0.640,0.036,0.080,hero)
+            pos.z=-0.493
+        elif label.begins_with("V12_CinchaCargaDorsal"):
+            replacement=_strap_press(0.058,dims.y,0.022,-0.018,hero)
+        elif label.begins_with("V2_CinchaPortaequipo"):
+            replacement=_strap_press(0.073,0.610,0.037,-0.028,hero)
+        elif label.begins_with("V5_SujecionBarreraIngeniero"):
+            replacement=_strap_press(0.103,0.280,0.037,-0.018,hero)
+        elif label.begins_with("V2_FaccionCincha"):
+            replacement=_strap_press(0.056,0.116,0.018,-0.006,hero)
+        elif label.begins_with("V9_BrocheArnesFijo"):
+            # Solid cast clasp with curved face and full underside.
+            replacement=V13._rounded_press(0.110,0.080,0.038,
+                0.018,0.006,hero)
+        elif label.begins_with("V12_CierrePouchMetalico"):
+            replacement=V13._rounded_press(0.073,0.039,0.029,
+                0.010,0.004,hero)
+        elif label.begins_with("V8_CosturaHombrera"):
+            replacement=_conformal_press(0.220,0.016,0.018,
+                0.005,0.003,0.020,hero)
+        else:
+            # Existing case seam was a cylinder. Use a slim sewn welt
+            # instead, preserving the original case-facing orientation.
+            replacement=_strap_press(0.013,dims.y,0.011,-0.003,hero)
+        if not _change(model,label,replacement,scale,pos):
+            return false
+    return true
+
 static func show_finish(model: Node3D, enabled: bool) -> bool:
     if not has_model(model):
         return false
@@ -453,6 +536,8 @@ static func apply(model: Node3D, hero: bool) -> bool:
                 return false
 
     if not _sculpt_hands(model,hero) or not _sculpt_uniform(model,hero):
+        return false
+    if not _sculpt_harness(model,hero):
         return false
 
     # No new MeshInstance3D; all faction materials and collision bodies stay.
