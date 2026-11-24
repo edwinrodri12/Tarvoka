@@ -5,6 +5,7 @@ extends SceneTree
 const Models=preload("res://scripts/ui/UnitModels3D.gd")
 const V6=preload("res://scripts/ui/InfantryEngineerFinishV6.gd")
 const V12=preload("res://scripts/ui/InfantryEngineerDorsalV12.gd")
+const V9=preload("res://scripts/ui/InfantryEngineerFinishV9.gd")
 const V16=preload("res://scripts/ui/InfantryEngineerSilhouetteV16.gd")
 const V17=preload("res://scripts/ui/InfantryEngineerOuterArmorV17.gd")
 const OUT: String="res://build/qa/engineer-v17"
@@ -214,6 +215,35 @@ func _run() -> void:
                         knee_faction.has_meta(V17.OLD) and
                         knee_faction.position.z<(-0.22),
                         "Android knee identity remains outside metal shell")
+            var hand_labels: Array[String]=[]
+            hand_labels.append_array(V17.HAND_PALMS)
+            hand_labels.append_array(V17.HAND_CUFFS)
+            hand_labels.append_array(V17.hand_digits(lod==13))
+            for label in hand_labels:
+                var hand: MeshInstance3D=model.find_child(label,true,false) as MeshInstance3D
+                check(hand!=null and closed_outward(hand.mesh) and
+                    hand.has_meta(V17.OLD) and
+                    hand.material_override is StandardMaterial3D and
+                    (hand.material_override as StandardMaterial3D).transparency==
+                        BaseMaterial3D.TRANSPARENCY_DISABLED,
+                    "opaque closed glove/cuff/digit "+label)
+            var right: MeshInstance3D=model.find_child(V17.HAND_PALMS[1],true,false) as MeshInstance3D
+            var work: MeshInstance3D=model.find_child(V17.HAND_PALMS[2],true,false) as MeshInstance3D
+            if right!=null and work!=null:
+                var right_pos: Vector3=right.position
+                var work_pos: Vector3=work.position
+                for pose in ["idle","attack","repair","capture","idle"]:
+                    check(V9.sync(model,pose),"glove contacts sync "+pose)
+                    var operating: bool=pose in ["repair","capture"]
+                    check(right.visible!=operating and work.visible==operating and
+                        right.position==right_pos and work.position==work_pos,
+                        "right hand transfers without drifting "+pose)
+                    for digit_label in V17.hand_digits(lod==13):
+                        var digit: MeshInstance3D=model.find_child(digit_label,true,false) as MeshInstance3D
+                        if digit!=null:
+                            var expected: bool=operating if digit_label.begins_with("V10_") else (
+                                true if digit_label.begins_with("V9_DedosCerrados_-1_") else not operating)
+                            check(digit.visible==expected,"digit visibility follows grip "+digit_label)
             # Enforce real Android LOD reduction instead of just claiming
             # that keeping mesh nodes constant guarantees mobile performance.
             if faction==0:
@@ -231,6 +261,10 @@ func _run() -> void:
                         var part: MeshInstance3D=model.find_child(
                             label,true,false) as MeshInstance3D
                         sculpt_triangles+=face_count(part.mesh)
+                for label in hand_labels:
+                    var hand: MeshInstance3D=model.find_child(label,true,false) as MeshInstance3D
+                    if hand!=null:
+                        sculpt_triangles+=face_count(hand.mesh)
                 if lod==8:
                     mobile_triangles=sculpt_triangles
                 else:

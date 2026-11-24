@@ -23,6 +23,19 @@ const FACE_PARTS: Array[String]=["V5_ViseraObraIngeniero",
     "V5_InsigniaCascoIngeniero","V9_VisorContinuoOpaco",
     "V7_MascaraResistenciaIngeniero","V7_FiltroCentralRespirador"]
 const ELBOW: String="V10_CubiertaCodo"
+const HAND_PALMS: Array[String]=["V9_GuanteContacto_-1",
+    "V9_GuanteContacto_1","V9_GuanteTrabajoFijadoHerramienta"]
+const HAND_CUFFS: Array[String]=["V10_MunecaContactoFusil_-1",
+    "V10_MunecaContactoFusil_1","V10_MunecaContactoHerramienta"]
+
+static func hand_digits(hero: bool) -> Array[String]:
+    var labels: Array[String]=[]
+    for i in range(3):
+        if hero:
+            for side in [-1,1]:
+                labels.append("V9_DedosCerrados_%d_%d"%[side,i])
+        labels.append("V10_DedoHerramienta_%d"%i)
+    return labels
 
 static func _find(model: Node3D, name: String) -> MeshInstance3D:
     return model.find_child(name,true,false) as MeshInstance3D
@@ -84,6 +97,60 @@ static func _conformal_press(w: float,h: float,d: float,r: float,
         out.set_normal(Vector3(n.x-slope*n.z,n.y,n.z).normalized())
         out.add_vertex(p)
     return out.commit()
+
+# Existing gloves use their weapon/tool rig as parent. Preserve the
+# contact centres and all V9 visibility switching, changing meshes only.
+static func _sculpt_hands(model: Node3D, hero: bool) -> bool:
+    var gun: Node3D=model.find_child("ArmamentoRig",true,false) as Node3D
+    var tool: Node3D=model.find_child("V6_HerramientaArticuladaRig",true,false) as Node3D
+    if gun==null or tool==null:
+        return false
+    # A tapered heel and broad knuckles replace the spherical mitt.
+    var palm_mesh: ArrayMesh=V13._lathe([
+        Vector3(0.047,-0.081,0.058),
+        Vector3(0.073,-0.065,0.078),
+        Vector3(0.084,-0.029,0.088),
+        Vector3(0.082,0.018,0.087),
+        Vector3(0.064,0.055,0.072),
+        Vector3(0.048,0.083,0.053)
+    ],hero)
+    # Broad overlapping wrist cuff, no opening through the hand.
+    var cuff_mesh: ArrayMesh=V13._lathe([
+        Vector3(0.053,-0.075,0.059),
+        Vector3(0.072,-0.050,0.076),
+        Vector3(0.075,0.027,0.077),
+        Vector3(0.065,0.069,0.068)
+    ],hero)
+    for i in range(HAND_PALMS.size()):
+        var palm: MeshInstance3D=_find(model,HAND_PALMS[i])
+        var cuff: MeshInstance3D=_find(model,HAND_CUFFS[i])
+        var rig: Node3D=tool if i==2 else gun
+        if palm==null or cuff==null or palm.get_parent()!=rig or cuff.get_parent()!=rig:
+            return false
+        if not _change(model,HAND_PALMS[i],palm_mesh,Vector3.ONE,palm.position):
+            return false
+        if not _change(model,HAND_CUFFS[i],cuff_mesh,Vector3.ONE,cuff.position):
+            return false
+    # Separate curved finger volumes, sharing one closed mesh per LOD.
+    # Their bases overlap the palm; no new digits or rig nodes are added.
+    var digit_mesh: ArrayMesh=V13._lathe([
+        Vector3(0.013,-0.052,0.017),
+        Vector3(0.020,-0.038,0.028),
+        Vector3(0.023,-0.005,0.035),
+        Vector3(0.022,0.030,0.032),
+        Vector3(0.016,0.053,0.021)
+    ],hero)
+    for label in hand_digits(hero):
+        var digit: MeshInstance3D=_find(model,label)
+        var rig: Node3D=tool if label.begins_with("V10_") else gun
+        if digit==null or digit.get_parent()!=rig:
+            return false
+        var original: Vector3=digit.position
+        # Curl back into the palm, preserving the contact point of the grip.
+        var fitted: Vector3=original+Vector3(0,0.008,0.006)
+        if not _change(model,label,digit_mesh,Vector3.ONE,fitted):
+            return false
+    return true
 
 static func show_finish(model: Node3D, enabled: bool) -> bool:
     if not has_model(model):
@@ -293,6 +360,9 @@ static func apply(model: Node3D, hero: bool) -> bool:
             if not _place(model,marker.name,
                     Vector3(0,-0.485,-0.227)):
                 return false
+
+    if not _sculpt_hands(model,hero):
+        return false
 
     # No new MeshInstance3D; all faction materials and collision bodies stay.
     model.set_meta(FLAG,true)
