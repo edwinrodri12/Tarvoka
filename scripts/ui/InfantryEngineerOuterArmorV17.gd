@@ -111,13 +111,17 @@ static func apply(model: Node3D, hero: bool) -> bool:
     # The V14 rounded shoulder was physically undersized and looked like
     # an isolated ball. New deltoids cover arm roots and descend toward
     # the biceps. Still a CLOSED continuous solid on each original arm rig.
+    # Broad sloped deltoid armor, NOT the oversize sphere revealed by
+    # the first 5-angle V17 native render. The shoulder has a flatter
+    # upper crest, defined sidewall and a narrower bicep contact.
     var shoulder_rings: Array=[
-        Vector3(0.072,-0.470,0.074),
-        Vector3(0.237,-0.425,0.221),
-        Vector3(0.386,-0.270,0.352),
-        Vector3(0.468,-0.035,0.452),
-        Vector3(0.447,0.184,0.441),
-        Vector3(0.311,0.379,0.318),
+        Vector3(0.072,-0.470,0.077),
+        Vector3(0.177,-0.415,0.184),
+        Vector3(0.298,-0.266,0.310),
+        Vector3(0.431,-0.070,0.396),
+        Vector3(0.430,0.109,0.395),
+        Vector3(0.356,0.252,0.340),
+        Vector3(0.184,0.415,0.207),
         Vector3(0.085,0.497,0.104)
     ]
     for side in [-1,1]:
@@ -131,7 +135,7 @@ static func apply(model: Node3D, hero: bool) -> bool:
             return false
         if not _change(model,SHOULDER+suffix,
                 V13._lathe(shoulder_rings,hero),
-                Vector3(0.74,0.59,0.70),
+                Vector3(0.68,0.55,0.65),
                 Vector3(0.0,-0.083,-0.065)):
             return false
         # Place existing painted faction shoulder strip ON the outer
@@ -141,7 +145,7 @@ static func apply(model: Node3D, hero: bool) -> bool:
         if stripe==null or stripe.get_parent()!=arm:
             return false
         if not _place(model,stripe.name,
-                Vector3(float(side)*0.350,-0.074,-0.091)):
+                Vector3(float(side)*0.298,-0.074,-0.091)):
             return false
 
         var leg: Node3D=model.find_child(
