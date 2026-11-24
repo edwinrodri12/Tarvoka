@@ -181,6 +181,13 @@ static func set_stage(root:Node3D,new_stage:int)->bool:
         if rotor!=null:
             rotor.visible=new_stage<4
     root.set_meta(STAGE_KEY,new_stage)
+    # V14 only swaps the right intact wing/tip for a genuinely broken
+    # sealed wing at D4. Layer 4 visibility drives the wreck replacement.
+    # Reversible for D4->D0 and for the original Studio LOD rebuild.
+    if bool(root.get_meta("tarvoka_a01_v14_organic_damage",false)):
+        for intact in root.get_meta("tarvoka_a01_v14_intact_wing_nodes",[]):
+            if is_instance_valid(intact):
+                (intact as MeshInstance3D).visible=new_stage<4
     return true
 
 static func repair(root:Node3D)->bool:

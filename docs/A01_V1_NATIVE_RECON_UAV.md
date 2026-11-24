@@ -211,3 +211,14 @@ La V12.1 está integrada en `main` tras pasar Godot 4.3 nativo y el compilador c
 - `UnitModels3D` agrega V13 al final de la cadena existente; `BastionStudioAdapter` mantiene el mismo visor online y los cambios de facción y LOD, sin páginas ni unidades alternativas.
 
 **Puerta de calidad:** no integrar en `main` hasta que el nuevo workflow nativo y la compilación completa del visor de Godot 4.3 se completen con éxito, y las ocho imágenes se inspeccionen. Sin alteraciones de visión de niebla, movimiento, combustible, economía, ataques ni helicópteros. La medida de FPS y temperatura en Android físico sigue pendiente.
+
+
+## A01 V14 — daños físicos D1–D4, fractura real de ala y reparación (23 noviembre 2026)
+
+**Motivación:** las capturas nativas V13 muestran todavía rayones, quemaduras, planchas y fragmentos dibujados como paralelepípedos sobre el fuselaje. La geometría D4 anterior conservaba el ala derecha totalmente intacta debajo de una caja negra, de modo que no existía una rotura visible real.
+
+**Implementación:** \`A01ReconDamageFinishV14.gd\` sustituye los nueve bloques de impactos D1–D4 por mallas opacas cerradas con superficies adaptadas a los perfiles aerodinámicos exactos de V4/V11/V13; conserva humos, llamas, controles de fase D0–D4 y reparaciones V6. El D4 oculta temporalmente el ala derecha completa y los componentes de su punta y muestra una **nueva ala acortada de perfil cerrado y extremo serrado**, con núcleo expuesto y dos esquirlas tridimensionales separadas. El ala izquierda permanece intacta. Al reparar se restauran las mismas instancias de malla y todas sus superficies; no se pierden colores de facción, cámara ni LOD.
+
+**Integración y seguridad:** \`A01ReconDamageV6.set_stage\` sigue siendo la única API de daño; una pequeña sincronización de nodos se activa únicamente cuando está presente el indicador V14. No cambia HP, visión, niebla, movimiento, combustible, ataque ni la configuración del helicóptero HAT-29. \`UnitModels3D\` y el Studio online comparten la misma construcción del A01; no se abre un segundo visor.
+
+**Prueba obligatoria:** \`test_a01_recon_damage_finish_v14.gd\` valida geometría sellada 2-manifold, cero caras degeneradas, las ocho facciones, ambos LOD, 5 estados, cambio real de ala, reparación exacta, presupuestos de mallas y triángulos y ocho nuevas capturas auténticas de Godot 4.3. Workflows A01 y Pages deben pasar antes del merge. Sin medición de FPS/temperatura Android físico no se considera arte terminado.
