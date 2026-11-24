@@ -129,8 +129,9 @@ func _run()->void:
             var nose:=m.find_child(V10.NOSE,true,false) as MeshInstance3D
             var ring:=m.find_child(V10.GIMBAL,true,false) as MeshInstance3D
             var thermal:=m.find_child(V10.THERMAL,true,false) as MeshInstance3D
-            check(nose!=null and nose.visible and nose.mesh is ArrayMesh,
-                "sealed new nose has true 3D triangulated volume")
+            check(nose!=null and not nose.visible and nose.mesh is ArrayMesh and
+                bool(m.get_meta("tarvoka_a01_unified_nose_shell",false)),
+                "legacy nose retained only as reference; unified shell renders instead")
             check(ring!=null and ring.visible and ring.mesh is ArrayMesh,
                 "EOIR front guard is hollow, not flat circular plate")
             check(thermal!=null and thermal.visible and thermal.mesh!=null,
