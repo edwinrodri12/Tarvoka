@@ -35,9 +35,10 @@ static func _mat(c:Color,metal:float,rough:float)->StandardMaterial3D:
     return m
 
 static func _tri(t:SurfaceTool,a:Vector3,b:Vector3,c:Vector3)->void:
+    # Godot considers clockwise triangles front-facing.
     t.add_vertex(a)
-    t.add_vertex(b)
     t.add_vertex(c)
+    t.add_vertex(b)
 
 static func _patch(parent:Node3D,tag:String,points:Array,
         up:Vector3,mat:Material)->MeshInstance3D:
