@@ -169,9 +169,10 @@ static func _wing_surface(side:float,x:float,t:float,hero:bool)->Vector3:
     return Vector3.ZERO
 
 static func _triangle(t:SurfaceTool,a:Vector3,b:Vector3,c:Vector3)->void:
+    # Godot considers clockwise triangles front-facing.
     t.add_vertex(a)
-    t.add_vertex(b)
     t.add_vertex(c)
+    t.add_vertex(b)
 
 static func _closed_patch(body:Node3D,name:String,corners:Array,
         lift:Vector3,paint:Material)->MeshInstance3D:
