@@ -25,7 +25,7 @@ func _collect(node: Node, meshes: Array[MeshInstance3D]) -> void:
         _collect(child, meshes)
 
 func _model(faction: int, lod: int, damage: int) -> Node3D:
-    var camp: Node3D = Art.build("suministros", faction, lod, damage)
+    var camp: Node3D = Art.build("suministros", faction, lod, damage, false)
     check(camp != null, "Native supply V2 exists")
     if camp == null:
         return null
