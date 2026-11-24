@@ -55,7 +55,32 @@ static func _body_cross_section(station:Array,count:int)->Array:
             _center_y(float(station[0]))+sin(angle)*float(station[2]),float(station[0])))
     return ring
 
-static func _fuselage(body:Node3D,hero:bool,shell:Material)->MeshInstance3D:
+# V19: a two-tone composite finish and faction shoulder pigment are
+# encoded on the existing sealed shell, not added as floating decals.
+static func _hull_pigment(p:Vector3,faction:Color)->Color:
+    var d:Vector2=_body_dimensions(p.z)
+    var lateral:float=absf(p.x)/maxf(d.x,0.001)
+    var elevation:float=(p.y-_center_y(p.z))/maxf(d.y,0.001)
+    var base:Color=Color("#65737e").lerp(Color("#b1bcc3"),
+        smoothstep(-0.85,0.55,elevation))
+    var axial:float=smoothstep(-1.30,-0.57,p.z)*(1.0-smoothstep(0.57,1.16,p.z))
+    var shoulder:float=smoothstep(0.42,0.90,lateral)*smoothstep(-0.62,0.35,elevation)
+    var result:Color=base.lerp(faction,0.66*axial*shoulder)
+    result.a=1.0
+    return result
+
+static func _hull_face(t:SurfaceTool,a:Vector3,b:Vector3,c:Vector3,
+        outward:Vector3,faction:Color)->void:
+    # Same clockwise winding as V16. Color is a deterministic function of
+    # position, so shared indexed vertices keep their smooth normals.
+    var vertices:Array[Vector3]=[a,b,c]
+    if (b-a).cross(c-a).dot(outward)>0.0:
+        vertices=[a,c,b]
+    for vertex in vertices:
+        t.set_color(_hull_pigment(vertex,faction))
+        t.add_vertex(vertex)
+
+static func _fuselage(body:Node3D,hero:bool,shell:Material,faction:Color)->MeshInstance3D:
     var count:int=16 if hero else 12
     var sections:Array=[]
     for station in SECTIONS:
@@ -70,13 +95,13 @@ static func _fuselage(body:Node3D,hero:bool,shell:Material)->MeshInstance3D:
             var outward:Vector3=(anterior[i]+anterior[next])*0.5-Vector3(
                 0,_center_y(float(SECTIONS[j][0])),float(SECTIONS[j][0]))
             outward.z=0.0
-            V10._face(t,anterior[i],anterior[next],posterior[next],outward)
-            V10._face(t,anterior[i],posterior[next],posterior[i],outward)
+            _hull_face(t,anterior[i],anterior[next],posterior[next],outward,faction)
+            _hull_face(t,anterior[i],posterior[next],posterior[i],outward,faction)
     var nose:Array=sections[0]
     var tail:Array=sections[sections.size()-1]
     for i in range(1,count-1):
-        V10._face(t,nose[0],nose[i],nose[i+1],Vector3.FORWARD)
-        V10._face(t,tail[0],tail[i],tail[i+1],Vector3.BACK)
+        _hull_face(t,nose[0],nose[i],nose[i+1],Vector3.FORWARD,faction)
+        _hull_face(t,tail[0],tail[i],tail[i+1],Vector3.BACK,faction)
     t.index()
     t.generate_normals()
     var result:=MeshInstance3D.new()
@@ -107,9 +132,9 @@ static func _dorsal_skin(body:Node3D,paint:Material,hero:bool)->MeshInstance3D:
     # A four-corner flat decal would sink INSIDE the curved fuselage near
     # its highest centerline. Sample the REAL ellipse at angular and axial
     # stations and close every boundary with opposite winding.
-    var stations_z:Array=[-0.360,-0.280,0.140,0.550]
+    var stations_z:Array=[-0.570,-0.280,0.140,0.570,0.760]
     # Exact angular vertices of the unified 12/16-sided shell.
-    var angles:Array=[67.5,90.0,112.5] if hero else [60.0,90.0,120.0]
+    var angles:Array=[45.0,67.5,90.0,112.5,135.0] if hero else [60.0,90.0,120.0]
     var outer:Array=[]
     var inner:Array=[]
     for z in stations_z:
@@ -320,18 +345,19 @@ static func apply(root:Node3D,faction_color:Color,hero:bool)->bool:
     for old_name in obsolete:
         if body.find_child(str(old_name),false,false)==null:
             return false
-    var shell:=_mat(Color("#bfcbd2"),0.31,0.48)
+    var shell:=_mat(Color.WHITE,0.19,0.63)
+    shell.vertex_color_use_as_albedo=true
     var paint:=_mat(faction_color,0.24,0.41)
     var graphite:=_mat(Color("#344853"),0.34,0.57)
-    var hull:=_fuselage(body,hero,shell)
+    var hull:=_fuselage(body,hero,shell,faction_color)
     var dorsal:=_dorsal_skin(body,paint,hero)
     for side in [-1,1]:
         var s:float=float(side)
         _closed_patch(body,WING_L if side<0 else WING_R,[
-            _wing_surface(s,1.230,0.20,hero),
-            _wing_surface(s,1.550,0.20,hero),
-            _wing_surface(s,1.550,0.83,hero),
-            _wing_surface(s,1.230,0.83,hero)
+            _wing_surface(s,1.215,0.13,hero),
+            _wing_surface(s,1.640,0.13,hero),
+            _wing_surface(s,1.640,0.90,hero),
+            _wing_surface(s,1.215,0.90,hero)
         ],Vector3.UP,paint)
     if hero:
         var service:=_mat(Color("#71838d"),0.27,0.62)
@@ -347,6 +373,7 @@ static func apply(root:Node3D,faction_color:Color,hero:bool)->bool:
     for name in obsolete:
         if not _retire(body,str(name)):
             return false
+    root.set_meta("tarvoka_a01_v19_integrated_composite_pigment",true)
     root.set_meta("tarvoka_a01_unified_nose_shell",true)
     root.set_meta(FLAG,true)
     root.set_meta("tarvoka_a01_v11_lod",13 if hero else 8)
