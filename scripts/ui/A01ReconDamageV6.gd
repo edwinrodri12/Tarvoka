@@ -11,6 +11,7 @@ const SMOKE_CACHE:String="tarvoka_a01_v6_smoke_nodes"
 const V1=preload("res://scripts/ui/A01ReconDroneV1.gd")
 const V3=preload("res://scripts/ui/A01ReconFinishV3.gd")
 const V5=preload("res://scripts/ui/A01ReconTailV5.gd")
+const AtmosphereV15=preload("res://scripts/ui/A01ReconAtmosphereV15.gd")
 const STAGES=["D0 · intacto","D1 · impactos leves","D2 · carcasa dañada y humo",
     "D3 · avería crítica y fuego","D4 · destruido"]
 
@@ -152,6 +153,8 @@ static func prepare(root:Node3D,hero:bool)->bool:
     _plume(d4,"A01_V6_D4_FinalEmber",Vector3(0.0,0.95,1.01),
         0.090,0.004,0.19,hot,hero,-8.0)
 
+    if not AtmosphereV15.prepare(root,rig,hero):
+        return false
     root.set_meta(FLAG,true)
     root.set_meta(STAGE_KEY,0)
     root.set_meta("tarvoka_a01_v6_visual_only",true)
@@ -181,6 +184,8 @@ static func set_stage(root:Node3D,new_stage:int)->bool:
         if rotor!=null:
             rotor.visible=new_stage<4
     root.set_meta(STAGE_KEY,new_stage)
+    if bool(root.get_meta(AtmosphereV15.FLAG,false)):
+        AtmosphereV15.reset(root)
     # V14 only swaps the right intact wing/tip for a genuinely broken
     # sealed wing at D4. Layer 4 visibility drives the wreck replacement.
     # Reversible for D4->D0 and for the original Studio LOD rebuild.
@@ -203,6 +208,8 @@ static func animate(root:Node3D,clock:float)->bool:
         return false
     if not bool(root.get_meta(FLAG,false)) or int(root.get_meta(STAGE_KEY,0))<2:
         return false
+    if bool(root.get_meta(AtmosphereV15.FLAG,false)):
+        return AtmosphereV15.animate(root,int(root.get_meta(STAGE_KEY,0)),clock)
     var vapors:Array=root.get_meta(SMOKE_CACHE,[])
     if vapors.size()!=2:
         return false
