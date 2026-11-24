@@ -320,10 +320,42 @@ func _run() -> void:
                         sculpt_triangles>mobile_triangles and
                         sculpt_triangles<=mobile_triangles*3.6,
                         "LOD8 external armor uses fewer triangles than hero")
+            var material_kinds: Dictionary={}
+            for item in model.find_children("*","MeshInstance3D",true,false):
+                var part: MeshInstance3D=item as MeshInstance3D
+                var kind: String=V17.surface_kind(str(part.name))
+                if kind.is_empty():
+                    check(not part.has_meta(V17.FINISH_NEW),"non-target finish untouched "+str(part.name))
+                    continue
+                var mat: StandardMaterial3D=part.material_override as StandardMaterial3D
+                var original: StandardMaterial3D=part.get_meta(V17.FINISH_OLD,null) as StandardMaterial3D
+                check(mat!=null and original!=null and mat!=original and
+                    mat.albedo_color==original.albedo_color and
+                    mat.transparency==BaseMaterial3D.TRANSPARENCY_DISABLED and
+                    mat.cull_mode==BaseMaterial3D.CULL_BACK,
+                    "opaque PBR retains original tint "+str(part.name))
+                if mat==null:
+                    continue
+                material_kinds[kind]=mat
+                if lod==13 and kind!="optic":
+                    check(mat.albedo_texture!=null and mat.uv1_triplanar,
+                        "hero microtexture on UV-less geometry "+str(part.name))
+                elif lod==8 and original!=null:
+                    check(mat.albedo_texture==original.albedo_texture,
+                        "no extra texture sampling on tactical LOD")
+            check(material_kinds.size()==5,"five distinct PBR finish classes")
+            if material_kinds.size()==5:
+                check(material_kinds["fabric"].roughness>material_kinds["ceramic"].roughness and
+                    material_kinds["ceramic"].roughness>material_kinds["optic"].roughness and
+                    material_kinds["metal"].metallic>0.7 and
+                    material_kinds["fabric"].metallic==0.0 and
+                    material_kinds["rubber"].metallic==0.0,
+                    "textile, ceramic, steel, rubber and optic behave differently")
+            var chest_material: Material=chest.material_override
             var current_mesh: Mesh=chest.mesh
             check(V17.show_finish(model,false) and
-                chest.mesh!=current_mesh,
-                "same physical torso restores approved V16 armor")
+                chest.mesh!=current_mesh and chest.material_override!=chest_material,
+                "same physical torso restores previous geometry and material")
             if lod==13:
                 for label in V17.old_fold_labels():
                     var stripe: MeshInstance3D=model.find_child(label,true,false) as MeshInstance3D
@@ -331,7 +363,7 @@ func _run() -> void:
                         check(stripe.visible==bool(stripe.get_meta(V17.FOLD_VISIBLE)),
                             "previous cloth visibility restored "+label)
             check(V17.show_finish(model,true) and
-                chest.mesh==current_mesh and
+                chest.mesh==current_mesh and chest.material_override==chest_material and
                 mesh_count(model)==count_before,
                 "real updated armor returns with ZERO extra mesh nodes")
             check(V6.pose(model,"inspect",1.0) and V6.reset(model),

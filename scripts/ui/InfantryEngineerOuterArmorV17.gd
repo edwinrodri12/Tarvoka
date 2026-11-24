@@ -324,6 +324,130 @@ static func _sculpt_harness(model: Node3D,hero: bool) -> bool:
             return false
     return true
 
+# Real PBR finish, independent of topology. Explicit lists exclude all
+# faction insignia, impact effects, hidden legacy geometry and weapon FX.
+# A shared, tileable neutral texture works even on procedural UV-less
+# meshes via local triplanar projection. Tactical LOD uses no new maps.
+const FINISH_OLD: String="tarvoka_v17_original_material"
+const FINISH_NEW: String="tarvoka_v17_pbr_material"
+const FINISH_KIND: String="tarvoka_v17_surface_kind"
+static var _finish_textures: Dictionary={}
+
+static func surface_kind(label: String) -> String:
+    if label in ["V9_VisorContinuoOpaco","V8_LenteProtegida"]:
+        return "optic"
+    if label in [FRONT,"V9_CascoContinuoBiselado",
+            "V12_EscudoCentralBiseladoCerrado"]:
+        return "ceramic"
+    if label in ["V7_FiltroCentralRespirador","V12_CierreCentralMetal",
+            "V8_RielOpticoSuperior","V8_CarcasaFusilIngeniero",
+            "V8_GuardamanosPerforado"]:
+        return "metal"
+    if label in HAND_PALMS or label in HAND_CUFFS or label in [
+            "V7_MascaraResistenciaIngeniero","V8_EmpunaduraAntideslizante"]:
+        return "rubber"
+    if label in cloth_labels() or label=="V2_MochilaOrganica":
+        return "fabric"
+    for prefix in [SHOULDER,ELBOW,KNEE,"V12_CorazaExteriorBarreraCerrada",
+            "V12_RevestimientoAlaArticulada","V12_TapaEstucheBiselada"]:
+        if label.begins_with(prefix+"_"):
+            return "ceramic"
+    for prefix in [CASE,POCKET,"V2_CinchaPortaequipo",
+            "V12_CinchaCargaDorsal","V5_SujecionBarreraIngeniero",
+            "V9_ArnesDorsalFijo"]:
+        if label.begins_with(prefix+"_"):
+            return "fabric"
+    for prefix in [SOLE,TOE,"V9_DedosCerrados","V10_DedoHerramienta"]:
+        if label.begins_with(prefix+"_"):
+            return "rubber"
+    for prefix in ["V9_BrocheArnesFijo","V12_CierrePouchMetalico",
+            "V12_RemacheExterior"]:
+        if label.begins_with(prefix+"_"):
+            return "metal"
+    return ""
+
+static func _surface_texture(kind: String) -> Texture2D:
+    if _finish_textures.has(kind):
+        return _finish_textures[kind] as Texture2D
+    var img: Image=Image.create(64,64,false,Image.FORMAT_RGBA8)
+    for y in range(64):
+        for x in range(64):
+            var u: float=TAU*float(x)/64.0
+            var v: float=TAU*float(y)/64.0
+            var grain: float=sin(13.0*u+17.0*v)*sin(19.0*u-11.0*v)
+            var tone: float=0.96+0.022*grain
+            match kind:
+                "fabric":
+                    tone=0.91+0.045*cos(8.0*u)*cos(8.0*v)+0.023*grain
+                "metal":
+                    tone=0.95+0.028*sin(16.0*v+sin(2.0*u))+0.010*grain
+                "rubber":
+                    tone=0.93+0.036*cos(8.0*u)*cos(8.0*v)+0.012*grain
+                "ceramic":
+                    tone=0.96+0.025*grain+0.012*sin(3.0*u-5.0*v)
+            tone=clampf(tone,0.82,1.0)
+            img.set_pixel(x,y,Color(tone,tone,tone,1.0))
+    img.generate_mipmaps()
+    var texture: ImageTexture=ImageTexture.create_from_image(img)
+    _finish_textures[kind]=texture
+    return texture
+
+static func _pbr_surface(original: StandardMaterial3D, kind: String,
+        hero: bool) -> StandardMaterial3D:
+    var mat: StandardMaterial3D=original.duplicate() as StandardMaterial3D
+    mat.transparency=BaseMaterial3D.TRANSPARENCY_DISABLED
+    mat.cull_mode=BaseMaterial3D.CULL_BACK
+    mat.clearcoat_enabled=false
+    mat.metallic_specular=0.42
+    match kind:
+        "ceramic":
+            mat.metallic=0.06
+            mat.roughness=0.56
+            mat.metallic_specular=0.35
+        "metal":
+            mat.metallic=0.78
+            mat.roughness=0.34
+        "fabric":
+            mat.metallic=0.0
+            mat.roughness=0.94
+            mat.metallic_specular=0.20
+        "rubber":
+            mat.metallic=0.0
+            mat.roughness=0.83
+            mat.metallic_specular=0.28
+        "optic":
+            mat.metallic=0.10
+            mat.roughness=0.16
+            mat.clearcoat_enabled=true
+            mat.clearcoat=0.72
+            mat.clearcoat_roughness=0.17
+    if hero and kind!="optic":
+        mat.albedo_texture=_surface_texture(kind)
+        mat.uv1_triplanar=true
+        mat.uv1_world_triplanar=false
+        mat.uv1_scale=Vector3.ONE*3.0
+        mat.texture_filter=BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
+    return mat
+
+static func _surface_finish(model: Node3D,hero: bool) -> bool:
+    var cache: Dictionary={}
+    for item in model.find_children("*","MeshInstance3D",true,false):
+        var part: MeshInstance3D=item as MeshInstance3D
+        var kind: String=surface_kind(str(part.name))
+        if kind.is_empty():
+            continue
+        var original: StandardMaterial3D=part.material_override as StandardMaterial3D
+        if original==null:
+            return false
+        var key: String=str(original.get_instance_id())+":"+kind
+        if not cache.has(key):
+            cache[key]=_pbr_surface(original,kind,hero)
+        part.set_meta(FINISH_OLD,original)
+        part.set_meta(FINISH_NEW,cache[key])
+        part.set_meta(FINISH_KIND,kind)
+        part.material_override=cache[key] as StandardMaterial3D
+    return true
+
 static func show_finish(model: Node3D, enabled: bool) -> bool:
     if not has_model(model):
         return false
@@ -331,6 +455,8 @@ static func show_finish(model: Node3D, enabled: bool) -> bool:
         var part: MeshInstance3D=item as MeshInstance3D
         if part.has_meta(FOLD_VISIBLE):
             part.visible=false if enabled else bool(part.get_meta(FOLD_VISIBLE))
+        if part.has_meta(FINISH_OLD) and part.has_meta(FINISH_NEW):
+            part.material_override=part.get_meta(FINISH_NEW if enabled else FINISH_OLD)
         if not part.has_meta(OLD) or not part.has_meta(NEW):
             continue
         var data: Dictionary=part.get_meta(NEW if enabled else OLD)
@@ -538,6 +664,8 @@ static func apply(model: Node3D, hero: bool) -> bool:
     if not _sculpt_hands(model,hero) or not _sculpt_uniform(model,hero):
         return false
     if not _sculpt_harness(model,hero):
+        return false
+    if not _surface_finish(model,hero):
         return false
 
     # No new MeshInstance3D; all faction materials and collision bodies stay.
