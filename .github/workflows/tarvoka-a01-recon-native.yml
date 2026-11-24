@@ -234,6 +234,8 @@ jobs:
           grep -F 'PASS A01 V15 ORGANIC EFFECTS:' /tmp/a01-v14-damage.log
           grep -F 'PASS A01 V16 SOLID EXTERIOR:' /tmp/a01-v14-damage.log
           test "$(find build/qa/a01-v14 -maxdepth 1 -name 'a01-v14-*.png' | wc -l)" -eq 8
+          test "$(find build/qa/a01-v16 -maxdepth 1 -name 'a01-v16-*.png' | wc -l)" -eq 12
+          find build/qa/a01-v16 -name 'a01-v16-*.png' -size +2k | wc -l | grep -qx '12'
 
       - name: Enforce same-viewer QA in the full native Studio publisher
         shell: bash
@@ -276,5 +278,6 @@ jobs:
             build/qa/a01-v12/*.png
             build/qa/a01-v13/*.png
             build/qa/a01-v14/*.png
+            build/qa/a01-v16/*.png
           if-no-files-found: warn
           retention-days: 14
