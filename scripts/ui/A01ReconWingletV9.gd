@@ -23,7 +23,7 @@ static func _material(color:Color, metallic_value:float, rough:float)->StandardM
 static func _triangle(tool:SurfaceTool, a:Vector3, b:Vector3, c:Vector3,
         outward:Vector3)->void:
     tool.add_vertex(a)
-    if (b-a).cross(c-a).dot(outward)<0.0:
+    if (b-a).cross(c-a).dot(outward)>0.0:
         tool.add_vertex(c)
         tool.add_vertex(b)
     else:
