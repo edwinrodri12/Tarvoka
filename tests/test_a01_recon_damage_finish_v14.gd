@@ -292,10 +292,57 @@ func _run()->void:
         vp.remove_child(craft)
         craft.free()
     verify(count==8,"eight genuine Godot 4.3 V14 visual evidence PNGs")
+    var v16_dir:String="res://build/qa/a01-v16"
+    verify(DirAccess.make_dir_recursive_absolute(
+        ProjectSettings.globalize_path(v16_dir))==OK,
+        "V16 genuine inspection image directory")
+    # [name, camera_position, look_at, orthogonal_size, LOD, faction, damage, up]
+    var inspection_views:Array=[
+        ["iso-left",Vector3(-4.2,3.6,-4.7),Vector3(0,0.96,0),4.4,13,0,0,Vector3.UP],
+        ["iso-right",Vector3(4.2,3.6,-4.7),Vector3(0,0.96,0),4.4,13,0,0,Vector3.UP],
+        ["front",Vector3(0,2.2,-6.0),Vector3(0,0.96,0),4.4,13,0,0,Vector3.UP],
+        ["rear",Vector3(0,2.1,6.0),Vector3(0,1.02,0),4.4,13,0,0,Vector3.UP],
+        ["top",Vector3(0,6.0,-0.5),Vector3(0,0.98,0),4.4,13,0,0,Vector3.FORWARD],
+        ["underside",Vector3(0,-4.0,2.4),Vector3(0,0.92,0),4.5,13,0,0,Vector3.UP],
+        ["side-left",Vector3(-6.0,2.0,0),Vector3(0,0.95,0),4.4,13,0,0,Vector3.UP],
+        ["side-right",Vector3(6.0,2.0,0),Vector3(0,0.95,0),4.4,13,0,0,Vector3.UP],
+        ["nose-close",Vector3(1.5,1.7,-2.65),Vector3(0,0.90,-0.95),1.85,13,0,0,Vector3.UP],
+        ["tail-close",Vector3(1.9,2.1,3.1),Vector3(0,1.06,1.18),1.9,13,0,0,Vector3.UP],
+        ["android-lod8",Vector3(4.1,3.4,-4.5),Vector3(0,0.94,0),4.4,8,5,0,Vector3.UP],
+        ["wreck-d4",Vector3(4.1,3.4,-4.2),Vector3(0,0.94,0),4.4,13,0,4,Vector3.UP]
+    ]
+    var v16_captures:int=0
+    for view in inspection_views:
+        var inspected:Node3D=Models.build("uav_recon",int(view[5]),true,int(view[4]))
+        verify(inspected!=null,"V16 real assembled inspection: "+str(view[0]))
+        if inspected==null:
+            continue
+        vp.add_child(inspected)
+        verify(Damage.set_stage(inspected,int(view[6])),
+            "V16 damage state for camera "+str(view[0]))
+        if int(view[6])>=2:
+            Damage.animate(inspected,0.82)
+        camera.position=view[1]
+        camera.size=float(view[3])
+        camera.look_at(view[2],view[7])
+        await process_frame
+        await process_frame
+        await process_frame
+        var render:Image=vp.get_texture().get_image()
+        verify(render!=null and not render.is_empty(),
+            "V16 image is an authentic Godot render: "+str(view[0]))
+        if render!=null and not render.is_empty():
+            var filename:String=v16_dir+"/a01-v16-"+str(view[0])+".png"
+            verify(render.save_png(filename)==OK,
+                "V16 image captured: "+str(view[0]))
+            v16_captures+=1
+        vp.remove_child(inspected)
+        inspected.free()
+    verify(v16_captures==12,"12 real V16 360, join closeups and LOD8 PNGs")
     verify(Arsenal.profile("uav_recon")==catalog,"cost/vision/fog/combat unchanged")
     vp.queue_free()
     if failures==0:
-        print("PASS A01 V16 SOLID EXTERIOR: closed clockwise visible meshes, opaque vertices, continuous nose shell, rooted tail booms")
+        print("PASS A01 V16 SOLID EXTERIOR: closed clockwise meshes, continuous nose, rooted booms, 12 real Godot inspection views")
         print("PASS A01 V15 ORGANIC EFFECTS: six sealed gradient volumes; fixed anchors; stage visibility; animation and full repair; both LODs")
         print("PASS A01 V14 REAL DAMAGE: eight factions, two LODs, sealed organic D1-D4, physically fractured right wing, genuine repair, 8 Godot renders")
         quit(0)
