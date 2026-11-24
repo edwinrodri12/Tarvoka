@@ -23,6 +23,24 @@ const FACE_PARTS: Array[String]=["V5_ViseraObraIngeniero",
     "V5_InsigniaCascoIngeniero","V9_VisorContinuoOpaco",
     "V7_MascaraResistenciaIngeniero","V7_FiltroCentralRespirador"]
 const ELBOW: String="V10_CubiertaCodo"
+const CLOTH_PARTS: Array[String]=["V2_MusloTaper","V2_PantorrillaTaper",
+    "V2_MangaCerrada","V2_AntebrazoCerrado"]
+const FOLD_VISIBLE: String="tarvoka_v17_old_fold_visibility"
+
+static func cloth_labels() -> Array[String]:
+    var result: Array[String]=[]
+    for side in [-1,1]:
+        for prefix in CLOTH_PARTS:
+            result.append(prefix+"_%d"%side)
+    return result
+
+static func old_fold_labels() -> Array[String]:
+    var result: Array[String]=[]
+    for side in [-1,1]:
+        for row in range(3):
+            result.append("V2_PlisePantalon_%d_%d"%[side,row])
+            result.append("V2_PliseManga_%d_%d"%[side,row])
+    return result
 const HAND_PALMS: Array[String]=["V9_GuanteContacto_-1",
     "V9_GuanteContacto_1","V9_GuanteTrabajoFijadoHerramienta"]
 const HAND_CUFFS: Array[String]=["V10_MunecaContactoFusil_-1",
@@ -152,11 +170,84 @@ static func _sculpt_hands(model: Node3D, hero: bool) -> bool:
             return false
     return true
 
+# Continuous cloth relief: deform the existing closed anatomical mesh,
+# not a stack of disconnected stripes. Fade to zero at both end caps so
+# all original contacts with knees, elbows, boots and shoulders survive.
+# The analytic inverse-transpose Jacobian keeps smooth lighting normals.
+# Same triangle count and mesh-node budget, lower amplitude on LOD8.
+static func _cloth_relief(source: Mesh, hero: bool,
+        side: int, cycles: float) -> ArrayMesh:
+    if source==null or source.get_surface_count()!=1:
+        return null
+    var arrays: Array=source.surface_get_arrays(0)
+    var points: PackedVector3Array=arrays[Mesh.ARRAY_VERTEX]
+    var normals: PackedVector3Array=arrays[Mesh.ARRAY_NORMAL]
+    if points.is_empty() or points.size()!=normals.size():
+        return null
+    var raw: Variant=arrays[Mesh.ARRAY_INDEX]
+    var indices: PackedInt32Array=(raw if raw is PackedInt32Array
+        else PackedInt32Array())
+    var bounds: AABB=source.get_aabb()
+    var span: float=maxf(0.001,bounds.size.y)
+    var rx: float=maxf(0.001,bounds.size.x*0.5)
+    var rz: float=maxf(0.001,bounds.size.z*0.5)
+    var amp: float=0.075 if hero else 0.032
+    var frequency: float=TAU*cycles
+    var ax: float=float(side)*0.85/rx
+    var az: float=0.52/rz
+    var out:=SurfaceTool.new()
+    out.begin(Mesh.PRIMITIVE_TRIANGLES)
+    var count: int=indices.size() if not indices.is_empty() else points.size()
+    for i in range(count):
+        var ix: int=indices[i] if not indices.is_empty() else i
+        var p: Vector3=points[ix]
+        var n: Vector3=normals[ix]
+        var t: float=clampf((p.y-bounds.position.y)/span,0.0,1.0)
+        var envelope: float=pow(sin(PI*t),2.0)
+        var phase: float=frequency*t+ax*p.x+az*p.z+float(side)*0.25
+        var wave: float=sin(phase)
+        var f: float=1.0+amp*envelope*wave
+        var fx: float=amp*envelope*cos(phase)*ax
+        var fz: float=amp*envelope*cos(phase)*az
+        var fy: float=amp*(PI*sin(2.0*PI*t)*wave+
+            envelope*cos(phase)*frequency)/span
+        var jacobian:=Basis(
+            Vector3(f+p.x*fx,0,p.z*fx),
+            Vector3(p.x*fy,1,p.z*fy),
+            Vector3(p.x*fz,0,f+p.z*fz))
+        out.set_normal((jacobian.inverse().transposed()*n).normalized())
+        out.add_vertex(Vector3(p.x*f,p.y,p.z*f))
+    return out.commit()
+
+static func _sculpt_uniform(model: Node3D, hero: bool) -> bool:
+    for side in [-1,1]:
+        for index in range(CLOTH_PARTS.size()):
+            var label: String=CLOTH_PARTS[index]+"_%d"%side
+            var cloth: MeshInstance3D=_find(model,label)
+            if cloth==null:
+                return false
+            var cycles: float=[2.0,1.5,1.7,1.15][index]
+            if not _change(model,label,_cloth_relief(cloth.mesh,hero,side,cycles),
+                    cloth.scale,cloth.position):
+                return false
+    # The older rigid strips remain in the scene for exact comparisons.
+    # Hide only the redundant fold geometry, not straps or faction marks.
+    if hero:
+        for label in old_fold_labels():
+            var stripe: MeshInstance3D=_find(model,label)
+            if stripe==null:
+                return false
+            stripe.set_meta(FOLD_VISIBLE,stripe.visible)
+            stripe.visible=false
+    return true
+
 static func show_finish(model: Node3D, enabled: bool) -> bool:
     if not has_model(model):
         return false
     for item in model.find_children("*","MeshInstance3D",true,false):
         var part: MeshInstance3D=item as MeshInstance3D
+        if part.has_meta(FOLD_VISIBLE):
+            part.visible=false if enabled else bool(part.get_meta(FOLD_VISIBLE))
         if not part.has_meta(OLD) or not part.has_meta(NEW):
             continue
         var data: Dictionary=part.get_meta(NEW if enabled else OLD)
@@ -361,7 +452,7 @@ static func apply(model: Node3D, hero: bool) -> bool:
                     Vector3(0,-0.485,-0.227)):
                 return false
 
-    if not _sculpt_hands(model,hero):
+    if not _sculpt_hands(model,hero) or not _sculpt_uniform(model,hero):
         return false
 
     # No new MeshInstance3D; all faction materials and collision bodies stay.

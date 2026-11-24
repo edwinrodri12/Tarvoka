@@ -215,6 +215,29 @@ func _run() -> void:
                         knee_faction.has_meta(V17.OLD) and
                         knee_faction.position.z<(-0.22),
                         "Android knee identity remains outside metal shell")
+            for label in V17.cloth_labels():
+                var cloth: MeshInstance3D=model.find_child(label,true,false) as MeshInstance3D
+                check(cloth!=null and cloth.has_meta(V17.OLD) and
+                    closed_outward(cloth.mesh),"closed textile relief "+label)
+                if cloth==null or not cloth.has_meta(V17.OLD):
+                    continue
+                var old: Dictionary=cloth.get_meta(V17.OLD)
+                var original: Mesh=old["mesh"]
+                check(cloth.mesh!=original and
+                    face_count(cloth.mesh)==face_count(original) and
+                    cloth.position==old["position"] and cloth.scale==old["scale"],
+                    "cloth deformation retains triangle budget and rig transform "+label)
+                var a: AABB=original.get_aabb()
+                var z: AABB=cloth.mesh.get_aabb()
+                check(absf(a.position.y-z.position.y)<0.00001 and
+                    absf(a.size.y-z.size.y)<0.00001 and
+                    absf(a.size.x-z.size.x)+absf(a.size.z-z.size.z)>0.0001,
+                    "real relief without moving terminal contacts "+label)
+            if lod==13:
+                for label in V17.old_fold_labels():
+                    var stripe: MeshInstance3D=model.find_child(label,true,false) as MeshInstance3D
+                    check(stripe!=null and stripe.has_meta(V17.FOLD_VISIBLE) and
+                        not stripe.visible,"obsolete floating strip hidden "+label)
             var hand_labels: Array[String]=[]
             hand_labels.append_array(V17.HAND_PALMS)
             hand_labels.append_array(V17.HAND_CUFFS)
@@ -276,6 +299,12 @@ func _run() -> void:
             check(V17.show_finish(model,false) and
                 chest.mesh!=current_mesh,
                 "same physical torso restores approved V16 armor")
+            if lod==13:
+                for label in V17.old_fold_labels():
+                    var stripe: MeshInstance3D=model.find_child(label,true,false) as MeshInstance3D
+                    if stripe!=null and stripe.has_meta(V17.FOLD_VISIBLE):
+                        check(stripe.visible==bool(stripe.get_meta(V17.FOLD_VISIBLE)),
+                            "previous cloth visibility restored "+label)
             check(V17.show_finish(model,true) and
                 chest.mesh==current_mesh and
                 mesh_count(model)==count_before,
