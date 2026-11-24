@@ -149,8 +149,8 @@ func _run()->void:
                     TailV5.BOOM_L if side<0 else TailV5.BOOM_R,
                     true,false) as MeshInstance3D
                 check(soft_boom!=null and soft_boom.visible and
-                    soft_boom.mesh is SphereMesh,
-                    "both V5 tail supports are closed composite ellipsoids")
+                    soft_boom.mesh is ArrayMesh,
+                    "both tail supports are closed sculpted booms")
                 var tail_band:=model.find_child(
                     "A01_V5_VtailFactionPanel"+("_L" if side<0 else "_R"),
                     true,false) as MeshInstance3D
