@@ -111,7 +111,9 @@ static func _fractured_wing(parent:Node3D,hero:bool,
     var broken:Array[Vector3]=V4._profile(1.12,1.056,-0.311,0.210,0.075)
     var edges:Array=[1.08,1.23,1.155,1.035,1.13,1.215]
     for i in range(6):
-        broken[i].x=float(edges[i])
+        var v:Vector3=broken[i]
+        v.x=float(edges[i])
+        broken[i]=v
     stations.append(broken)
     var t:=SurfaceTool.new()
     t.begin(Mesh.PRIMITIVE_TRIANGLES)
