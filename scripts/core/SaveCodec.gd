@@ -18,6 +18,7 @@ const Opening = preload("res://scripts/core/OpeningBalance.gd")
 const Weather = preload("res://scripts/core/Weather.gd")
 const Winter = preload("res://scripts/ui/WinterBattleBiome.gd")
 const Identity = preload("res://scripts/ui/FactionIdentity.gd")
+const Camps = preload("res://scripts/core/CampTactics.gd")
 const MAX_UNITS := 256
 const MAX_STAT := 10000
 
@@ -62,6 +63,12 @@ static func encode(state: Dictionary) -> String:
             var position: Vector2i = site["pos"]
             site["pos"] = [position.x, position.y]
         snapshot["economy"] = urban
+    if state.has("camps"):
+        var camps: Array = state["camps"].duplicate(true)
+        for camp in camps:
+            var camp_pos: Vector2i = camp["pos"]
+            camp["pos"] = [camp_pos.x, camp_pos.y]
+        snapshot["camps"] = camps
     if Visibility.enabled(state):
         snapshot["fog_enabled"] = true
         var explored: Dictionary = {}
@@ -185,6 +192,20 @@ static func decode(raw: String) -> Dictionary:
                 if not _whole(site["produced_turn"]):
                     return {}
                 site["produced_turn"] = int(site["produced_turn"])
+    if state.has("camps"):
+        if not state["camps"] is Array or state["camps"].size() > Camps.MAX_PER_SIDE * 2:
+            return {}
+        for camp in state["camps"]:
+            if not camp is Dictionary or not camp.get("pos") is Array or camp["pos"].size() != 2:
+                return {}
+            var coord: Array = camp["pos"]
+            if not _whole(coord[0]) or not _whole(coord[1]):
+                return {}
+            camp["pos"] = Vector2i(int(coord[0]), int(coord[1]))
+            for key in ["owner", "hp", "max_hp", "vision"]:
+                if not _whole(camp.get(key)):
+                    return {}
+                camp[key] = int(camp[key])
     if state.has("fog_enabled"):
         if state["fog_enabled"] != true or not state.get("explored") is Dictionary:
             return {}
@@ -331,6 +352,8 @@ static func _valid_state(state: Dictionary) -> bool:
     if state.has("economy"):
         if not state["economy"] is Dictionary or not Economy.valid(state["economy"], state["terrain"]):
             return false
+    if not Camps.valid(state):
+        return false
     # Fog saves must include coherent, bounded exploration for both factions.
     if state.has("fog_enabled"):
         if state["fog_enabled"] != true or not state.get("explored") is Dictionary:

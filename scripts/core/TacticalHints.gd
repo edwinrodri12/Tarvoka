@@ -84,7 +84,7 @@ static func for_unit(state: Dictionary, unit_id: String) -> Dictionary:
             continue
         if not Turns.in_attack_range(unit, enemy):
             continue
-        var result: Dictionary = BattleActions.public_preview_exchange(unit, enemy, state["terrain"],state.get("economy",{}),Visibility.observed_state(state,faction)["units"])
+        var result: Dictionary = BattleActions.public_preview_exchange(unit, enemy, state["terrain"],state.get("economy",{}),Visibility.observed_state(state,faction)["units"],Visibility.observed_state(state,faction).get("camps",[]))
         if result.get("valid", false):
             attacks[enemy_pos] = {
                 "id": str(enemy["id"]), "damage": int(result["damage"]),
