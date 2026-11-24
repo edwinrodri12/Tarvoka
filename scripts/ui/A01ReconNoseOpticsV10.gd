@@ -126,6 +126,99 @@ static func _orb(root:Node3D,name:String,at:Vector3,dimensions:Vector3,
     part.scale=dimensions
     return part
 
+# V20: the lower camera is a compact sculpted pod, not a stack of discs.
+# Reuse every original node and the original animation pivot.
+static func _pod_loft(stations:Array,sides:int)->ArrayMesh:
+    var rings:Array=[]
+    for station in stations:
+        var ring:Array[Vector3]=[]
+        for i in range(sides):
+            var a:float=TAU*float(i)/float(sides)
+            ring.append(Vector3(cos(a)*float(station[1]),
+                sin(a)*float(station[2]),float(station[0])))
+        rings.append(ring)
+    var t:=SurfaceTool.new()
+    t.begin(Mesh.PRIMITIVE_TRIANGLES)
+    for j in range(rings.size()-1):
+        var front:Array=rings[j]
+        var rear:Array=rings[j+1]
+        for i in range(sides):
+            var k:int=(i+1)%sides
+            var a:float=TAU*(float(i)+0.5)/float(sides)
+            var radial:=Vector3(cos(a),sin(a),0)
+            _face(t,front[i],front[k],rear[k],radial)
+            _face(t,front[i],rear[k],rear[i],radial)
+    var first:Array=rings[0]
+    var last:Array=rings[rings.size()-1]
+    for i in range(1,sides-1):
+        _face(t,first[0],first[i],first[i+1],Vector3.FORWARD)
+        _face(t,last[0],last[i],last[i+1],Vector3.BACK)
+    t.index()
+    t.generate_normals()
+    return t.commit()
+
+static func _refine_optics(root:Node3D,body:Node3D,pivot:Node3D,hero:bool)->bool:
+    var pod:=pivot.find_child("A01_V1_SealedThreeAxisOpticalPod",false,false) as MeshInstance3D
+    var rim:=pivot.find_child("A01_V2_ClosedGimbalRing",false,false) as MeshInstance3D
+    var glass:=pivot.find_child("A01_V2_ClosedOpticalGlass",false,false) as MeshInstance3D
+    var legacy_lens:=pivot.find_child("A01_V1_BlueEOIRLens",false,false) as MeshInstance3D
+    var brow:=pivot.find_child("A01_V1_CameraBrow",false,false) as MeshInstance3D
+    var cradle:=body.find_child("A01_V2_OpticalMountCradle",false,false) as MeshInstance3D
+    var plate:=pivot.find_child("A01_V2_EOIRLensProtectiveBezel",false,false) as MeshInstance3D
+    var thermal:=pivot.find_child(THERMAL,false,false) as MeshInstance3D
+    if pod==null or rim==null or glass==null or legacy_lens==null or brow==null or cradle==null or plate==null or thermal==null:
+        return false
+    var sides:int=20 if hero else 12
+    var shell:=_mat(Color("#35434e"),0.24,0.53)
+    var trim:=_mat(Color("#657985"),0.42,0.41)
+    pod.mesh=_pod_loft([
+        [-0.224,0.162,0.155],[-0.170,0.191,0.175],
+        [-0.040,0.205,0.184],[0.115,0.176,0.164],
+        [0.186,0.108,0.103],[0.205,0.049,0.045]],sides)
+    pod.scale=Vector3.ONE
+    pod.material_override=shell
+    rim.mesh=_pod_loft([
+        [-0.282,0.153,0.153],[-0.249,0.177,0.167],
+        [-0.210,0.181,0.167],[-0.178,0.163,0.152]],sides)
+    rim.position=Vector3.ZERO
+    rim.rotation=Vector3.ZERO
+    rim.material_override=trim
+    # Two separate opaque convex glass surfaces on a dark common backing.
+    # This is artistic geometry only; no new sensor function or vision range.
+    var lens:=SphereMesh.new()
+    lens.radius=0.5
+    lens.height=1.0
+    lens.radial_segments=20 if hero else 12
+    lens.rings=8 if hero else 5
+    glass.mesh=lens
+    glass.position=Vector3(-0.035,0.010,-0.292)
+    glass.rotation=Vector3.ZERO
+    glass.scale=Vector3(0.124,0.124,0.050)
+    glass.material_override=_mat(Color("#357d91"),0.18,0.19)
+    thermal.position=Vector3(0.060,-0.021,-0.298)
+    thermal.scale=Vector3(0.062,0.062,0.036)
+    thermal.material_override=_mat(Color("#815c55"),0.12,0.23)
+    plate.material_override=_mat(Color("#202a32"),0.24,0.61)
+    # The fixed rounded cradle overlaps both hull and rotating pod.
+    var mount:=SphereMesh.new()
+    mount.radius=0.5
+    mount.height=1.0
+    mount.radial_segments=16 if hero else 8
+    mount.rings=6 if hero else 4
+    cradle.mesh=mount
+    cradle.position=Vector3(0,0.695,-0.565)
+    cradle.scale=Vector3(0.292,0.184,0.293)
+    cradle.material_override=trim
+    legacy_lens.visible=false
+    brow.visible=false
+    for suffix in ["_L","_R"]:
+        var bearing:=pivot.find_child("A01_V3_EOIRTrunnion"+suffix,false,false) as MeshInstance3D
+        if bearing!=null:
+            bearing.scale=Vector3(0.78,0.84,0.78)
+            bearing.material_override=trim
+    root.set_meta("tarvoka_a01_v20_sculpted_eoir",true)
+    return true
+
 static func _conformal_nose_paint(body:Node3D,name:String,side:float,
         hero:bool,enamel:Material)->MeshInstance3D:
     # Godot screenshot QA: the prior ellipsoids looked like blue pods
@@ -237,6 +330,8 @@ static func apply(root:Node3D,color:Color,hero:bool)->bool:
         _box(body,SEAM_R,Vector3(0.255,0.914,-1.020),
             Vector3(0.018,0.073,0.150),graphite)
     if nose.mesh==null or guard.mesh==null or ir.mesh==null:
+        return false
+    if not _refine_optics(root,body,pivot,hero):
         return false
     original.visible=false
     root.set_meta(FLAG,true)
