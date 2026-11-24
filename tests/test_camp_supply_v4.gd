@@ -49,16 +49,19 @@ func _audit(faction: int, lod: int, damage: int) -> Node3D:
     _collect(model, meshes)
     var sculpted: int = 0
     var faction_count: int = 0
+    # Neutral uses the actual native palette of the factory. Never require
+    # a numbered faction color for neutral -1.
+    var expected_accent: Color = Camp.STEEL if faction == -1 else Style.faction_color(faction)
     for p in meshes:
         var mat: StandardMaterial3D = p.material_override as StandardMaterial3D
         check(mat != null and mat.transparency == BaseMaterial3D.TRANSPARENCY_DISABLED and mat.cull_mode == BaseMaterial3D.CULL_BACK, "Opaque material " + str(p.name))
-        if mat != null and faction >= 0 and mat.albedo_color == Style.faction_color(faction):
+        if mat != null and mat.albedo_color == expected_accent:
             faction_count += 1
         if p.get_meta("supply_v4_closed", false) and p.mesh is ArrayMesh:
             sculpted += 1
             check(_closed(p.mesh), "Watertight triangle edge topology " + str(p.name))
     check(sculpted >= 1 if damage == 3 else sculpted >= 25, "Substantial custom sculpture")
-    check(faction_count >= 3 if damage == 3 else faction_count >= 15, "Faction paint")
+    check(faction_count >= (3 if damage == 3 else 15), "Faction/neutral paint %d LOD%d D%d" % [faction, lod, damage])
     var core: Node3D = model.get_node_or_null("EquipamientoDesplegable/SupplyV2_PremiumRig/SupplyV4_IndustrialSculpt") as Node3D
     if damage == 3:
         check(core == null, "Destroyed camp cannot resurrect")
@@ -67,6 +70,13 @@ func _audit(faction: int, lod: int, damage: int) -> Node3D:
         if core != null:
             var rear: Node3D = core.get_node("V4_RearGablePivot") as Node3D
             check(rear.has_node("V4_GableClosedPanel"), "Actual rear closure")
+            check(core.has_node("V4_WallRib_1_42") and core.has_node("V4_TankFrameTop_0"), "Physical wall reinforcement and tank frame")
+            check(core.has_node("V4_CrateRackLowerRail_1") and core.has_node("V4_WalkwayModule_0"), "Accessible racks and walkway")
+            var v2: Node3D = core.get_parent() as Node3D
+            var old_guard: Node3D = v2.get_node("SupplyV3_ReadabilityRig/V3_ProteccionExternaTanque_0") as Node3D
+            check(not old_guard.visible, "Opaque slab replaced by genuine frame")
+            if damage < 2:
+                check(v2.has_node("V2_ArticulacionCubierta_-1/V4_ContinuousRidgeCap"), "Roof ridge cover folds with leaf")
             check(Camp.pose_deploy(model, 0.0) and absf(rear.rotation_degrees.x) > 80.0, "Gable folds")
             check(Camp.pose_deploy(model, 1.0) and absf(rear.rotation_degrees.x) < 0.01, "Gable reopens")
         check(model.has_node("EquipamientoDesplegable/SupplyV2_PremiumRig/V2_MangueraArticulada/V4_ContinuousHose"), "Continuous hose in moving rig")

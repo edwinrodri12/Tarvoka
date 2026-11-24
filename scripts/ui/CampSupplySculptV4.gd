@@ -175,6 +175,22 @@ static func _roof(core: Node3D, accent: Color, lod: int, damage: int) -> bool:
         for child in leaf.get_children():
             if str(child.name).begins_with("NervaduraTecho_") or str(child.name).begins_with("PlacaTactica_"):
                 child.visible = false
+        # Both roof leaves now meet at the true centerline, instead of
+        # overlapping each other beyond the ridge. The flexible ridge cover
+        # is attached to one leaf and folds with it.
+        var panel: MeshInstance3D = leaf.get_node("CubiertaAceroContinua_" + suffix) as MeshInstance3D
+        panel.mesh = beveled(Vector3(2.13, 0.13, 3.55), 0.035)
+        panel.position.x = -float(side) * 1.065
+        _hide(leaf, "PerfilSelladoBorde_" + suffix)
+        if side == -1 and damage < 2:
+            var ridge := CylinderMesh.new()
+            ridge.top_radius = 0.092
+            ridge.bottom_radius = 0.092
+            ridge.height = 3.52
+            ridge.radial_segments = 16 if lod == 13 else 8
+            var cap: MeshInstance3D = _part(leaf, "V4_ContinuousRidgeCap", ridge,
+                Vector3(2.11, 0.073, 0.0), STEEL, 0.45, 0.62)
+            cap.rotation_degrees.x = 90.0
         # Narrow folded seams instead of ladder-like exposed bars.
         for i in range(5 if lod == 13 else 3):
             var z: float = -1.31 + float(i) * (0.65 if lod == 13 else 1.30)
@@ -183,8 +199,8 @@ static func _roof(core: Node3D, accent: Color, lod: int, damage: int) -> bool:
                 Vector3(2.12, 0.055, 0.055), STEEL, 0.01, 0.44)
         _box(leaf, "V4_RoofFactionInlay", Vector3(-float(side) * 1.08, 0.084, 0.86),
             Vector3(1.62, 0.032, 0.48), accent, 0.008, 0.30)
-        _box(leaf, "V4_RoofEdgeFold", Vector3(-float(side) * 2.23, 0.035, 0),
-            Vector3(0.12, 0.17, 3.44), FRAME, 0.025, 0.50)
+        _box(leaf, "V4_RoofEdgeFold", Vector3(-float(side) * 2.08, 0.015, 0),
+            Vector3(0.085, 0.14, 3.44), STEEL, 0.020, 0.46)
     return true
 
 static func _rear(deployable: Node3D, core: Node3D, accent: Color, lod: int, damage: int) -> bool:
@@ -193,6 +209,23 @@ static func _rear(deployable: Node3D, core: Node3D, accent: Color, lod: int, dam
     for side in [-1, 1]:
         if not _replace_box(deployable, "RefugioLogistico_ParedLateral_%d" % side, 0.04, PANEL, 0.16, 0.80):
             return false
+        # The old diagonal tension rods penetrated the new roof. Replace
+        # with short bracing fixed between the side wall and eave.
+        _hide(deployable, "RefugioLogistico_Tensor_%d" % side)
+        var outer: float = float(side) * 2.09
+        for z in [0.42, 2.32]:
+            var rib: MeshInstance3D = _box(core, "V4_WallRib_%d_%d" % [side, int(z * 100)],
+                Vector3(outer, 1.08, z), Vector3(0.11, 1.86, 0.14), FRAME, 0.022, 0.42)
+            rib.set_meta("supply_v4_wall_reinforcement", true)
+        _box(core, "V4_WallLowerRail_%d" % side, Vector3(outer, 0.30, 1.35),
+            Vector3(0.10, 0.19, 2.51), STEEL, 0.025, 0.38)
+        _box(core, "V4_WallUpperRail_%d" % side, Vector3(outer, 1.99, 1.35),
+            Vector3(0.10, 0.16, 2.51), STEEL, 0.025, 0.38)
+        if lod == 13:
+            for z in [0.64, 0.88, 1.12, 1.36, 1.60, 1.84, 2.08]:
+                _box(core, "V4_SideFoldedSeam_%d_%d" % [side, int(z * 100)],
+                    Vector3(float(side) * 2.08, 0.79, z),
+                    Vector3(0.037, 0.64, 0.025), STEEL, 0.006, 0.22)
         _box(core, "V4_CornerPost_%d" % side, Vector3(float(side) * 1.95, 1.15, 2.71),
             Vector3(0.21, 2.09, 0.23), FRAME, 0.044, 0.55)
     _box(core, "V4_RearAccessHatch", Vector3(0.49, 1.10, 2.78),
@@ -263,6 +296,36 @@ static func _equipment(core: Node3D, v2: Node3D, accent: Color, lod: int, damage
         if lod == 13:
             _box(crate, "V4_CrateGrip", Vector3(0, 0.17, -0.37),
                 Vector3(0.20, 0.075, 0.08), ZINC, 0.015, 0.62)
+    # Replace the dark slab barriers with physical frames. The equipment
+    # can now be seen at a low angle rather than being buried behind panels.
+    var v3: Node3D = v2.get_node_or_null("SupplyV3_ReadabilityRig") as Node3D
+    if v3 == null:
+        return false
+    for i in range(2):
+        var guard: MeshInstance3D = v3.get_node_or_null("V3_ProteccionExternaTanque_%d" % i) as MeshInstance3D
+        if guard == null:
+            return false
+        guard.visible = false
+        _hide(v3, "V3_PanelFaccionTanque_%d" % i)
+        _hide(v3, "V3_TapaMantenimiento_%d" % i)
+        var z: float = -0.45 + float(i) * 1.65
+        for end in [-1, 1]:
+            _box(core, "V4_TankFramePost_%d_%d" % [i, end],
+                Vector3(3.25, 0.55, z + float(end) * 0.57),
+                Vector3(0.15, 0.91, 0.15), FRAME, 0.027, 0.46)
+        _box(core, "V4_TankFrameTop_%d" % i, Vector3(3.25, 0.97, z),
+            Vector3(0.17, 0.14, 1.28), accent, 0.032, 0.37)
+        _box(core, "V4_TankFrameBase_%d" % i, Vector3(3.25, 0.18, z),
+            Vector3(0.17, 0.16, 1.28), FRAME, 0.025, 0.53)
+    for side in [-1, 1]:
+        _hide(v2, "ContencionMunicion_%d" % side)
+        var x: float = -1.45 + float(side) * 0.64
+        for z in [-2.99, -1.15]:
+            _box(core, "V4_CrateRackPost_%d_%d" % [side, int(z * 100)],
+                Vector3(x, 0.52, z), Vector3(0.12, 0.80, 0.13), FRAME, 0.022, 0.46)
+        _box(core, "V4_CrateRackLowerRail_%d" % side,
+            Vector3(x, 0.34, -2.06), Vector3(0.12, 0.15, 1.96),
+            STEEL, 0.022, 0.40)
     # Continuous curved hose in the original moving hose group. Ring plane
     # follows the tangent, so the elbows share vertices instead of gaps.
     var hose: Node3D = v2.get_node_or_null("V2_MangueraArticulada") as Node3D
@@ -319,6 +382,17 @@ static func apply(root: Node3D, accent: Color, lod: int, damage: int) -> bool:
         return false
     if not _equipment(core, v2, accent, lod, damage):
         return false
+    # An inset modular non-slip walkway provides scale and a visible
+    # access path without creating another permanent platform.
+    for i in range(4):
+        var z: float = -2.53 + float(i) * 0.67
+        _box(core, "V4_WalkwayModule_%d" % i, Vector3(0.40, 0.018, z),
+            Vector3(1.45, 0.036, 0.61), Color("#687B7A"), 0.009, 0.13)
+        if lod == 13:
+            for end in [-1, 1]:
+                _box(core, "V4_WalkwayGrip_%d_%d" % [i, end],
+                    Vector3(0.40, 0.041, z + float(end) * 0.17),
+                    Vector3(1.16, 0.018, 0.033), STEEL, 0.004, 0.22)
     # Low, modular floor joint rails and ground tie-down blocks. The open
     # entrance stays clear and no permanent foundation is added.
     for z in [-0.95, 0.65, 2.17]:

@@ -15,3 +15,7 @@ por este cambio: deberán recibir revisiones equivalentes individualmente.
 QA: 72 combinaciones (incluido neutral), auditoría de aristas de las nuevas
 mallas, 16 PNG nativos de Godot y comprobación del comparador en la escena
 web real. Publicar únicamente después de revisar los resultados.
+
+## V4.1 — revisión de 16 capturas reales
+
+El primer CI generó 16 PNG y el export web pasó, pero la auditoría marcó ocho falsos negativos de pintura neutral (-1). Se conserva el umbral y se contrasta con el color neutral real de la factoría. La inspección detectó además dos tensores que atravesaban el techo, solape de faldones en cumbrera, paredes planas y barreras macizas que ocultaban depósitos y cajas. V4.1 ajusta las hojas al eje central, monta una cumbrera articulada, elimina tensores obsoletos, esculpe refuerzos laterales y sustituye barreras por bastidores abiertos. Añade pasarela modular a ras de plataforma. No altera la huella ni la lógica táctica. Requiere nueva QA y comparación de renders antes de publicación.
