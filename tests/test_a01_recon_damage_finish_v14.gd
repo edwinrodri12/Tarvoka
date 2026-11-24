@@ -176,6 +176,25 @@ func _run()->void:
                     var bounds:AABB=boom.mesh.get_aabb()
                     verify(bounds.position.z<-0.21 and bounds.end.z>1.46 and bounds.end.y>1.08,
                         "boom physically reaches wing spar and tail hinge")
+            # V18: both control surfaces use the actual V4 swept trailing
+            # edge, with a closed root and tip, and keep their damage IDs.
+            verify(bool(craft.get_meta("tarvoka_a01_v18_conformal_flaperons",false)),
+                "V18 control surface sculpt integrated")
+            var left_flap:=body.find_child("A01_V4_SolidTrailingFlap_L",false,false) as MeshInstance3D
+            var right_flap:=body.find_child("A01_V4_SolidTrailingFlap_R",false,false) as MeshInstance3D
+            for flap in [left_flap,right_flap]:
+                var part:=flap as MeshInstance3D
+                verify(part!=null and part.mesh is ArrayMesh and part.visible,
+                    "V18 flaperon is a visible solid mesh, not a box")
+                if part==null or not (part.mesh is ArrayMesh):
+                    continue
+                verify(_closed(part.mesh) and _exterior(part.mesh),
+                    "V18 flaperon has sealed clockwise surfaces")
+                var limits:AABB=part.mesh.get_aabb()
+                verify(is_equal_approx(limits.size.x,0.95) and limits.size.y<0.10,
+                    "V18 follows swept wing with low-profile thickness")
+                verify(part.mesh.get_faces().size()/3==(68 if lod==13 else 44),
+                    "V18 flaperon has bounded LOD geometry")
             var intact:Dictionary=_stats(craft)
             verify(Damage.stage(craft)==0 and real_wing.visible and
                 not broken.is_visible_in_tree(),"D0 shows untouched full wing")
@@ -185,6 +204,9 @@ func _run()->void:
                 verify(real_wing.visible==(stage<4) and
                     broken.is_visible_in_tree()==(stage==4) and
                     left_wing.visible,"physical D4 swap never damages left wing")
+                if left_flap!=null and right_flap!=null:
+                    verify(left_flap.visible and right_flap.visible==(stage<4),
+                        "V18 right control surface disappears with fractured wing only")
                 for entry in effects:
                     var effect:=entry[0] as MeshInstance3D
                     verify(effect.is_visible_in_tree()==(stage>=int(entry[1])),
@@ -214,6 +236,9 @@ func _run()->void:
             verify(Damage.repair(craft) and Damage.stage(craft)==0 and
                 real_wing.visible and not broken.is_visible_in_tree(),
                 "D4->D0 fully restores real unbroken wing and fins")
+            if left_flap!=null and right_flap!=null:
+                verify(left_flap.visible and right_flap.visible,
+                    "V18 repair restores both original control surfaces")
             for entry in effects:
                 var effect:=entry[0] as MeshInstance3D
                 verify(not effect.is_visible_in_tree() and effect.scale.is_equal_approx(Vector3.ONE) and
