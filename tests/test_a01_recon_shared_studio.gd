@@ -48,7 +48,7 @@ func _run()->void:
         "recon drone added to the SAME unit selector")
     if picker!=null and index>=0 and index<picker.item_count:
         check(picker.get_item_text(index).contains("A01") and
-            picker.get_item_text(index).contains("V15 EN DESARROLLO"),
+            picker.get_item_text(index).contains("V16 EN DESARROLLO"),
             "A01 correctly remains an unapproved first art revision")
         picker.select(index)
     studio.call("_display_role","uav_recon")
@@ -247,8 +247,9 @@ func _run()->void:
     check(v10_optics!=null and v10_optics.visible and v10_optics.mesh is ArrayMesh,
         "V10 real sealed annular optic is shown in the SAME 3D viewer")
     var v10_nose:=model.find_child(NoseV10.NOSE,true,false) as MeshInstance3D
-    check(v10_nose!=null and v10_nose.visible and v10_nose.mesh is ArrayMesh,
-        "V10 real sealed sculpted nose is shown in the original 3D viewer")
+    check(v10_nose!=null and not v10_nose.visible and v10_nose.mesh is ArrayMesh and
+        bool(model.get_meta("tarvoka_a01_unified_nose_shell",false)),
+        "V16 unified hull replaces overlapping nose in original 3D viewer")
     # New physical V11 replaces visually floating boxes with watertight paint.
     var hull_v11:=model.find_child(AirframeV11.HULL,true,false) as MeshInstance3D
     var wing_v11:=model.find_child(AirframeV11.WING_R,true,false) as MeshInstance3D
