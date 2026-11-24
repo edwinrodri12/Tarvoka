@@ -308,7 +308,7 @@ func _ready() -> void:
         while role_picker.item_count<=recon_index:
             role_picker.add_item(P06Models.ROLES[role_picker.item_count])
         role_picker.set_item_text(recon_index,
-            "A01 · Dron de reconocimiento · V15 EN DESARROLLO")
+            "A01 · Dron de reconocimiento · V16 EN DESARROLLO")
     # Preserve existing roles/indices; these are additional native 3D variants.
     for entry in [
         ["line","★ INFANTERÍA BÁSICA · Guardia"],
@@ -1635,7 +1635,7 @@ func _a01_play(kind:String)->void:
     if kind not in A01Recon.VALID_POSES:
         return
     if A01DamageV6.has_model(model_root) and A01DamageV6.stage(model_root)==4 and kind in ["move","scan"]:
-        status_label.text="A01 V15 · aeronave destruida, selecciona D0 para reparar."
+        status_label.text="A01 V16 · aeronave destruida, selecciona D0 para reparar."
         return
     if _a01_tween!=null and _a01_tween.is_running():
         _a01_tween.kill()
@@ -1647,7 +1647,7 @@ func _a01_play(kind:String)->void:
     _a01_tween.tween_method(Callable(self,"_a01_tick").bind(art,kind),
         0.0,1.0,2.8 if kind=="scan" else 1.5)
     _a01_tween.tween_callback(Callable(self,"_a01_done").bind(art))
-    status_label.text="A01 V15 · %s · animación óptica 3D, sin alterar niebla" % kind
+    status_label.text="A01 V16 · %s · animación óptica 3D, sin alterar niebla" % kind
 
 func _a01_tick(progress:float,art:Node3D,kind:String)->void:
     if is_instance_valid(art):
@@ -1869,7 +1869,7 @@ func _refresh_unified_studio_navigation() -> void:
             "apc": label="P06 · Bastión · V25"
             "mlrs": label="G11 · Lanzador · V33"
             "attack_heli": label="A01 · Helicóptero HAT-29 · V14"
-            "uav_recon": label="A01 · Dron de reconocimiento · V15 EN DESARROLLO"
+            "uav_recon": label="A01 · Dron de reconocimiento · V16 EN DESARROLLO"
             "logistics_mobile": label="G16 · Logística blindada 6×6 · V6 PBR y suministros articulados"
             "ew_mobile": label="G15 · Guerra electrónica · V11 (neumáticos, óptica y electrónica 3D)"
             "aa_mobile": label="G13 · Antiaéreo · V54 caucho y rodadura 3D"
@@ -5469,7 +5469,7 @@ func _update_details() -> void:
     if _role=="uav_recon" and model_root!=null and detail_label!=null and status_label!=null:
         var ready_a01:bool=A01NoseOpticsV10.has_model(model_root)
         var current_damage:int=A01DamageV6.stage(model_root) if ready_a01 else -1
-        detail_label.text="A01 V15 EN DESARROLLO · LOD%d · UAV SIN ARMAS · %d mallas · %s" % [
+        detail_label.text="A01 V16 EN DESARROLLO · LOD%d · UAV SIN ARMAS · %d mallas · %s" % [
             _a01_review_lod,P06Models.inspect_meshes(model_root),
             A01DamageV6.STAGES[current_damage] if ready_a01 else "modelo incompleto"]
         status_label.text="A01 · %s · daño 3D artístico, sin cambiar HP, visión ni ataque" % [
