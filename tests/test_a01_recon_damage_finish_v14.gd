@@ -144,6 +144,30 @@ func _run()->void:
                     verify(mat!=null and mat.transparency==
                         BaseMaterial3D.TRANSPARENCY_DISABLED,
                         "no transparent/hollow damage part")
+            verify(bool(craft.get_meta("tarvoka_a01_v21_conformal_damage",false)),
+                "V21 irregular damage finish integrated")
+            for tag in [Finish.D1_WING,Finish.D1_NOSE,Finish.D2_BURN,
+                    Finish.D2_PLATE,Finish.D3_TAIL,Finish.D3_PANEL]:
+                var scar:=craft.find_child(tag,true,false) as MeshInstance3D
+                verify(scar!=null and scar.mesh is ArrayMesh,"V21 sealed damage scar exists")
+                if scar==null or not (scar.mesh is ArrayMesh):
+                    continue
+                verify(scar.mesh.get_faces().size()/3==32,
+                    "V21 eight-sided irregular scar has exactly 32 triangles")
+                var mat:=scar.material_override as StandardMaterial3D
+                verify(mat!=null and mat.vertex_color_use_as_albedo,
+                    "V21 gradient damage is vertex pigment, not alpha or a floating box")
+                var arrays:Array=scar.mesh.surface_get_arrays(0)
+                var pigment:PackedColorArray=arrays[Mesh.ARRAY_COLOR]
+                var tones:Dictionary={}
+                for shade in pigment:
+                    tones[shade.to_html()]=true
+                    verify(shade.a>=0.999,"V21 opaque damage pigment")
+                verify(tones.size()>=2,"V21 edge and center damage tones")
+            var right_light:=body.find_child("A01_V2_NavLightStarboard",false,false) as MeshInstance3D
+            var left_light:=body.find_child("A01_V2_NavLightPort",false,false) as MeshInstance3D
+            verify(right_light!=null and left_light!=null and right_light.visible and left_light.visible,
+                "V21 intact aircraft retains both navigation lights")
             verify(Atmosphere.has_model(craft),"V15 six closed effect meshes")
             var effects:Array=craft.get_meta(Atmosphere.CACHE,[])
             verify(effects.size()==6,"exact six legacy effects replaced")
@@ -204,6 +228,9 @@ func _run()->void:
                 verify(real_wing.visible==(stage<4) and
                     broken.is_visible_in_tree()==(stage==4) and
                     left_wing.visible,"physical D4 swap never damages left wing")
+                if right_light!=null and left_light!=null:
+                    verify(left_light.visible and right_light.visible==(stage<4),
+                        "V21 severed right wing cannot leave navigation light floating")
                 if left_flap!=null and right_flap!=null:
                     verify(left_flap.visible and right_flap.visible==(stage<4),
                         "V18 right control surface disappears with fractured wing only")
@@ -236,6 +263,9 @@ func _run()->void:
             verify(Damage.repair(craft) and Damage.stage(craft)==0 and
                 real_wing.visible and not broken.is_visible_in_tree(),
                 "D4->D0 fully restores real unbroken wing and fins")
+            if right_light!=null and left_light!=null:
+                verify(right_light.visible and left_light.visible,
+                    "V21 repair restores both navigation lights")
             if left_flap!=null and right_flap!=null:
                 verify(left_flap.visible and right_flap.visible,
                     "V18 repair restores both original control surfaces")
