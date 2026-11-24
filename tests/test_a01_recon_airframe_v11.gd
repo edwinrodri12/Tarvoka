@@ -94,6 +94,24 @@ func _run()->void:
                 var mat:=part.material_override as StandardMaterial3D
                 check(mat!=null and mat.transparency==BaseMaterial3D.TRANSPARENCY_DISABLED,
                     "physical V11 mesh materials are completely opaque")
+                if name==V11.HULL and part.mesh is ArrayMesh and mat!=null:
+                    check(mat.vertex_color_use_as_albedo,
+                        "V19 hull pigment is integrated on the original solid mesh")
+                    var arrays:Array=part.mesh.surface_get_arrays(0)
+                    var pigment:PackedColorArray=arrays[Mesh.ARRAY_COLOR]
+                    var vertices:PackedVector3Array=arrays[Mesh.ARRAY_VERTEX]
+                    check(pigment.size()==vertices.size() and not pigment.is_empty(),
+                        "V19 every hull vertex has opaque composite pigment")
+                    var tones:Dictionary={}
+                    for i in range(pigment.size()):
+                        var shade:Color=pigment[i]
+                        tones[shade.to_html()]=true
+                        check(shade.a>=0.999 and shade.is_equal_approx(
+                            V11._hull_pigment(vertices[i],expected)),
+                            "V19 pigment matches geometry and official faction")
+                    check(tones.size()>=8,"V19 hull has visible two-tone variation")
+                    check(bool(model.get_meta("tarvoka_a01_v19_integrated_composite_pigment",false)),
+                        "V19 native finish present in both LODs")
                 if name!=V11.ANTENNA:
                     check(_closed(part.mesh),"sealed non-degenerate manifold: "+name)
                 if name in [V11.CREST,V11.WING_L,V11.WING_R]:
