@@ -45,6 +45,14 @@ func closed_outward(mesh: Mesh) -> bool:
             var c: Vector3=verts[index[i+2] if index.size()>0 else i+2]
             # Godot clockwise front faces: negate conventional signed volume.
             volume-=a.dot(b.cross(c))/6.0
+            # Godot front-face geometric normal is the reversed cross product.
+            # A closed mesh with inverted lighting normals is not acceptable.
+            var outward: Vector3=(c-a).cross(b-a)
+            var avg: Vector3=normals[index[i] if index.size()>0 else i]+(
+                normals[index[i+1] if index.size()>0 else i+1])+(
+                normals[index[i+2] if index.size()>0 else i+2])
+            if outward.length_squared()<1e-18 or outward.dot(avg)<=0.0:
+                return false
             var t: Array[String]=[_key(a),_key(b),_key(c)]
             if t[0]==t[1] or t[1]==t[2] or t[2]==t[0]:
                 return false
@@ -170,13 +178,18 @@ func _run() -> void:
                     absf(stripe.position.x)<0.32,
                     "faction arm identifier moved outside new armor")
                 for label in [V17.KNEE+suffix,V17.POCKET+suffix,
-                        V17.SOLE+suffix]:
+                        V17.SOLE+suffix,V17.TOE+suffix]:
                     var part: MeshInstance3D=model.find_child(
                         label,true,false) as MeshInstance3D
                     check(part!=null and part.get_parent()==leg
                         and closed_outward(part.mesh) and
                         part.has_meta(V17.OLD),
                         "solid no-gap knee, pouch or boot: "+label)
+                var case_part: MeshInstance3D=model.find_child(
+                    V17.CASE+suffix,true,false) as MeshInstance3D
+                check(case_part!=null and case_part.get_parent()==torso and
+                    closed_outward(case_part.mesh) and case_part.has_meta(V17.OLD),
+                    "closed refined dorsal case on original torso")
                 if lod==8:
                     var knee_faction: MeshInstance3D=model.find_child(
                         "V3_IdentidadRodillaMapa"+suffix,
@@ -193,7 +206,7 @@ func _run() -> void:
                     var suffix: String="_%d"%side
                     for label in [V17.SHOULDER+suffix,
                             V17.KNEE+suffix,V17.POCKET+suffix,
-                            V17.SOLE+suffix]:
+                            V17.SOLE+suffix,V17.TOE+suffix,V17.CASE+suffix]:
                         var part: MeshInstance3D=model.find_child(
                             label,true,false) as MeshInstance3D
                         sculpt_triangles+=face_count(part.mesh)

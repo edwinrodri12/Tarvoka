@@ -106,7 +106,7 @@ static func _plate(parent: Node3D, name: String, center: Vector3,
     st.begin(Mesh.PRIMITIVE_TRIANGLES)
     var layers: Array[Vector2] = [
         Vector2(1.0,depth*0.5),
-        Vector2(1.0,-depth*0.5+0.025),
+        Vector2(1.0,-depth*0.5+minf(0.025,depth*0.38)),
         Vector2(0.89,-depth*0.5)
     ]
     for k in range(layers.size()-1):

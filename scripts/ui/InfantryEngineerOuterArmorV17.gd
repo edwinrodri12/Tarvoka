@@ -17,6 +17,8 @@ const INSIGNIA: String="V8_EscudoTecnicoPecho"
 const KNEE: String="Rodillera"
 const POCKET: String="BolsilloPierna"
 const SOLE: String="V2_Suela"
+const TOE: String="V2_PunteraProtegida"
+const CASE: String="V12_EstucheDorsalContorneado"
 
 static func _find(model: Node3D, name: String) -> MeshInstance3D:
     return model.find_child(name,true,false) as MeshInstance3D
@@ -179,9 +181,42 @@ static func apply(model: Node3D, hero: bool) -> bool:
         if sole==null or sole.get_parent()!=leg:
             return false
         if not _change(model,SOLE+suffix,
-                V13._rounded_press(0.261,0.089,0.453,0.036,
-                    0.013,hero),Vector3.ONE,
+                V13._lathe([
+                    Vector3(0.099,-0.045,0.194),
+                    Vector3(0.130,-0.028,0.226),
+                    Vector3(0.132,0.014,0.229),
+                    Vector3(0.116,0.043,0.210)
+                ],hero),Vector3.ONE,
                 Vector3(0,-0.930,-0.128)):
+            return false
+
+        # Replace the isolated sphere at the toe with a low, reinforced
+        # closed boot cap that overlaps the boot and the actual outsole.
+        var toe: MeshInstance3D=_find(model,TOE+suffix)
+        if toe==null or toe.get_parent()!=leg:
+            return false
+        if not _change(model,TOE+suffix,V13._lathe([
+                    Vector3(0.091,-0.066,0.074),
+                    Vector3(0.119,-0.042,0.105),
+                    Vector3(0.120,0.006,0.112),
+                    Vector3(0.093,0.043,0.093),
+                    Vector3(0.049,0.061,0.052)
+                ],hero),Vector3.ONE,Vector3(0,-0.850,-0.300)):
+            return false
+
+        # Existing rear case gets a more structured rounded housing,
+        # keeping its lids, latches, paint and the original torso rig.
+        var case_part: MeshInstance3D=_find(model,CASE+suffix)
+        if case_part==null or case_part.get_parent()!=torso:
+            return false
+        if not _change(model,CASE+suffix,V13._lathe([
+                    Vector3(0.066,-0.174,0.078),
+                    Vector3(0.101,-0.148,0.116),
+                    Vector3(0.115,-0.097,0.128),
+                    Vector3(0.119,0.090,0.127),
+                    Vector3(0.108,0.144,0.115),
+                    Vector3(0.070,0.174,0.080)
+                ],hero),case_part.scale,case_part.position):
             return false
 
         # Keep existing tactical LOD8 identity on the outside of the
