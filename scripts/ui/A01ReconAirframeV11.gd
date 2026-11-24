@@ -159,6 +159,56 @@ static func _dorsal_skin(body:Node3D,paint:Material,hero:bool)->MeshInstance3D:
     body.add_child(mesh)
     return mesh
 
+# V16.1: closed service skins fitted to the polygonal hull.
+static func _flush_service_panel(body:Node3D,tag:String,zs:Array,angles:Array,
+        hero:bool,material:Material)->void:
+    var step:float=360.0/float(16 if hero else 12)
+    var outer:Array=[]
+    var inner:Array=[]
+    for z_value in zs:
+        var z:float=float(z_value)
+        var outer_row:Array=[]
+        var inner_row:Array=[]
+        for angle_value in angles:
+            var angle:float=float(angle_value)
+            var lo:float=floorf(angle/step)*step
+            var base:Vector3=_body_surface(z,lo).lerp(
+                _body_surface(z,lo+step),(angle-lo)/step)
+            var n:=Vector3(cos(deg_to_rad(angle)),sin(deg_to_rad(angle)),0)
+            outer_row.append(base+n*0.0035)
+            inner_row.append(base-n*0.004)
+        outer.append(outer_row)
+        inner.append(inner_row)
+    var t:=SurfaceTool.new()
+    t.begin(Mesh.PRIMITIVE_TRIANGLES)
+    for j in range(zs.size()-1):
+        for i in range(angles.size()-1):
+            var a:float=deg_to_rad((float(angles[i])+float(angles[i+1]))*0.5)
+            var n:=Vector3(cos(a),sin(a),0)
+            V10._face(t,outer[j][i],outer[j+1][i],outer[j+1][i+1],n)
+            V10._face(t,outer[j][i],outer[j+1][i+1],outer[j][i+1],n)
+            V10._face(t,inner[j][i],inner[j+1][i+1],inner[j+1][i],-n)
+            V10._face(t,inner[j][i],inner[j][i+1],inner[j+1][i+1],-n)
+    for j in [0,zs.size()-1]:
+        var n:Vector3=Vector3.FORWARD if j==0 else Vector3.BACK
+        for i in range(angles.size()-1):
+            V10._face(t,outer[j][i],inner[j][i],inner[j][i+1],n)
+            V10._face(t,outer[j][i],inner[j][i+1],outer[j][i+1],n)
+    for i in [0,angles.size()-1]:
+        var a:float=deg_to_rad(float(angles[i]))
+        var tangent:=Vector3(-sin(a),cos(a),0)
+        var n:Vector3=-tangent if i==0 else tangent
+        for j in range(zs.size()-1):
+            V10._face(t,outer[j][i],inner[j][i],inner[j+1][i],n)
+            V10._face(t,outer[j][i],inner[j+1][i],outer[j+1][i],n)
+    t.index()
+    t.generate_normals()
+    var part:=body.find_child(tag,false,false) as MeshInstance3D
+    if part!=null:
+        part.mesh=t.commit()
+        part.position=Vector3.ZERO
+        part.material_override=material
+
 static func _wing_surface(side:float,x:float,t:float,hero:bool)->Vector3:
     # Follows the ACTUAL top chord between V4 profile vertices 1 and 2,
     # rather than placing an axis-aligned box above a swept wing.
@@ -283,6 +333,14 @@ static func apply(root:Node3D,faction_color:Color,hero:bool)->bool:
             _wing_surface(s,1.550,0.83,hero),
             _wing_surface(s,1.230,0.83,hero)
         ],Vector3.UP,paint)
+    if hero:
+        var service:=_mat(Color("#71838d"),0.27,0.62)
+        _flush_service_panel(body,V10.HATCH,[-0.850,-0.700,-0.660],
+            [72.0,90.0,108.0],hero,service)
+        _flush_service_panel(body,V10.SEAM_R,[-1.075,-0.940,-0.910],
+            [-9.0,0.0,9.0],hero,service)
+        _flush_service_panel(body,V10.SEAM_L,[-1.075,-0.940,-0.910],
+            [171.0,180.0,189.0],hero,service)
     var mast:=_antenna(body,hero,graphite)
     if hull.mesh==null or dorsal.mesh==null or mast.mesh==null:
         return false
