@@ -1,4 +1,4 @@
-name: TARVOKA A01 Recon UAV V14 Native Visual QA
+name: TARVOKA A01 Recon UAV V15 Native Visual QA
 
 on:
   pull_request:
@@ -15,7 +15,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: a01-recon-v14-native-${{ github.event.pull_request.number || github.ref }}
+  group: a01-recon-v15-native-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -231,6 +231,7 @@ jobs:
             exit 1
           fi
           grep -F 'PASS A01 V14 REAL DAMAGE:' /tmp/a01-v14-damage.log
+          grep -F 'PASS A01 V15 ORGANIC EFFECTS:' /tmp/a01-v14-damage.log
           test "$(find build/qa/a01-v14 -maxdepth 1 -name 'a01-v14-*.png' | wc -l)" -eq 8
 
       - name: Enforce same-viewer QA in the full native Studio publisher
@@ -251,6 +252,7 @@ jobs:
           grep -Fq "A01DamageFinishV14.apply" scripts/ui/UnitModels3D.gd
           grep -Fq "test_a01_recon_damage_finish_v14.gd" .github/workflows/tarvoka-3d-pages.yml
           grep -Fq "PASS A01 V14 SHARED STUDIO:" .github/workflows/tarvoka-3d-pages.yml
+          grep -Fq "PASS A01 V15 SHARED STUDIO:" .github/workflows/tarvoka-3d-pages.yml
           grep -Fq "test_a01_recon_tail_optics_v13.gd" .github/workflows/tarvoka-3d-pages.yml
           grep -Fq "PASS A01 V13 SHARED STUDIO:" .github/workflows/tarvoka-3d-pages.yml
           grep -Fq "A01AirframeV11.apply" scripts/ui/UnitModels3D.gd
@@ -261,7 +263,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: tarvoka-a01-v14-natural-damage-visual-evidence
+          name: tarvoka-a01-v15-organic-effects-visual-evidence
           path: |
             build/qa/a01-v1/*.png
             build/qa/a01-v6/*.png
