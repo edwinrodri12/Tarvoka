@@ -40,64 +40,94 @@ static func _tri(t:SurfaceTool,a:Vector3,b:Vector3,c:Vector3)->void:
     t.add_vertex(c)
     t.add_vertex(b)
 
-static func _patch(parent:Node3D,tag:String,points:Array,
+# V21: irregular sealed scars with softer perimeter shading. All points
+# follow the original wing/body parameterization, with buried inner skin.
+const SCAR_OUTLINE:Array=[
+    Vector2(0.04,0.40),Vector2(0.20,0.08),Vector2(0.53,0.03),
+    Vector2(0.85,0.16),Vector2(0.98,0.52),Vector2(0.78,0.87),
+    Vector2(0.40,0.98),Vector2(0.12,0.79)
+]
+
+static func _colored_tri(t:SurfaceTool,a:Vector3,b:Vector3,c:Vector3,
+        ca:Color,cb:Color,cc:Color)->void:
+    t.set_color(ca)
+    t.add_vertex(a)
+    t.set_color(cc)
+    t.add_vertex(c)
+    t.set_color(cb)
+    t.add_vertex(b)
+
+static func _patch(parent:Node3D,tag:String,points:Array,center:Vector3,
         up:Vector3,mat:Material)->MeshInstance3D:
-    # Twelve triangles form a truly closed, 0.006-m-thick enamel/scar
-    # rather than a two-sided plane. The upper wing sample comes from V11.
-    var winding:Array=[0,1,2,3]
-    if (points[1]-points[0]).cross(points[2]-points[0]).dot(up)<0.0:
-        winding=[0,3,2,1]
+    var normal:Vector3=up.normalized()
+    var order:Array=[]
+    for i in range(points.size()):
+        order.append(i)
+    if (points[1]-points[0]).cross(points[2]-points[0]).dot(normal)<0.0:
+        order.reverse()
     var outside:Array=[]
     var inside:Array=[]
-    var normal:Vector3=up.normalized()
-    for idx in winding:
+    for idx in order:
         var p:Vector3=points[int(idx)]
-        outside.append(p+normal*0.014)
-        inside.append(p+normal*0.008)
+        outside.append(p+normal*0.005)
+        inside.append(p-normal*0.008)
+    var dark:=Color("#c4c4c4")
+    var edge:=Color.WHITE
+    var top:Vector3=center+normal*0.008
+    var bottom:Vector3=center-normal*0.008
     var t:=SurfaceTool.new()
     t.begin(Mesh.PRIMITIVE_TRIANGLES)
-    _tri(t,outside[0],outside[1],outside[2])
-    _tri(t,outside[0],outside[2],outside[3])
-    _tri(t,inside[0],inside[2],inside[1])
-    _tri(t,inside[0],inside[3],inside[2])
-    for i in range(4):
-        var j:int=(i+1)%4
-        _tri(t,outside[i],inside[i],inside[j])
-        _tri(t,outside[i],inside[j],outside[j])
+    for i in range(order.size()):
+        var j:int=(i+1)%order.size()
+        _colored_tri(t,top,outside[i],outside[j],dark,edge,edge)
+        _colored_tri(t,bottom,inside[j],inside[i],edge,edge,edge)
+        _colored_tri(t,outside[i],inside[i],inside[j],edge,edge,edge)
+        _colored_tri(t,outside[i],inside[j],outside[j],edge,edge,edge)
+    t.index()
     t.generate_normals()
     var n:=MeshInstance3D.new()
     n.name=tag
     n.mesh=t.commit()
-    n.material_override=mat
+    var finish:=mat.duplicate() as StandardMaterial3D
+    finish.vertex_color_use_as_albedo=true
+    n.material_override=finish
     parent.add_child(n)
     return n
 
 static func _wing_patch(parent:Node3D,tag:String,side:float,
         x0:float,x1:float,u0:float,u1:float,hero:bool,
         mat:Material)->MeshInstance3D:
-    return _patch(parent,tag,[
-        V11._wing_surface(side,x0,u0,hero),
-        V11._wing_surface(side,x1,u0,hero),
-        V11._wing_surface(side,x1,u1,hero),
-        V11._wing_surface(side,x0,u1,hero)
-    ],Vector3.UP,mat)
+    var points:Array=[]
+    for uv in SCAR_OUTLINE:
+        points.append(V11._wing_surface(side,lerpf(x0,x1,uv.x),
+            lerpf(u0,u1,uv.y),hero))
+    var center:Vector3=V11._wing_surface(side,(x0+x1)*0.5,(u0+u1)*0.5,hero)
+    return _patch(parent,tag,points,center,Vector3.UP,mat)
+
+static func _hull_point(z:float,angle:float,hero:bool)->Vector3:
+    # Match actual polygon facets instead of an ideal ellipse outside them.
+    var step:float=360.0/float(16 if hero else 12)
+    var lo:float=floorf(angle/step)*step
+    return V11._body_surface(z,lo).lerp(
+        V11._body_surface(z,lo+step),(angle-lo)/step)
 
 static func _body_patch(parent:Node3D,tag:String,z0:float,z1:float,
-        a0:float,a1:float,mat:Material)->MeshInstance3D:
+        a0:float,a1:float,hero:bool,mat:Material)->MeshInstance3D:
+    var points:Array=[]
+    for uv in SCAR_OUTLINE:
+        points.append(_hull_point(lerpf(z0,z1,uv.x),lerpf(a0,a1,uv.y),hero))
     var mid:float=deg_to_rad((a0+a1)*0.5)
-    return _patch(parent,tag,[
-        V11._body_surface(z0,a0),V11._body_surface(z1,a0),
-        V11._body_surface(z1,a1),V11._body_surface(z0,a1)
-    ],Vector3(cos(mid),sin(mid),0),mat)
+    var center:Vector3=_hull_point((z0+z1)*0.5,(a0+a1)*0.5,hero)
+    return _patch(parent,tag,points,center,Vector3(cos(mid),sin(mid),0),mat)
 
 static func _tail_patch(parent:Node3D,hero:bool,
         mat:Material)->MeshInstance3D:
-    return _patch(parent,D3_TAIL,[
-        V13._tail_top(-1.0,0.42,0.29,hero),
-        V13._tail_top(-1.0,0.59,0.29,hero),
-        V13._tail_top(-1.0,0.59,0.76,hero),
-        V13._tail_top(-1.0,0.42,0.76,hero)
-    ],Vector3(0,0.92,0.39),mat)
+    var points:Array=[]
+    for uv in SCAR_OUTLINE:
+        points.append(V13._tail_top(-1.0,lerpf(0.42,0.59,uv.x),
+            lerpf(0.29,0.76,uv.y),hero))
+    return _patch(parent,D3_TAIL,points,V13._tail_top(-1.0,0.505,0.525,hero),
+        Vector3(0,0.92,0.39),mat)
 
 static func _fractured_wing(parent:Node3D,hero:bool,
         shell:Material)->MeshInstance3D:
@@ -204,7 +234,7 @@ static func apply(root:Node3D,hero:bool)->bool:
             to_hide.append(old)
     var swap_names:Array=[
         V4.WING_R,V11.WING_R,V8.FIN_R,V9.PANEL_R,V9.ROOT_R,
-        "A01_V4_SolidTrailingFlap_R"
+        "A01_V4_SolidTrailingFlap_R","A01_V2_NavLightStarboard"
     ]
     var intact:Array=[]
     for name in swap_names:
@@ -212,17 +242,17 @@ static func apply(root:Node3D,hero:bool)->bool:
         if original==null or not original.visible:
             return false
         intact.append(original)
-    var soot:=_mat(Color("#252c31"),0.13,0.91)
-    var burn:=_mat(Color("#131d24"),0.08,0.92)
+    var soot:=_mat(Color("#53616a"),0.13,0.91)
+    var burn:=_mat(Color("#343d43"),0.08,0.92)
     var metal:=_mat(Color("#9faeb7"),0.33,0.55)
     var carbon:=_mat(Color("#42525a"),0.17,0.81)
     var gray:=_mat(Color("#bdc9ce"),0.34,0.46)
     _wing_patch(layers[0],D1_WING,-1.0,0.88,1.12,0.28,0.54,hero,soot)
-    _body_patch(layers[0],D1_NOSE,-0.95,-0.73,41,66,soot)
+    _body_patch(layers[0],D1_NOSE,-0.95,-0.73,41,66,hero,soot)
     _wing_patch(layers[1],D2_BURN,1.0,0.88,1.14,0.45,0.79,hero,burn)
     _wing_patch(layers[1],D2_PLATE,1.0,1.04,1.23,0.78,0.96,hero,carbon)
     _tail_patch(layers[2],hero,burn)
-    _body_patch(layers[2],D3_PANEL,0.52,0.71,48,70,metal)
+    _body_patch(layers[2],D3_PANEL,0.52,0.71,48,70,hero,metal)
     _fractured_wing(layers[3],hero,gray)
     _debris(layers[3],D4_RIB,[
         Vector3(1.12,1.067,-0.215),Vector3(1.24,1.07,-0.135),
@@ -241,6 +271,7 @@ static func apply(root:Node3D,hero:bool)->bool:
     ],0.022,carbon)
     for old in to_hide:
         (old as MeshInstance3D).visible=false
+    root.set_meta("tarvoka_a01_v21_conformal_damage",true)
     root.set_meta("tarvoka_a01_v14_intact_wing_nodes",intact)
     root.set_meta(FLAG,true)
     root.set_meta("tarvoka_a01_v14_lod",13 if hero else 8)
