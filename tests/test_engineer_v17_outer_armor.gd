@@ -229,10 +229,31 @@ func _run() -> void:
                     "cloth deformation retains triangle budget and rig transform "+label)
                 var a: AABB=original.get_aabb()
                 var z: AABB=cloth.mesh.get_aabb()
-                check(absf(a.position.y-z.position.y)<0.00001 and
-                    absf(a.size.y-z.size.y)<0.00001 and
-                    absf(a.size.x-z.size.x)+absf(a.size.z-z.size.z)>0.0001,
-                    "real relief without moving terminal contacts "+label)
+                # Extremal radii can occur at the unchanged end caps:
+                # a deformed interior need not change the AABB. Inspect
+                # the actual corresponding triangle vertices instead.
+                var old_arrays: Array=original.surface_get_arrays(0)
+                var new_arrays: Array=cloth.mesh.surface_get_arrays(0)
+                var old_points: PackedVector3Array=old_arrays[Mesh.ARRAY_VERTEX]
+                var new_points: PackedVector3Array=new_arrays[Mesh.ARRAY_VERTEX]
+                var raw: Variant=old_arrays[Mesh.ARRAY_INDEX]
+                var ix: PackedInt32Array=(raw if raw is PackedInt32Array else PackedInt32Array())
+                var count: int=ix.size() if not ix.is_empty() else old_points.size()
+                var moved: float=0.0
+                var endpoints_fixed: bool=new_points.size()==count
+                if endpoints_fixed:
+                    for i in range(count):
+                        var p: Vector3=old_points[ix[i] if not ix.is_empty() else i]
+                        var q: Vector3=new_points[i]
+                        var delta: float=p.distance_to(q)
+                        if absf(p.y-a.position.y)<0.00001 or absf(p.y-a.end.y)<0.00001:
+                            endpoints_fixed=endpoints_fixed and delta<0.00001
+                        else:
+                            moved=maxf(moved,delta)
+                check(endpoints_fixed and moved>0.0001 and
+                    absf(a.position.y-z.position.y)<0.00001 and
+                    absf(a.size.y-z.size.y)<0.00001,
+                    "actual interior cloth relief with fixed end-cap vertices "+label)
             if lod==13:
                 for label in V17.old_fold_labels():
                     var stripe: MeshInstance3D=model.find_child(label,true,false) as MeshInstance3D
