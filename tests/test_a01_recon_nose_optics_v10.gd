@@ -151,6 +151,36 @@ func _run()->void:
                     max_r=maxf(max_r,radius)
                 check(min_r>0.10 and max_r>0.15,
                     "optical pupil remains open for the original blue EOIR lens")
+            var optics_pivot:=m.find_child(V1.SENSOR,true,false) as Node3D
+            check(optics_pivot!=null and bool(m.get_meta("tarvoka_a01_v20_sculpted_eoir",false)),
+                "V20 optical refinement installed on original pivot")
+            if optics_pivot!=null:
+                var pod:=optics_pivot.find_child("A01_V1_SealedThreeAxisOpticalPod",false,false) as MeshInstance3D
+                var rim:=optics_pivot.find_child("A01_V2_ClosedGimbalRing",false,false) as MeshInstance3D
+                var lens:=optics_pivot.find_child("A01_V2_ClosedOpticalGlass",false,false) as MeshInstance3D
+                var old_lens:=optics_pivot.find_child("A01_V1_BlueEOIRLens",false,false) as MeshInstance3D
+                var old_brow:=optics_pivot.find_child("A01_V1_CameraBrow",false,false) as MeshInstance3D
+                var cradle:=m.find_child("A01_V2_OpticalMountCradle",true,false) as MeshInstance3D
+                check(pod!=null and pod.mesh is ArrayMesh and pod.scale.is_equal_approx(Vector3.ONE),
+                    "V20 genuine rounded closed pod replaces stretched primitive")
+                if pod!=null and pod.mesh is ArrayMesh:
+                    check(_closed(pod.mesh as ArrayMesh,236 if lod==13 else 140),
+                        "V20 closed pod shell with bounded native geometry")
+                check(rim!=null and rim.mesh is ArrayMesh,
+                    "V20 shaped transition collar replaces blunt disc")
+                if rim!=null and rim.mesh is ArrayMesh:
+                    check(_closed(rim.mesh as ArrayMesh,156 if lod==13 else 92),
+                        "V20 transition collar closed on both LODs")
+                check(lens!=null and lens.mesh is SphereMesh and lens.visible,
+                    "V20 convex main lens is an actual 3D surface")
+                if lens!=null and thermal!=null:
+                    check(lens.position.x<0 and thermal.position.x>0 and
+                        lens.position.distance_to(thermal.position)>0.09,
+                        "V20 distinct lenses remain in original moving assembly")
+                check(cradle!=null and cradle.mesh is SphereMesh and cradle.get_parent()!=optics_pivot,
+                    "V20 rounded cradle stays fixed to airframe")
+                check(old_lens!=null and old_brow!=null and not old_lens.visible and not old_brow.visible,
+                    "V20 overlapping legacy lens and rectangular brow retired")
             var expected:Color=Models.faction_paint_color(team)
             for side in [-1,1]:
                 var paint:=m.find_child(V10.PAINT_L if side<0 else V10.PAINT_R,
