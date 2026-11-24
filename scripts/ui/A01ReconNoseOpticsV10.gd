@@ -26,7 +26,7 @@ static func _mat(color:Color,metal:float,rough:float)->StandardMaterial3D:
 
 static func _face(t:SurfaceTool,a:Vector3,b:Vector3,c:Vector3,out:Vector3)->void:
     t.add_vertex(a)
-    if (b-a).cross(c-a).dot(out)<0.0:
+    if (b-a).cross(c-a).dot(out)>0.0:
         t.add_vertex(c)
         t.add_vertex(b)
     else:
