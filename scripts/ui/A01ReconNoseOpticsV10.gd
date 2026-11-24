@@ -142,11 +142,10 @@ static func _conformal_nose_paint(body:Node3D,name:String,side:float,
     sections.append([-0.850,0.266,0.213])
     # Finish on the actual interpolated section of the V10 closed nose.
     sections.append([-0.700,0.27993,0.21246])
-    var count:int=12 if hero else 8
-    # V10 hero: upper side faces 30..60 and 120..150 degrees.
-    # V10 Android: lower-poly upper side faces 0..45 and 135..180.
-    var lo:int=1 if hero else 0
-    var hi:int=2 if hero else 1
+    # Match V16 unified hull ring vertices (16 hero, 12 mobile).
+    var count:int=16 if hero else 12
+    var lo:int=1
+    var hi:int=2
     var first:int=lo if side>0.0 else int(count/2)-hi
     var second:int=hi if side>0.0 else int(count/2)-lo
     var rings:Array=[]
