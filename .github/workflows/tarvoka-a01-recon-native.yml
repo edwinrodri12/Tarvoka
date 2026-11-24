@@ -1,4 +1,4 @@
-name: TARVOKA A01 Recon UAV V15 Native Visual QA
+name: TARVOKA A01 Recon UAV V16 Native Visual QA
 
 on:
   pull_request:
@@ -232,6 +232,7 @@ jobs:
           fi
           grep -F 'PASS A01 V14 REAL DAMAGE:' /tmp/a01-v14-damage.log
           grep -F 'PASS A01 V15 ORGANIC EFFECTS:' /tmp/a01-v14-damage.log
+          grep -F 'PASS A01 V16 SOLID EXTERIOR:' /tmp/a01-v14-damage.log
           test "$(find build/qa/a01-v14 -maxdepth 1 -name 'a01-v14-*.png' | wc -l)" -eq 8
 
       - name: Enforce same-viewer QA in the full native Studio publisher
@@ -263,7 +264,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: tarvoka-a01-v15-organic-effects-visual-evidence
+          name: tarvoka-a01-v16-solid-exterior-visual-evidence
           path: |
             build/qa/a01-v1/*.png
             build/qa/a01-v6/*.png
