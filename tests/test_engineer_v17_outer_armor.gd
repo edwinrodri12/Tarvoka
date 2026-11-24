@@ -43,7 +43,8 @@ func closed_outward(mesh: Mesh) -> bool:
             var a: Vector3=verts[index[i] if index.size()>0 else i]
             var b: Vector3=verts[index[i+1] if index.size()>0 else i+1]
             var c: Vector3=verts[index[i+2] if index.size()>0 else i+2]
-            volume+=a.dot(b.cross(c))/6.0
+            # Godot clockwise front faces: negate conventional signed volume.
+            volume-=a.dot(b.cross(c))/6.0
             var t: Array[String]=[_key(a),_key(b),_key(c)]
             if t[0]==t[1] or t[1]==t[2] or t[2]==t[0]:
                 return false

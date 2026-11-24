@@ -41,7 +41,8 @@ func _outward_watertight(shape: Mesh) -> bool:
             var a: Vector3=vertices[ia]
             var b: Vector3=vertices[ib]
             var c: Vector3=vertices[ic]
-            volume+=a.dot(b.cross(c))/6.0
+            # Godot clockwise front faces: negate conventional signed volume.
+            volume-=a.dot(b.cross(c))/6.0
             var v: Array[String]=[_key(a),_key(b),_key(c)]
             if v[0]==v[1] or v[1]==v[2] or v[2]==v[0]:
                 return false
