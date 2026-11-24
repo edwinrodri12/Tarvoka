@@ -131,9 +131,12 @@ func _run()->void:
                 "D4->D0 fully restores real unbroken wing and fins")
             verify(_stats(craft)==intact,
                 "restored D0 returns exactly same visible mesh workload")
-            verify(Models.faction_paint_color(faction).is_equal_approx(
-                (craft.find_child("A01_V11_ConformalDorsalFactionCrest",
-                    true,false) as MeshInstance3D).material_override.albedo_color),
+            var crest:=craft.find_child(
+                "A01_V11_ConformalDorsalFactionCrest",true,false) as MeshInstance3D
+            var crest_paint:=crest.material_override as StandardMaterial3D
+            verify(crest_paint!=null and
+                Models.faction_paint_color(faction).is_equal_approx(
+                    crest_paint.albedo_color),
                 "all 8 selected faction pigments persist after damage")
             models+=1
             root.remove_child(craft)
