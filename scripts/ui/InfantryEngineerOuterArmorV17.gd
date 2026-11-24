@@ -332,6 +332,87 @@ const FINISH_OLD: String="tarvoka_v17_original_material"
 const FINISH_NEW: String="tarvoka_v17_pbr_material"
 const FINISH_KIND: String="tarvoka_v17_surface_kind"
 static var _finish_textures: Dictionary={}
+const WEAR_SOURCE: String="tarvoka_v17_wear_source_mesh"
+const WEAR_KIND: String="tarvoka_v17_local_wear_kind"
+
+# Only already-sculpted closed armor, boots and cases receive local wear.
+# No faction emblems, optic, moving contacts or damage effects are touched.
+static func wear_kind(label: String) -> String:
+    if label==FRONT:
+        return "armor"
+    for prefix in [SHOULDER,ELBOW,KNEE]:
+        if label.begins_with(prefix+"_"):
+            return "armor"
+    for prefix in [SOLE,TOE]:
+        if label.begins_with(prefix+"_"):
+            return "boot"
+    if label.begins_with(CASE+"_"):
+        return "case"
+    return ""
+
+# Vertex colors are bound to the mesh, not the world or camera. Use
+# exposure-biased, continuous masks with a restrained contrast range.
+# Preserve exact vertex order, normals, indices and primitive type.
+static func _wear_mesh(source: ArrayMesh,kind: String) -> ArrayMesh:
+    if source==null or source.get_surface_count()!=1:
+        return null
+    var arrays: Array=source.surface_get_arrays(0)
+    var points: PackedVector3Array=arrays[Mesh.ARRAY_VERTEX]
+    var normals: PackedVector3Array=arrays[Mesh.ARRAY_NORMAL]
+    if points.is_empty() or points.size()!=normals.size():
+        return null
+    var aabb: AABB=source.get_aabb()
+    var extent: Vector3=Vector3(maxf(aabb.size.x,0.001),
+        maxf(aabb.size.y,0.001),maxf(aabb.size.z,0.001))
+    var colors:=PackedColorArray()
+    colors.resize(points.size())
+    for i in range(points.size()):
+        var p: Vector3=(points[i]-aabb.position)/extent
+        var n: Vector3=normals[i]
+        var edge: float=smoothstep(0.66,0.98,maxf(absf(p.x-0.5)*2.0,
+            absf(p.y-0.5)*2.0))
+        var speck: float=0.5+0.5*sin(p.x*31.0+p.y*27.0+p.z*19.0)
+        var patch: float=0.5+0.5*sin(p.x*9.0-p.y*13.0+p.z*7.0)
+        var tone: float=0.95-0.035*patch
+        match kind:
+            "armor":
+                # Brighter rubbed bevels; irregular darker scuffs on exposed panels.
+                tone=0.94+0.06*edge-0.075*(1.0-edge)*patch*speck
+            "boot":
+                # Dirt-like dark marks are strongest near the sole and toe.
+                tone=0.97-0.13*(1.0-smoothstep(0.08,0.68,p.y))*patch
+                tone-=0.035*maxf(0.0,-n.z)*speck
+            "case":
+                # Abrasion on projecting corners of the field equipment.
+                tone=0.94+0.045*edge-0.070*patch*speck
+        tone=clampf(tone,0.82,1.0)
+        colors[i]=Color(tone,tone,tone,1.0)
+    arrays[Mesh.ARRAY_COLOR]=colors
+    var result:=ArrayMesh.new()
+    result.add_surface_from_arrays(source.surface_get_primitive_type(0),arrays)
+    return result
+
+static func _local_wear(model: Node3D,hero: bool) -> bool:
+    if not hero:
+        return true
+    for item in model.find_children("*","MeshInstance3D",true,false):
+        var part: MeshInstance3D=item as MeshInstance3D
+        var kind: String=wear_kind(str(part.name))
+        if kind.is_empty():
+            continue
+        if not part.has_meta(NEW) or not part.mesh is ArrayMesh:
+            return false
+        var source: ArrayMesh=part.mesh as ArrayMesh
+        var worn: ArrayMesh=_wear_mesh(source,kind)
+        if worn==null:
+            return false
+        part.set_meta(WEAR_SOURCE,source)
+        part.set_meta(WEAR_KIND,kind)
+        var state: Dictionary=part.get_meta(NEW)
+        state["mesh"]=worn
+        part.set_meta(NEW,state)
+        part.mesh=worn
+    return true
 
 static func surface_kind(label: String) -> String:
     if label in ["V9_VisorContinuoOpaco","V8_LenteProtegida"]:
@@ -380,7 +461,12 @@ static func _surface_texture(kind: String) -> Texture2D:
                 "fabric":
                     tone=0.91+0.045*cos(8.0*u)*cos(8.0*v)+0.023*grain
                 "metal":
+                    # Short broken abrasion lines, repeated seamlessly
+                    # on metal only. No faction paint or optic is altered.
+                    var scratch: float=pow(maxf(0.0,cos(9.0*v+2.0*u)),18.0)
+                    var broken: float=smoothstep(0.35,0.82,0.5+0.5*sin(3.0*u-2.0*v))
                     tone=0.95+0.028*sin(16.0*v+sin(2.0*u))+0.010*grain
+                    tone-=0.065*scratch*broken
                 "rubber":
                     tone=0.93+0.036*cos(8.0*u)*cos(8.0*v)+0.012*grain
                 "ceramic":
@@ -393,8 +479,9 @@ static func _surface_texture(kind: String) -> Texture2D:
     return texture
 
 static func _pbr_surface(original: StandardMaterial3D, kind: String,
-        hero: bool) -> StandardMaterial3D:
+        hero: bool, worn: bool) -> StandardMaterial3D:
     var mat: StandardMaterial3D=original.duplicate() as StandardMaterial3D
+    mat.vertex_color_use_as_albedo=worn
     mat.transparency=BaseMaterial3D.TRANSPARENCY_DISABLED
     mat.cull_mode=BaseMaterial3D.CULL_BACK
     mat.clearcoat_enabled=false
@@ -439,9 +526,10 @@ static func _surface_finish(model: Node3D,hero: bool) -> bool:
         var original: StandardMaterial3D=part.material_override as StandardMaterial3D
         if original==null:
             return false
-        var key: String=str(original.get_instance_id())+":"+kind
+        var worn: bool=part.has_meta(WEAR_SOURCE)
+        var key: String=str(original.get_instance_id())+":"+kind+":"+str(worn)
         if not cache.has(key):
-            cache[key]=_pbr_surface(original,kind,hero)
+            cache[key]=_pbr_surface(original,kind,hero,worn)
         part.set_meta(FINISH_OLD,original)
         part.set_meta(FINISH_NEW,cache[key])
         part.set_meta(FINISH_KIND,kind)
@@ -665,7 +753,7 @@ static func apply(model: Node3D, hero: bool) -> bool:
         return false
     if not _sculpt_harness(model,hero):
         return false
-    if not _surface_finish(model,hero):
+    if not _local_wear(model,hero) or not _surface_finish(model,hero):
         return false
 
     # No new MeshInstance3D; all faction materials and collision bodies stay.

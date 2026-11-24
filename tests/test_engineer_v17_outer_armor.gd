@@ -372,6 +372,44 @@ func _run() -> void:
                     material_kinds["fabric"].metallic==0.0 and
                     material_kinds["rubber"].metallic==0.0,
                     "textile, ceramic, steel, rubber and optic behave differently")
+            var wear_count: int=0
+            for item in model.find_children("*","MeshInstance3D",true,false):
+                var part: MeshInstance3D=item as MeshInstance3D
+                var kind: String=V17.wear_kind(str(part.name))
+                if lod==8 or kind.is_empty():
+                    check(not part.has_meta(V17.WEAR_SOURCE),
+                        "no additional wear on tactical or protected parts "+str(part.name))
+                    continue
+                wear_count+=1
+                check(part.has_meta(V17.WEAR_SOURCE) and
+                    str(part.get_meta(V17.WEAR_KIND,""))==kind,
+                    "localized wear only on selected real mesh "+str(part.name))
+                if not part.has_meta(V17.WEAR_SOURCE):
+                    continue
+                var source: ArrayMesh=part.get_meta(V17.WEAR_SOURCE) as ArrayMesh
+                var old_arrays: Array=source.surface_get_arrays(0)
+                var new_arrays: Array=part.mesh.surface_get_arrays(0)
+                var colors: PackedColorArray=new_arrays[Mesh.ARRAY_COLOR]
+                var vertices: PackedVector3Array=new_arrays[Mesh.ARRAY_VERTEX]
+                check(old_arrays[Mesh.ARRAY_VERTEX]==vertices and
+                    old_arrays[Mesh.ARRAY_NORMAL]==new_arrays[Mesh.ARRAY_NORMAL] and
+                    old_arrays[Mesh.ARRAY_INDEX]==new_arrays[Mesh.ARRAY_INDEX] and
+                    face_count(source)==face_count(part.mesh) and closed_outward(part.mesh),
+                    "wear leaves geometry, normals and triangle budget intact "+str(part.name))
+                var darkest: float=1.0
+                var lightest: float=0.0
+                var valid: bool=colors.size()==vertices.size()
+                for shade in colors:
+                    darkest=minf(darkest,shade.r)
+                    lightest=maxf(lightest,shade.r)
+                    valid=valid and shade.a==1.0 and shade.r>=0.81 and shade.r<=1.0 and (
+                        absf(shade.r-shade.g)<0.004 and absf(shade.r-shade.b)<0.004)
+                check(valid and lightest-darkest>0.025,
+                    "restrained nonuniform opaque wear tones "+str(part.name))
+                var mat: StandardMaterial3D=part.material_override as StandardMaterial3D
+                check(mat!=null and mat.vertex_color_use_as_albedo,
+                    "PBR renders local abrasion without extra mesh "+str(part.name))
+            check(wear_count==(13 if lod==13 else 0),"hero-only wear on thirteen existing parts")
             var chest_material: Material=chest.material_override
             var current_mesh: Mesh=chest.mesh
             check(V17.show_finish(model,false) and
