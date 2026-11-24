@@ -619,6 +619,26 @@ static func apply(model: Node3D, hero: bool) -> bool:
                 Vector3.ONE,spec[6]):
             return false
 
+    # Native side view showed the original V7 rear faction plate
+    # floating out from the helmet's curved silhouette. Conform the
+    # existing badge to the rear shell rather than stack another badge.
+    var rear_badge: MeshInstance3D=_find(model,"V7_IdentidadCascoPosterior")
+    if rear_badge==null or rear_badge.get_parent()!=head:
+        return false
+    if not _change(model,rear_badge.name,_conformal_press(
+            0.270,0.065,0.020,0.018,0.004,-0.038,hero),
+            Vector3.ONE,Vector3(0,0.390,0.341)):
+        return false
+    # The V2 crown marker also remains a separate slab; follow the
+    # curved helmet cap, keeping the same faction material.
+    var crown_badge: MeshInstance3D=_find(model,"V2_FaccionCasco")
+    if crown_badge==null or crown_badge.get_parent()!=head:
+        return false
+    if not _change(model,crown_badge.name,_conformal_press(
+            0.240,0.064,0.022,0.017,0.004,0.032,hero),
+            Vector3.ONE,Vector3(0,0.548,-0.222)):
+        return false
+
     # The V14 rounded shoulder was physically undersized and looked like
     # an isolated ball. New deltoids cover arm roots and descend toward
     # the biceps. Still a CLOSED continuous solid on each original arm rig.
@@ -627,13 +647,13 @@ static func apply(model: Node3D, hero: bool) -> bool:
     # upper crest, defined sidewall and a narrower bicep contact.
     var shoulder_rings: Array=[
         Vector3(0.072,-0.470,0.077),
-        Vector3(0.177,-0.415,0.184),
-        Vector3(0.298,-0.266,0.310),
-        Vector3(0.431,-0.070,0.396),
-        Vector3(0.430,0.109,0.395),
-        Vector3(0.356,0.252,0.340),
-        Vector3(0.184,0.415,0.207),
-        Vector3(0.085,0.497,0.104)
+        Vector3(0.160,-0.415,0.169),
+        Vector3(0.271,-0.266,0.273),
+        Vector3(0.379,-0.070,0.332),
+        Vector3(0.382,0.109,0.337),
+        Vector3(0.331,0.252,0.301),
+        Vector3(0.204,0.370,0.207),
+        Vector3(0.085,0.432,0.104)
     ]
     for side in [-1,1]:
         var suffix: String="_%d"%side
@@ -656,7 +676,7 @@ static func apply(model: Node3D, hero: bool) -> bool:
         if stripe==null or stripe.get_parent()!=arm:
             return false
         if not _place(model,stripe.name,
-                Vector3(float(side)*0.298,-0.074,-0.091)):
+                Vector3(float(side)*0.249,-0.074,-0.091)):
             return false
 
         # Existing elbow protector becomes a shaped hard-shell cap, fitted

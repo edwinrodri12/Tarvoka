@@ -169,6 +169,19 @@ func _run() -> void:
                     (part.material_override as StandardMaterial3D).cull_mode==
                         BaseMaterial3D.CULL_BACK,
                     "conformal opaque face component "+label)
+            for badge_name in ["V7_IdentidadCascoPosterior","V2_FaccionCasco"]:
+                var badge: MeshInstance3D=model.find_child(badge_name,true,false) as MeshInstance3D
+                check(badge!=null and badge.get_parent()==head and
+                    badge.has_meta(V17.OLD) and closed_outward(badge.mesh) and
+                    V17.surface_kind(badge_name).is_empty(),
+                    "closed conformal helmet identity remains faction painted "+badge_name)
+                if badge!=null:
+                    if badge_name=="V7_IdentidadCascoPosterior":
+                        check(badge.position.z<0.35 and badge.position.y<0.41,
+                            "rear badge no longer projects past helmet shell")
+                    else:
+                        check(badge.mesh.get_aabb().size.x<0.25,
+                            "crown badge follows narrowed helmet crown")
             for side in [-1,1]:
                 var suffix: String="_%d"%side
                 var arm: Node3D=model.find_child(
@@ -191,9 +204,14 @@ func _run() -> void:
                     "V8_FaccionHombrera"+suffix,true,false) as MeshInstance3D
                 check(stripe!=null and stripe.get_parent()==arm
                     and stripe.has_meta(V17.OLD) and
-                    absf(stripe.position.x)>0.29 and
-                    absf(stripe.position.x)<0.32,
-                    "faction arm identifier moved outside new armor")
+                    absf(stripe.position.x)>0.23 and
+                    absf(stripe.position.x)<0.27,
+                    "faction arm identifier follows compact armor")
+                if stripe!=null and shoulder!=null:
+                    var bounds: AABB=shoulder.mesh.get_aabb()
+                    var outer_x: float=bounds.size.x*0.5*shoulder.scale.x
+                    check(absf(absf(stripe.position.x)-outer_x)<0.035,
+                        "shoulder stripe remains close to real exterior")
                 for label in [V17.KNEE+suffix,V17.POCKET+suffix,
                         V17.SOLE+suffix,V17.TOE+suffix]:
                     var part: MeshInstance3D=model.find_child(
