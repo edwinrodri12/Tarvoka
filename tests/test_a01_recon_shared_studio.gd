@@ -119,7 +119,7 @@ func _run()->void:
         "visible active-quality label changes to Android LOD8")
     var android:Node3D=studio.get("model_root") as Node3D
     check(android!=null and android!=hero_before and
-        NoseV10.has_model(android) and AirframeV11.has_model(android) and WingRootV12.has_model(android) and TailOpticsV13.has_model(android) and
+        NoseV10.has_model(android) and AirframeV11.has_model(android) and WingRootV12.has_model(android) and TailOpticsV13.has_model(android) and DamageFinishV14.has_model(android) and
         int(android.get_meta("tarvoka_a01_v10_lod",0))==8,
         "low-poly A01 V10 geometry is the actual Android LOD8 rig")
     check(DamageV6.stage(android)==3,
@@ -134,7 +134,7 @@ func _run()->void:
     studio.call("_on_faction",6)
     await process_frame
     android=studio.get("model_root") as Node3D
-    check(android!=null and NoseV10.has_model(android) and AirframeV11.has_model(android) and WingRootV12.has_model(android) and TailOpticsV13.has_model(android) and
+    check(android!=null and NoseV10.has_model(android) and AirframeV11.has_model(android) and WingRootV12.has_model(android) and TailOpticsV13.has_model(android) and DamageFinishV14.has_model(android) and
         int(android.get_meta("tarvoka_a01_v10_lod",0))==8 and
         DamageV6.stage(android)==3,
         "faction change inside Android LOD8 preserves LOD and damage D3")
@@ -160,7 +160,7 @@ func _run()->void:
     check(lod_label!=null and lod_label.text.contains("LOD13"),
         "visible active-quality label returns to high-detail LOD13")
     var hero_after:Node3D=studio.get("model_root") as Node3D
-    check(hero_after!=null and NoseV10.has_model(hero_after) and AirframeV11.has_model(hero_after) and WingRootV12.has_model(hero_after) and TailOpticsV13.has_model(hero_after) and
+    check(hero_after!=null and NoseV10.has_model(hero_after) and AirframeV11.has_model(hero_after) and WingRootV12.has_model(hero_after) and TailOpticsV13.has_model(hero_after) and DamageFinishV14.has_model(hero_after) and
         int(hero_after.get_meta("tarvoka_a01_v10_lod",0))==13 and
         DamageV6.stage(hero_after)==3,
         "LOD13 restores details without losing faction paint or D3")
@@ -311,9 +311,15 @@ func _run()->void:
     studio.call("_studio_run_animation","damage_4")
     check(DamageV6.stage(model)==4,
         "D4 displays destroyed composite aircraft")
+    var original_right:=model.find_child(AeroV4.WING_R,true,false) as MeshInstance3D
+    var fractured:=model.find_child(DamageFinishV14.FRACTURE,true,false) as MeshInstance3D
+    check(original_right!=null and fractured!=null and not original_right.visible and
+        fractured.is_visible_in_tree(),
+        "original Studio D4 actually SWAPS full wing for enclosed fractured wing")
     studio.call("_studio_run_animation","damage_0")
-    check(DamageV6.stage(model)==0,
-        "repair restores intact physical UAV in the same viewer")
+    check(DamageV6.stage(model)==0 and original_right.visible and
+        not fractured.is_visible_in_tree(),
+        "repair restores exactly the intact wing and hides physical debris")
     # The original Studio used neutral paint for non-tanks before A01 V5.
     # Sweep EVERY faction on the same selector to catch stale materials
     # and palette aliasing, not only a single before/after color change.
