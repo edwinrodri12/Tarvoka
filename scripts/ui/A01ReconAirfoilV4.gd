@@ -80,6 +80,32 @@ static func _airfoil(parent:Node3D,label:String,stations:Array,
     parent.add_child(out)
     return out
 
+# V18: follow the actual trailing edge, rather than floating a straight box
+# above the swept wing. The leading overlap is buried inside the host foil.
+static func _flaperon_stations(wing:Array,hero:bool)->Array:
+    var span:Array=[0.60,0.73,1.43,1.55]
+    if hero:
+        span.insert(2,0.99)
+        span.insert(3,1.20)
+    var result:Array=[]
+    for position in span:
+        var x:float=float(position)
+        for j in range(wing.size()-1):
+            var a:Array=wing[j]
+            var b:Array=wing[j+1]
+            if x>float(b[0]):
+                continue
+            var t:float=(x-float(a[0]))/(float(b[0])-float(a[0]))
+            var y:float=lerpf(float(a[1]),float(b[1]),t)
+            var trailing:float=lerpf(float(a[3]),float(b[3]),t)
+            var tip:bool=is_equal_approx(x,0.60) or is_equal_approx(x,1.55)
+            var overlap:float=0.046 if tip else 0.075
+            var extension:float=0.007 if tip else 0.025
+            var depth:float=0.012 if tip else 0.024
+            result.append([x,y+0.002,trailing-overlap,trailing+extension,depth])
+            break
+    return result
+
 static func _fairing(parent:Node3D,label:String,at:Vector3,
         dimension:Vector3,material:Material,hero:bool)->MeshInstance3D:
     var node:=MeshInstance3D.new()
@@ -120,7 +146,7 @@ static func apply(root:Node3D,hero:bool)->bool:
     if body==null:
         return false
     var metal:=_material(Color("#bdc9ce"),0.34,0.46)
-    var seam:=_material(Color("#64747c"),0.44,0.40)
+    var seam:=_material(Color("#91a1a8"),0.30,0.49)
     # Fixed shared silhouette across both LODs; hero adds an extra section
     # for more convincing taper and surface curvature without giant meshes.
     var right_stations:Array=[
@@ -139,9 +165,11 @@ static func apply(root:Node3D,hero:bool)->bool:
         _fairing(body,"A01_V4_SmoothCompositeWingRoot"+suffix,
             Vector3(s*0.36,1.037,-0.075),
             Vector3(0.32,0.16,0.61),metal,hero)
-        _flap(body,"A01_V4_SolidTrailingFlap"+suffix,
-            Vector3(s*1.07,1.079,0.181),
-            Vector3(0.92,0.025,0.090),seam)
+        # Retain the historical node name for D4 visibility and repair.
+        var control:=_airfoil(body,"A01_V4_SolidTrailingFlap"+suffix,
+            _flaperon_stations(right_stations,hero),s,seam)
+        if control.mesh==null:
+            return false
         # Keep the existing V2/V3 physical faction band and winglets.
         # Retire only the redundant rectangular wing and straight V2 edges.
         var old_wing:=body.find_child(
@@ -158,6 +186,7 @@ static func apply(root:Node3D,hero:bool)->bool:
             "A01_V2_ClosedFlaperon_Starboard",false,false) as MeshInstance3D
         if old_flap!=null:
             old_flap.visible=false
+    root.set_meta("tarvoka_a01_v18_conformal_flaperons",true)
     root.set_meta(FLAG,true)
     root.set_meta("tarvoka_a01_v4_lod",13 if hero else 8)
     root.set_meta("tarvoka_a01_v4_closed_meshes_only",true)
