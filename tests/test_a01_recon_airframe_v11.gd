@@ -106,8 +106,10 @@ func _run()->void:
                     for i in range(pigment.size()):
                         var shade:Color=pigment[i]
                         tones[shade.to_html()]=true
-                        check(shade.a>=0.999 and shade.is_equal_approx(
-                            V11._hull_pigment(vertices[i],expected)),
+                        var wanted:Color=V11._hull_pigment(vertices[i],expected)
+                        # Godot may quantize vertex colors to 8-bit channels.
+                        check(shade.a>=0.999 and absf(shade.r-wanted.r)<0.009 and
+                            absf(shade.g-wanted.g)<0.009 and absf(shade.b-wanted.b)<0.009,
                             "V19 pigment matches geometry and official faction")
                     check(tones.size()>=8,"V19 hull has visible two-tone variation")
                     check(bool(model.get_meta("tarvoka_a01_v19_integrated_composite_pigment",false)),
