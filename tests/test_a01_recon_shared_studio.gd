@@ -14,6 +14,7 @@ const NoseV10=preload("res://scripts/ui/A01ReconNoseOpticsV10.gd")
 const AirframeV11=preload("res://scripts/ui/A01ReconAirframeV11.gd")
 const WingRootV12=preload("res://scripts/ui/A01ReconWingRootV12.gd")
 const TailOpticsV13=preload("res://scripts/ui/A01ReconTailOpticsV13.gd")
+const DamageFinishV14=preload("res://scripts/ui/A01ReconDamageFinishV14.gd")
 const OUT="res://build/qa/a01-v1/a01-unified-studio.png"
 var failures:int=0
 
@@ -46,14 +47,14 @@ func _run()->void:
         "recon drone added to the SAME unit selector")
     if picker!=null and index>=0 and index<picker.item_count:
         check(picker.get_item_text(index).contains("A01") and
-            picker.get_item_text(index).contains("V13 EN DESARROLLO"),
+            picker.get_item_text(index).contains("V14 EN DESARROLLO"),
             "A01 correctly remains an unapproved first art revision")
         picker.select(index)
     studio.call("_display_role","uav_recon")
     await process_frame
     var model:=studio.get("model_root") as Node3D
     check(model!=null and Drone.has_model(model) and Finish.has_model(model) and
-        HardwareV3.has_model(model) and AeroV4.has_model(model) and TailV5.has_model(model) and DamageV6.has_model(model) and NoseV10.has_model(model) and AirframeV11.has_model(model) and WingRootV12.has_model(model) and TailOpticsV13.has_model(model),
+        HardwareV3.has_model(model) and AeroV4.has_model(model) and TailV5.has_model(model) and DamageV6.has_model(model) and NoseV10.has_model(model) and AirframeV11.has_model(model) and WingRootV12.has_model(model) and TailOpticsV13.has_model(model) and DamageFinishV14.has_model(model),
         "native A01 V5 airframe, sealed optics and three-blade motor in original SubViewport")
     check(factions!=null and factions.visible,"same eight-faction selector")
     var panel:=studio.get("a01_360_panel") as VBoxContainer
@@ -367,4 +368,5 @@ func _run()->void:
     else:
         print("PASS A01 V10 SHARED STUDIO: native A01, V8 swept fins, 8 colors, D0-D4/repair, unarmed gimbal, 360 cameras")
         print("PASS A01 V13 SHARED STUDIO: original Godot viewer renders sealed tail pigments and moving round EOIR underguard")
+        print("PASS A01 V14 SHARED STUDIO: physically fractured D4 wing, enclosed damage patches and reversible same-viewer LOD")
         quit(0)
