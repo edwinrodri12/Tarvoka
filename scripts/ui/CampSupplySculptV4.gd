@@ -12,6 +12,39 @@ const DECK := Color("#65716D")
 const GASKET := Color("#303C40")
 const ZINC := Color("#B9C5C6")
 const CAUTION := Color("#D5AC57")
+const WEATHERED := Color("#56605B")
+const SCORCH := Color("#323A38")
+const EXPOSED := Color("#9FA9A7")
+const OXIDE := Color("#81654B")
+static var _finish_cache: Dictionary = {}
+
+# Shared deterministic, opaque material maps. No external images, dynamic
+# shader dependencies or asynchronous noise generation in the Web export.
+# Neutral/faction pigments retain their exact base albedo colors.
+static func _finish_map(kind: String) -> ImageTexture:
+    if _finish_cache.has(kind):
+        return _finish_cache[kind] as ImageTexture
+    var image := Image.create(64, 64, false, Image.FORMAT_RGBA8)
+    var noise := FastNoiseLite.new()
+    noise.seed = 4172
+    noise.frequency = 0.17
+    for y in range(64):
+        for x in range(64):
+            var grain: float = noise.get_noise_2d(float(x), float(y))
+            var speck: float = float(posmod(x * 37 + y * 67 + x * y * 13, 97)) / 96.0 - 0.5
+            var factor: float = 0.91 + grain * 0.10 + speck * 0.045
+            if kind == "metal":
+                factor += 0.036 * sin(float(y) * TAU / 8.0) + 0.025 * sin(float(y) * TAU / 3.2)
+            elif kind == "fabric":
+                factor += 0.036 * cos(float(x) * TAU / 4.0) * cos(float(y) * TAU / 4.0)
+            else:
+                factor -= 0.025 * absf(sin(float(x + y) * TAU / 8.0))
+            factor = clampf(factor, 0.72, 1.0)
+            image.set_pixel(x, y, Color(factor, factor, factor, 1.0))
+    image.generate_mipmaps()
+    var texture := ImageTexture.create_from_image(image)
+    _finish_cache[kind] = texture
+    return texture
 
 static func _material(tint: Color, metal: float, rough: float) -> StandardMaterial3D:
     var material := StandardMaterial3D.new()
@@ -20,6 +53,20 @@ static func _material(tint: Color, metal: float, rough: float) -> StandardMateri
     material.roughness = rough
     material.transparency = BaseMaterial3D.TRANSPARENCY_DISABLED
     material.cull_mode = BaseMaterial3D.CULL_BACK
+    # Only known surface materials are textured; official faction accents
+    # remain unmodified, including the neutral color supplied by the roster.
+    var kind: String = ""
+    if tint in [STEEL, FRAME, ZINC, EXPOSED, OXIDE]:
+        kind = "metal"
+    elif tint in [PANEL, WEATHERED]:
+        kind = "fabric"
+    elif tint in [DECK, GASKET, SCORCH]:
+        kind = "rubber"
+    if not kind.is_empty():
+        material.albedo_texture = _finish_map(kind)
+        material.uv1_triplanar = true
+        material.uv1_scale = Vector3(2.4, 2.4, 2.4)
+        material.set_meta("supply_v42_finish", kind)
     return material
 
 # Godot front faces use clockwise winding. Use the physical outward normal
@@ -358,10 +405,125 @@ static func _equipment(core: Node3D, v2: Node3D, accent: Color, lod: int, damage
     _part(hose, "V4_ContinuousHose", _loft(rings), Vector3.ZERO, GASKET, 0.04, 0.88)
     return true
 
+# Small closed cylinders, mounted at a physical surface, not floating
+# decoration. Used for mechanical fittings, recessed fasteners and gauges.
+static func _fitting(parent: Node3D, label: String, at: Vector3, radius: float,
+        depth: float, axis: Vector3, tint: Color, lod: int) -> MeshInstance3D:
+    var cylinder := CylinderMesh.new()
+    cylinder.top_radius = radius
+    cylinder.bottom_radius = radius
+    cylinder.height = depth
+    cylinder.radial_segments = 16 if lod == 13 else 8
+    var piece: MeshInstance3D = _part(parent, label, cylinder, at, tint, 0.57, 0.49)
+    piece.quaternion = Quaternion(Vector3.UP, axis.normalized())
+    return piece
+
+static func _finish_hardware(core: Node3D, v2: Node3D, accent: Color, lod: int, damage: int) -> void:
+    # The tank fittings live on their original moving/damaged tank groups.
+    # This is fictional service hardware and has no operational simulation.
+    for i in range(2):
+        var tank: Node3D = v2.get_node("V2_DepositoCombustibleSellado_%d" % i) as Node3D
+        _fitting(tank, "V42_InspectionFlange", Vector3(0, 0.00, -0.735),
+            0.145, 0.075, Vector3.FORWARD, ZINC, lod)
+        _fitting(tank, "V42_InspectionCap", Vector3(0, 0.00, -0.79),
+            0.095, 0.06, Vector3.FORWARD, FRAME, lod)
+        _fitting(tank, "V42_ValveCollar", Vector3(0, 0.46, -0.18),
+            0.155, 0.07, Vector3.UP, EXPOSED, lod)
+        if lod == 13:
+            for side in [-1, 1]:
+                for z in [-0.36, 0.36]:
+                    _fitting(tank, "V42_BandFastener_%d_%d" % [side, int(z * 100)],
+                        Vector3(float(side) * 0.415, 0.15, z),
+                        0.045, 0.075, Vector3(float(side), 0, 0), ZINC, lod)
+    var pump: Node3D = v2.get_node("V2_EstacionBombeo") as Node3D
+    _box(pump, "V42_InstrumentBezel", Vector3(-0.12, 1.03, -0.558),
+        Vector3(0.42, 0.30, 0.045), FRAME, 0.012, 0.45)
+    var screen: MeshInstance3D = _box(pump, "V42_InstrumentFace", Vector3(-0.12, 1.03, -0.585),
+        Vector3(0.33, 0.20, 0.024), Color("#334E50"), 0.005, 0.08)
+    var screen_material: StandardMaterial3D = screen.material_override as StandardMaterial3D
+    screen_material.roughness = 0.29
+    _box(pump, "V42_InstrumentReadout", Vector3(-0.12, 1.045, -0.602),
+        Vector3(0.22, 0.044, 0.014), Color("#9CBFA7") if damage == 0 else Color("#52655D"), 0.003, 0.03)
+    _fitting(pump, "V42_FrontDial", Vector3(0.28, 0.95, -0.55),
+        0.086, 0.055, Vector3.FORWARD, ZINC, lod)
+    _fitting(pump, "V42_FrontDialCenter", Vector3(0.28, 0.95, -0.585),
+        0.057, 0.024, Vector3.FORWARD, FRAME, lod)
+    _box(pump, "V42_DialMark", Vector3(0.28, 0.973, -0.602),
+        Vector3(0.015, 0.05, 0.015), CAUTION, 0.003, 0.1)
+    for side in [-1, 1]:
+        _box(core, "V42_RearHinge_%d" % side, Vector3(-0.19, 1.10 + float(side) * 0.53, 2.865),
+            Vector3(0.15, 0.19, 0.11), FRAME, 0.025, 0.48)
+        _fitting(core, "V42_RearHingePin_%d" % side,
+            Vector3(-0.19, 1.10 + float(side) * 0.53, 2.93),
+            0.055, 0.045, Vector3.BACK, ZINC, lod)
+        _box(core, "V42_SideAccessTrim_%d" % side,
+            Vector3(float(side) * 2.09, 0.62, 1.35),
+            Vector3(0.06, 0.55, 0.74), STEEL, 0.018, 0.30)
+    if lod == 13:
+        for side in [-1, 1]:
+            for z in [0.37, 2.30]:
+                for y in [0.40, 1.72]:
+                    _fitting(core, "V42_WallFastener_%d_%d_%d" % [side, int(z * 100), int(y * 100)],
+                        Vector3(float(side) * 2.16, y, z), 0.034, 0.034,
+                        Vector3(float(side), 0, 0), ZINC, lod)
+        for x in [0.01, 0.40, 0.79]:
+            _fitting(core, "V42_DeckAnchor_%d" % int(x * 100),
+                Vector3(x, 0.035, -2.83), 0.038, 0.035, Vector3.UP, FRAME, lod)
+
+# Closed, displaced loft replacing an actual roof leaf. Its volume remains
+# manifold even after a buckle; it is not an open, paper-thin torn face.
+static func _buckled_roof() -> ArrayMesh:
+    var rings: Array = []
+    for z in [-1.775, -0.80, 0.0, 0.80, 1.775]:
+        var ring: Array[Vector3] = _octagon(1.065, 0.065, 0.025, z)
+        for i in range(ring.size()):
+            var p: Vector3 = ring[i]
+            var factor: float = maxf(0.0, 1.0 - absf(z) / 1.775)
+            p.y += factor * (0.15 + 0.11 * p.x)
+            p.x += factor * 0.065
+            ring[i] = p
+        rings.append(ring)
+    return _loft(rings)
+
+static func _damage_finish(root: Node3D, core: Node3D, v2: Node3D, lod: int, damage: int) -> void:
+    if damage <= 0:
+        return
+    var marks: Node3D = _group(core, "V42_DamageOnly")
+    # Visible abrasion volumes with thin closed profiles, not alpha decals.
+    for i in range(4 if lod == 13 else 2):
+        var scrape: MeshInstance3D = _box(marks, "V42_RearAbrasion_%d" % i,
+            Vector3(0.18 + float(i) * 0.15, 0.46 + float(i % 2) * 0.09, 2.897),
+            Vector3(0.17, 0.027, 0.015), EXPOSED, 0.004, 0.42)
+        scrape.rotation_degrees.z = -18.0 + float(i) * 13.0
+    var pump: Node3D = v2.get_node("V2_EstacionBombeo") as Node3D
+    _box(pump, "V42_ScuffedFoot", Vector3(-0.28, 0.25, -0.545),
+        Vector3(0.29, 0.095, 0.035), WEATHERED, 0.010, 0.14)
+    if damage < 2:
+        return
+    var leaf: Node3D = v2.get_node("V2_ArticulacionCubierta_-1") as Node3D
+    var panel: MeshInstance3D = leaf.get_node("CubiertaAceroContinua_-1") as MeshInstance3D
+    panel.mesh = _buckled_roof()
+    panel.material_override = _material(WEATHERED, 0.22, 0.89)
+    panel.set_meta("supply_v42_buckled", true)
+    # Hardware on the displaced roof follows the surviving sheet.
+    for child in leaf.get_children():
+        if child != panel and str(child.name).begins_with("V4_CubiertaCostura_"):
+            child.position.y += 0.12
+    var patch: MeshInstance3D = _box(leaf, "V42_RoofScorch", Vector3(0.52, 0.19, 0.25),
+        Vector3(0.66, 0.035, 0.45), SCORCH, 0.009, 0.08)
+    patch.rotation_degrees.y = 12.0
+    for i in range(3 if lod == 13 else 1):
+        var rubble: MeshInstance3D = _box(marks, "V42_DetachedTrim_%d" % i,
+            Vector3(2.22 + float(i) * 0.25, 0.09, -2.48 + float(i) * 0.23),
+            Vector3(0.48, 0.10, 0.13), OXIDE if i == 1 else FRAME, 0.02, 0.4)
+        rubble.rotation_degrees = Vector3(9.0, 22.0 + float(i) * 19.0, 11.0)
+    root.set_meta("suministros_v42_physical_damage", true)
+
 static func apply(root: Node3D, accent: Color, lod: int, damage: int) -> bool:
     if root == null or root.get_meta("camp_kind", "") != "suministros":
         return false
     root.set_meta("suministros_art_v4", 4)
+    root.set_meta("suministros_art_revision", "4.2")
     root.set_meta("suministros_v4_no_gameplay_changes", true)
     if not _replace_box(root, "PlataformaDesmontable", 0.045, DECK, 0.08, 0.84):
         return false
@@ -382,6 +544,8 @@ static func apply(root: Node3D, accent: Color, lod: int, damage: int) -> bool:
         return false
     if not _equipment(core, v2, accent, lod, damage):
         return false
+    _finish_hardware(core, v2, accent, lod, damage)
+    _damage_finish(root, core, v2, lod, damage)
     # An inset modular non-slip walkway provides scale and a visible
     # access path without creating another permanent platform.
     for i in range(4):

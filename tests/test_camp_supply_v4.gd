@@ -44,23 +44,30 @@ func _audit(faction: int, lod: int, damage: int) -> Node3D:
         return null
     audits += 1
     check(int(model.get_meta("suministros_art_v4", 0)) == 4, "V4 metadata")
+    check(model.get_meta("suministros_art_revision", "") == "4.2", "Latest V4.2 revision")
     check(model.get_meta("no_gameplay_effects", false) and model.get_meta("temporary_structure", false), "Art-only temporary structure")
     var meshes: Array[MeshInstance3D] = []
     _collect(model, meshes)
     var sculpted: int = 0
     var faction_count: int = 0
+    var finishes: Dictionary = {}
     # Neutral uses the actual native palette of the factory. Never require
     # a numbered faction color for neutral -1.
     var expected_accent: Color = Camp.STEEL if faction == -1 else Style.faction_color(faction)
     for p in meshes:
         var mat: StandardMaterial3D = p.material_override as StandardMaterial3D
         check(mat != null and mat.transparency == BaseMaterial3D.TRANSPARENCY_DISABLED and mat.cull_mode == BaseMaterial3D.CULL_BACK, "Opaque material " + str(p.name))
+        if mat != null and mat.has_meta("supply_v42_finish"):
+            check(mat.albedo_texture is ImageTexture and mat.uv1_triplanar, "Native opaque mapped surface")
+            check(mat.albedo_texture.get_width() == 64 and mat.albedo_texture.get_height() == 64, "Shared bounded material map")
+            finishes[str(mat.get_meta("supply_v42_finish"))] = true
         if mat != null and mat.albedo_color == expected_accent:
             faction_count += 1
         if p.get_meta("supply_v4_closed", false) and p.mesh is ArrayMesh:
             sculpted += 1
             check(_closed(p.mesh), "Watertight triangle edge topology " + str(p.name))
     check(sculpted >= 1 if damage == 3 else sculpted >= 25, "Substantial custom sculpture")
+    check(finishes.has("rubber") and (damage == 3 or (finishes.has("metal") and finishes.has("fabric"))), "Distinct surface finishes")
     check(faction_count >= (3 if damage == 3 else 15), "Faction/neutral paint %d LOD%d D%d" % [faction, lod, damage])
     var core: Node3D = model.get_node_or_null("EquipamientoDesplegable/SupplyV2_PremiumRig/SupplyV4_IndustrialSculpt") as Node3D
     if damage == 3:
@@ -73,6 +80,11 @@ func _audit(faction: int, lod: int, damage: int) -> Node3D:
             check(core.has_node("V4_WallRib_1_42") and core.has_node("V4_TankFrameTop_0"), "Physical wall reinforcement and tank frame")
             check(core.has_node("V4_CrateRackLowerRail_1") and core.has_node("V4_WalkwayModule_0"), "Accessible racks and walkway")
             var v2: Node3D = core.get_parent() as Node3D
+            check(v2.has_node("V2_DepositoCombustibleSellado_0/V42_InspectionFlange"), "Fittings attached to tank rig")
+            check(v2.has_node("V2_EstacionBombeo/V42_InstrumentFace") and core.has_node("V42_RearHinge_-1"), "Detailed station and door hardware")
+            check(core.has_node("V42_DamageOnly") == (damage > 0), "Damage only in appropriate states")
+            var damaged_leaf: MeshInstance3D = v2.get_node("V2_ArticulacionCubierta_-1/CubiertaAceroContinua_-1") as MeshInstance3D
+            check(damaged_leaf.get_meta("supply_v42_buckled", false) == (damage == 2), "Actual bent roof mesh only in D2")
             var old_guard: Node3D = v2.get_node("SupplyV3_ReadabilityRig/V3_ProteccionExternaTanque_0") as Node3D
             check(not old_guard.visible, "Opaque slab replaced by genuine frame")
             if damage < 2:
