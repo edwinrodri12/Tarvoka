@@ -1,5 +1,6 @@
 extends SceneTree
 const Camp = preload("res://scripts/ui/CampModels3DV1.gd")
+const V43 = preload("res://scripts/ui/CampSupplySculptV4.gd")
 const Style = preload("res://scripts/ui/VisualStyle.gd")
 const OUT := "res://build/qa/camps-supply-v4"
 const ANGLES := [Vector3(9.8, 8.1, -10), Vector3(-9.8, 8.1, -10),
@@ -44,7 +45,7 @@ func _audit(faction: int, lod: int, damage: int) -> Node3D:
         return null
     audits += 1
     check(int(model.get_meta("suministros_art_v4", 0)) == 4, "V4 metadata")
-    check(model.get_meta("suministros_art_revision", "") == "4.2", "Latest V4.2 revision")
+    check(model.get_meta("suministros_art_revision", "") == "4.3", "Latest V4.3 revision")
     check(model.get_meta("no_gameplay_effects", false) and model.get_meta("temporary_structure", false), "Art-only temporary structure")
     var meshes: Array[MeshInstance3D] = []
     _collect(model, meshes)
@@ -72,11 +73,16 @@ func _audit(faction: int, lod: int, damage: int) -> Node3D:
     var core: Node3D = model.get_node_or_null("EquipamientoDesplegable/SupplyV2_PremiumRig/SupplyV4_IndustrialSculpt") as Node3D
     if damage == 3:
         check(core == null, "Destroyed camp cannot resurrect")
+        check(model.has_node("V43_DestroyedRemains"), "Detailed collapsed wreck")
+        check(not V43.service_pose(model, 0.5), "Destroyed equipment cannot animate")
     else:
         check(core != null, "V4 built within V2 original hierarchy")
         if core != null:
             var rear: Node3D = core.get_node("V4_RearGablePivot") as Node3D
             check(rear.has_node("V4_GableClosedPanel"), "Actual rear closure")
+            check(core.has_node("V43_InteriorService/V43_ServiceDesk/V43_ConsoleScreen") and core.has_node("V43_InteriorService/V43_StorageRack"), "Real interior furniture and equipment")
+            var interior_light: OmniLight3D = core.get_node("V43_InteriorService/V43_InteriorLamp/V43_InteriorLight") as OmniLight3D
+            check(interior_light.visible == (damage < 2 and lod == 13), "LOD-aware light and damaged blackout")
             check(core.has_node("V4_WallRib_1_42") and core.has_node("V4_TankFrameTop_0"), "Physical wall reinforcement and tank frame")
             check(core.has_node("V4_CrateRackLowerRail_1") and core.has_node("V4_WalkwayModule_0"), "Accessible racks and walkway")
             var v2: Node3D = core.get_parent() as Node3D
@@ -89,6 +95,17 @@ func _audit(faction: int, lod: int, damage: int) -> Node3D:
             check(not old_guard.visible, "Opaque slab replaced by genuine frame")
             if damage < 2:
                 check(v2.has_node("V2_ArticulacionCubierta_-1/V4_ContinuousRidgeCap"), "Roof ridge cover folds with leaf")
+            if damage < 2:
+                check(V43.inspect_interior(model, true), "Interior inspection uses hinges")
+                var open_leaf: Node3D = v2.get_node("V2_ArticulacionCubierta_-1") as Node3D
+                check(absf(open_leaf.rotation_degrees.z) > 100.0, "Roof physically opens")
+                check(V43.inspect_interior(model, false), "Roof inspection reversible")
+                check(V43.service_pose(model, 0.5), "Service midpoint")
+                var lever: Node3D = v2.get_node("V2_EstacionBombeo/V43_ServiceLever") as Node3D
+                check(absf(lever.rotation_degrees.x) > 30.0, "Real lever movement")
+                check(V43.service_pose(model, 1.0) and absf(lever.rotation_degrees.x) < 0.01, "Service returns to rest")
+            else:
+                check(not V43.inspect_interior(model, true) and not V43.service_pose(model, 0.5), "Disabled damage operation")
             check(Camp.pose_deploy(model, 0.0) and absf(rear.rotation_degrees.x) > 80.0, "Gable folds")
             check(Camp.pose_deploy(model, 1.0) and absf(rear.rotation_degrees.x) < 0.01, "Gable reopens")
         check(model.has_node("EquipamientoDesplegable/SupplyV2_PremiumRig/V2_MangueraArticulada/V4_ContinuousHose"), "Continuous hose in moving rig")
@@ -155,7 +172,11 @@ func _run() -> void:
                         await _shot(viewport, "v4_close_service")
                         camera.position = Vector3(8, 4.3, 10)
                         camera.look_at(Vector3(1.0, 1.65, 2.35), Vector3.UP)
-                        await _shot(viewport, "v4_close_rear")
+                        V43.inspect_interior(model, true)
+                        camera.position = Vector3(6.0, 5.0, -7.0)
+                        camera.look_at(Vector3(0, 0.9, 1.45), Vector3.UP)
+                        await _shot(viewport, "v43_interior_open")
+                        V43.inspect_interior(model, false)
                         camera.size = 10.4
                         camera.position = ANGLES[0]
                         camera.look_at(Vector3(0, 1.15, 0), Vector3.UP)

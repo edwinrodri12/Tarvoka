@@ -519,11 +519,119 @@ static func _damage_finish(root: Node3D, core: Node3D, v2: Node3D, lod: int, dam
         rubble.rotation_degrees = Vector3(9.0, 22.0 + float(i) * 19.0, 11.0)
     root.set_meta("suministros_v42_physical_damage", true)
 
+# Interior occupies the rear and sides; the central access aisle stays open.
+static func _interior_v43(core: Node3D, v2: Node3D, accent: Color, lod: int, damage: int) -> void:
+    var old: Node3D = v2.get_node("SupplyV3_ReadabilityRig") as Node3D
+    for child in old.get_children():
+        var label: String = str(child.name)
+        for prefix in ["V3_BancoInterior", "V3_PatasBanco", "V3_ConsolaInterior", "V3_PantallaInterior", "V3_IndicadorConsola", "V3_ContenedorInterior", "V3_TapaContenedorInterior"]:
+            if label.begins_with(prefix):
+                child.visible = false
+    var room: Node3D = _group(core, "V43_InteriorService")
+    _box(room, "V43_InteriorFloor", Vector3(0, 0.048, 1.35), Vector3(3.66, 0.09, 2.48), DECK, 0.02, 0.13)
+    for side in [-1, 1]:
+        _box(room, "V43_InnerWallRail_%d" % side, Vector3(float(side) * 1.89, 1.05, 1.32), Vector3(0.095, 0.12, 2.32), FRAME, 0.023, 0.40)
+    var desk: Node3D = _group(room, "V43_ServiceDesk", Vector3(0.84, 0, 1.93))
+    _box(desk, "V43_WorkSurface", Vector3(0, 0.89, 0), Vector3(1.64, 0.13, 0.68), ZINC, 0.035, 0.47)
+    for side in [-1, 1]:
+        _box(desk, "V43_DeskFrame_%d" % side, Vector3(float(side) * 0.68, 0.45, 0), Vector3(0.14, 0.76, 0.60), FRAME, 0.025, 0.45)
+    _box(desk, "V43_StorageCabinet", Vector3(-0.33, 0.44, 0.02), Vector3(0.60, 0.70, 0.53), STEEL, 0.06, 0.36)
+    for i in range(3 if lod == 13 else 2):
+        var y: float = 0.24 + float(i) * (0.19 if lod == 13 else 0.27)
+        _box(desk, "V43_Drawer_%d" % i, Vector3(-0.33, y, -0.265), Vector3(0.51, 0.15, 0.05), PANEL, 0.015)
+        _box(desk, "V43_DrawerPull_%d" % i, Vector3(-0.33, y, -0.302), Vector3(0.20, 0.045, 0.04), FRAME, 0.009)
+    _box(desk, "V43_ConsoleBase", Vector3(0.37, 1.03, 0.12), Vector3(0.65, 0.18, 0.36), STEEL, 0.04)
+    var screen: MeshInstance3D = _box(desk, "V43_ConsoleScreen", Vector3(0.37, 1.30, 0.23), Vector3(0.61, 0.42, 0.10), FRAME, 0.032)
+    screen.rotation_degrees.x = -12.0
+    var face: MeshInstance3D = _box(screen, "V43_ConsoleDisplay", Vector3(0, 0, -0.059), Vector3(0.48, 0.30, 0.025), Color("#405F61"), 0.008, 0.02)
+    var face_material: StandardMaterial3D = face.material_override as StandardMaterial3D
+    face_material.emission_enabled = damage < 2
+    face_material.emission = Color("#76AFA2")
+    face_material.emission_energy_multiplier = 0.23 if damage < 2 else 0.0
+    for i in range(3 if lod == 13 else 1):
+        _box(face, "V43_DisplayTrace_%d" % i, Vector3(-0.03, 0.08 - float(i) * 0.07, -0.018), Vector3(0.31 - float(i) * 0.055, 0.018, 0.012), Color("#A0C4B0") if damage < 2 else FRAME, 0.003, 0.0)
+    var shelf: Node3D = _group(room, "V43_StorageRack", Vector3(-1.20, 0, 1.58))
+    for side in [-1, 1]:
+        for z in [-0.35, 0.35]:
+            _box(shelf, "V43_RackPost_%d_%d" % [side, int(z * 100)], Vector3(float(side) * 0.46, 0.94, z), Vector3(0.10, 1.72, 0.10), FRAME, 0.025, 0.42)
+    for i in range(3):
+        var y: float = 0.23 + float(i) * 0.60
+        _box(shelf, "V43_RackShelf_%d" % i, Vector3(0, y, 0), Vector3(1.02, 0.085, 0.81), STEEL, 0.018)
+        var crate: MeshInstance3D = _box(shelf, "V43_SpareCase_%d" % i, Vector3(0.0, y + 0.19, 0.02), Vector3(0.76, 0.30, 0.59), WEATHERED if i == 1 else STEEL, 0.048)
+        _box(crate, "V43_CaseIdentity", Vector3(0, 0.025, -0.307), Vector3(0.58, 0.10, 0.032), accent, 0.008)
+    var fixture: Node3D = _group(room, "V43_InteriorLamp", Vector3(0, 2.00, 1.54))
+    _box(fixture, "V43_LampHousing", Vector3.ZERO, Vector3(1.20, 0.13, 0.24), FRAME, 0.027)
+    var diffuser: MeshInstance3D = _box(fixture, "V43_OpaqueDiffuser", Vector3(0, -0.074, 0), Vector3(1.06, 0.055, 0.16), Color("#D5DCD0") if damage < 2 else WEATHERED, 0.012, 0.0)
+    var lamp_material: StandardMaterial3D = diffuser.material_override as StandardMaterial3D
+    lamp_material.emission_enabled = damage < 2
+    lamp_material.emission = Color("#DCE8C9")
+    lamp_material.emission_energy_multiplier = 0.55 if damage < 2 else 0.0
+    var lamp := OmniLight3D.new()
+    lamp.name = "V43_InteriorLight"
+    lamp.position.y = -0.20
+    lamp.light_color = Color("#E5EACF")
+    lamp.light_energy = 0.50
+    lamp.omni_range = 2.4
+    lamp.shadow_enabled = false
+    lamp.visible = damage < 2 and lod == 13
+    fixture.add_child(lamp)
+    if damage >= 2:
+        screen.rotation_degrees.z = -19.0
+        _box(room, "V43_FallenCase", Vector3(-0.54, 0.24, 0.62), Vector3(0.62, 0.29, 0.45), SCORCH, 0.04).rotation_degrees.z = 18.0
+
+static func _service_rig_v43(v2: Node3D, lod: int) -> void:
+    var pump: Node3D = v2.get_node("V2_EstacionBombeo") as Node3D
+    var dial: Node3D = _group(pump, "V43_DialPivot", Vector3(0.28, 0.95, -0.614))
+    var old_mark: Node3D = pump.get_node("V42_DialMark") as Node3D
+    old_mark.visible = false
+    _box(dial, "V43_DialNeedle", Vector3(0, 0.031, 0), Vector3(0.014, 0.062, 0.012), CAUTION, 0.003, 0.08)
+    var lever: Node3D = _group(pump, "V43_ServiceLever", Vector3(-0.52, 0.83, -0.15))
+    _fitting(lever, "V43_LeverAxle", Vector3.ZERO, 0.075, 0.11, Vector3.LEFT, ZINC, lod)
+    _box(lever, "V43_LeverStem", Vector3(-0.045, 0.13, 0), Vector3(0.065, 0.25, 0.065), STEEL, 0.013)
+    _box(lever, "V43_LeverGrip", Vector3(-0.045, 0.255, 0), Vector3(0.13, 0.08, 0.13), GASKET, 0.025, 0.04)
+
+# Inspection mode moves real hinges. No transparent walls or second scene.
+static func inspect_interior(root: Node3D, enabled: bool) -> bool:
+    if root == null or root.get_meta("suministros_art_revision", "") != "4.3" or int(root.get_meta("visual_damage", 0)) >= 2:
+        return false
+    var v2: Node3D = root.get_node("EquipamientoDesplegable/SupplyV2_PremiumRig") as Node3D
+    var core: Node3D = v2.get_node(CORE) as Node3D
+    for side in [-1, 1]:
+        var leaf: Node3D = v2.get_node("V2_ArticulacionCubierta_%d" % side) as Node3D
+        leaf.rotation_degrees.z = float(side) * 105.0 if enabled else float(side) * -25.0
+    for key in ["V4_RearGablePivot", "V4_FrontGablePivot"]:
+        var gable: Node3D = core.get_node(key) as Node3D
+        gable.rotation_degrees.x = (-88.0 if key == "V4_RearGablePivot" else 88.0) if enabled else 0.0
+    root.set_meta("suministros_v43_interior_open", enabled)
+    return true
+
+static func service_pose(root: Node3D, progress: float) -> bool:
+    if root == null or root.get_meta("suministros_art_revision", "") != "4.3" or int(root.get_meta("visual_damage", 0)) >= 2:
+        return false
+    var pump: Node3D = root.get_node("EquipamientoDesplegable/SupplyV2_PremiumRig/V2_EstacionBombeo") as Node3D
+    var lever: Node3D = pump.get_node("V43_ServiceLever") as Node3D
+    var dial: Node3D = pump.get_node("V43_DialPivot") as Node3D
+    var phase: float = clampf(progress, 0.0, 1.0)
+    var stroke: float = sin(PI * phase)
+    lever.rotation_degrees.x = -36.0 * stroke
+    dial.rotation_degrees.z = -95.0 * stroke
+    root.set_meta("suministros_v43_service_phase", phase)
+    return true
+
+static func _wreck_v43(root: Node3D, lod: int) -> void:
+    var wreck: Node3D = _group(root, "V43_DestroyedRemains")
+    for i in range(3 if lod == 13 else 2):
+        var plate: MeshInstance3D = _part(wreck, "V43_CollapsedPanel_%d" % i, _buckled_roof(), Vector3(-1.48 + float(i) * 1.33, 0.15, 1.05 - float(i) * 0.69), SCORCH, 0.24, 0.93)
+        plate.scale = Vector3(0.55, 0.80, 0.43)
+        plate.rotation_degrees = Vector3(5.0, 24.0 + float(i) * 31.0, -8.0 + float(i) * 5.0)
+    for i in range(4 if lod == 13 else 2):
+        _box(wreck, "V43_BrokenFrame_%d" % i, Vector3(-2.0 + float(i) * 1.15, 0.18, -0.8), Vector3(0.83, 0.16, 0.19), OXIDE if i % 2 == 0 else FRAME, 0.038).rotation_degrees.y = 25.0 + float(i) * 18.0
+
 static func apply(root: Node3D, accent: Color, lod: int, damage: int) -> bool:
     if root == null or root.get_meta("camp_kind", "") != "suministros":
         return false
     root.set_meta("suministros_art_v4", 4)
-    root.set_meta("suministros_art_revision", "4.2")
+    root.set_meta("suministros_art_revision", "4.3")
     root.set_meta("suministros_v4_no_gameplay_changes", true)
     if not _replace_box(root, "PlataformaDesmontable", 0.045, DECK, 0.08, 0.84):
         return false
@@ -532,6 +640,7 @@ static func apply(root: Node3D, accent: Color, lod: int, damage: int) -> bool:
         for child in root.get_children():
             if str(child.name).begins_with("RestosDesmontables_"):
                 _replace_box(root, str(child.name), 0.025, STEEL, 0.45, 0.75)
+        _wreck_v43(root, lod)
         return true
     var deployable: Node3D = root.get_node_or_null("EquipamientoDesplegable") as Node3D
     if deployable == null:
@@ -545,6 +654,8 @@ static func apply(root: Node3D, accent: Color, lod: int, damage: int) -> bool:
     if not _equipment(core, v2, accent, lod, damage):
         return false
     _finish_hardware(core, v2, accent, lod, damage)
+    _interior_v43(core, v2, accent, lod, damage)
+    _service_rig_v43(v2, lod)
     _damage_finish(root, core, v2, lod, damage)
     # An inset modular non-slip walkway provides scale and a visible
     # access path without creating another permanent platform.
@@ -579,6 +690,7 @@ static func pose(root: Node3D, progress: float) -> bool:
     var front: Node3D = core.get_node_or_null("V4_FrontGablePivot") as Node3D
     if rear == null or front == null:
         return false
+    root.set_meta("suministros_v43_interior_open", false)
     var t: float = clampf(progress, 0.0, 1.0)
     rear.rotation_degrees.x = lerpf(-88.0, 0.0, t)
     front.rotation_degrees.x = lerpf(88.0, 0.0, t)

@@ -7,11 +7,12 @@ extends "res://scripts/ui/HeadquartersV24SharedStudioAdapter.gd"
 # because the upstream HQ/Workshop viewer scripts live in pinned source branches.
 const CampArt = preload("res://scripts/ui/CampModels3DV1.gd")
 const CampStyle = preload("res://scripts/ui/VisualStyle.gd")
+const SupplyV43 = preload("res://scripts/ui/CampSupplySculptV4.gd")
 const CampRoster = preload("res://scripts/ui/InfantryCampRosterV1.gd")
 const FIRST_CAMP_INDEX: int = 7
 const CAMP_KEYS := ["suministros", "reconocimiento", "defensivo", "medico"]
 const CAMP_LABELS := [
-    "Campamento de Suministros · V4.2",
+    "Campamento de Suministros · V4.3",
     "Campamento de Reconocimiento · V2",
     "Campamento Defensivo · V2",
     "Campamento Médico · V2"
@@ -22,6 +23,8 @@ var camp_lod_picker: OptionButton
 var camp_damage_picker: OptionButton
 var camp_finish_picker: OptionButton
 var camp_status: Label
+var camp_supply_actions: VBoxContainer
+var _camp_service_tween: Tween
 var camp_kind: String = "suministros"
 var _camp_saved_visibility: Dictionary = {}
 
@@ -90,7 +93,7 @@ func _camp_create_controls() -> void:
     camp_controls.add_child(camp_lod_picker)
     camp_finish_picker = OptionButton.new()
     camp_finish_picker.name = "SuministrosComparacionV3V4"
-    camp_finish_picker.add_item("Suministros V4.2 · acabados industriales")
+    camp_finish_picker.add_item("Suministros V4.3 · interior y servicio")
     camp_finish_picker.add_item("Suministros V3 · comparación anterior")
     camp_finish_picker.select(0)
     camp_finish_picker.item_selected.connect(_camp_option_changed)
@@ -113,6 +116,11 @@ func _camp_create_controls() -> void:
     _add_paired(camp_controls, "ACERCAR",
         func(): _change_zoom(1), "ALEJAR",
         func(): _change_zoom(-1))
+    camp_supply_actions = VBoxContainer.new()
+    camp_supply_actions.name = "SuministrosInspeccionYServicio"
+    camp_controls.add_child(camp_supply_actions)
+    _add_paired(camp_supply_actions, "VER INTERIOR", func(): _camp_interior(true), "CERRAR TECHO", func(): _camp_interior(false))
+    _button(camp_supply_actions, "ANIMAR SERVICIO", _camp_animate_service)
     _button(camp_controls, "Restablecer cámara", _reset_camera)
     camp_status = _title(camp_controls, "Modelo aún no seleccionado", 11)
 
@@ -135,6 +143,7 @@ func _camp_hide_prior_controls() -> void:
         faction_picker.visible = false
 
 func _camp_restore_prior_controls() -> void:
+    _camp_stop_service()
     for item in _camp_saved_visibility.keys():
         if is_instance_valid(item):
             var control: Control = item as Control
@@ -181,6 +190,7 @@ func _camp_display() -> void:
     var previous_zoom: float = _zoom
     var previous_deploy: float = float(model_root.get_meta(
         "visual_deploy_progress", 1.0)) if same_camp else 1.0
+    _camp_stop_service()
     _stop_animation()
     if model_root != null:
         if model_root.get_parent() != null:
@@ -192,6 +202,7 @@ func _camp_display() -> void:
     var lod: int = 8 if camp_lod_picker.selected == 0 else 13
     var damage: int = camp_damage_picker.selected
     camp_finish_picker.visible = camp_kind == "suministros"
+    camp_supply_actions.visible = camp_kind == "suministros" and camp_finish_picker.selected == 0 and damage < 2
     model_root = CampArt.build(camp_kind, faction, lod, damage, camp_finish_picker.selected == 0)
     if model_root == null:
         push_error("CAMP STUDIO: cannot assemble actual camp " + camp_kind)
@@ -214,10 +225,40 @@ func _camp_display() -> void:
 func _camp_pose(progress: float) -> void:
     if model_root == null or not _role.begins_with("camp_"):
         return
+    _camp_stop_service()
     if not CampArt.pose_deploy(model_root, progress):
         push_error("CAMP STUDIO: physical deployment pose failed")
         return
     _update_details()
+
+func _camp_stop_service() -> void:
+    if _camp_service_tween != null and _camp_service_tween.is_valid():
+        _camp_service_tween.kill()
+    _camp_service_tween = null
+    if model_root != null and _role == "camp_suministros":
+        SupplyV43.service_pose(model_root, 0.0)
+
+func _camp_interior(enabled: bool) -> void:
+    if model_root == null or _role != "camp_suministros":
+        return
+    _camp_stop_service()
+    if not CampArt.pose_deploy(model_root, 1.0):
+        return
+    if SupplyV43.inspect_interior(model_root, enabled):
+        _update_details()
+
+func _camp_service_frame(progress: float) -> void:
+    if model_root != null and _role == "camp_suministros":
+        SupplyV43.service_pose(model_root, progress)
+
+func _camp_animate_service() -> void:
+    if model_root == null or _role != "camp_suministros":
+        return
+    if not SupplyV43.service_pose(model_root, 0.0):
+        return
+    _camp_stop_service()
+    _camp_service_tween = create_tween()
+    _camp_service_tween.tween_method(_camp_service_frame, 0.0, 1.0, 1.6)
 
 func _update_camera() -> void:
     if _role.begins_with("camp_") and model_root != null and camera != null:

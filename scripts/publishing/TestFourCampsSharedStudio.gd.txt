@@ -178,6 +178,12 @@ func _run() -> void:
                 await _frames(4)
                 camp = studio.get("model_root") as Node3D
                 _check(camp != null and int(camp.get_meta("suministros_art_v4", 0)) == 4, "V4 restored")
+            studio.call("_camp_interior", true)
+            _check(camp.get_meta("suministros_v43_interior_open", false) == true, "Roof opens inside original viewport")
+            studio.call("_camp_interior", false)
+            studio.call("_camp_service_frame", 0.5)
+            _check(absf(float(camp.get_meta("suministros_v43_service_phase", 0.0)) - 0.5) < 0.01, "Native service rig animates in same Studio")
+            studio.call("_camp_stop_service")
             var before_faction: Node3D = camp
             studio.call("_rotate", 84.0)
             studio.call("_change_zoom", 1)
