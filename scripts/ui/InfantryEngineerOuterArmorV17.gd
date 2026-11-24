@@ -19,6 +19,10 @@ const POCKET: String="BolsilloPierna"
 const SOLE: String="V2_Suela"
 const TOE: String="V2_PunteraProtegida"
 const CASE: String="V12_EstucheDorsalContorneado"
+const FACE_PARTS: Array[String]=["V5_ViseraObraIngeniero",
+    "V5_InsigniaCascoIngeniero","V9_VisorContinuoOpaco",
+    "V7_MascaraResistenciaIngeniero","V7_FiltroCentralRespirador"]
+const ELBOW: String="V10_CubiertaCodo"
 
 static func _find(model: Node3D, name: String) -> MeshInstance3D:
     return model.find_child(name,true,false) as MeshInstance3D
@@ -54,6 +58,32 @@ static func _place(model: Node3D, name: String,
     if part==null:
         return false
     return _change(model,name,part.mesh,part.scale,new_position)
+
+# Bend an actual closed press around the face, keeping clockwise triangles
+# and transforming normals by the inverse transpose of the local shear.
+# The outer edges sweep toward +Z (back) rather than hovering over the face.
+static func _conformal_press(w: float,h: float,d: float,r: float,
+        bulge: float,sweep: float,hero: bool) -> ArrayMesh:
+    var source: ArrayMesh=V13._rounded_press(w,h,d,r,bulge,hero)
+    var arrays: Array=source.surface_get_arrays(0)
+    var points: PackedVector3Array=arrays[Mesh.ARRAY_VERTEX]
+    var normals: PackedVector3Array=arrays[Mesh.ARRAY_NORMAL]
+    var raw: Variant=arrays[Mesh.ARRAY_INDEX]
+    var indices: PackedInt32Array=(raw if raw is PackedInt32Array
+        else PackedInt32Array())
+    var out:=SurfaceTool.new()
+    out.begin(Mesh.PRIMITIVE_TRIANGLES)
+    var half: float=w*0.5
+    var count: int=indices.size() if not indices.is_empty() else points.size()
+    for i in range(count):
+        var ix: int=indices[i] if not indices.is_empty() else i
+        var p: Vector3=points[ix]
+        var n: Vector3=normals[ix]
+        var slope: float=2.0*sweep*p.x/(half*half)
+        p.z+=sweep*pow(p.x/half,2.0)
+        out.set_normal(Vector3(n.x-slope*n.z,n.y,n.z).normalized())
+        out.add_vertex(p)
+    return out.commit()
 
 static func show_finish(model: Node3D, enabled: bool) -> bool:
     if not has_model(model):
@@ -110,6 +140,30 @@ static func apply(model: Node3D, hero: bool) -> bool:
             Vector3(0.0,0.128,-0.495)):
         return false
 
+    # Sculpt the existing construction brow, faction band, optic and
+    # respirator as nested curved solid parts, preserving the head pivot.
+    # All materials stay opaque; no fake glass or layered duplicate nodes.
+    var head: Node3D=model.find_child("CabezaRig",true,false) as Node3D
+    if head==null:
+        return false
+    var face_specs: Array=[
+        [0.570,0.126,0.128,0.039,0.014,0.065,Vector3(0,0.451,-0.316)],
+        [0.345,0.069,0.024,0.018,0.004,0.024,Vector3(0,0.470,-0.394)],
+        [0.410,0.136,0.065,0.037,0.014,0.051,Vector3(0,0.255,-0.293)],
+        [0.345,0.196,0.100,0.050,0.019,0.045,Vector3(0,0.122,-0.286)],
+        [0.154,0.098,0.044,0.026,0.008,0.009,Vector3(0,0.115,-0.352)]
+    ]
+    for i in range(FACE_PARTS.size()):
+        var face: MeshInstance3D=_find(model,FACE_PARTS[i])
+        if face==null or face.get_parent()!=head:
+            return false
+        var spec: Array=face_specs[i]
+        if not _change(model,FACE_PARTS[i],_conformal_press(
+                float(spec[0]),float(spec[1]),float(spec[2]),
+                float(spec[3]),float(spec[4]),float(spec[5]),hero),
+                Vector3.ONE,spec[6]):
+            return false
+
     # The V14 rounded shoulder was physically undersized and looked like
     # an isolated ball. New deltoids cover arm roots and descend toward
     # the biceps. Still a CLOSED continuous solid on each original arm rig.
@@ -148,6 +202,16 @@ static func apply(model: Node3D, hero: bool) -> bool:
             return false
         if not _place(model,stripe.name,
                 Vector3(float(side)*0.298,-0.074,-0.091)):
+            return false
+
+        # Existing elbow protector becomes a shaped hard-shell cap, fitted
+        # to the flexible elbow seal without touching the dynamic grip link.
+        var elbow: MeshInstance3D=_find(model,ELBOW+suffix)
+        if elbow==null or elbow.get_parent()!=arm:
+            return false
+        if not _change(model,ELBOW+suffix,
+                _conformal_press(0.184,0.158,0.068,0.045,
+                    0.014,0.022,hero),Vector3.ONE,elbow.position):
             return false
 
         var leg: Node3D=model.find_child(

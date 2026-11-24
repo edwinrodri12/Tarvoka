@@ -157,6 +157,17 @@ func _run() -> void:
                     BaseMaterial3D.TRANSPARENCY_DISABLED and
                 symbol.position.z<(-0.49),
                 "faction emblem preserved ON the front of the cuirass")
+            var head: Node3D=model.find_child("CabezaRig",true,false) as Node3D
+            for label in V17.FACE_PARTS:
+                var part: MeshInstance3D=model.find_child(label,true,false) as MeshInstance3D
+                check(part!=null and part.get_parent()==head and
+                    closed_outward(part.mesh) and part.has_meta(V17.OLD) and
+                    part.material_override is StandardMaterial3D and
+                    (part.material_override as StandardMaterial3D).transparency==
+                        BaseMaterial3D.TRANSPARENCY_DISABLED and
+                    (part.material_override as StandardMaterial3D).cull_mode==
+                        BaseMaterial3D.CULL_BACK,
+                    "conformal opaque face component "+label)
             for side in [-1,1]:
                 var suffix: String="_%d"%side
                 var arm: Node3D=model.find_child(
@@ -170,6 +181,11 @@ func _run() -> void:
                     shoulder.has_meta(V17.OLD) and
                     shoulder.scale.x>=0.65 and shoulder.scale.x<=0.72,
                     "real anatomically broadened shoulder still on arm rig")
+                var elbow: MeshInstance3D=model.find_child(
+                    V17.ELBOW+suffix,true,false) as MeshInstance3D
+                check(elbow!=null and elbow.get_parent()==arm and
+                    closed_outward(elbow.mesh) and elbow.has_meta(V17.OLD),
+                    "sealed elbow armor tracks original arm")
                 var stripe: MeshInstance3D=model.find_child(
                     "V8_FaccionHombrera"+suffix,true,false) as MeshInstance3D
                 check(stripe!=null and stripe.get_parent()==arm
@@ -202,7 +218,12 @@ func _run() -> void:
             # that keeping mesh nodes constant guarantees mobile performance.
             if faction==0:
                 var sculpt_triangles: int=face_count(chest.mesh)
+                for label in V17.FACE_PARTS:
+                    sculpt_triangles+=face_count(
+                        (model.find_child(label,true,false) as MeshInstance3D).mesh)
                 for side in [-1,1]:
+                    sculpt_triangles+=face_count(
+                        (model.find_child(V17.ELBOW+"_%d"%side,true,false) as MeshInstance3D).mesh)
                     var suffix: String="_%d"%side
                     for label in [V17.SHOULDER+suffix,
                             V17.KNEE+suffix,V17.POCKET+suffix,
