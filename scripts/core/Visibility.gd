@@ -37,6 +37,22 @@ static func visible_cells(state: Dictionary, faction: int) -> Dictionary:
                 var cell := Vector2i(x, y)
                 if absi(cell.x - center.x) + absi(cell.y - center.y) <= radius and _clear_los(terrain, center, cell):
                     visible[cell] = true
+    # Recon camps reveal territory independently of an occupant. They use
+    # the same LOS as units; an explicit scenario radius is required.
+    for camp in state.get("camps", []):
+        if not camp is Dictionary or camp.get("kind") != "reconocimiento" or int(camp.get("owner", -1)) != faction or int(camp.get("hp", 0)) <= 0:
+            continue
+        var center: Variant = camp.get("pos")
+        if not center is Vector2i or not Rules.inside(center, terrain):
+            continue
+        var radius: int = int(camp.get("vision", 0))
+        if radius < 1 or radius > MAX_VISION:
+            continue
+        for y in range(maxi(0, center.y - radius), mini(dimensions.y - 1, center.y + radius) + 1):
+            for x in range(maxi(0, center.x - radius), mini(dimensions.x - 1, center.x + radius) + 1):
+                var cell := Vector2i(x, y)
+                if absi(cell.x - center.x) + absi(cell.y - center.y) <= radius and _clear_los(terrain, center, cell):
+                    visible[cell] = true
     return visible
 
 # Godot-grid Bresenham: a mountain on an intermediate tile blocks sight.
@@ -188,6 +204,12 @@ static func observed_state(state: Dictionary, faction: int) -> Dictionary:
         if int(unit.get("faction", -1)) == faction or (int(unit.get("hp", 0)) > 0 and visible.has(unit.get("pos", null))):
             units.append(unit.duplicate(true))
     observed["units"] = units
+    if observed.has("camps"):
+        var known_camps: Array = []
+        for camp in state["camps"]:
+            if camp is Dictionary and (int(camp.get("owner", -1)) == faction or visible.has(camp.get("pos"))):
+                known_camps.append(camp.duplicate(true))
+        observed["camps"] = known_camps
     # Relay locations are public mission objectives, but the CURRENT owner
     # of a relay outside sight is not. Mask it in the AI observation just
     # as the visible board renders it neutral when unseen.

@@ -4,6 +4,7 @@ class_name TarvokaTerrainTactics
 const Rules = preload("res://scripts/core/Rules.gd")
 const Domains = preload("res://scripts/core/Domains.gd")
 const Doctrine = preload("res://scripts/core/CombatDoctrine.gd")
+const Camps = preload("res://scripts/core/CampTactics.gd")
 
 # Original positional rules. A tile is not an RPG level and never changes
 # permanent unit stats. Everything is recalculated on EACH attack, including
@@ -52,7 +53,7 @@ static func flanks(attacker: Dictionary, defender: Dictionary, units: Array) -> 
             return true
     return false
 
-static func modifiers(attacker: Dictionary, defender: Dictionary, terrain: Array, economy: Dictionary = {}, units: Array = []) -> Dictionary:
+static func modifiers(attacker: Dictionary, defender: Dictionary, terrain: Array, economy: Dictionary = {}, units: Array = [], camps: Array = []) -> Dictionary:
     var result := {"attack_bonus":0,"defense_cover":0,"height_delta":0,"flanked":false,"city":false,"terrain":""}
     var a_pos = attacker.get("pos",null)
     var d_pos = defender.get("pos",null)
@@ -70,6 +71,7 @@ static func modifiers(attacker: Dictionary, defender: Dictionary, terrain: Array
         if city_at(economy,d_pos):
             result["city"] = true
             result["defense_cover"] += CITY_COVER
+    result["defense_cover"] += Camps.defensive_cover(attacker, defender, camps)
     if Domains.domain(attacker) == Domains.GROUND and Domains.domain(defender) == Domains.GROUND:
         var differential: int = height_of(attack_tile)-height_of(defend_tile)
         result["height_delta"] = differential

@@ -11,6 +11,7 @@ const Economy = preload("res://scripts/core/UrbanEconomy.gd")
 const Logistics = preload("res://scripts/core/Logistics.gd")
 const Opening = preload("res://scripts/core/OpeningBalance.gd")
 const Weather = preload("res://scripts/core/Weather.gd")
+const Camps = preload("res://scripts/core/CampTactics.gd")
 
 # Scene-independent two-faction battle state. All operations return fresh dictionaries.
 static func start(units: Array, terrain: Array, first_faction: int = 0, fog_enabled: bool = false, relay_mode: bool = false, economy_mode: bool = false, modern_mode: bool = false, balanced_opening: bool = false, weather: String = "clear", dynamic_weather: bool = false) -> Dictionary:
@@ -64,12 +65,23 @@ static func attack(state: Dictionary, attacker_id: String, defender_id: String) 
     # sight. The shot may reveal combat effects, but never unlocks omniscience.
     var defender_side: int = 1 - int(state["faction"])
     var counter_visible: bool = not Visibility.enabled(state) or Visibility.is_unit_visible(state,defender_side,attacker_id)
-    var action: Dictionary = BattleActions.attack(state["units"], attacker_id, defender_id, state["faction"],counter_visible,Rules.map_size(state["terrain"]),state["terrain"],state.get("economy",{}))
+    var action: Dictionary = BattleActions.attack(state["units"], attacker_id, defender_id, state["faction"],counter_visible,Rules.map_size(state["terrain"]),state["terrain"],state.get("economy",{}),state.get("camps",[]))
     var applied: Dictionary = _apply(state, action)
     if applied.get("valid", false):
         applied["attacker_id"] = attacker_id
         applied["defender_id"] = defender_id
     return applied
+
+# Explicit scenario-only API; no standard skirmish UI or unapproved defaults.
+static func deploy_camp(state: Dictionary, builder_id: String, kind: String, profile: Dictionary) -> Dictionary:
+    if not _active(state) or not Opening.can_order(state):
+        return {"valid": false, "state": state.duplicate(true)}
+    var action: Dictionary = Camps.deploy(state, builder_id, kind, profile)
+    if action.get("valid", false):
+        Opening.record(action["state"])
+        if Visibility.enabled(action["state"]):
+            action["state"] = Visibility.update_exploration(action["state"])
+    return action
 
 static func purchase(state: Dictionary, factory_pos: Vector2i, role: String) -> Dictionary:
     if not _active(state) or not Opening.can_order(state):

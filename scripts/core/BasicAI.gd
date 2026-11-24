@@ -62,7 +62,7 @@ static func step(state: Dictionary) -> Dictionary:
             # Use the same exchange model as the combat action, but assume
             # the visible enemy MAY still have ammo/reaction. Never inspect
             # its private stock or readiness to make a planning decision.
-            var preview: Dictionary = BattleActions.public_preview_exchange(unit, enemy, knowledge["terrain"],knowledge.get("economy",{}),knowledge["units"])
+            var preview: Dictionary = BattleActions.public_preview_exchange(unit, enemy, knowledge["terrain"],knowledge.get("economy",{}),knowledge["units"],knowledge.get("camps",[]))
             if not preview.get("valid", false):
                 continue
             var damage := int(preview["damage"])
@@ -521,7 +521,7 @@ static func _advance_finishing_hit(state: Dictionary, knowledge: Dictionary, fri
                     attacker["pos"] = cell
                     if not Turns.in_attack_range(attacker, enemy):
                         continue
-                    var simulated: Dictionary = BattleActions.public_preview_exchange(attacker,enemy,knowledge["terrain"],knowledge.get("economy",{}),knowledge["units"])
+                    var simulated: Dictionary = BattleActions.public_preview_exchange(attacker,enemy,knowledge["terrain"],knowledge.get("economy",{}),knowledge["units"],knowledge.get("camps",[]))
                     if not simulated.get("valid",false) or not simulated.get("defeated",false):
                         continue
                     var score: int = 100000 + int(enemy.get("attack", 0)) * 10 - int(reachable[cell])
@@ -568,7 +568,7 @@ static func _defensive_retreat(state: Dictionary, knowledge: Dictionary, friends
         for enemy in enemies:
             if not Turns.in_attack_range(enemy, ally):
                 continue
-            var incoming: Dictionary = BattleActions.public_preview_exchange(enemy,ally,knowledge["terrain"],knowledge.get("economy",{}),knowledge["units"])
+            var incoming: Dictionary = BattleActions.public_preview_exchange(enemy,ally,knowledge["terrain"],knowledge.get("economy",{}),knowledge["units"],knowledge.get("camps",[]))
             if incoming.get("valid", false) and incoming.get("defeated", false):
                 threatened = true
                 break
