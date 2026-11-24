@@ -1,0 +1,202 @@
+name: TARVOKA four specialist camps - native 3D visual QA
+
+on:
+  pull_request:
+    paths:
+      - "scripts/ui/CampModels3DV1.gd"
+      - "scripts/ui/CampSupplyFinishV2.gd"
+      - "scripts/ui/CampSupplyReadabilityV3.gd"
+      - "scripts/ui/CampReconFinishV2.gd"
+      - "scripts/ui/CampDefenseFinishV2.gd"
+      - "scripts/ui/CampMedicalFinishV2.gd"
+      - "tests/test_camp_models_v1.gd"
+      - "tests/test_camp_supply_v2.gd"
+      - "tests/test_camp_supply_v3.gd"
+      - "tests/test_camp_recon_v2.gd"
+      - "tests/test_camp_defense_v2.gd"
+      - "tests/test_camp_medical_v2.gd"
+      - ".github/workflows/camp-art-native-qa.yml"
+      - "scripts/publishing/CampUnifiedStudioAdapterV1.gd.txt"
+      - "scripts/publishing/TestFourCampsSharedStudio.gd.txt"
+      - ".github/workflows/tarvoka-3d-pages.yml"
+  push:
+    branches: [main, feat/campamentos-visor-integrado-20261123]
+    paths:
+      - "scripts/ui/CampModels3DV1.gd"
+      - "scripts/ui/CampSupplyFinishV2.gd"
+      - "scripts/ui/CampSupplyReadabilityV3.gd"
+      - "scripts/ui/CampReconFinishV2.gd"
+      - "scripts/ui/CampDefenseFinishV2.gd"
+      - "scripts/ui/CampMedicalFinishV2.gd"
+      - "tests/test_camp_models_v1.gd"
+      - "tests/test_camp_supply_v2.gd"
+      - "tests/test_camp_supply_v3.gd"
+      - "tests/test_camp_recon_v2.gd"
+      - "tests/test_camp_defense_v2.gd"
+      - "tests/test_camp_medical_v2.gd"
+      - ".github/workflows/camp-art-native-qa.yml"
+      - "scripts/publishing/CampUnifiedStudioAdapterV1.gd.txt"
+      - "scripts/publishing/TestFourCampsSharedStudio.gd.txt"
+      - ".github/workflows/tarvoka-3d-pages.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  four-camps-godot-3d:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download exact Godot 4.3 engine
+        run: |
+          set -euo pipefail
+          curl --fail --location --retry 3 \
+            https://github.com/godotengine/godot/releases/download/4.3-stable/Godot_v4.3-stable_linux.x86_64.zip \
+            -o /tmp/godot.zip
+          unzip -q /tmp/godot.zip -d /tmp
+          chmod +x /tmp/Godot_v4.3-stable_linux.x86_64
+      - name: Guard single-studio publishing wiring and seven original buildings
+        run: |
+          set -euo pipefail
+          test -s scripts/publishing/CampUnifiedStudioAdapterV1.gd.txt
+          test -s scripts/publishing/TestFourCampsSharedStudio.gd.txt
+          grep -Fq 'extends "res://scripts/ui/HeadquartersV24SharedStudioAdapter.gd"' \
+            scripts/publishing/CampUnifiedStudioAdapterV1.gd.txt
+          grep -Fq 'FIRST_CAMP_INDEX: int = 7' \
+            scripts/publishing/CampUnifiedStudioAdapterV1.gd.txt
+          grep -Fq 'func _change_selected_building(index: int)' \
+            scripts/publishing/CampUnifiedStudioAdapterV1.gd.txt
+          grep -Fq 'scenes/UnitArtStudioWeb.tscn' \
+            .github/workflows/tarvoka-3d-pages.yml
+          grep -Fq 'TestFourCampsSharedStudio.gd.txt' \
+            .github/workflows/tarvoka-3d-pages.yml
+          grep -Fq 'PASS FOUR CAMPS SHARED STUDIO:' \
+            scripts/publishing/TestFourCampsSharedStudio.gd.txt
+          echo 'PASS SINGLE STUDIO PUBLISH WIRING: four camps additive'
+      - name: Import native camp art
+        run: |
+          set -euo pipefail
+          # The shared web wrapper is supplied by an external Pages export;
+          # it is absent on main. Keep unrelated broken adapter out of import.
+          if test ! -f scripts/ui/CombinedArtStudioWeb.gd && \
+             test -f scripts/ui/BastionStudioAdapter.gd; then
+            mkdir -p /tmp/camp-web-wrapper
+            mv scripts/ui/BastionStudioAdapter.gd /tmp/camp-web-wrapper/
+          fi
+          /tmp/Godot_v4.3-stable_linux.x86_64 --headless --editor \
+            --path . --import --quit 2>&1 | tee /tmp/camp-import.log
+          if grep -E 'SCRIPT ERROR:|Parse Error:|Import failed' /tmp/camp-import.log; then
+            exit 1
+          fi
+      - name: Verify 256 native variants and render 20 genuine PNG previews
+        run: |
+          set -euo pipefail
+          mkdir -p build/qa/camps-v1
+          timeout --signal=TERM --kill-after=5s 300s \
+            xvfb-run -a -s '-screen 0 1280x720x24' \
+            env LIBGL_ALWAYS_SOFTWARE=1 \
+            /tmp/Godot_v4.3-stable_linux.x86_64 \
+            --rendering-method gl_compatibility --audio-driver Dummy --path . \
+            --script res://tests/test_camp_models_v1.gd \
+            2>&1 | tee /tmp/camp-native.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Parse Error:|Assertion failed' /tmp/camp-native.log; then
+            exit 1
+          fi
+          grep -F 'PASS CAMPS V1 NATIVE 3D: 256 audits, 20 PNGs' /tmp/camp-native.log
+          test "$(find build/qa/camps-v1 -name '*.png' | wc -l)" -eq 20
+      - name: Validate sealed supply V2, hinged roof, hose and 25 genuine previews
+        run: |
+          set -euo pipefail
+          mkdir -p build/qa/supply-camp-v2
+          timeout --signal=TERM --kill-after=5s 300s \
+            xvfb-run -a -s '-screen 0 1280x720x24' \
+            env LIBGL_ALWAYS_SOFTWARE=1 \
+            /tmp/Godot_v4.3-stable_linux.x86_64 \
+            --rendering-method gl_compatibility --audio-driver Dummy --path . \
+            --script res://tests/test_camp_supply_v2.gd \
+            2>&1 | tee /tmp/camp-supply-v2-native.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Parse Error:|Assertion failed' /tmp/camp-supply-v2-native.log; then
+            exit 1
+          fi
+          grep -F 'PASS SUPPLY CAMP V2 NATIVE 3D: 64 audits, 25 PNGs' /tmp/camp-supply-v2-native.log
+          test "$(find build/qa/supply-camp-v2 -name '*.png' | wc -l)" -eq 25
+      - name: Inspect V3 supply camp from all four corners and both Android/art LODs
+        run: |
+          set -euo pipefail
+          mkdir -p build/qa/camps-supply-v3
+          timeout --signal=TERM --kill-after=5s 300s \
+            xvfb-run -a -s '-screen 0 1280x720x24' \
+            env LIBGL_ALWAYS_SOFTWARE=1 \
+            /tmp/Godot_v4.3-stable_linux.x86_64 \
+            --rendering-method gl_compatibility --audio-driver Dummy --path . \
+            --script res://tests/test_camp_supply_v3.gd \
+            2>&1 | tee /tmp/camp-v3-native.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Parse Error:|Assertion failed' /tmp/camp-v3-native.log; then
+            exit 1
+          fi
+          grep -F 'PASS SUPPLY CAMP V3 NATIVE QA: 64 audits, 18 views' /tmp/camp-v3-native.log
+          test "$(find build/qa/camps-supply-v3 -name '*.png' | wc -l)" -eq 18
+      - name: Inspect native Recon V2 64 models, 25 real views, optical scan and folding
+        run: |
+          set -euo pipefail
+          mkdir -p build/qa/recon-camp-v2
+          timeout --signal=TERM --kill-after=5s 300s \
+            xvfb-run -a -s '-screen 0 1280x720x24' \
+            env LIBGL_ALWAYS_SOFTWARE=1 \
+            /tmp/Godot_v4.3-stable_linux.x86_64 \
+            --rendering-method gl_compatibility --audio-driver Dummy --path . \
+            --script res://tests/test_camp_recon_v2.gd \
+            2>&1 | tee /tmp/camp-recon-v2-native.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Parse Error:|Assertion failed' /tmp/camp-recon-v2-native.log; then
+            exit 1
+          fi
+          grep -F 'PASS RECON CAMP V2 NATIVE: 64 audits, 25 PNGs' /tmp/camp-recon-v2-native.log
+          test "$(find build/qa/recon-camp-v2 -name '*.png' | wc -l)" -eq 25
+      - name: Native Defense V2 - verify 64 sculpt combinations and 24 rendered previews
+        run: |
+          set -euo pipefail
+          mkdir -p build/qa/defense-camp-v2
+          timeout --signal=TERM --kill-after=5s 300s \
+            xvfb-run -a -s '-screen 0 1280x720x24' \
+            env LIBGL_ALWAYS_SOFTWARE=1 \
+            /tmp/Godot_v4.3-stable_linux.x86_64 \
+            --rendering-method gl_compatibility --audio-driver Dummy --path . \
+            --script res://tests/test_camp_defense_v2.gd \
+            2>&1 | tee /tmp/camp-defense-native.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Parse Error:|Assertion failed' /tmp/camp-defense-native.log; then
+            exit 1
+          fi
+          grep -F 'PASS DEFENSE CAMP V2 NATIVE: 64 audits, 24 PNGs' /tmp/camp-defense-native.log
+          test "$(find build/qa/defense-camp-v2 -name '*.png' | wc -l)" -eq 24
+      - name: Native Medical V2 - validate 64 models, 24 true screenshots and physical folding
+        run: |
+          set -euo pipefail
+          mkdir -p build/qa/medical-camp-v2
+          timeout --signal=TERM --kill-after=5s 300s \
+            xvfb-run -a -s '-screen 0 1280x720x24' \
+            env LIBGL_ALWAYS_SOFTWARE=1 \
+            /tmp/Godot_v4.3-stable_linux.x86_64 \
+            --rendering-method gl_compatibility --audio-driver Dummy --path . \
+            --script res://tests/test_camp_medical_v2.gd \
+            2>&1 | tee /tmp/camp-medical-native.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Parse Error:|Assertion failed' /tmp/camp-medical-native.log; then
+            exit 1
+          fi
+          grep -F 'PASS MEDICAL CAMP V2 NATIVE: 64 audits, 24 PNGs' /tmp/camp-medical-native.log
+          test "$(find build/qa/medical-camp-v2 -name '*.png' | wc -l)" -eq 24
+      - name: Upload actual Godot screenshots for visual review
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: tarvoka-four-camps-native-3d-v1
+          path: |
+            build/qa/camps-v1/*.png
+            build/qa/supply-camp-v2/*.png
+            build/qa/camps-supply-v3/*.png
+            build/qa/recon-camp-v2/*.png
+            build/qa/defense-camp-v2/*.png
+            build/qa/medical-camp-v2/*.png
+          if-no-files-found: warn
+          retention-days: 14
