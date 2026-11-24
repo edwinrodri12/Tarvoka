@@ -35,7 +35,7 @@ static func _triangle(tool:SurfaceTool,a:Vector3,b:Vector3,c:Vector3,
         normal_out:Vector3)->void:
     # A visible manifold, never a two-sided plane or transparent material.
     tool.add_vertex(a)
-    if (b-a).cross(c-a).dot(normal_out)<0.0:
+    if (b-a).cross(c-a).dot(normal_out)>0.0:
         tool.add_vertex(c)
         tool.add_vertex(b)
     else:
