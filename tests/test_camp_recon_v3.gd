@@ -58,12 +58,12 @@ func _audit(faction: int, lod: int, damage: int) -> Node3D:
     if camp == null:
         return null
     audits += 1
-    check(camp.get_meta("recon_art_v3", 0) == 3 and camp.get_meta("recon_art_revision", "") == "3.4" and camp.get_meta("no_gameplay_effects", false), "V3.4 art only")
+    check(camp.get_meta("recon_art_v3", 0) == 3 and camp.get_meta("recon_art_revision", "") == "3.5" and camp.get_meta("no_gameplay_effects", false), "V3.5 art only")
     var core: Node3D = camp.get_node_or_null("EquipamientoDesplegable/" + Recon.CORE) as Node3D
     if damage == 3:
         check(core == null and camp.has_node("V3_ReconWreck"), "Closed wreck, no intact tower")
         check(not ReconV3.station_pose(camp, 0.25), "D3 electronics cannot animate")
-        check(camp.has_node("V3_ReconWreck/V34_FallenTowerFrame"), "Collapsed truss remains on ground")
+        check(camp.has_node("V3_ReconWreck/V34_FallenTowerFrame") and camp.has_node("V3_ReconWreck/V35_CrushedCanopy") and camp.has_node("V3_ReconWreck/V35_TornGroundCable"), "Collapsed truss, canopy and loose cable")
     else:
         check(core != null, "Actual tower and station")
         if core != null:
@@ -71,7 +71,7 @@ func _audit(faction: int, lod: int, damage: int) -> Node3D:
             check(core.has_node("V33_ModularDeck/V33_AccessMat_1") and core.has_node("V33_AuxiliaryEquipment/V33_PortableBatteryCase"), "Modular deck and portable support equipment")
             var ground: Node3D = core.get_node("V33_GroundSensor_1/V33_SensorMastPivot") as Node3D
             var ground_head: Node3D = ground.get_node("V33_SensorHead") as Node3D
-            check(ground_head.has_node("V33_OpaqueGroundLens") and core.has_node("V33_GroundSensorConduit_1"), "Actual enclosed sensor and cable")
+            check(ground_head.has_node("V33_OpaqueGroundLens") and core.has_node("V33_GroundSensorConduit_1") and core.has_node("V35_DeckJunction_1") and core.has_node("V33_GroundSensor_1/V35_SensorCableGland"), "Enclosed sensor and cable terminated at physical hardware")
             if damage < 2:
                 var extended_ground: float = ground_head.position.y
                 check(Art.pose_deploy(camp, 0.0) and absf(ground_head.position.y - extended_ground) > 0.30 and ground.scale == Vector3.ONE, "Ground sensor slides without scaling")
@@ -105,10 +105,17 @@ func _audit(faction: int, lod: int, damage: int) -> Node3D:
                 var head_size: Vector3 = (head.get_node("CarcasaSensorCerrada") as MeshInstance3D).mesh.get_aabb().size
                 var length: float = (shaft.mesh as CylinderMesh).height
                 var extended: float = head.position.y
+                check(head.has_node("V35_ShaftCoupler"), "Mechanical shaft coupling")
                 check(Art.pose_deploy(camp, 0.0), "Pack")
                 check(mast.scale == Vector3.ONE and absf(head.position.y - extended) > 0.55, "Rigid shaft translates")
                 check(absf((shaft.mesh as CylinderMesh).height - length) < 0.001 and (head.get_node("CarcasaSensorCerrada") as MeshInstance3D).mesh.get_aabb().size == head_size, "Head and shaft dimensions unchanged")
                 check(Art.pose_deploy(camp, 1.0) and absf(head.position.y - extended) < 0.01, "Restored")
+                for progress in [0.0, 0.5, 1.0]:
+                    check(Art.pose_deploy(camp, progress), "Intermediate telescope pose")
+                    var coupler: MeshInstance3D = head.get_node("V35_ShaftCoupler") as MeshInstance3D
+                    var shaft_top: float = shaft.position.y + (shaft.mesh as CylinderMesh).height * 0.5
+                    var coupler_bottom: float = head.position.y + coupler.position.y - (coupler.mesh as CylinderMesh).height * 0.5
+                    check(shaft_top >= coupler_bottom, "No disconnected shaft at any sampled extension")
                 check(Recon.pose_scan(camp, 45.0) and absf(head.rotation_degrees.y - 45.0) < 0.01, "Optical yaw")
                 Recon.pose_scan(camp, 0.0)
             else:

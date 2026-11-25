@@ -17,3 +17,7 @@ V3.2 pasó todas las verificaciones, incluyendo 72 variantes, 27 PNG y exportaci
 ## V3.4 — deterioro físico y efectos
 
 V3.3 pasó todas las verificaciones (72 variantes y 29 PNG). V3.4 agrega desgaste D1, perfiles estructurales cerrados y arqueados D2, pantalla dañada y cable desprendido; D3 muestra bastidor colapsado horizontal y consola aplastada sin reponer equipos. Rig de efectos visuales opacos acotado por LOD, reutiliza esferas del escultor de suministros sin tocar su comportamiento. Los controles de impacto, explosión, daño persistente y destrucción progresiva del visor ahora también operan reconocimiento, con cancelación por generación. 72 variantes y 32 capturas previstas; prueba de transición D2-D3 en el visor original. Sin cambios de combate. Pendiente validación y revisión visual.
+
+## V3.5 — cierre de uniones mecánicas y revisión 360
+
+Revisión de las 29 capturas nativas V3.3: sensores y cubierta legibles, pero cableado terrestre con terminaciones no visibles y unión del eje mejorable. V3.5 incorpora prensaestopas, cajas de conexión con pintura de facción, acoplamiento rígido y sellos del cabezal, comprobación de contacto en tres posiciones del telescopio, y restos adicionales de cubierta/consola/cableado. Conserva el ángulo óptico al cambiar LOD o facción en el mismo visor. V3.4 aún en CI al preparar este cambio; V3.5 requiere nuevas pruebas nativas, 32 capturas y exportación web antes de integrar. No cambia reglas ni publica una versión no validada.

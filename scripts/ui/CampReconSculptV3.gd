@@ -152,6 +152,14 @@ static func _tower(tower: Node3D, accent: Color, lod: int, damage: int) -> bool:
     var head: Node3D = mast.get_node("V2_CabezalOpticoGiratorio") as Node3D
     _cyl(head, "V3_YawBearing", Vector3(0, -0.35, 0), 0.32, 0.15, Vector3.UP, FRAME, lod)
     _cyl(head, "V3_BearingAccent", Vector3(0, -0.28, 0), 0.30, 0.09, Vector3.UP, accent, lod)
+    # A keyed coupling bridges the shaft and bearing at every rigid pose.
+    _cyl(head, "V35_ShaftCoupler", Vector3(0, -0.437, 0), 0.175, 0.18, Vector3.UP, ALLOY, lod, 0.30)
+    _cyl(head, "V35_CouplerSeal", Vector3(0, -0.493, 0), 0.195, 0.056, Vector3.UP, GASKET, lod)
+    if lod == 13:
+        for i in range(4):
+            var angle: float = TAU * float(i) / 4.0
+            _cyl(head, "V35_BearingFastener_%d" % i,
+                Vector3(cos(angle) * 0.25, -0.244, sin(angle) * 0.25), 0.036, 0.048, Vector3.UP, ALLOY, lod)
     _replace(head, "CarcasaSensorCerrada", 0.12, GREY, 0.54)
     _replace(head, "FrontalSensor", 0.045, FRAME, 0.48)
     _replace(head, "TapaSensorBlindada", 0.05, PANEL, 0.35)
@@ -466,6 +474,19 @@ static func _ground_v33(core: Node3D, accent: Color, lod: int, damage: int) -> v
             Vector3(x, 0.09, -0.72), Vector3(x - float(side) * 0.04, 0.09, -0.48),
             Vector3(x - float(side) * 0.15, 0.20, -0.20)]
         _cable(core, "V33_GroundSensorConduit_%d" % side, route, 0.038, lod)
+        # Both ends terminate in physical connectors, not free air.
+        _box(rig, "V35_SensorCableSocket", Vector3(0, 0.235, 0.32),
+            Vector3(0.16, 0.16, 0.17), FRAME, 0.024)
+        _cyl(rig, "V35_SensorCableGland", Vector3(0, 0.27, 0.39), 0.062, 0.10,
+            Vector3.BACK, ALLOY, lod)
+        var junction: Vector3 = Vector3(x - float(side) * 0.15, 0.13, -0.20)
+        _box(core, "V35_DeckJunction_%d" % side, junction,
+            Vector3(0.29, 0.24, 0.29), FRAME, 0.045)
+        _box(core, "V35_JunctionLid_%d" % side, junction + Vector3(0, 0.132, 0),
+            Vector3(0.25, 0.045, 0.25), accent, 0.009)
+        if lod == 13:
+            _box(core, "V35_ConduitClamp_%d" % side, Vector3(x, 0.10, -0.72),
+                Vector3(0.16, 0.10, 0.10), ALLOY, 0.012)
 
 # Rigid telescoping columns and heading. Motion is purely presentational.
 static func _ground_pose(root: Node3D, progress: float) -> void:
@@ -500,7 +521,7 @@ static func _damage_v34(core: Node3D, station: Node3D, tower: Node3D, lod: int, 
         return
     var marks: Node3D = _group(core, "V34_ImpactWear")
     for i in range(4 if lod == 13 else 2):
-        var at := Vector3(-2.0 + float(i) * 0.22, 1.42 - float(i % 2) * 0.10, 0.91)
+        var at := Vector3(-2.0 + float(i) * 0.22, 1.42 - float(i % 2) * 0.10, 1.08)
         var scar: MeshInstance3D = _box(marks, "V34_Scuff_%d" % i, at,
             Vector3(0.16, 0.038, 0.028), ALLOY, 0.004)
         scar.rotation_degrees.z = -22.0 + float(i) * 15.0
@@ -530,7 +551,7 @@ static func _damage_v34(core: Node3D, station: Node3D, tower: Node3D, lod: int, 
 
 static func _wreck_v34(wreck: Node3D, accent: Color, lod: int) -> void:
     # Collapsed truss lies flat within the original temporary footprint.
-    var truss: Node3D = _group(wreck, "V34_FallenTowerFrame", Vector3(0.58, 0.22, 0.89))
+    var truss: Node3D = _group(wreck, "V34_FallenTowerFrame", Vector3(0.58, 0.16, 0.89))
     truss.rotation_degrees.y = -25.0
     for side in [-1, 1]:
         _box(truss, "V34_FallenChord_%d" % side, Vector3(float(side) * 0.40, 0.04, 0),
@@ -547,6 +568,15 @@ static func _wreck_v34(wreck: Node3D, accent: Color, lod: int) -> void:
         Vector3(1.18, 0.13, 0.57), GREY, 0.05).rotation_degrees.y = 32.0
     _cyl(wreck, "V34_BrokenLensHousing", Vector3(1.36, 0.29, -1.73), 0.19, 0.18,
         Vector3.FORWARD, FRAME, lod)
+    _box(wreck, "V35_CrushedCanopy", Vector3(-1.75, 0.14, 1.85),
+        Vector3(1.62, 0.16, 1.04), GREY, 0.048).rotation_degrees = Vector3(7.0, 16.0, -9.0)
+    _box(wreck, "V35_CanopyPaintRemnant", Vector3(-1.75, 0.25, 1.85),
+        Vector3(0.78, 0.032, 0.22), accent, 0.008).rotation_degrees.y = 16.0
+    _box(wreck, "V35_CrushedConsoleFace", Vector3(-1.73, 0.40, -1.22),
+        Vector3(0.76, 0.23, 0.10), FRAME, 0.025).rotation_degrees = Vector3(20.0, -18.0, 12.0)
+    var cable: Array[Vector3] = [Vector3(-1.17, 0.19, -0.51), Vector3(-0.91, 0.11, -0.25),
+        Vector3(-0.48, 0.13, -0.28), Vector3(-0.13, 0.08, 0.17)]
+    _cable(wreck, "V35_TornGroundCable", cable, 0.038, lod)
 
 # Dedicated, bounded opaque effect rig. No alpha surfaces on the building.
 const FX_ROOT := "V34_ReconDamageFX"
@@ -598,7 +628,7 @@ static func damage_fx_pose(root: Node3D, kind: String, progress: float) -> bool:
     if damage == 3:
         origin = Vector3(0.75, 0.37, 0.43)
     if not idle:
-        origin = Vector3(1.87, 3.07, 0.80) if not blast else Vector3(1.88, 1.65, 0.34)
+        origin = Vector3(1.87, 3.07, 0.68) if not blast else Vector3(1.92, 1.66, 0.27)
     var smoke: Node3D = rig.get_node("Smoke") as Node3D
     for i in range(smoke.get_child_count()):
         var puff: Node3D = smoke.get_child(i) as Node3D
@@ -638,7 +668,7 @@ static func apply(root: Node3D, accent: Color, lod: int, damage: int) -> bool:
     if root == null or root.get_meta("camp_kind", "") != "reconocimiento":
         return false
     root.set_meta("recon_art_v3", 3)
-    root.set_meta("recon_art_revision", "3.4")
+    root.set_meta("recon_art_revision", "3.5")
     root.set_meta("recon_v3_art_only", true)
     _replace(root, "PlataformaDesmontable", 0.045, PANEL, 0.12)
     if damage == 3:
