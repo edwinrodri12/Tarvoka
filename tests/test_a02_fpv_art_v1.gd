@@ -97,6 +97,30 @@ func _run()->void:
                         tones[color.to_html()]=true
                         check(color.a>=0.999,"opaque pigment")
                     check(tones.size()>=3,"graduated faction and neutral tones")
+            check(bool(model.get_meta("tarvoka_a02_v3_surface_finish",false)),"V3 finish active")
+            var casing:=model.find_child("A02_ClosedCentralShell",true,false) as MeshInstance3D
+            var frame:=model.find_child("A02_VisorFrame",true,false) as MeshInstance3D
+            var face:=model.find_child("A02_FrontVisor",true,false) as MeshInstance3D
+            check(casing!=null and frame!=null and face!=null,"V3 continuous ornamental front")
+            if casing!=null and frame!=null and face!=null:
+                check(frame.mesh is ArrayMesh and face.mesh is ArrayMesh and _closed(frame.mesh) and _closed(face.mesh),
+                    "V3 sealed faceplate and frame")
+                var outer:AABB=frame.transform*frame.mesh.get_aabb()
+                var inner:AABB=face.transform*face.mesh.get_aabb()
+                var hull:AABB=casing.transform*casing.mesh.get_aabb()
+                check(outer.intersects(hull) and outer.intersects(inner),
+                    "V3 decorative surfaces overlap without detached components")
+                check(inner.size.x<outer.size.x and inner.size.y<outer.size.y,
+                    "V3 dark surround remains visible")
+                var material:=casing.material_override as StandardMaterial3D
+                check(material!=null and material.vertex_color_use_as_albedo and material.vertex_color_is_srgb,
+                    "V3 opaque tonal shell pigment")
+                var arrays:Array=casing.mesh.surface_get_arrays(0)
+                var colors:PackedColorArray=arrays[Mesh.ARRAY_COLOR]
+                var vertices:PackedVector3Array=arrays[Mesh.ARRAY_VERTEX]
+                check(colors.size()==vertices.size(),"V3 pigment per vertex")
+                for shade in colors:
+                    check(shade.a>=0.999,"V3 opaque shell")
             var tris:int=0
             for child in model.find_children("*","MeshInstance3D",true,false):
                 var part:=child as MeshInstance3D
@@ -127,7 +151,8 @@ func _run()->void:
             ["front",Vector3(0,1.7,-4.0),Vector3.UP],
             ["rear",Vector3(0,1.7,4.0),Vector3.UP],
             ["top",Vector3(0,5.0,0),Vector3.FORWARD],
-            ["bottom",Vector3(2.2,-3.0,2.8),Vector3.UP]]
+            ["bottom",Vector3(2.2,-3.0,2.8),Vector3.UP],
+            ["front-detail",Vector3(1.1,1.45,-3.0),Vector3.UP]]
         var captures:int=0
         for view in views:
             camera.position=view[1]
@@ -138,7 +163,7 @@ func _run()->void:
             var image:Image=vp.get_texture().get_image()
             if image!=null and not image.is_empty() and image.save_png(out+"/a02-v2-"+str(view[0])+".png")==OK:
                 captures+=1
-        check(captures==4,"V2 four additional real Godot inspection angles")
+        check(captures==5,"V3 five real Godot inspection angles")
         vp.remove_child(inspection)
         inspection.free()
     check(Arsenal.profile("fpv")==profile,"no catalogue changes")

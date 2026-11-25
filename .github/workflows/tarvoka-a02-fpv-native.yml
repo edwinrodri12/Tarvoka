@@ -65,7 +65,7 @@ jobs:
           if grep -E 'SCRIPT ERROR:|Parse Error:|ERROR:|Assertion failed' /tmp/a02-native.log; then exit 1; fi
           grep -F 'PASS A02 FPV ART V1:' /tmp/a02-native.log
           test "$(find build/qa/a02-v1 -name 'a02-f*-lod*.png' -size +2k | wc -l)" -eq 16
-          test "$(find build/qa/a02-v1 -name 'a02-v2-*.png' -size +2k | wc -l)" -eq 4
+          test "$(find build/qa/a02-v1 -name 'a02-v2-*.png' -size +2k | wc -l)" -eq 5
       - name: Archive authentic A02 captures
         if: always()
         uses: actions/upload-artifact@v4

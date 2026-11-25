@@ -76,6 +76,19 @@ static func _sculpt()->ArrayMesh:
     t.generate_normals()
     return t.commit()
 
+static func _shell_finish(source:ArrayMesh,upper:Color,lower:Color)->ArrayMesh:
+    # V3 opaque tonal variation on the same closed ornamental surface.
+    var arrays:Array=source.surface_get_arrays(0)
+    var vertices:PackedVector3Array=arrays[Mesh.ARRAY_VERTEX]
+    var pigments:=PackedColorArray()
+    for vertex in vertices:
+        var shade:Color=lower.lerp(upper,smoothstep(-0.5,0.5,vertex.y))
+        pigments.append(shade)
+    arrays[Mesh.ARRAY_COLOR]=pigments
+    var mesh:=ArrayMesh.new()
+    mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES,arrays)
+    return mesh
+
 static func _guard_finish(primitive:TorusMesh,faction:Color)->ArrayMesh:
     # Color is baked into existing visual geometry; no decal or alpha.
     var arrays:Array=primitive.get_mesh_arrays()
@@ -83,7 +96,7 @@ static func _guard_finish(primitive:TorusMesh,faction:Color)->ArrayMesh:
     var pigments:=PackedColorArray()
     for vertex in vertices:
         pigments.append(Color("#43535d").lerp(faction,
-            0.18+0.82*smoothstep(-0.015,0.06,vertex.y)))
+            0.10+0.72*smoothstep(-0.015,0.06,vertex.y)))
     arrays[Mesh.ARRAY_COLOR]=pigments
     var mesh:=ArrayMesh.new()
     mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES,arrays)
@@ -96,20 +109,31 @@ static func build(root:Node3D,faction:Color,hero:bool)->bool:
     body.name=BODY
     root.add_child(body)
     var graphite:=_mat(Color("#33414a"),0.12,0.74)
+    var coated_shell:=_mat(Color.WHITE,0.12,0.74)
+    coated_shell.vertex_color_use_as_albedo=true
+    coated_shell.vertex_color_is_srgb=true
     var shell:=_mat(Color("#697b86"),0.14,0.73)
     var coated_guard:=_mat(Color.WHITE,0.12,0.74)
     coated_guard.vertex_color_use_as_albedo=true
     coated_guard.vertex_color_is_srgb=true
     var sculpt:=_sculpt()
-    var enamel:=_mat(faction,0.13,0.65)
-    var glass:=_mat(Color("#377c91"),0.17,0.25)
-    _part(body,"A02_ClosedCentralShell",sculpt,Vector3(0,0.96,0),
-        Vector3(0.72,0.44,1.05),graphite)
+    var enamel:=_mat(faction,0.13,0.72)
+    var glass:=_mat(Color("#286477"),0.15,0.34)
+    var dark_trim:=_mat(Color("#263740"),0.10,0.70)
+    var shell_mesh:=_shell_finish(sculpt,Color("#697b86"),Color("#34434c"))
+    _part(body,"A02_ClosedCentralShell",shell_mesh,Vector3(0,0.96,0),
+        Vector3(0.72,0.44,1.05),coated_shell)
     _part(body,PAINT,sculpt,Vector3(0,1.105,-0.045),
         Vector3(0.61,0.20,0.83),enamel)
-    _oval(body,"A02_FrontVisor",Vector3(0,0.99,-0.465),Vector3(0.35,0.25,0.20),glass,hero)
-    _part(body,"A02_SealedUndershell",sculpt,Vector3(0,0.805,0.07),
-        Vector3(0.57,0.25,0.77),shell)
+    # V3: a stylized opaque faceplate, not a real imaging assembly.
+    # The bevelled dark frame overlaps the existing sculpture; the inset
+    # colored face overlaps the frame, with no detached or transparent panel.
+    _part(body,"A02_VisorFrame",sculpt,Vector3(0,0.98,-0.485),
+        Vector3(0.43,0.25,0.16),dark_trim)
+    _part(body,"A02_FrontVisor",sculpt,Vector3(0,0.98,-0.552),
+        Vector3(0.32,0.16,0.065),glass)
+    _part(body,"A02_SealedUndershell",shell_mesh,Vector3(0,0.805,0.07),
+        Vector3(0.57,0.25,0.77),coated_shell)
     for i in range(4):
         var side:float=-1.0 if i%2==0 else 1.0
         var depth:float=-1.0 if i<2 else 1.0
@@ -136,6 +160,7 @@ static func build(root:Node3D,faction:Color,hero:bool)->bool:
         if hero:
             _part(body,"A02_ShoulderBadge_"+str(i),sculpt,
                 Vector3(side*0.34,1.065,depth*0.28),Vector3(0.22,0.07,0.20),enamel)
+    root.set_meta("tarvoka_a02_v3_surface_finish",true)
     root.set_meta("tarvoka_a02_v2_beveled_visual_shell",true)
     root.set_meta(FLAG,true)
     root.set_meta("tarvoka_a02_visual_only",true)
