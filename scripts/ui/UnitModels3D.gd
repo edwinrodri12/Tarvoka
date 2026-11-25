@@ -971,19 +971,54 @@ static func _fighter(root: Node3D) -> void:
     _cylinder(root,"Tobera",Vector3(0,0.62,1.62),
         0.24,0.23,BLACK,Vector3(90,0,0),16)
 
+# V1 naval silhouette: joined closed transverse stations, with a separate
+# conformal deck and opaque faction markings. Presentation only.
+static func _destroyer_shell(root: Node3D, label: String, stations: Array,
+        tint: Color) -> MeshInstance3D:
+    var points: Array = []
+    var faces: Array = []
+    for station in stations:
+        var z: float = station[0]
+        var w: float = station[1]
+        var bottom: float = station[2]
+        var top: float = station[3]
+        points.append_array([
+            Vector3(-w * 0.86, top, z), Vector3(w * 0.86, top, z),
+            Vector3(w, lerpf(bottom, top, 0.64), z),
+            Vector3(w * 0.67, bottom, z), Vector3(-w * 0.67, bottom, z),
+            Vector3(-w, lerpf(bottom, top, 0.64), z)])
+    for ring in range(stations.size() - 1):
+        for i in range(6):
+            var j: int = (i + 1) % 6
+            var a: int = ring * 6
+            var b: int = a + 6
+            faces.append([a + i, b + i, b + j, a + j])
+    faces.append([0,1,2,3,4,5])
+    var last: int = (stations.size() - 1) * 6
+    faces.append([last+5,last+4,last+3,last+2,last+1,last])
+    return _hull(root,label,points,faces,tint)
+
 static func _destroyer(root: Node3D) -> void:
-    var outline: Array = [
-        Vector3(-0.75,0.18,-1.35),Vector3(0.75,0.18,-1.35),
-        Vector3(0.91,0.18,1.20),Vector3(-0.91,0.18,1.20),
-        Vector3(0,0.22,-2.26),Vector3(-0.67,0.74,-1.20),
-        Vector3(0.67,0.74,-1.20),Vector3(0.70,0.72,1.20),
-        Vector3(-0.70,0.72,1.20)
-    ]
-    _hull(root,"CascoNaval",outline,[
-        [0,3,2,1],[0,1,4],[0,5,8,3],[1,2,7,6],
-        [3,8,7,2],[4,1,6],[4,6,5],[0,4,5],[5,6,7,8]],STEEL)
-    _box(root,"Cubierta",Vector3(0,0.75,0.23),
-        Vector3(1.30,0.09,2.69),ARMOR)
+    var stations: Array = [
+        [-2.26,0.045,0.36,0.76],[-2.04,0.28,0.18,0.76],
+        [-1.56,0.62,0.15,0.76],[-0.92,0.82,0.14,0.76],
+        [0.0,0.90,0.14,0.76],[0.90,0.85,0.14,0.76],
+        [1.43,0.70,0.17,0.76],[1.60,0.56,0.22,0.76]]
+    _destroyer_shell(root,"CascoNaval",stations,STEEL)
+    var deck_stations: Array = []
+    for station in stations:
+        deck_stations.append([station[0],station[1]*0.86,0.738,0.802])
+    _destroyer_shell(root,"Cubierta",deck_stations,ARMOR)
+    # Thin closed enamel plates along the broad central hull. Their outer
+    # surfaces slightly overlap the tapered side rather than floating.
+    for side in [-1,1]:
+        _box(root,"FaccionFranjaNaval_%d" % side,
+            Vector3(float(side)*0.744,0.69,0.02),
+            Vector3(0.07,0.095,1.32),ACCENT)
+        _box(root,"FaccionIdentidadNaval_%d" % side,
+            Vector3(float(side)*0.775,0.76,0.02),
+            Vector3(0.07,0.10,0.48),ACCENT)
+    root.set_meta("destroyer_art_revision","1.0")
     _body(root,"Superestructura",0.43,0.25,0.50,0.80,1.36,METAL)
     _box(root,"Puente",Vector3(0,1.30,0),
         Vector3(0.79,0.26,0.50),GLASS)
