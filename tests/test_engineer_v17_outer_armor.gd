@@ -345,6 +345,24 @@ func _run() -> void:
                         knee_faction.has_meta(V17.OLD) and
                         knee_faction.position.z<(-0.22),
                         "Android knee identity remains outside metal shell")
+                    if knee_faction!=null:
+                        var knee: MeshInstance3D=model.find_child(V17.KNEE+suffix,true,false) as MeshInstance3D
+                        check(knee!=null and closed_outward(knee_faction.mesh) and
+                            knee_faction.get_parent()==leg,
+                            "tactical knee paint is a closed physical plate on original leg rig")
+                        if knee!=null:
+                            var verts: PackedVector3Array=knee_faction.mesh.surface_get_arrays(0)[Mesh.ARRAY_VERTEX]
+                            var normals: PackedVector3Array=knee_faction.mesh.surface_get_arrays(0)[Mesh.ARRAY_NORMAL]
+                            var tested: int=0
+                            for k in range(verts.size()):
+                                if normals[k].z> -0.55:
+                                    continue
+                                var pt: Vector3=knee_faction.transform*verts[k]
+                                var clearance: float=V17.knee_surface_z(knee,pt.x,pt.y)-pt.z
+                                check(is_finite(clearance) and clearance>0.005 and clearance<0.024,
+                                    "knee paint front lies outside curved shell")
+                                tested+=1
+                            check(tested>0,"tactical knee front geometry actually sampled")
             # Independently exercise the manufacturing-profile deformation
             # at both native LODs. It must preserve every original vertex
             # slot, triangle count, index ordering and exterior dimensions.

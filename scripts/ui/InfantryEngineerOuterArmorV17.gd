@@ -93,7 +93,8 @@ static func _place(model: Node3D, name: String,
 # Sample the actual triangulated exterior in parent-arm coordinates.
 # This is not an AABB approximation: each painted strip follows the
 # asymmetric shoulder at its own height and depth.
-static func shoulder_surface_x(shell: MeshInstance3D,y: float,z: float,side: int) -> float:
+static func shoulder_surface_x(shell: MeshInstance3D,y: float,z: float,side: int,
+        front_axis: bool=false) -> float:
     var arrays: Array=shell.mesh.surface_get_arrays(0)
     var verts: PackedVector3Array=arrays[Mesh.ARRAY_VERTEX]
     var raw: Variant=arrays[Mesh.ARRAY_INDEX]
@@ -104,6 +105,12 @@ static func shoulder_surface_x(shell: MeshInstance3D,y: float,z: float,side: int
         var a: Vector3=shell.transform*verts[indices[i] if not indices.is_empty() else i]
         var b: Vector3=shell.transform*verts[indices[i+1] if not indices.is_empty() else i+1]
         var c: Vector3=shell.transform*verts[indices[i+2] if not indices.is_empty() else i+2]
+        # A front-facing knee uses the same exact triangle query with
+        # x and z exchanged. No approximation by an enclosing box.
+        if front_axis:
+            a=Vector3(a.z,a.y,a.x)
+            b=Vector3(b.z,b.y,b.x)
+            c=Vector3(c.z,c.y,c.x)
         var by: float=b.y-a.y
         var bz: float=b.z-a.z
         var cy: float=c.y-a.y
@@ -141,6 +148,41 @@ static func _fitted_shoulder_stripe(stripe: MeshInstance3D,shell: MeshInstance3D
         points[i]=p
         normals[i]=Vector3(n.x/0.45,n.y-sample.y*n.x/0.45,
             n.z-sample.z*n.x/0.45).normalized()
+    arrays[Mesh.ARRAY_VERTEX]=points
+    arrays[Mesh.ARRAY_NORMAL]=normals
+    var result:=ArrayMesh.new()
+    result.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES,arrays)
+    return result
+
+static func knee_surface_z(shell: MeshInstance3D,x: float,y: float) -> float:
+    return shoulder_surface_x(shell,y,x,-1,true)
+
+# Tactical knee marker used to be a flat box floating across a curved
+# pad. Use a small closed, contoured plate with actual sampled front
+# depth, keeping the original leg anchor and faction material.
+static func _fitted_knee_marker(shell: MeshInstance3D,center: Vector3) -> ArrayMesh:
+    var base: ArrayMesh=V13._rounded_press(0.190,0.076,0.018,0.012,0.002,false)
+    var arrays: Array=base.surface_get_arrays(0)
+    var points: PackedVector3Array=arrays[Mesh.ARRAY_VERTEX]
+    var normals: PackedVector3Array=arrays[Mesh.ARRAY_NORMAL]
+    var samples: Dictionary={}
+    for i in range(points.size()):
+        var p: Vector3=points[i]
+        var n: Vector3=normals[i]
+        var xy:=Vector2(p.x+center.x,p.y+center.y)
+        if not samples.has(xy):
+            var depth: float=knee_surface_z(shell,xy.x,xy.y)
+            var dx: float=(knee_surface_z(shell,xy.x+0.002,xy.y)-
+                knee_surface_z(shell,xy.x-0.002,xy.y))/0.004
+            var dy: float=(knee_surface_z(shell,xy.x,xy.y+0.002)-
+                knee_surface_z(shell,xy.x,xy.y-0.002))/0.004
+            if not is_finite(depth) or not is_finite(dx) or not is_finite(dy):
+                return null
+            samples[xy]=Vector3(depth,dx,dy)
+        var sample: Vector3=samples[xy]
+        p.z+=sample.x-center.z-0.008
+        points[i]=p
+        normals[i]=Vector3(n.x-sample.y*n.z,n.y-sample.z*n.z,n.z).normalized()
     arrays[Mesh.ARRAY_VERTEX]=points
     arrays[Mesh.ARRAY_NORMAL]=normals
     var result:=ArrayMesh.new()
@@ -1587,8 +1629,9 @@ static func apply(model: Node3D, hero: bool) -> bool:
                 "V3_IdentidadRodillaMapa"+suffix)
             if marker==null or marker.get_parent()!=leg:
                 return false
-            if not _place(model,marker.name,
-                    Vector3(0,-0.485,-0.227)):
+            var marker_center:=Vector3(0,-0.485,-0.227)
+            if not _change(model,marker.name,_fitted_knee_marker(pad,marker_center),
+                    Vector3.ONE,marker_center):
                 return false
 
     if not _sculpt_hands(model,hero) or not _sculpt_uniform(model,hero):

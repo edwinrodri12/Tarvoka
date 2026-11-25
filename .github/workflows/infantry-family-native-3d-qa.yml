@@ -1,6 +1,12 @@
 name: TARVOKA Infantry V1 Native 3D QA
 
 on:
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/ui/InfantryEngineerOuterArmorV17.gd'
+      - 'tests/test_engineer_v17_outer_armor.gd'
+      - '.github/workflows/infantry-family-native-3d-qa.yml'
   pull_request:
     paths:
       - 'scripts/ui/InfantryFamilyV1.gd'
