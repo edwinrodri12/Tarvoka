@@ -196,6 +196,39 @@ func _run() -> void:
                     (part.material_override as StandardMaterial3D).cull_mode==
                         BaseMaterial3D.CULL_BACK,
                     "conformal opaque face component "+label)
+            for label in V17.helmet_labels(lod==13):
+                var accessory: MeshInstance3D=model.find_child(label,true,false) as MeshInstance3D
+                check(accessory!=null and accessory.get_parent()==head and
+                    accessory.has_meta(V17.OLD) and closed_outward(accessory.mesh) and
+                    accessory.material_override is StandardMaterial3D and
+                    (accessory.material_override as StandardMaterial3D).transparency==
+                        BaseMaterial3D.TRANSPARENCY_DISABLED,
+                    "real closed fitted helmet accessory "+label)
+                if accessory==null or not accessory.has_meta(V17.OLD):
+                    continue
+                var previous: Dictionary=accessory.get_meta(V17.OLD)
+                check(accessory.mesh!=previous["mesh"] and
+                    accessory.position.distance_to(previous["position"])<0.15,
+                    "helmet accessory retains nearby original attachment "+label)
+                if label==V17.HELMET_BROW[1] or label.begins_with(V17.HELMET_ID+"_"):
+                    check(V17.surface_kind(label).is_empty() and
+                        not accessory.has_meta(V17.FINISH_NEW),
+                        "faction identity material untouched "+label)
+            for side in [-1,1]:
+                var suffix: String="_%d"%side
+                var inner: MeshInstance3D=model.find_child(
+                    V17.HELMET_SIDE[0]+suffix,true,false) as MeshInstance3D
+                var outer: MeshInstance3D=model.find_child(
+                    V17.HELMET_SIDE[2]+suffix,true,false) as MeshInstance3D
+                if inner!=null and outer!=null:
+                    var inner_bounds: AABB=inner.transform*inner.mesh.get_aabb()
+                    var outer_bounds: AABB=outer.transform*outer.mesh.get_aabb()
+                    check(inner_bounds.intersects(outer_bounds) and
+                        absf(outer.position.x)+outer.mesh.get_aabb().size.x*0.5<0.32,
+                        "ear protector nests against cushion in compact envelope")
+                var badge: MeshInstance3D=model.find_child(
+                    V17.HELMET_ID+suffix,true,false) as MeshInstance3D
+                check((badge!=null)==(lod==13),"lateral badge retains original LOD availability")
             for badge_name in ["V7_IdentidadCascoPosterior","V2_FaccionCasco"]:
                 var badge: MeshInstance3D=model.find_child(badge_name,true,false) as MeshInstance3D
                 check(badge!=null and badge.get_parent()==head and
@@ -669,9 +702,18 @@ func _run() -> void:
                 "render real native animated pose "+str(spec[0]))
             await snapshot(viewport,"v17_pose_"+str(spec[0]))
         Models.restore_model_pose("infantry_engineer",hero)
+        # Dedicated helmet camera framing makes side fittings inspectable,
+        # instead of relying on the low pixel count in full-body previews.
+        camera.size=0.95
+        for spec in [["front",Vector3(0,2.40,-3.0)],
+                ["side",Vector3(3.0,2.40,0)],
+                ["rear",Vector3(0,2.40,3.0)]]:
+            camera.position=spec[1]
+            camera.look_at(Vector3(0,2.28,0),Vector3.UP)
+            await snapshot(viewport,"v17_helmet_"+str(spec[0]))
         hero.queue_free()
         await process_frame
-    check(photos==16,"ten native comparison PNGs and six animation poses")
+    check(photos==19,"ten comparison PNGs, six poses and three helmet macro views")
     if failed>0:
         push_error("FAIL ENGINEER V17: %d violations"%failed)
         quit(1)

@@ -421,6 +421,13 @@ static func surface_kind(label: String) -> String:
     if label in [FRONT,"V9_CascoContinuoBiselado",
             "V12_EscudoCentralBiseladoCerrado"]:
         return "ceramic"
+    if label.begins_with("V9_CierreNucaBajoCasco_"):
+        return "metal"
+    if label.begins_with("V7_SelloLateral_"):
+        return "ceramic"
+    if label=="V8_ViseraSuperiorSellada" or label.begins_with(
+            "V7_ProteccionOido_") or label.begins_with("V9_CubiertaAuricularPerfil_"):
+        return "rubber"
     if label in ["V7_FiltroCentralRespirador","V12_CierreCentralMetal",
             "V8_RielOpticoSuperior","V8_CarcasaFusilIngeniero",
             "V8_GuardamanosPerforado"]:
@@ -784,6 +791,93 @@ static func polish_pose(model: Node3D, kind: String, progress: float) -> bool:
             head.rotation_degrees.x=-5.0*impulse*strength
     return true
 
+# Refine the remaining helmet accessories without changing the sealed
+# V7/V12.3 interior or the animated head pivot. Existing insignia retain
+# their exact faction material; never add stacked duplicate renderables.
+const HELMET_BROW: Array[String]=["V8_ViseraSuperiorSellada",
+    "V8_CrestaCascoFaccion"]
+const HELMET_SIDE: Array[String]=["V7_ProteccionOido","V7_SelloLateral",
+    "V9_CubiertaAuricularPerfil","V9_CierreNucaBajoCasco"]
+const HELMET_ID: String="V9_InsigniaLateralCasco"
+
+static func helmet_labels(hero: bool) -> Array[String]:
+    var labels: Array[String]=[]
+    labels.append_array(HELMET_BROW)
+    for side in [-1,1]:
+        var suffix: String="_%d"%side
+        for prefix in HELMET_SIDE:
+            labels.append(prefix+suffix)
+        if hero:
+            labels.append(HELMET_ID+suffix)
+    return labels
+
+static func _sculpt_helmet_accessories(model: Node3D,hero: bool) -> bool:
+    var head: Node3D=model.find_child("CabezaRig",true,false) as Node3D
+    if head==null:
+        return false
+    for label in helmet_labels(hero):
+        var part: MeshInstance3D=_find(model,label)
+        if part==null or part.get_parent()!=head:
+            return false
+    # The redundant angular brow becomes a narrow fitted rim over
+    # the V17 construction brow instead of a protruding frontal shelf.
+    if not _change(model,HELMET_BROW[0],_conformal_press(
+            0.490,0.063,0.026,0.023,0.005,0.047,hero),
+            Vector3.ONE,Vector3(0,0.422,-0.377)):
+        return false
+    if not _change(model,HELMET_BROW[1],_conformal_press(
+            0.270,0.037,0.018,0.012,0.003,0.035,hero),
+            Vector3.ONE,Vector3(0,0.508,-0.344)):
+        return false
+    for side in [-1,1]:
+        var suffix: String="_%d"%side
+        var x: float=float(side)
+        # The flexible inner earpad and rigid-looking outer protector
+        # form a nested assembly. Rounded profiles have a sealed underside.
+        var cushion: ArrayMesh=V13._lathe([
+            Vector3(0.030,-0.134,0.080),
+            Vector3(0.055,-0.105,0.116),
+            Vector3(0.060,-0.015,0.125),
+            Vector3(0.056,0.095,0.110),
+            Vector3(0.030,0.134,0.070)],hero)
+        if not _change(model,HELMET_SIDE[0]+suffix,cushion,
+                Vector3.ONE,Vector3(x*0.246,0.208,0.064)):
+            return false
+        var cheek: ArrayMesh=V13._lathe([
+            Vector3(0.025,-0.092,0.047),
+            Vector3(0.045,-0.065,0.075),
+            Vector3(0.049,0.008,0.085),
+            Vector3(0.039,0.065,0.072),
+            Vector3(0.023,0.092,0.044)],hero)
+        if not _change(model,HELMET_SIDE[1]+suffix,cheek,
+                Vector3.ONE,Vector3(x*0.214,0.093,-0.166)):
+            return false
+        var cover: ArrayMesh=V13._lathe([
+            Vector3(0.022,-0.100,0.052),
+            Vector3(0.043,-0.073,0.087),
+            Vector3(0.047,0.006,0.100),
+            Vector3(0.042,0.070,0.084),
+            Vector3(0.021,0.100,0.052)],hero)
+        if not _change(model,HELMET_SIDE[2]+suffix,cover,
+                Vector3.ONE,Vector3(x*0.268,0.233,0.047)):
+            return false
+        if not _change(model,HELMET_SIDE[3]+suffix,V13._rounded_press(
+                0.088,0.062,0.030,0.016,0.005,hero),
+                Vector3.ONE,Vector3(x*0.140,0.082,0.276)):
+            return false
+        if hero:
+            # Thin solid side badge follows the side of the helmet.
+            # An elliptical x/z section avoids box-shaped projecting edges.
+            var badge: ArrayMesh=V13._lathe([
+                Vector3(0.009,-0.035,0.041),
+                Vector3(0.013,-0.025,0.054),
+                Vector3(0.014,0.018,0.055),
+                Vector3(0.009,0.035,0.040)],hero)
+            if not _change(model,HELMET_ID+suffix,badge,
+                    Vector3.ONE,Vector3(x*0.276,0.326,-0.056)):
+                return false
+    return true
+
 static func apply(model: Node3D, hero: bool) -> bool:
     if model==null or has_model(model) or not V16.has_model(model):
         return false
@@ -870,6 +964,9 @@ static func apply(model: Node3D, hero: bool) -> bool:
     if not _change(model,crown_badge.name,_conformal_press(
             0.240,0.064,0.022,0.017,0.004,0.032,hero),
             Vector3.ONE,Vector3(0,0.548,-0.222)):
+        return false
+
+    if not _sculpt_helmet_accessories(model,hero):
         return false
 
     # The V14 rounded shoulder was physically undersized and looked like
