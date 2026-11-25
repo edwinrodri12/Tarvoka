@@ -9,6 +9,7 @@ on:
       - 'scripts/ui/InfantryEngineerContourV14.gd'
       - 'scripts/ui/InfantryEngineerGearV15.gd'
       - 'scripts/ui/InfantryEngineerSilhouetteV16.gd'
+      - 'scripts/ui/InfantryEngineerOuterArmorV17.gd'
       - 'tests/test_engineer_v12_live_battle.gd'
       - '.github/workflows/engineer-v12-live-battle.yml'
   push:
@@ -20,6 +21,7 @@ on:
       - 'scripts/ui/InfantryEngineerContourV14.gd'
       - 'scripts/ui/InfantryEngineerGearV15.gd'
       - 'scripts/ui/InfantryEngineerSilhouetteV16.gd'
+      - 'scripts/ui/InfantryEngineerOuterArmorV17.gd'
       - 'tests/test_engineer_v12_live_battle.gd'
       - '.github/workflows/engineer-v12-live-battle.yml'
   workflow_dispatch:
@@ -53,6 +55,7 @@ jobs:
           test -s scripts/ui/InfantryEngineerDorsalV12.gd
           test -s scripts/ui/InfantryEngineerGearV15.gd
           test -s scripts/ui/InfantryEngineerSilhouetteV16.gd
+          test -s scripts/ui/InfantryEngineerOuterArmorV17.gd
           test -s tests/test_engineer_v12_live_battle.gd
           # This feature only maps gameplay G05 -> approved 3D art;
           # it never alters combat stats, production, saves or progression.

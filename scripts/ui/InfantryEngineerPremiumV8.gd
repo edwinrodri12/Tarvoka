@@ -78,9 +78,9 @@ static func _bevel(parent: Node3D, label: String, at: Vector3,
         var a_rear := Vector3(a.x,a.y,-thick*0.5)
         var b_rear := Vector3(c.x,c.y,-thick*0.5)
         # Exterior front (+Z) and rear (-Z) filled triangle fans.
-        for v in [Vector3(0,0,thick*0.5),a_front,b_front,
-                Vector3(0,0,-thick*0.5),b_rear,a_rear,
-                a_front,a_rear,b_rear,a_front,b_rear,b_front]:
+        for v in [Vector3(0,0,thick*0.5),b_front,a_front,
+                Vector3(0,0,-thick*0.5),a_rear,b_rear,
+                a_front,b_rear,a_rear,a_front,b_front,b_rear]:
             st.add_vertex(v)
     st.generate_normals()
     return _mesh(parent,label,st.commit(),at,mat)

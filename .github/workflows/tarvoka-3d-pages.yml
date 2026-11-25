@@ -102,6 +102,7 @@ on:
       - "scripts/ui/InfantryEngineerContourV14.gd"
       - "scripts/ui/InfantryEngineerGearV15.gd"
       - "scripts/ui/InfantryEngineerSilhouetteV16.gd"
+      - "scripts/ui/InfantryEngineerOuterArmorV17.gd"
       - "tests/test_infantry_family_v2.gd"
       - "scripts/ui/InfantrySculptFinishV2.gd"
       - "tests/test_bastion_v16_joint_finish.gd"
@@ -254,6 +255,7 @@ on:
       - "scripts/ui/InfantryEngineerContourV14.gd"
       - "scripts/ui/InfantryEngineerGearV15.gd"
       - "scripts/ui/InfantryEngineerSilhouetteV16.gd"
+      - "scripts/ui/InfantryEngineerOuterArmorV17.gd"
       - "tests/test_infantry_studio_v2_review.gd"
   workflow_dispatch:
   workflow_run:
@@ -293,7 +295,7 @@ concurrency:
   # deployment, and the city preview's workflow_run follows native success.
   # Preserve the dedicated city V16 publish slot and ignored-check isolation.
   group: >-
-    ${{ (github.event_name == 'pull_request' && github.event.pull_request.head.ref == 'art/camp-medical-v3-20261125') && 'tarvoka-medical-v3-pr' || (github.event_name == 'push' && github.ref == 'refs/heads/art/camp-medical-v3-20261125') && 'tarvoka-medical-v3-preview' || (github.event_name == 'pull_request' && github.event.pull_request.head.ref == 'art/camp-defense-v3-20261125') && 'tarvoka-defense-v3-pr' || (github.event_name == 'push' && github.ref == 'refs/heads/art/camp-defense-v3-20261125') && 'tarvoka-defense-v3-preview' || (github.event_name == 'pull_request' && github.event.pull_request.head.ref == 'art/camp-recon-v3-20261124') && 'tarvoka-recon-v3-pr' || (github.event_name == 'push' && github.ref == 'refs/heads/art/camp-recon-v3-20261124') && 'tarvoka-recon-v3-preview' || (github.event_name == 'pull_request' && github.event.pull_request.head.ref == 'art/camp-supply-v4-20261124') && 'tarvoka-supply-v4-pr' || (github.event_name == 'push' && github.ref == 'refs/heads/art/camp-supply-v4-20261124') && 'tarvoka-supply-v4-preview' || github.event_name == 'pull_request' && github.event.pull_request.head.ref == 'feat/campamentos-visor-integrado-20261123' && 'tarvoka-four-camps-rebased-pr' || github.event_name == 'push' && github.ref == 'refs/heads/feat/campamentos-visor-integrado-20261123' && 'tarvoka-four-camps-rebased-push' || github.event_name == 'pull_request' && github.event.pull_request.head.ref == 'feat/a01-v13-tail-gimbal-surface-polish-20261123' && 'tarvoka-a01-v13-unique-pages-review' || github.event_name == 'pull_request' && github.event.pull_request.head.ref == 'feat/a01-recon-v11-aerodynamic-body-and-conformal-paint-20261122' && 'tarvoka-a01-v12-unique-pages-review' || github.event_name == 'pull_request' && github.event.pull_request.head.ref == 'feat/hq-v24-live-shared-pages-integration-20261121' && 'tarvoka-hq-v24-actual-pages-check' || github.event_name == 'pull_request' && github.event.pull_request.head.ref == 'art/engineer-v11-integrated-hq-v24-20261121' && 'tarvoka-engineer-v11-hq24-pages-review' || github.event_name == 'pull_request' && github.event.pull_request.head.ref == 'art/engineer-v10-anatomic-arms-workhand-20261121' && 'tarvoka-engineer-v10-native-pages-review' || github.event_name == 'pull_request' && github.event.pull_request.head.ref == 'fix/infantry-engineer-v6-360-hinge-continuity-20261121' && 'tarvoka-engineer-v6-hinge-pages-review' || github.event_name == 'pull_request' && github.event.pull_request.head.ref == 'feat/a01-recon-uav-v1-studio-20261120' && 'tarvoka-a01-v6-native-pages-review' || github.event_name == 'pull_request' && github.event.pull_request.head.ref == 'feat/infantry-six-core-camps-20261120' && 'tarvoka-infantry-six-camps-pages-review' || github.event_name == 'pull_request' && github.event.pull_request.head.ref == 'feat/infantry-v3-tactical-color-lod-studio-20261120' && 'tarvoka-infantry-v3-tactical-pages-review' || github.event_name == 'pull_request' && github.event.pull_request.head.ref == 'feat/infantry-v2-in-one-studio-20261120' && 'tarvoka-infantry-v2-native-pages-review' || github.event_name == 'pull_request' && github.event.pull_request.head.ref == 'feat/g16-v6-consolidated-service-hardware-20261120' && 'tarvoka-g16-v6-native-pages-review' || github.event_name == 'pull_request' && github.event.pull_request.head.ref == 'feat/g16-v5-materials-glazing-damage-20261120' && 'tarvoka-g16-v5-native-pages-review' || github.event_name == 'pull_request' && github.event.pull_request.head.ref == 'feat/g16-v4-body-sculpt-wreck-studio-20261119' && 'tarvoka-g16-v4-pages-review' || github.event_name == 'pull_request' && github.event.pull_request.head.ref == 'feat/g16-v1-armored-logistics-studio-20261119' && 'tarvoka-g16-v3-pages-review' || github.event_name == 'pull_request' && github.event.pull_request.head.ref == 'feat/g15-v11-wheel-sidewall-cab-360-20261119' && 'tarvoka-g15-v11-pages-review' || github.event_name == 'pull_request' && github.event.pull_request.head.ref == 'fix/g15-v11b-physical-contour-closure-20261119' && 'tarvoka-g15-v11b-pages-review' || github.event_name == 'push' && startsWith(github.event.head_commit.message, 'ci(studio): ship civilian city V16 unified buildings') && 'tarvoka-city-v16-native-publish' || github.event_name == 'workflow_run' && (github.event.workflow_run.conclusion != 'success' || github.event.workflow_run.event != 'push') && 'tarvoka-pages-ignored-checks' || github.event_name == 'push' && startsWith(github.event.head_commit.message, 'art(infantry): integrate Engineer V11') && 'tarvoka-engineer-v11-hq24-publish' || github.event_name == 'push' && startsWith(github.event.head_commit.message, 'ci(workshop-pages):') && 'tarvoka-workshop-auto-lod-publish' || github.event_name == 'push' && startsWith(github.event.head_commit.message, 'ci(g16-pages):') && 'tarvoka-g16-v3-verified-main-publish' || github.event_name == 'push' && startsWith(github.event.head_commit.message, 'ci(g16-v4-pages):') && 'tarvoka-g16-v4-verified-main-deploy' || github.event_name == 'push' && startsWith(github.event.head_commit.message, 'ci(g16-v5-pages):') && 'tarvoka-g16-v5-verified-main-publish' || 'tarvoka-native-3d-studio-build' }}
+    ${{ (github.event_name == 'pull_request' && github.event.pull_request.head.ref == 'art/camp-medical-v3-20261125') && 'tarvoka-medical-v3-pr' || (github.event_name == 'push' && github.ref == 'refs/heads/art/camp-medical-v3-20261125') && 'tarvoka-medical-v3-preview' || (github.event_name == 'pull_request' && github.event.pull_request.head.ref == 'art/camp-defense-v3-20261125') && 'tarvoka-defense-v3-pr' || (github.event_name == 'push' && github.ref == 'refs/heads/art/camp-defense-v3-20261125') && 'tarvoka-defense-v3-preview' || (github.event_name == 'pull_request' && github.event.pull_request.head.ref == 'art/camp-recon-v3-20261124') && 'tarvoka-recon-v3-pr' || (github.event_name == 'push' && github.ref == 'refs/heads/art/camp-recon-v3-20261124') && 'tarvoka-recon-v3-preview' || (github.event_name == 'pull_request' && github.event.pull_request.head.ref == 'art/camp-supply-v4-20261124') && 'tarvoka-supply-v4-pr' || (github.event_name == 'push' && github.ref == 'refs/heads/art/camp-supply-v4-20261124') && 'tarvoka-supply-v4-preview' || github.event_name == 'pull_request' && github.event.pull_request.head.ref == 'art/engineer-v17-continuous-outer-armor-20261123' && 'tarvoka-engineer-v17-shared-pages-review' || github.event_name == 'pull_request' && github.event.pull_request.head.ref == 'feat/campamentos-visor-integrado-20261123' && 'tarvoka-four-camps-rebased-pr' || github.event_name == 'push' && github.ref == 'refs/heads/feat/campamentos-visor-integrado-20261123' && 'tarvoka-four-camps-rebased-push' || github.event_name == 'pull_request' && github.event.pull_request.head.ref == 'feat/a01-v13-tail-gimbal-surface-polish-20261123' && 'tarvoka-a01-v13-unique-pages-review' || github.event_name == 'pull_request' && github.event.pull_request.head.ref == 'feat/a01-recon-v11-aerodynamic-body-and-conformal-paint-20261122' && 'tarvoka-a01-v12-unique-pages-review' || github.event_name == 'pull_request' && github.event.pull_request.head.ref == 'feat/hq-v24-live-shared-pages-integration-20261121' && 'tarvoka-hq-v24-actual-pages-check' || github.event_name == 'pull_request' && github.event.pull_request.head.ref == 'art/engineer-v11-integrated-hq-v24-20261121' && 'tarvoka-engineer-v11-hq24-pages-review' || github.event_name == 'pull_request' && github.event.pull_request.head.ref == 'art/engineer-v10-anatomic-arms-workhand-20261121' && 'tarvoka-engineer-v10-native-pages-review' || github.event_name == 'pull_request' && github.event.pull_request.head.ref == 'fix/infantry-engineer-v6-360-hinge-continuity-20261121' && 'tarvoka-engineer-v6-hinge-pages-review' || github.event_name == 'pull_request' && github.event.pull_request.head.ref == 'feat/a01-recon-uav-v1-studio-20261120' && 'tarvoka-a01-v6-native-pages-review' || github.event_name == 'pull_request' && github.event.pull_request.head.ref == 'feat/infantry-six-core-camps-20261120' && 'tarvoka-infantry-six-camps-pages-review' || github.event_name == 'pull_request' && github.event.pull_request.head.ref == 'feat/infantry-v3-tactical-color-lod-studio-20261120' && 'tarvoka-infantry-v3-tactical-pages-review' || github.event_name == 'pull_request' && github.event.pull_request.head.ref == 'feat/infantry-v2-in-one-studio-20261120' && 'tarvoka-infantry-v2-native-pages-review' || github.event_name == 'pull_request' && github.event.pull_request.head.ref == 'feat/g16-v6-consolidated-service-hardware-20261120' && 'tarvoka-g16-v6-native-pages-review' || github.event_name == 'pull_request' && github.event.pull_request.head.ref == 'feat/g16-v5-materials-glazing-damage-20261120' && 'tarvoka-g16-v5-native-pages-review' || github.event_name == 'pull_request' && github.event.pull_request.head.ref == 'feat/g16-v4-body-sculpt-wreck-studio-20261119' && 'tarvoka-g16-v4-pages-review' || github.event_name == 'pull_request' && github.event.pull_request.head.ref == 'feat/g16-v1-armored-logistics-studio-20261119' && 'tarvoka-g16-v3-pages-review' || github.event_name == 'pull_request' && github.event.pull_request.head.ref == 'feat/g15-v11-wheel-sidewall-cab-360-20261119' && 'tarvoka-g15-v11-pages-review' || github.event_name == 'pull_request' && github.event.pull_request.head.ref == 'fix/g15-v11b-physical-contour-closure-20261119' && 'tarvoka-g15-v11b-pages-review' || github.event_name == 'push' && startsWith(github.event.head_commit.message, 'ci(studio): ship civilian city V16 unified buildings') && 'tarvoka-city-v16-native-publish' || github.event_name == 'workflow_run' && (github.event.workflow_run.conclusion != 'success' || github.event.workflow_run.event != 'push') && 'tarvoka-pages-ignored-checks' || github.event_name == 'push' && startsWith(github.event.head_commit.message, 'art(infantry): integrate Engineer V11') && 'tarvoka-engineer-v11-hq24-publish' || github.event_name == 'push' && startsWith(github.event.head_commit.message, 'ci(workshop-pages):') && 'tarvoka-workshop-auto-lod-publish' || github.event_name == 'push' && startsWith(github.event.head_commit.message, 'ci(g16-pages):') && 'tarvoka-g16-v3-verified-main-publish' || github.event_name == 'push' && startsWith(github.event.head_commit.message, 'ci(g16-v4-pages):') && 'tarvoka-g16-v4-verified-main-deploy' || github.event_name == 'push' && startsWith(github.event.head_commit.message, 'ci(g16-v5-pages):') && 'tarvoka-g16-v5-verified-main-publish' || 'tarvoka-native-3d-studio-build' }}
   cancel-in-progress: false
 
 jobs:
@@ -330,7 +332,7 @@ jobs:
           # The publisher keeps the complete HQ/Airbase/G09 web studio from its
           # release branch. Only P06 model/animation files and an additive
           # subclass adapter come from main; no building assets are replaced.
-          for item in UnitModels3D.gd InfantryFamilyV1.gd InfantrySculptFinishV2.gd InfantryVariantsV4.gd InfantryEngineerSilhouetteV5.gd InfantryEngineerFinishV6.gd InfantryEngineerCompletenessV7.gd InfantryEngineerPremiumV8.gd InfantryEngineerFinishV9.gd InfantryEngineerAnatomyV10.gd InfantryEngineerMechanicsV11.gd InfantryEngineerDorsalV12.gd InfantryEngineerSmoothV13.gd InfantryEngineerContourV14.gd InfantryEngineerGearV15.gd InfantryEngineerSilhouetteV16.gd InfantryCampRosterV1.gd AttackHelicopterV1.gd AttackHelicopterCabinV2.gd AttackHelicopterRotorV3.gd AttackHelicopterEnginesV4.gd AttackHelicopterLandingV5.gd AttackHelicopterLandingFinishV6.gd AttackHelicopterReadabilityV7.gd AttackHelicopterSilhouetteV8.gd AttackHelicopterFinishV10.gd AttackHelicopterTailV11.gd AttackHelicopterNoseV12.gd AttackHelicopterDamageV13.gd AttackHelicopterFactionV14.gd AttackHelicopterCombatFXV14.gd AttackHelicopterNightStudioV144.gd AttackHelicopterRotorMountV145.gd AttackHelicopterRotorDampersV146.gd AttackHelicopterDamperFinishV147.gd AttackHelicopterPitchHingesV148.gd AttackHelicopterRotorAnchorsV149.gd AttackHelicopterRotorContactV1410.gd AttackHelicopterBladeRootsV1411.gd AttackHelicopterBladeSeamV1412.gd AttackHelicopterHubCrownV1413.gd AttackHelicopterHubWreckV1414.gd AttackHelicopterHubCutFinishV1415.gd BastionVisualRig3D.gd BastionDamage3D.gd BastionStudioAdapter.gd APCArtV1.gd APCArmorV2.gd APCBatchingV4.gd APCFinishV3.gd APCDetailV5.gd APCFinishV6.gd APCMachineGunV7.gd APCDamageV7.gd APCRearDesignV10.gd APCExteriorV11.gd APCTurretV12.gd APCSurfaceV13.gd APCWheelV14.gd APCUndercarriageV15.gd APCJointFinishV16.gd APCContourV17.gd APCWheelwellV18.gd APCUnifiedFlankV19.gd APCMicrodetailV20.gd APCMaterialFinishV21.gd APCWeatherFinishV22.gd APCTireFinishV23.gd APCRubberArchV24.gd APCClosedTiresV25.gd APCTacticalLOD8.gd APCDistanceLODControllerV9.gd APCWeaponAudioV8.gd APCVisualRigV1.gd G11Art3D.gd G11VisualRig3D.gd G11FinishV2.gd G11SurfaceV3.gd G11GeometryV4.gd G11MechanicsV5.gd G11DamageSculptV6.gd G11DamageAtmosphereV7.gd G11SequentialSalvoV8.gd G11ExhaustV9.gd G11CooldownV10.gd G11ArmorFinishV11.gd G11CabChassisV12.gd G11TracksFactionV13.gd G11MechanicalDetailV14.gd G11AftPodFinishV15.gd G11FrontFrameV16.gd G11SurfaceWeatherV17.gd G11TrackAssemblyV18.gd G11TrackFinishV19.gd G11WheelSuspensionV20.gd G11ShockMountFinishV21.gd G11SuspensionJointsV22.gd G11JointFinishV23.gd G11MobileLOD.gd G11TacticalReadabilityV24.gd G11BattleLODControllerV25.gd G11BattleContextV25.gd G11RocketFaceReadabilityV25.gd G11TacticalPaintReadabilityV27.gd G11CameraIdentityV28.gd G11BattleActionsV29.gd G11RearUndercarriageV30.gd G11RocketTrailsV30.gd G11RocketFlightV31.gd G11RunningGearV32.gd G11FinalAuditV33.gd G13MobileAirDefenseV1.gd G13DetailV2.gd G13GroundAirFinishV4.gd G13UndercarriageV6.gd G13WheelFinishV7.gd G13SurfaceFinishV8.gd G13SilhouetteV10.gd InfantryBarracksBattle3D.gd InfantryBarracksWindowShadeV11.gd VisualStyle.gd FactionIdentity.gd CommandCityArtV14.gd HeadquartersBattle3D.gd HeadquartersCurvedRoof3D.gd HeadquartersBattleAccents3D.gd HeadquartersMapLOD3D.gd BattleTerrain3D.gd TerrainVisualMapBridge3D.gd TerrainSurfaceFinish3D.gd TerrainSurfaceSampler3D.gd TerrainStudioRoadShore3D.gd TerrainStudioSnowPaletteV15.gd WinterBattleBiome.gd; do
+          for item in UnitModels3D.gd InfantryFamilyV1.gd InfantrySculptFinishV2.gd InfantryVariantsV4.gd InfantryEngineerSilhouetteV5.gd InfantryEngineerFinishV6.gd InfantryEngineerCompletenessV7.gd InfantryEngineerPremiumV8.gd InfantryEngineerFinishV9.gd InfantryEngineerAnatomyV10.gd InfantryEngineerMechanicsV11.gd InfantryEngineerDorsalV12.gd InfantryEngineerSmoothV13.gd InfantryEngineerContourV14.gd InfantryEngineerGearV15.gd InfantryEngineerSilhouetteV16.gd InfantryEngineerOuterArmorV17.gd InfantryCampRosterV1.gd AttackHelicopterV1.gd AttackHelicopterCabinV2.gd AttackHelicopterRotorV3.gd AttackHelicopterEnginesV4.gd AttackHelicopterLandingV5.gd AttackHelicopterLandingFinishV6.gd AttackHelicopterReadabilityV7.gd AttackHelicopterSilhouetteV8.gd AttackHelicopterFinishV10.gd AttackHelicopterTailV11.gd AttackHelicopterNoseV12.gd AttackHelicopterDamageV13.gd AttackHelicopterFactionV14.gd AttackHelicopterCombatFXV14.gd AttackHelicopterNightStudioV144.gd AttackHelicopterRotorMountV145.gd AttackHelicopterRotorDampersV146.gd AttackHelicopterDamperFinishV147.gd AttackHelicopterPitchHingesV148.gd AttackHelicopterRotorAnchorsV149.gd AttackHelicopterRotorContactV1410.gd AttackHelicopterBladeRootsV1411.gd AttackHelicopterBladeSeamV1412.gd AttackHelicopterHubCrownV1413.gd AttackHelicopterHubWreckV1414.gd AttackHelicopterHubCutFinishV1415.gd BastionVisualRig3D.gd BastionDamage3D.gd BastionStudioAdapter.gd APCArtV1.gd APCArmorV2.gd APCBatchingV4.gd APCFinishV3.gd APCDetailV5.gd APCFinishV6.gd APCMachineGunV7.gd APCDamageV7.gd APCRearDesignV10.gd APCExteriorV11.gd APCTurretV12.gd APCSurfaceV13.gd APCWheelV14.gd APCUndercarriageV15.gd APCJointFinishV16.gd APCContourV17.gd APCWheelwellV18.gd APCUnifiedFlankV19.gd APCMicrodetailV20.gd APCMaterialFinishV21.gd APCWeatherFinishV22.gd APCTireFinishV23.gd APCRubberArchV24.gd APCClosedTiresV25.gd APCTacticalLOD8.gd APCDistanceLODControllerV9.gd APCWeaponAudioV8.gd APCVisualRigV1.gd G11Art3D.gd G11VisualRig3D.gd G11FinishV2.gd G11SurfaceV3.gd G11GeometryV4.gd G11MechanicsV5.gd G11DamageSculptV6.gd G11DamageAtmosphereV7.gd G11SequentialSalvoV8.gd G11ExhaustV9.gd G11CooldownV10.gd G11ArmorFinishV11.gd G11CabChassisV12.gd G11TracksFactionV13.gd G11MechanicalDetailV14.gd G11AftPodFinishV15.gd G11FrontFrameV16.gd G11SurfaceWeatherV17.gd G11TrackAssemblyV18.gd G11TrackFinishV19.gd G11WheelSuspensionV20.gd G11ShockMountFinishV21.gd G11SuspensionJointsV22.gd G11JointFinishV23.gd G11MobileLOD.gd G11TacticalReadabilityV24.gd G11BattleLODControllerV25.gd G11BattleContextV25.gd G11RocketFaceReadabilityV25.gd G11TacticalPaintReadabilityV27.gd G11CameraIdentityV28.gd G11BattleActionsV29.gd G11RearUndercarriageV30.gd G11RocketTrailsV30.gd G11RocketFlightV31.gd G11RunningGearV32.gd G11FinalAuditV33.gd G13MobileAirDefenseV1.gd G13DetailV2.gd G13GroundAirFinishV4.gd G13UndercarriageV6.gd G13WheelFinishV7.gd G13SurfaceFinishV8.gd G13SilhouetteV10.gd InfantryBarracksBattle3D.gd InfantryBarracksWindowShadeV11.gd VisualStyle.gd FactionIdentity.gd CommandCityArtV14.gd HeadquartersBattle3D.gd HeadquartersCurvedRoof3D.gd HeadquartersBattleAccents3D.gd HeadquartersMapLOD3D.gd BattleTerrain3D.gd TerrainVisualMapBridge3D.gd TerrainSurfaceFinish3D.gd TerrainSurfaceSampler3D.gd TerrainStudioRoadShore3D.gd TerrainStudioSnowPaletteV15.gd WinterBattleBiome.gd; do
             if [ ! -s "hq-android-v15/scripts/ui/${item}" ]; then echo "::error::Missing combined Studio file: ${item}"; exit 1; fi
             cp "hq-android-v15/scripts/ui/${item}" "scripts/ui/${item}"
           done
@@ -381,6 +383,7 @@ jobs:
           test -s scripts/ui/InfantryEngineerContourV14.gd
           test -s scripts/ui/InfantryEngineerGearV15.gd
           test -s scripts/ui/InfantryEngineerSilhouetteV16.gd
+          test -s scripts/ui/InfantryEngineerOuterArmorV17.gd
           test -s scripts/ui/InfantryCampRosterV1.gd
           test -s hq-android-v15/tests/test_infantry_family_v2.gd
           cp hq-android-v15/tests/test_infantry_family_v2.gd tests/test_infantry_family_v2.gd
@@ -398,6 +401,7 @@ jobs:
           grep -Fq "InfantryEngineerV11.apply" scripts/ui/UnitModels3D.gd
           grep -Fq "InfantryEngineerV12.apply" scripts/ui/UnitModels3D.gd
           grep -Fq "InfantryEngineerV16.apply" scripts/ui/UnitModels3D.gd
+          grep -Fq "InfantryEngineerV17.apply" scripts/ui/UnitModels3D.gd
           grep -Fq "InfantryEngineerV9.sync" scripts/ui/UnitModels3D.gd
           grep -Fq "EngineerFinishV6.pose" scripts/ui/BastionStudioAdapter.gd
           grep -Fq "InfantryV1.supports" scripts/ui/BastionStudioAdapter.gd
@@ -669,6 +673,10 @@ jobs:
           test -s scripts/ui/HeadquartersCurvedRoof3D.gd
           # The same N1-N3/D0-D4 sculpt must be used by the playable Battle
           # and by the Web art viewer. No shadow copies or stale HQ art.
+          # Preserve provenance BEFORE removing the temporary main checkout.
+          cmp scripts/ui/InfantryEngineerOuterArmorV17.gd hq-android-v15/scripts/ui/InfantryEngineerOuterArmorV17.gd
+          git -C hq-android-v15 rev-parse HEAD > /tmp/tarvoka-studio-source-sha
+          sha256sum scripts/ui/InfantryEngineerOuterArmorV17.gd > /tmp/tarvoka-engineer-source.sha256
           rm -rf hq-android-v15
           test "$(find assets/buildings/hq_v15 -maxdepth 1 -name '*.png' | wc -l)" -eq 9
       # The main terrain visualizer already imports civilian city V5 types,
@@ -2733,6 +2741,94 @@ jobs:
           name: tarvoka-mismo-estudio-3d-cuatro-campamentos
           path: build/web/
           if-no-files-found: error
+          retention-days: 14
+
+      - name: Verify and expose exact Engineer V17 web build identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          sha256sum -c /tmp/tarvoka-engineer-source.sha256
+          grep -Fq 'InfantryEngineerV17.apply' scripts/ui/UnitModels3D.gd
+          source_sha="$(cat /tmp/tarvoka-studio-source-sha)"
+          [[ "$source_sha" =~ ^[0-9a-f]{40}$ ]]
+          export STUDIO_SOURCE_SHA="$source_sha"
+          python3 - <<'PY'
+          from pathlib import Path
+          import hashlib
+          import html
+          import json
+          import os
+          root = Path('build/web')
+          source = Path('scripts/ui/InfantryEngineerOuterArmorV17.gd')
+          commit = os.environ['STUDIO_SOURCE_SHA']
+          info = {
+              'engineer': 'G05 V17',
+              'source_commit': commit,
+              'engineer_source_sha256': hashlib.sha256(source.read_bytes()).hexdigest(),
+              'bundle_sha256': hashlib.sha256((root / 'index.pck').read_bytes()).hexdigest(),
+          }
+          (root / 'studio-version.json').write_text(json.dumps(info, indent=2) + '\n', encoding='utf-8')
+          viewer = root / 'index.html'
+          page = viewer.read_text(encoding='utf-8')
+          assert page.count('</body>') == 1
+          badge = (
+              '<div id="tarvoka-engineer-build" role="status" '
+              'style="position:fixed;right:8px;bottom:8px;z-index:950;'
+              'padding:4px 7px;background:#14202acc;color:#ffe3a5;'
+              'font:600 11px system-ui,Arial,sans-serif">'
+              'Estudio · G05 V17 incluido · ' + html.escape(commit[:12])
+              + ' · <a style="color:inherit" href="studio-version.json">versión</a></div>'
+          )
+          viewer.write_text(page.replace('</body>', badge + '\n</body>'), encoding='utf-8')
+          assert commit[:12] in viewer.read_text(encoding='utf-8')
+          print('Verified Engineer V17 export source:', commit)
+          PY
+
+      - name: Capture real Engineer V17 WebGL canvas in Chromium
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p build/qa/engineer-browser
+          npm install --no-save playwright-core pngjs
+          python3 -m http.server 8123 --directory build/web > /tmp/engineer-browser-http.log 2>&1 &
+          server=$!
+          trap 'kill "$server" 2>/dev/null || true' EXIT
+          cat > /tmp/engineer-browser.cjs <<'JS'
+          const {chromium}=require(process.cwd()+'/node_modules/playwright-core');
+          const {PNG}=require(process.cwd()+'/node_modules/pngjs');
+          const fs=require('node:fs');
+          (async()=>{
+            const browser=await chromium.launch({headless:true,executablePath:'/usr/bin/google-chrome',
+              args:['--no-sandbox','--disable-dev-shm-usage','--enable-webgl','--use-gl=angle','--use-angle=swiftshader','--enable-unsafe-swiftshader']});
+            try {
+              const page=await browser.newPage({viewport:{width:1280,height:720},deviceScaleFactor:1});
+              const errors=[];
+              page.on('pageerror',e=>errors.push(String(e)));
+              page.on('console',m=>{if(/SCRIPT ERROR:|Parse Error:|Could not create render/.test(m.text())) errors.push(m.text());});
+              await page.goto('http://127.0.0.1:8123/?unidad=ingeniero',{waitUntil:'domcontentloaded',timeout:60000});
+              await page.waitForFunction(()=>window.__tarvokaEngineerEntry!==undefined,null,{timeout:180000});
+              const info=await page.evaluate(()=>window.__tarvokaEngineerEntry);
+              console.log('G05 actual browser model',JSON.stringify(info));
+              if(info.role!=='infantry_engineer'||info.edition!=='V17'||info.visible_meshes<20)
+                throw Error('Actual WebGL entry does not load current G05');
+              await page.waitForTimeout(1500);
+              const png=await page.screenshot({path:'build/qa/engineer-browser/g05-v17-real-webgl.png'});
+              const image=PNG.sync.read(png);
+              if(image.width!==1280||image.height!==720)throw Error('Bad screenshot dimensions');
+              fs.writeFileSync('build/qa/engineer-browser/report.json',JSON.stringify({info,errors},null,2));
+              if(errors.length)throw Error(errors.join('\n'));
+              if(info.transparent_meshes.length)console.log('REVIEW visible translucent materials',info.transparent_meshes);
+            } finally {await browser.close();}
+          })().catch(e=>{console.error(e);process.exitCode=1;});
+          JS
+          node /tmp/engineer-browser.cjs
+      - name: Archive real G05 WebGL evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: tarvoka-g05-v17-actual-browser
+          path: build/qa/engineer-browser/
+          if-no-files-found: warn
           retention-days: 14
 
       - name: Upload GitHub Pages web site

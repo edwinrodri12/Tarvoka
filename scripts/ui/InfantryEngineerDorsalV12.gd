@@ -88,7 +88,7 @@ static func _contoured_pouch(parent: Node3D, label: String, at: Vector3,
             var b0 := Vector3(cos(b)*low.x,low.y,sin(b)*low.z)
             var a1 := Vector3(cos(a)*high.x,high.y,sin(a)*high.z)
             var b1 := Vector3(cos(b)*high.x,high.y,sin(b)*high.z)
-            for vertex in [a0,a1,b0,b0,a1,b1]:
+            for vertex in [a0,b0,a1,b0,b1,a1]:
                 mesh.add_vertex(vertex)
     for n in range(segments):
         var a: float=TAU*float(n)/float(segments)
@@ -99,8 +99,8 @@ static func _contoured_pouch(parent: Node3D, label: String, at: Vector3,
         var low_b := Vector3(cos(b)*first.x,first.y,sin(b)*first.z)
         var high_a := Vector3(cos(a)*last.x,last.y,sin(a)*last.z)
         var high_b := Vector3(cos(b)*last.x,last.y,sin(b)*last.z)
-        for vertex in [low_a,low_b,Vector3(0,first.y,0),
-                Vector3(0,last.y,0),high_b,high_a]:
+        for vertex in [low_a,Vector3(0,first.y,0),low_b,
+                Vector3(0,last.y,0),high_a,high_b]:
             mesh.add_vertex(vertex)
     mesh.generate_normals()
     return _part(parent,label,mesh.commit(),at,paint)

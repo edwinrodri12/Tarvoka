@@ -11,6 +11,7 @@ const FinishV9 = preload("res://scripts/ui/InfantryEngineerFinishV9.gd")
 const AnatomyV10 = preload("res://scripts/ui/InfantryEngineerAnatomyV10.gd")
 const MechanicsV11 = preload("res://scripts/ui/InfantryEngineerMechanicsV11.gd")
 const Infantry = preload("res://scripts/ui/InfantryFamilyV1.gd")
+const OuterV17 = preload("res://scripts/ui/InfantryEngineerOuterArmorV17.gd")
 const OUT := "res://build/qa/infantry-v6"
 var errors: int=0
 var shots: int=0
@@ -178,11 +179,40 @@ func _run() -> void:
                     FinishV9.LINK+"_%d"%side,true,false) as MeshInstance3D
                 var anatomy: MeshInstance3D=model.find_child(
                     AnatomyV10.SIDE_PLATE+"_%d"%side,true,false) as MeshInstance3D
-                var tube: CylinderMesh=(
-                    sleeve.mesh as CylinderMesh if sleeve!=null else null)
+                # V17 replaces the cylinder, not its animated pivot.
+                # Audit the actual saved historical V10 primitive as well
+                # as the actual new closed sleeve and its physical ends.
+                var previous: Mesh=null
+                if sleeve!=null:
+                    previous=sleeve.get_meta(OuterV17.LINK_OLD,sleeve.mesh) as Mesh
+                var tube: CylinderMesh=previous as CylinderMesh
                 check(tube!=null and tube.top_radius<=0.055 and
                     tube.bottom_radius<=0.075 and tube.top_radius>0.0,
                     "V10 slimmer physical wrist-to-elbow connector replaces thick V9 pipe")
+                if OuterV17.has_model(model):
+                    check(sleeve!=null and sleeve.has_meta(OuterV17.LINK_NEW) and
+                        sleeve.mesh==sleeve.get_meta(OuterV17.LINK_NEW) and
+                        _watertight(sleeve.mesh),
+                        "V17 contact sleeve has genuinely closed geometry")
+                    if sleeve!=null and sleeve.mesh is ArrayMesh:
+                        var vertices: PackedVector3Array=sleeve.mesh.surface_get_arrays(0)[Mesh.ARRAY_VERTEX]
+                        var wrist_radius: float=0.0
+                        var elbow_radius: float=0.0
+                        var max_radius: float=0.0
+                        var bounds: AABB=sleeve.mesh.get_aabb()
+                        for p in vertices:
+                            var radius: float=Vector2(p.x,p.z).length()
+                            max_radius=maxf(max_radius,radius)
+                            if absf(p.y-0.5)<0.00001:
+                                wrist_radius=maxf(wrist_radius,radius)
+                            elif absf(p.y+0.5)<0.00001:
+                                elbow_radius=maxf(elbow_radius,radius)
+                        check(wrist_radius>0.0 and wrist_radius<=0.055 and
+                            elbow_radius>0.0 and elbow_radius<=0.075 and
+                            max_radius<=0.077 and
+                            absf(bounds.position.y+0.5)<0.00001 and
+                            absf(bounds.size.y-1.0)<0.00001,
+                            "V17 retains slender wrist/elbow, bounded fold relief and exact unit length")
                 check(anatomy!=null and anatomy.mesh is SphereMesh and
                     anatomy.get_parent().name=="TorsoRig",
                     "V10 anatomical rib fairings have solid native PBR geometry")

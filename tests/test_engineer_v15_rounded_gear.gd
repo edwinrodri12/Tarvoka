@@ -7,6 +7,7 @@ const V6=preload("res://scripts/ui/InfantryEngineerFinishV6.gd")
 const V12=preload("res://scripts/ui/InfantryEngineerDorsalV12.gd")
 const V14=preload("res://scripts/ui/InfantryEngineerContourV14.gd")
 const V15=preload("res://scripts/ui/InfantryEngineerGearV15.gd")
+const V17=preload("res://scripts/ui/InfantryEngineerOuterArmorV17.gd")
 const OUT: String="res://build/qa/engineer-v15"
 var issues: int=0
 var photos: int=0
@@ -62,6 +63,7 @@ func _run() -> void:
                 if soldier!=null:
                     soldier.free()
                 continue
+            check(V17.show_finish(soldier,false),"isolate historical V15 before comparison")
             var count: int=mesh_count(soldier)
             for name in ["V8_CarcasaFusilIngeniero",
                     "V8_GuardamanosPerforado",
@@ -132,6 +134,7 @@ func _run() -> void:
     check(hero!=null and V15.has_model(hero),"hero model in Godot")
     if hero!=null:
         view.add_child(hero)
+        check(V17.show_finish(hero,false),"historical V15 render excludes V17")
         var views: Dictionary={
             "front":Vector3(0,2.2,-4.7),
             "left":Vector3(-4.1,2.25,-2.6),

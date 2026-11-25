@@ -18,12 +18,14 @@ on:
       - 'scripts/ui/InfantryEngineerContourV14.gd'
       - 'scripts/ui/InfantryEngineerGearV15.gd'
       - 'scripts/ui/InfantryEngineerSilhouetteV16.gd'
+      - 'scripts/ui/InfantryEngineerOuterArmorV17.gd'
       - 'tests/test_infantry_engineer_v12_finish.gd'
       - 'tests/test_engineer_v123_opaque_closure.gd'
       - 'tests/test_engineer_v13_smooth_finish.gd'
       - 'tests/test_engineer_v14_anatomic_finish.gd'
       - 'tests/test_engineer_v15_rounded_gear.gd'
       - 'tests/test_engineer_v16_silhouette.gd'
+      - 'tests/test_engineer_v17_outer_armor.gd'
       - 'scripts/ui/InfantryCampRosterV1.gd'
       - 'tests/test_infantry_camp_roster.gd'
       - 'scripts/ui/UnitModels3D.gd'
@@ -71,6 +73,8 @@ jobs:
           test -s scripts/ui/InfantryEngineerContourV14.gd
           test -s scripts/ui/InfantryEngineerGearV15.gd
           test -s scripts/ui/InfantryEngineerSilhouetteV16.gd
+          test -s scripts/ui/InfantryEngineerOuterArmorV17.gd
+          test -s tests/test_engineer_v17_outer_armor.gd
           test -s tests/test_engineer_v16_silhouette.gd
           test -s tests/test_engineer_v15_rounded_gear.gd
           test -s tests/test_engineer_v14_anatomic_finish.gd
@@ -95,6 +99,7 @@ jobs:
           grep -Fq 'InfantryEngineerV14.apply' scripts/ui/UnitModels3D.gd
           grep -Fq 'InfantryEngineerV15.apply' scripts/ui/UnitModels3D.gd
           grep -Fq 'InfantryEngineerV16.apply' scripts/ui/UnitModels3D.gd
+          grep -Fq 'InfantryEngineerV17.apply' scripts/ui/UnitModels3D.gd
           grep -Fq 'InfantryEngineerV6.pose' scripts/ui/UnitModels3D.gd
           grep -Fq 'InfantryFamily.pose' scripts/ui/UnitModels3D.gd
           grep -Fq 'InfantryV1.supports' scripts/ui/BastionStudioAdapter.gd
@@ -218,6 +223,18 @@ jobs:
           if grep -E 'SCRIPT ERROR:|ERROR:|Parse Error:|Assertion failed' /tmp/engineer-v16-silhouette.log; then exit 1; fi
           grep -Fq 'PASS ENGINEER V16:' /tmp/engineer-v16-silhouette.log
           test "$(find build/qa/engineer-v16 -name '*.png' | wc -l)" -eq 10
+      - name: Verify V17 closed anatomy, thirty-seven native views, animated contacts, damage and instanced effects
+        if: ${{ !cancelled() }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p build/qa/engineer-v17
+          timeout --signal=TERM --kill-after=5s 240s xvfb-run -a -s '-screen 0 1024x768x24' env LIBGL_ALWAYS_SOFTWARE=1 \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --rendering-method gl_compatibility --audio-driver Dummy --path . \
+            --script res://tests/test_engineer_v17_outer_armor.gd 2>&1 | tee /tmp/engineer-v17-armor.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Parse Error:|Assertion failed' /tmp/engineer-v17-armor.log; then exit 1; fi
+          grep -Fq 'PASS ENGINEER V17:' /tmp/engineer-v17-armor.log
+          test "$(find build/qa/engineer-v17 -name '*.png' | wc -l)" -eq 37
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -232,5 +249,6 @@ jobs:
             build/qa/engineer-v14/*.png
             build/qa/engineer-v15/*.png
             build/qa/engineer-v16/*.png
+            build/qa/engineer-v17/*.png
           if-no-files-found: warn
           retention-days: 14
