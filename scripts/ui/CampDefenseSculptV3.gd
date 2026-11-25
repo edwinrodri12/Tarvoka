@@ -274,6 +274,49 @@ static func _wall(core: Node3D, side: int, accent: Color, lod: int) -> void:
                 0.052, 0.055, Vector3.RIGHT, ALLOY, lod)
 
     _armor_v31(core, wall, side, accent, lod)
+    _locks_v33(core, wall, side, accent, lod)
+
+# V3.3 captive safety bolts slide along the hinge axle into a rotating
+# sector. Two detents correspond to transport and standing configurations.
+static func _locks_v33(core: Node3D, wall: Node3D, side: int, accent: Color, lod: int) -> void:
+    for z in [-1.05, 1.05]:
+        var label: String = "%d_%d" % [side, int(z * 100)]
+        var center: Vector3 = wall.position + Vector3(0, 0, z)
+        _cyl(wall, "V33_Sector_" + str(int(z * 100)), Vector3(0, 0, z + 0.22),
+            0.23, 0.085, Vector3.BACK, DARK, lod)
+        _box(core, "V33_LockHousing_" + label, center + Vector3(0, 0.105, z * 0.0 + 0.40),
+            Vector3(0.26, 0.21, 0.23), STEEL, 0.035)
+        var bolt: Node3D = _group(core, "V33_CaptiveLock_" + label, center + Vector3(0, 0.105, 0.31))
+        bolt.set_meta("home_z", bolt.position.z)
+        _cyl(bolt, "Pin", Vector3.ZERO, 0.050, 0.30, Vector3.BACK, ALLOY, lod)
+        _cyl(bolt, "Grip", Vector3(0, 0, 0.19), 0.085, 0.10, Vector3.BACK, accent, lod)
+        if lod == 13:
+            _box(bolt, "GripTab", Vector3(0, 0.078, 0.19),
+                Vector3(0.16, 0.055, 0.07), DARK, 0.012)
+
+static func _lock_pose(core: Node3D, release: float) -> void:
+    for child in core.get_children():
+        if not str(child.name).begins_with("V33_CaptiveLock_"):
+            continue
+        var bolt: Node3D = child as Node3D
+        bolt.position.z = float(bolt.get_meta("home_z")) + 0.16 * clampf(release, 0.0, 1.0)
+
+# Timeline is reversible and deterministic; there is no game-process loop.
+# 0-.15: unlock; .15-.85: lift; .85-1: secure.
+static func deployment_frame(root: Node3D, timeline: float) -> bool:
+    if root == null or root.get_meta("defense_art_v3", 0) != 3 or int(root.get_meta("visual_damage", 0)) >= 2:
+        return false
+    var t: float = clampf(timeline, 0.0, 1.0)
+    var lift: float = smoothstep(0.15, 0.85, t)
+    var release: float = minf(smoothstep(0.0, 0.15, t), 1.0 - smoothstep(0.85, 1.0, t))
+    if not pose(root, lift):
+        return false
+    var core: Node3D = root.get_node("EquipamientoDesplegable/" + Base.CORE) as Node3D
+    _lock_pose(core, release)
+    root.set_meta("defense_v33_timeline", t)
+    root.set_meta("defense_v33_lock_release", release)
+    root.set_meta("visual_deploy_progress", lift)
+    return true
 
 static func _deck(core: Node3D, accent: Color, lod: int) -> void:
     _replace(core, "V2_SueloCentralOcupable", 0.012, CANVAS_DARK, 0.05)
@@ -404,7 +447,7 @@ static func apply(root: Node3D, accent: Color, lod: int, damage: int) -> bool:
     if root == null or root.get_meta("camp_kind", "") != "defensivo":
         return false
     root.set_meta("defense_art_v3", 3)
-    root.set_meta("defense_art_revision", "3.2")
+    root.set_meta("defense_art_revision", "3.3")
     _replace(root, "PlataformaDesmontable", 0.045, CANVAS_DARK, 0.06)
     if damage == 3:
         var wreck: Node3D = _group(root, "V3_DefenseWreck")
@@ -444,5 +487,9 @@ static func pose(root: Node3D, progress: float) -> bool:
             if wall != null:
                 wall.rotation_degrees = Vector3(0, 0, float(side) * lerpf(78.0, 0.0, t))
         _brace_pose(core)
+        var release: float = 1.0 if t > 0.001 and t < 0.999 else 0.0
+        _lock_pose(core, release)
+        root.set_meta("defense_v33_lock_release", release)
+    root.set_meta("defense_v33_timeline", t)
     root.set_meta("defense_v3_deploy_progress", t)
     return true

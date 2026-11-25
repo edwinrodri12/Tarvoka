@@ -4,6 +4,7 @@ extends SceneTree
 # scenes; 24 authentic PNG views including 360°, deployment and damage.
 const Art = preload("res://scripts/ui/CampModels3DV1.gd")
 const Defense = preload("res://scripts/ui/CampDefenseFinishV2.gd")
+const Motion = preload("res://scripts/ui/CampDefenseSculptV3.gd")
 const Roster = preload("res://scripts/ui/InfantryCampRosterV1.gd")
 const Style = preload("res://scripts/ui/VisualStyle.gd")
 const DEST := "res://build/qa/defense-camp-v3"
@@ -67,11 +68,12 @@ func _audit(faction: int, lod: int, damage: int) -> Node3D:
     if camp == null:
         return null
     audits += 1
-    check(camp.get_meta("defense_art_v3", 0) == 3 and camp.get_meta("defense_art_revision", "") == "3.2" and camp.get_meta("no_gameplay_effects", false), "V3.2 visual only")
+    check(camp.get_meta("defense_art_v3", 0) == 3 and camp.get_meta("defense_art_revision", "") == "3.3" and camp.get_meta("no_gameplay_effects", false), "V3.3 visual only")
     check(camp.get_meta("builder_role", "") == "infantry_engineer", "Engineer identity")
     var core: Node3D = camp.get_node_or_null("EquipamientoDesplegable/" + Defense.CORE) as Node3D
     if damage == 3:
         check(core == null and camp.has_node("V3_DefenseWreck"), "No intact fort in D3")
+        check(not Motion.deployment_frame(camp, 0.5), "D3 cannot animate deployment")
     else:
         check(core != null, "Fort present")
         if core != null:
@@ -111,6 +113,18 @@ func _audit(faction: int, lod: int, damage: int) -> Node3D:
                 var shaft: Node3D = brace.get_node("Shaft") as Node3D
                 check(middle.position.y - 0.21 <= 0.40 and shaft.position.y - 0.21 <= middle.position.y + 0.21, "No gap between telescoping sections")
             check(core.has_node("V2_BarreraArticulada_1") == (damage < 2), "D2 no intact right wall")
+            var bolt: Node3D = core.get_node("V33_CaptiveLock_-1_-105") as Node3D
+            if damage < 2:
+                var home: float = float(bolt.get_meta("home_z"))
+                check(Motion.deployment_frame(camp, 0.0) and absf(bolt.position.z - home) < 0.001, "Transport lock engaged")
+                check(Motion.deployment_frame(camp, 0.15) and absf(left.rotation_degrees.z + 78.0) < 0.01 and absf(bolt.position.z - home - 0.16) < 0.001, "Unlock before motion")
+                check(Motion.deployment_frame(camp, 0.5) and absf(left.rotation_degrees.z + 39.0) < 0.01, "Smooth half deployment")
+                check(Motion.deployment_frame(camp, 0.85) and absf(left.rotation_degrees.z) < 0.01 and absf(bolt.position.z - home - 0.16) < 0.001, "Raised before lock")
+                check(Motion.deployment_frame(camp, 1.0) and absf(bolt.position.z - home) < 0.001, "Standing lock engaged")
+                check(Motion.deployment_frame(camp, 0.5) and Motion.deployment_frame(camp, 0.0), "Reverse sequence")
+                check(Motion.deployment_frame(camp, 1.0), "Restore deployed")
+            else:
+                check(not Motion.deployment_frame(camp, 0.5), "D2 cannot animate intact deployment")
             var parts: Array[MeshInstance3D] = []
             _meshes(core, parts)
             for part in parts:
@@ -214,6 +228,13 @@ func _run() -> void:
                         camera.size = 7.0
                         await _capture(viewport, "defense_v32_rear_retention.png")
                         camera.size = 10.9
+                        camera.position = VIEWS[0]
+                        camera.look_at(Vector3(0, 0.83, 0), Vector3.UP)
+                        Motion.deployment_frame(camp, 0.35)
+                        await _capture(viewport, "defense_v33_deploy_early.png")
+                        Motion.deployment_frame(camp, 0.65)
+                        await _capture(viewport, "defense_v33_deploy_late.png")
+                        Motion.deployment_frame(camp, 1.0)
                     check(CampPose(camp, 0.0), "Fold barriers in place")
                     camera.position = VIEWS[0]
                     camera.look_at(Vector3(0, 0.83, 0), Vector3.UP)
@@ -234,13 +255,13 @@ func _run() -> void:
                     stage.remove_child(camp)
                 camp.free()
     check(audits == 72, "9 factions x 2 LOD x 4 damages = 72")
-    check(screenshots == 28,
-        "26 base captures plus 2 engineering closeups")
+    check(screenshots == 30,
+        "28 base captures plus 2 intermediate deployment views")
     viewport.queue_free()
     await process_frame
     if errors > 0:
         printerr("FAIL DEFENSE CAMP V3 NATIVE: %d issues" % errors)
         quit(1)
         return
-    print("PASS DEFENSE CAMP V3 NATIVE: 72 audits, 28 PNGs")
+    print("PASS DEFENSE CAMP V3 NATIVE: 72 audits, 30 PNGs")
     quit(0)

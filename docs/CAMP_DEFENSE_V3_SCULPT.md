@@ -9,3 +9,7 @@ V3 superó ambas QA nativas, APK y galería. Capturas muestran una silueta clara
 ## V3.2 — equipamiento de ingeniería y contención posterior
 
 V3.1 pasó QA nativa (72 variantes, 26 PNG) y compilación Android. La revisión de capturas reales mostró blindaje legible, pero muralla y cajas repetitivas. V3.2 alterna las juntas de sacos, agrega bastidor de contención con postes, raíles y anclajes; desarrolla cofres de herramientas con tapas, cierres y bisagras, banco de trabajo y estante de perfiles estructurales en los dos rincones traseros. El acceso y la superficie central permanecen despejados. D2 pierde el estante derecho. Todo decorativo; no hay producción, armas ni nuevas reglas. QA de espacio central y 72 variantes, 28 capturas previstas, pendiente CI e inspección visual.
+
+## V3.3 — despliegue y recogida animados
+
+V3.2 todavía en CI al preparar esta iteración. V3.3 añade seguros cautivos, discos de bloqueo y pasadores que deslizan por el eje; ciclo visual reversible de 3.2 s: desbloqueo, elevación suavizada con riostras articuladas y bloqueo final. El visor original conserva poses instantáneas y agrega animar despliegue/recogida y detener; cancela tween al cambiar modelo o pose. D2/D3 no ofrecen animación operativa. 72 combinaciones y 30 capturas previstas, pruebas de fases, reversibilidad, cierre y cancelación. Sin reglas nuevas. Pendiente validación visual y nativa.

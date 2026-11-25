@@ -285,7 +285,7 @@ func _run() -> void:
             damage.item_selected.emit(0)
             await _frames(4)
         if i == 2:
-            _check(camp.get_meta("defense_art_v3", 0) == 3 and camp.get_meta("defense_art_revision", "") == "3.2", "Defense V3.2 in original studio")
+            _check(camp.get_meta("defense_art_v3", 0) == 3 and camp.get_meta("defense_art_revision", "") == "3.3", "Defense V3.3 in original studio")
             _check(camp.has_node("EquipamientoDesplegable/DefenseV2_EngineerOutpost/V32_EngineeringGear/V32_EngineeringBay_-1/V32_BenchTop"), "Engineer equipment in original viewport")
             var defense_finish: OptionButton = studio.get("camp_defense_finish") as OptionButton
             _check(defense_finish != null and defense_finish.visible, "Defense comparison visible")
@@ -295,6 +295,16 @@ func _run() -> void:
             var brace: Node3D = barrier.get_parent().get_node("V31_Brace_-1_91") as Node3D
             _check(brace != null and float(brace.get_meta("span", 0.0)) >= 0.42, "Articulated support follows wall in original studio")
             studio.call("_camp_pose", 1.0)
+            var controls: VBoxContainer = studio.get("camp_defense_actions") as VBoxContainer
+            _check(controls.visible, "Animated deployment controls in original viewport")
+            studio.call("_camp_defense_frame", 0.15)
+            _check(absf(float(camp.get_meta("defense_v33_lock_release", 0.0)) - 1.0) < 0.01, "Unlock phase")
+            studio.call("_camp_defense_animate", 1.0)
+            await _frames(4)
+            studio.call("_camp_stop_defense")
+            _check(studio.get("_camp_defense_tween") == null, "Stop kills deployment tween")
+            studio.call("_camp_defense_frame", 1.0)
+            _check(absf(float(camp.get_meta("defense_v33_lock_release", 1.0))) < 0.01, "Secure phase")
             defense_finish.select(1)
             defense_finish.item_selected.emit(1)
             await _frames(4)
