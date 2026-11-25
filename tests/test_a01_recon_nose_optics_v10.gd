@@ -181,6 +181,25 @@ func _run()->void:
                     "V20 rounded cradle stays fixed to airframe")
                 check(old_lens!=null and old_brow!=null and not old_lens.visible and not old_brow.visible,
                     "V20 overlapping legacy lens and rectangular brow retired")
+                check(bool(m.get_meta("tarvoka_a01_v27_mechanical_bearings",false)),
+                    "V27 stepped bearing refinement installed")
+                for side in [-1,1]:
+                    var tag:String="A01_V3_EOIRTrunnion"+("_L" if side<0 else "_R")
+                    var bearing:=optics_pivot.find_child(tag,false,false) as MeshInstance3D
+                    check(bearing!=null and bearing.visible and bearing.mesh is ArrayMesh,
+                        "V27 actual solid bearing on moving optical assembly")
+                    if bearing!=null and bearing.mesh is ArrayMesh:
+                        check(_closed(bearing.mesh as ArrayMesh,92 if lod==13 else 60),
+                            "V27 closed stepped bearing within LOD budget")
+                        var bounds:AABB=bearing.mesh.get_aabb()
+                        check(absf(bearing.position.x)-absf(bounds.position.z)<0.15 and
+                            absf(bearing.position.x)+bounds.end.z>0.22 and
+                            is_equal_approx(bearing.rotation_degrees.y,float(side)*90.0),
+                            "V27 internal shaft embedded and external cap exposed")
+                if lens!=null and thermal!=null:
+                    check(lens.position.z-lens.scale.z*0.5> -0.320 and
+                        thermal.position.z-thermal.scale.z*0.5>= -0.320,
+                        "V27 glass remains recessed behind protective annulus")
             var expected:Color=Models.faction_paint_color(team)
             for side in [-1,1]:
                 var paint:=m.find_child(V10.PAINT_L if side<0 else V10.PAINT_R,

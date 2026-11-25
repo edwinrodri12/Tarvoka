@@ -95,7 +95,21 @@ static func _sculpt_blade(parent:Node3D,label:String,hero:bool,
         rings.append(ring)
     var part:=MeshInstance3D.new()
     part.name=label
-    part.mesh=_loft_rings(rings)
+    # V27: metal root, graphite blade and muted tip pigmentation on
+    # the same sealed blade mesh, not extra bands or transparent decals.
+    var source:ArrayMesh=_loft_rings(rings)
+    var arrays:Array=source.surface_get_arrays(0)
+    var vertices:PackedVector3Array=arrays[Mesh.ARRAY_VERTEX]
+    var pigments:=PackedColorArray()
+    for vertex in vertices:
+        var shade:Color=Color("#5b6c76").lerp(Color("#303b43"),
+            smoothstep(0.10,0.30,vertex.y))
+        shade=shade.lerp(Color("#85949d"),0.60*smoothstep(0.43,0.505,vertex.y))
+        pigments.append(shade)
+    arrays[Mesh.ARRAY_COLOR]=pigments
+    var finished:=ArrayMesh.new()
+    finished.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES,arrays)
+    part.mesh=finished
     part.material_override=material
     parent.add_child(part)
     return part
@@ -143,7 +157,9 @@ static func apply(root:Node3D,color:Color,hero:bool)->bool:
     var airframe:=_mat(Color("#b8c7cc"),0.39,0.39)
     var graphite:=_mat(Color("#242f38"),0.15,0.77)
     var alloy:=_mat(Color("#61747d"),0.62,0.34)
-    var blades:=_mat(Color("#20262c"),0.12,0.65)
+    var blades:=_mat(Color.WHITE,0.15,0.68)
+    blades.vertex_color_use_as_albedo=true
+    blades.vertex_color_is_srgb=true
     var paint:=_mat(color,0.22,0.38)
 
     # Solid wingtip fences, tail trims and cable-protected servo joints.
@@ -204,6 +220,7 @@ static func apply(root:Node3D,color:Color,hero:bool)->bool:
     _axial_shell(prop,"A01_V3_PropellerSpinner",[
         [0.068,0.091],[0.105,0.085],[0.151,0.047],[0.171,0.014]],
         16 if hero else 10,alloy)
+    root.set_meta("tarvoka_a01_v27_propeller_pigment",true)
     root.set_meta("tarvoka_a01_v17_sculpted_propulsion",true)
     if hero:
         _box(body,"A01_V3_AntennaTip",

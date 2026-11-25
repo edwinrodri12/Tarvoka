@@ -20,17 +20,17 @@ const STATIONS=[
     [0.175,1.016,-0.336,0.240,0.102,0.075],
     [0.270,1.026,-0.357,0.265,0.126,0.082],
     [0.370,1.036,-0.351,0.254,0.108,0.075],
-    [0.480,1.041,-0.347,0.241,0.092,0.067],
-    [0.600,1.045,-0.336,0.229,0.081,0.061],
-    [0.750,1.050,-0.319,0.206,0.060,0.052]
+    [0.480,1.041,-0.347,0.241,0.077,0.060],
+    [0.600,1.043,-0.336,0.229,0.060,0.040],
+    [0.750,1.045,-0.300,0.190,0.025,0.018]
 ]
 
 static func _material()->StandardMaterial3D:
     var m:=StandardMaterial3D.new()
     # Match the actual V11 composite shell instead of using a bright patch.
-    m.albedo_color=Color("#bfcbd2")
-    m.metallic=0.31
-    m.roughness=0.48
+    m.albedo_color=Color("#8899a5")
+    m.metallic=0.12
+    m.roughness=0.72
     m.transparency=BaseMaterial3D.TRANSPARENCY_DISABLED
     m.cull_mode=BaseMaterial3D.CULL_BACK
     return m
@@ -135,7 +135,8 @@ static func apply(root:Node3D,hero:bool)->bool:
     for side in [-1,1]:
         var wing:=_loft(body,ROOT_L if side<0 else ROOT_R,
             float(side),hero,material)
-        if wing.mesh==null or not (wing.mesh is ArrayMesh):
+        # V26: use the same position-based pigment as the neighboring airfoil.
+        if wing.mesh==null or not V4.apply_composite_finish(wing,hero):
             return false
     for old in legacy:
         (old as MeshInstance3D).visible=false

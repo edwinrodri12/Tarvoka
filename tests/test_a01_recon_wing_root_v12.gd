@@ -4,6 +4,7 @@ extends SceneTree
 # Six ACTUAL Godot screenshots, not an illustration or device FPS estimate.
 const Models=preload("res://scripts/ui/UnitModels3D.gd")
 const V1=preload("res://scripts/ui/A01ReconDroneV1.gd")
+const V4=preload("res://scripts/ui/A01ReconAirfoilV4.gd")
 const V11=preload("res://scripts/ui/A01ReconAirframeV11.gd")
 const V12=preload("res://scripts/ui/A01ReconWingRootV12.gd")
 const Damage=preload("res://scripts/ui/A01ReconDamageV6.gd")
@@ -101,6 +102,24 @@ func _run()->void:
                 check(_closed_mesh(shoulder.mesh),"sealed mesh with outward two-manifold orientation")
                 check(faces.size()/3==(68 if lod==13 else 44),
                     "two LODs use correct physical 3D polygon budgets")
+                check(bool(craft.get_meta("tarvoka_a01_v26_material_coherence",false)),
+                    "V26 material refinement applied to original model")
+                var finish:=shoulder.material_override as StandardMaterial3D
+                check(finish!=null and finish.vertex_color_use_as_albedo and
+                    finish.vertex_color_is_srgb and finish.roughness>=0.70,
+                    "V26 fillet uses matching matte composite finish")
+                var arrays:Array=shoulder.mesh.surface_get_arrays(0)
+                var positions:PackedVector3Array=arrays[Mesh.ARRAY_VERTEX]
+                var pigments:PackedColorArray=arrays[Mesh.ARRAY_COLOR]
+                check(pigments.size()==positions.size(),"V26 shoulder vertices pigmented")
+                if pigments.size()==positions.size():
+                    for i in range(positions.size()):
+                        var expected:Color=V4._wing_pigment(positions[i],lod==13)
+                        var actual:Color=pigments[i]
+                        check(actual.a>=0.999 and absf(actual.r-expected.r)<0.009 and
+                            absf(actual.g-expected.g)<0.009 and absf(actual.b-expected.b)<0.009,
+                            "V26 matching opaque composite across shoulder and wing")
+
                 var min_x:float=100.0
                 var max_x:float=-100.0
                 var min_y:float=100.0
@@ -135,6 +154,19 @@ func _run()->void:
                     float(V12.STATIONS[V12.STATIONS.size()-1][1]))
                 check(final_profile.x>0.70 and final_profile.y<1.07,
                     "far cap sits within real wing span/height")
+                var span_t:float=(0.75-0.28)/((0.99 if lod==13 else 1.72)-0.28)
+                var host:Array[Vector3]=V4._profile(float(side)*0.75,
+                    lerpf(1.030,1.047 if lod==13 else 1.080,span_t),
+                    lerpf(-0.364,-0.322 if lod==13 else -0.255,span_t),
+                    lerpf(0.264,0.220 if lod==13 else 0.142,span_t),
+                    lerpf(0.100,0.086 if lod==13 else 0.054,span_t))
+                var outline:=PackedVector2Array()
+                for vertex in host:
+                    outline.append(Vector2(vertex.z,vertex.y))
+                for vertex in V12._ring(float(side),V12.STATIONS[V12.STATIONS.size()-1]):
+                    check(Geometry2D.is_point_in_polygon(Vector2(vertex.z,vertex.y),outline),
+                        "V26 outer shoulder cap buried inside actual host airfoil")
+
                 if lod==13:
                     var square:=body.find_child("A01_V3_WingServiceHatch"+suffix,
                         false,false) as MeshInstance3D

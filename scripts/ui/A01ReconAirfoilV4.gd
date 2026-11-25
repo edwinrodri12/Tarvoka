@@ -37,11 +37,11 @@ static func _wing_pigment(p:Vector3,hero:bool)->Color:
     var thickness:float=lerpf(float(a[4]),float(b[4]),t)
     var chord:float=clampf((p.z-leading)/(trailing-leading),0.0,1.0)
     var elevation:float=(p.y-center_y)/thickness
-    var base:Color=Color("#64727d").lerp(Color("#a9b7bf"),
+    var base:Color=Color("#60737e").lerp(Color("#8899a5"),
         smoothstep(-0.45,0.52,elevation))
     var lip:float=1.0-smoothstep(0.0,0.19,chord)
     var trailing_lip:float=smoothstep(0.82,1.0,chord)
-    return base.lerp(Color("#778994"),0.35*maxf(lip,trailing_lip))
+    return base.lerp(Color("#647581"),0.35*maxf(lip,trailing_lip))
 
 static func apply_composite_finish(wing:MeshInstance3D,hero:bool)->bool:
     if wing==null or not (wing.mesh is ArrayMesh):
@@ -57,8 +57,9 @@ static func apply_composite_finish(wing:MeshInstance3D,hero:bool)->bool:
     arrays[Mesh.ARRAY_COLOR]=pigment
     var finished:=ArrayMesh.new()
     finished.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES,arrays)
-    var surface:=_material(Color.WHITE,0.15,0.63)
+    var surface:=_material(Color.WHITE,0.12,0.72)
     surface.vertex_color_use_as_albedo=true
+    surface.vertex_color_is_srgb=true
     wing.mesh=finished
     wing.material_override=surface
     return true
@@ -191,8 +192,8 @@ static func apply(root:Node3D,hero:bool)->bool:
     var body:=root.find_child(V1.BODY,true,false) as Node3D
     if body==null:
         return false
-    var metal:=_material(Color("#a9b7bf"),0.15,0.63)
-    var seam:=_material(Color("#87959e"),0.18,0.62)
+    var metal:=_material(Color("#8899a5"),0.12,0.72)
+    var seam:=_material(Color("#6f808c"),0.16,0.70)
     # Fixed shared silhouette across both LODs; hero adds an extra section
     # for more convincing taper and surface curvature without giant meshes.
     var right_stations:Array=[

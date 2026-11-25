@@ -146,12 +146,20 @@ func _run()->void:
                 var wing_tones:Dictionary={}
                 for idx in range(wing_colors.size()):
                     var shade:Color=wing_colors[idx]
-                    var expected:Color=Aero._wing_pigment(wing_vertices[idx],lod==13)
+                    var expected:Color=Finish._fracture_pigment(wing_vertices[idx],lod==13) if foil==broken else Aero._wing_pigment(wing_vertices[idx],lod==13)
                     wing_tones[shade.to_html()]=true
                     verify(shade.a>=0.999 and absf(shade.r-expected.r)<0.009 and
                         absf(shade.g-expected.g)<0.009 and absf(shade.b-expected.b)<0.009,
                         "V24 correct opaque pigment at each wing vertex")
                 verify(wing_tones.size()>=3,"V24 differentiated upper, edge and underside tones")
+            verify(bool(craft.get_meta("tarvoka_a01_v29_substrate_damage",false)),
+                "V29 weathering follows substrate and charred fracture")
+            var near:Vector3=Vector3(0.28,1.03,-0.364)
+            var tip:Vector3=Vector3(1.155,1.056,0.132)
+            verify(Finish._fracture_pigment(near,lod==13).is_equal_approx(
+                Aero._wing_pigment(near,lod==13)) and
+                Finish._fracture_pigment(tip,lod==13).v<Aero._wing_pigment(tip,lod==13).v,
+                "V29 fracture darkens only broken extremity; original root pigment preserved")
             var tagged:Array=[
                 Finish.D1_WING,Finish.D1_NOSE,
                 Finish.D2_BURN,Finish.D2_PLATE,
@@ -180,8 +188,9 @@ func _run()->void:
                 verify(scar.mesh.get_faces().size()/3==32,
                     "V21 eight-sided irregular scar has exactly 32 triangles")
                 var mat:=scar.material_override as StandardMaterial3D
-                verify(mat!=null and mat.vertex_color_use_as_albedo,
-                    "V21 gradient damage is vertex pigment, not alpha or a floating box")
+                verify(mat!=null and mat.vertex_color_use_as_albedo and
+                    mat.vertex_color_is_srgb and mat.albedo_color.is_equal_approx(Color.WHITE),
+                    "V29 opaque color-managed scar pigment uses substrate at perimeter")
                 var arrays:Array=scar.mesh.surface_get_arrays(0)
                 var pigment:PackedColorArray=arrays[Mesh.ARRAY_COLOR]
                 var tones:Dictionary={}
@@ -461,6 +470,38 @@ func _run()->void:
         vp.remove_child(inspected)
         inspected.free()
     verify(v16_captures==12,"12 real V16 360, join closeups and LOD8 PNGs")
+    # V28: fixed geometry, varied directional light for continuity inspection.
+    var light_dir:String="res://build/qa/a01-v28"
+    verify(DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(light_dir))==OK,
+        "V28 lighting audit directory")
+    var lighting:Array=[
+        ["key-left",Vector3(-20,-65,0),Vector3(4.2,3.6,-4.7),Vector3(0,0.96,0),1.55],
+        ["key-right",Vector3(-20,65,0),Vector3(4.2,3.6,-4.7),Vector3(0,0.96,0),1.55],
+        ["raking-top",Vector3(-8,95,0),Vector3(0,6.0,-0.8),Vector3(0,0.98,0),1.45],
+        ["underbody",Vector3(35,-25,0),Vector3(0,-4.0,2.4),Vector3(0,0.92,0),1.25]]
+    var lighting_captures:int=0
+    for shot in lighting:
+        var reviewed:Node3D=Models.build("uav_recon",0,true,13)
+        verify(reviewed!=null,"V28 real native airframe under alternate lighting")
+        if reviewed==null:
+            continue
+        vp.add_child(reviewed)
+        sun.rotation_degrees=shot[1]
+        sun.light_energy=float(shot[4])
+        env.ambient_light_energy=0.45
+        camera.position=shot[2]
+        camera.size=3.9
+        camera.look_at(shot[3],Vector3.UP)
+        await process_frame
+        await process_frame
+        await process_frame
+        var image:Image=vp.get_texture().get_image()
+        if image!=null and not image.is_empty() and image.save_png(
+                light_dir+"/a01-v28-"+str(shot[0])+".png")==OK:
+            lighting_captures+=1
+        vp.remove_child(reviewed)
+        reviewed.free()
+    verify(lighting_captures==4,"V28 four real directional-light inspection PNGs")
     verify(Arsenal.profile("uav_recon")==catalog,"cost/vision/fog/combat unchanged")
     vp.queue_free()
     if failures==0:

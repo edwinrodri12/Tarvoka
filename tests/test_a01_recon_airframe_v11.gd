@@ -85,6 +85,14 @@ func _run()->void:
             check(bool(model.get_meta("tarvoka_a01_v11_visual_only",false)),
                 "new finish cannot touch fog, attack or economy")
             var expected:Color=Models.faction_paint_color(team)
+            check(bool(model.get_meta("tarvoka_a01_v28_continuous_enamel",false)),
+                "V28 enamel transition on original continuous hull")
+            var crown:Color=V11._hull_pigment(V11._body_surface(0.14,90.0),expected)
+            var underside:Color=V11._hull_pigment(V11._body_surface(0.14,270.0),expected)
+            check(Vector3(crown.r,crown.g,crown.b).distance_to(Vector3(expected.r,expected.g,expected.b))<0.20,
+                "V28 crown pigment approaches authentic faction enamel")
+            check(underside.is_equal_approx(Color("#627580")),
+                "V28 underside stays neutral and readable in every faction")
             for name in [V11.HULL,V11.CREST,V11.WING_L,V11.WING_R,V11.ANTENNA]:
                 var part:=model.find_child(name,true,false) as MeshInstance3D
                 check(part!=null and part.visible and part.mesh!=null,
