@@ -61,7 +61,7 @@ static func _hull_pigment(p:Vector3,faction:Color)->Color:
     var d:Vector2=_body_dimensions(p.z)
     var lateral:float=absf(p.x)/maxf(d.x,0.001)
     var elevation:float=(p.y-_center_y(p.z))/maxf(d.y,0.001)
-    var base:Color=Color("#65737e").lerp(Color("#b1bcc3"),
+    var base:Color=Color("#53636e").lerp(Color("#91a0aa"),
         smoothstep(-0.85,0.55,elevation))
     var axial:float=smoothstep(-1.30,-0.57,p.z)*(1.0-smoothstep(0.57,1.16,p.z))
     var shoulder:float=smoothstep(0.42,0.90,lateral)*smoothstep(-0.62,0.35,elevation)
@@ -345,8 +345,9 @@ static func apply(root:Node3D,faction_color:Color,hero:bool)->bool:
     for old_name in obsolete:
         if body.find_child(str(old_name),false,false)==null:
             return false
-    var shell:=_mat(Color.WHITE,0.19,0.63)
+    var shell:=_mat(Color.WHITE,0.12,0.72)
     shell.vertex_color_use_as_albedo=true
+    shell.vertex_color_is_srgb=true
     var paint:=_mat(faction_color,0.12,0.64)
     var graphite:=_mat(Color("#344853"),0.34,0.57)
     var hull:=_fuselage(body,hero,shell,faction_color)
@@ -382,6 +383,7 @@ static func apply(root:Node3D,faction_color:Color,hero:bool)->bool:
     for name in obsolete:
         if not _retire(body,str(name)):
             return false
+    root.set_meta("tarvoka_a01_v26_material_coherence",true)
     root.set_meta("tarvoka_a01_v23_service_finish",true)
     root.set_meta("tarvoka_a01_v19_integrated_composite_pigment",true)
     root.set_meta("tarvoka_a01_unified_nose_shell",true)
