@@ -20,12 +20,13 @@ static func _emit(st: SurfaceTool, p: Vector3, n: Vector3) -> void:
 static func _quad(st: SurfaceTool, a: Vector3, b: Vector3,
         c: Vector3, d: Vector3,
         na: Vector3, nb: Vector3, nc: Vector3, nd: Vector3) -> void:
+    # Godot uses clockwise front faces; keep the explicit outward normals.
     _emit(st,a,na)
+    _emit(st,c,nc)
     _emit(st,b,nb)
-    _emit(st,c,nc)
     _emit(st,a,na)
-    _emit(st,c,nc)
     _emit(st,d,nd)
+    _emit(st,c,nc)
 
 # A watertight rounded rectangle with continuously shaded bevel and real
 # thickness. Outer edges keep the engineer shield's approved width/height,
@@ -85,9 +86,9 @@ static func _rounded_press(w: float, h: float, thick: float,
         _quad(st,outer_a,outer_b,rear_b,rear_a,
             outer_na,outer_nb,side_nb,side_na)
         # Physical closed front and rear caps.
-        for vertex in [Vector3(0,0,front_center),inner_b,inner_a]:
+        for vertex in [Vector3(0,0,front_center),inner_a,inner_b]:
             _emit(st,vertex,Vector3(0,0,-1))
-        for vertex in [Vector3(0,0,rear_z),rear_a,rear_b]:
+        for vertex in [Vector3(0,0,rear_z),rear_b,rear_a]:
             _emit(st,vertex,Vector3(0,0,1))
     return st.commit()
 
@@ -140,25 +141,25 @@ static func _lathe(rings: Array, hero: bool,
             var np1: Vector3=_lathe_normal(smooth,i,b)
             var nq0: Vector3=_lathe_normal(smooth,i+1,a)
             var nq1: Vector3=_lathe_normal(smooth,i+1,b)
-            # Counterclockwise viewed from outside, no missing side faces.
+            # Clockwise viewed from outside, with explicit outward normals.
             _emit(st,p0,np0)
-            _emit(st,q0,nq0)
-            _emit(st,p1,np1)
             _emit(st,p1,np1)
             _emit(st,q0,nq0)
+            _emit(st,p1,np1)
             _emit(st,q1,nq1)
+            _emit(st,q0,nq0)
     var low_y: float=smooth[0].y
     var top_y: float=smooth[-1].y
     for k in range(slices):
         var a: float=TAU*float(k)/float(slices)
         var b: float=TAU*float(k+1)/float(slices)
         for point in [Vector3(0,low_y,z_shift),
-                _lathe_point(smooth[0],a,z_shift),
-                _lathe_point(smooth[0],b,z_shift)]:
+                _lathe_point(smooth[0],b,z_shift),
+                _lathe_point(smooth[0],a,z_shift)]:
             _emit(st,point,Vector3.DOWN)
         for point in [Vector3(0,top_y,z_shift),
-                _lathe_point(smooth[-1],b,z_shift),
-                _lathe_point(smooth[-1],a,z_shift)]:
+                _lathe_point(smooth[-1],a,z_shift),
+                _lathe_point(smooth[-1],b,z_shift)]:
             _emit(st,point,Vector3.UP)
     return st.commit()
 

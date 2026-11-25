@@ -12,6 +12,7 @@ const Engineer = preload("res://scripts/ui/InfantryEngineerDorsalV12.gd")
 const ContourV14 = preload("res://scripts/ui/InfantryEngineerContourV14.gd")
 const GearV15 = preload("res://scripts/ui/InfantryEngineerGearV15.gd")
 const SilhouetteV16 = preload("res://scripts/ui/InfantryEngineerSilhouetteV16.gd")
+const OuterV17 = preload("res://scripts/ui/InfantryEngineerOuterArmorV17.gd")
 const Models = preload("res://scripts/ui/UnitModels3D.gd")
 var failures: int = 0
 
@@ -67,8 +68,9 @@ func _run() -> void:
         check(Engineer.has_model(soldier) and Engineer.is_visible(soldier)
             and Engineer.has_seals(soldier) and ContourV14.has_model(soldier)
             and GearV15.has_model(soldier)
-            and SilhouetteV16.has_model(soldier),
-            "playable G05 LOD8 uses sealed complete V16 anatomical body")
+            and SilhouetteV16.has_model(soldier)
+            and OuterV17.has_model(soldier),
+            "playable G05 LOD8 uses sealed complete V17 exterior on V16 body")
         var shoulder: MeshInstance3D=soldier.find_child(
             ContourV14.SHOULDER+"_1",true,false) as MeshInstance3D
         check(shoulder!=null and shoulder.mesh is ArrayMesh and
@@ -89,6 +91,15 @@ func _run() -> void:
             anatomy_thigh!=null and anatomy_thigh.mesh is ArrayMesh and
             anatomy_thigh.get_parent().name=="PiernaRig_1",
             "battle G05 actually renders V16 closed torso and tapered legs")
+        var exterior: MeshInstance3D=soldier.find_child(
+            OuterV17.FRONT,true,false) as MeshInstance3D
+        var knee: MeshInstance3D=soldier.find_child(
+            OuterV17.KNEE+"_1",true,false) as MeshInstance3D
+        check(exterior!=null and exterior.mesh is ArrayMesh and
+            exterior.has_meta(OuterV17.OLD) and
+            knee!=null and knee.mesh is ArrayMesh and
+            knee.get_parent().name=="PiernaRig_1",
+            "playable G05 has truly contoured chest and knee LOD8 meshes")
         check(int(soldier.get_meta("tarvoka_infantry_lod",0))==8,
             "LOD8 lightweight native soldier, not LOD13 hero or fallback disc")
         check(str(soldier.get_meta("tarvoka_engineer_game_role",""))=="engineer"
@@ -124,6 +135,7 @@ func _run() -> void:
     check(red!=null and Engineer.has_model(red) and
         Engineer.has_seals(red) and ContourV14.has_model(red) and
         GearV15.has_model(red) and SilhouetteV16.has_model(red) and
+        OuterV17.has_model(red) and
         int(red.get_meta("tarvoka_engineer_visual_faction",-1))==7 and
         int(red.get_meta("faction",-1))==1,
         "enemy G05 uses onyx visual faction with engine team unchanged")

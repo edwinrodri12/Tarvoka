@@ -31,6 +31,7 @@ const InfantryEngineerV13 = preload("res://scripts/ui/InfantryEngineerSmoothV13.
 const InfantryEngineerV14 = preload("res://scripts/ui/InfantryEngineerContourV14.gd")
 const InfantryEngineerV15 = preload("res://scripts/ui/InfantryEngineerGearV15.gd")
 const InfantryEngineerV16 = preload("res://scripts/ui/InfantryEngineerSilhouetteV16.gd")
+const InfantryEngineerV17 = preload("res://scripts/ui/InfantryEngineerOuterArmorV17.gd")
 const G16LogisticsV1 = preload("res://scripts/ui/G16ArmoredLogisticsV1.gd")
 const G16ExteriorV2 = preload("res://scripts/ui/G16LogisticsExteriorV2.gd")
 const G16MechanicsV3 = preload("res://scripts/ui/G16LogisticsMechanicsDamageV3.gd")
@@ -1072,6 +1073,8 @@ static func build(role: String, faction: int = -1, finish_enabled: bool = true, 
                         push_warning("Engineer V15 rounded rifle, straps and shield-edge art missing")
                     elif not InfantryEngineerV16.apply(model,art_level>=13):
                         push_warning("Engineer V16 unified torso, pelvis and leg silhouette missing")
+                    elif not InfantryEngineerV17.apply(model,art_level>=13):
+                        push_warning("Engineer V17 organic outer armor silhouette and closed knee pads missing")
         "apc":
             # Art level 8 is a separate native lightweight *same silhouette*
             # profile for eight-player Android boards. Older art-level 6
@@ -1576,9 +1579,19 @@ static func pose_model(role: String, model: Node3D, kind: String,
         if posed and InfantryFinishV2.has_model(model):
             InfantryFinishV2.pose(model,kind,progress)
         if posed and role=="infantry_engineer" and InfantryEngineerV6.has_model(model):
-            InfantryEngineerV6.pose(model,kind,progress)
+            var engineer_v17: bool=InfantryEngineerV17.has_model(model) and bool(
+                model.get_meta("tarvoka_engineer_v17_visible",true))
+            var destroyed: bool=engineer_v17 and InfantryFamily.damage_stage(model)>=4
+            var visual_kind: String="idle" if destroyed else kind
+            if destroyed and InfantryFinishV2.has_model(model):
+                InfantryFinishV2.pose(model,"idle",0.0)
+            InfantryEngineerV6.pose(model,visual_kind,0.0 if destroyed else progress)
+            # Finish the visual pose before solving physical hand contacts.
+            if engineer_v17:
+                InfantryEngineerV17.polish_pose(model,kind,progress)
+                InfantryEngineerV17.sync_damage_visuals(model,visual_kind,progress)
             if InfantryEngineerV9.has_model(model):
-                InfantryEngineerV9.sync(model,kind)
+                InfantryEngineerV9.sync(model,visual_kind)
         return posed
     match role:
         "tank":
@@ -1630,6 +1643,8 @@ static func restore_model_pose(role: String, model: Node3D) -> void:
             InfantryFinishV2.restore(model)
         if role=="infantry_engineer" and InfantryEngineerV6.has_model(model):
             InfantryEngineerV6.reset(model)
+            if InfantryEngineerV17.has_model(model):
+                InfantryEngineerV17.sync_damage_visuals(model,"idle",0.0,true)
             if InfantryEngineerV9.has_model(model):
                 InfantryEngineerV9.sync(model,"idle")
         return

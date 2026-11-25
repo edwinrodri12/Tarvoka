@@ -43,7 +43,8 @@ func closed_outward(mesh: Mesh) -> bool:
             var a: Vector3=verts[ia]
             var b: Vector3=verts[ib]
             var c: Vector3=verts[ic]
-            volume+=a.dot(b.cross(c))/6.0
+            # Godot clockwise front faces: negate conventional signed volume.
+            volume-=a.dot(b.cross(c))/6.0
             var triangle: Array[String]=[_key(a),_key(b),_key(c)]
             if triangle[0]==triangle[1] or triangle[1]==triangle[2] or (
                     triangle[0]==triangle[2]):
