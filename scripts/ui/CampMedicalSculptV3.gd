@@ -234,6 +234,91 @@ static func _pose_bed(bed: Node3D, progress: float) -> void:
         rail.rotation_degrees.z = float(-side) * lerpf(65.0, 0.0, t)
     bed.set_meta("clinical_deploy_progress", t)
 
+# Replace the inherited equipment once; all components are solid native meshes.
+static func _clear_equipment(node: Node3D) -> void:
+    for child in node.get_children():
+        node.remove_child(child)
+        child.free()
+
+static func _round(parent: Node3D, label: String, at: Vector3, radius: float, length: float, tint: Color, lod: int) -> MeshInstance3D:
+    var mesh := CylinderMesh.new()
+    mesh.top_radius = radius
+    mesh.bottom_radius = radius
+    mesh.height = length
+    mesh.radial_segments = 20 if lod == 13 else 12
+    return _part(parent, label, mesh, at, tint, 0.38 if tint == ALLOY else 0.06)
+
+static func _clinical_equipment(core: Node3D, accent: Color, lod: int, damage: int) -> void:
+    var cabinet: Node3D = core.get_node("V2_ModuloMedicamentos") as Node3D
+    _clear_equipment(cabinet)
+    _box(cabinet, "V32_CabinetShell", Vector3(0, 0.96, 0), Vector3(0.84, 1.70, 0.88), WHITE, 0.072, 0.23)
+    _box(cabinet, "V32_CabinetPlinth", Vector3(0, 0.075, 0), Vector3(0.78, 0.15, 0.81), FRAME, 0.03, 0.4)
+    _box(cabinet, "V32_CabinetTop", Vector3(0, 1.84, 0), Vector3(0.88, 0.12, 0.94), FRAME, 0.037, 0.42)
+    for i in range(3):
+        var y: float = 0.36 + float(i) * 0.33
+        _box(cabinet, "V32_Drawer_%d" % i, Vector3(0, y, -0.462), Vector3(0.73, 0.28, 0.10), CANVAS, 0.027, 0.14)
+        _box(cabinet, "V32_DrawerGrip_%d" % i, Vector3(0, y, -0.535), Vector3(0.32, 0.065, 0.075), FRAME, 0.018, 0.42)
+        if lod == 13:
+            _box(cabinet, "V32_DrawerLabel_%d" % i, Vector3(-0.25, y + 0.06, -0.519), Vector3(0.11, 0.055, 0.015), WHITE, 0.004, 0.0)
+    _box(cabinet, "V32_UpperDoor", Vector3(0, 1.40, -0.464), Vector3(0.73, 0.64, 0.10), accent, 0.034, 0.24)
+    _box(cabinet, "V32_DoorGrip", Vector3(0.27, 1.42, -0.54), Vector3(0.062, 0.23, 0.07), FRAME, 0.018, 0.45)
+    _box(cabinet, "V32_EmblemPlate", Vector3(-0.045, 1.42, -0.527), Vector3(0.42, 0.43, 0.035), WHITE, 0.017, 0.05)
+    _box(cabinet, "V32_EmblemVertical", Vector3(-0.045, 1.42, -0.55), Vector3(0.09, 0.30, 0.025), TEAL, 0.008, 0.0)
+    _box(cabinet, "V32_EmblemHorizontal", Vector3(-0.045, 1.42, -0.55), Vector3(0.30, 0.09, 0.025), TEAL, 0.008, 0.0)
+    # IV is moved next to the foot of the trolley, clear of the entrance.
+    var iv: Node3D = core.get_node("V2_SoporteSueros") as Node3D
+    _clear_equipment(iv)
+    iv.position = Vector3(1.39, 0, -0.95)
+    _round(iv, "V32_IVBase", Vector3(0, 0.13, 0), 0.13, 0.18, FRAME, lod)
+    for i in range(4):
+        var angle: float = TAU * float(i) / 4.0
+        var at := Vector3(cos(angle) * 0.19, 0.065, sin(angle) * 0.19)
+        var leg: MeshInstance3D = _box(iv, "V32_IVFoot_%d" % i, at, Vector3(0.29, 0.13, 0.09), FRAME, 0.025, 0.4)
+        leg.rotation.y = -angle
+        _round(iv, "V32_IVPad_%d" % i, Vector3(cos(angle) * 0.28, 0.035, sin(angle) * 0.28), 0.062, 0.07, RUBBER, lod)
+    _round(iv, "V32_IVLowerMast", Vector3(0, 0.77, 0), 0.055, 1.32, ALLOY, lod)
+    _round(iv, "V32_IVLockCollar", Vector3(0, 1.41, 0), 0.075, 0.11, FRAME, lod)
+    _round(iv, "V32_IVUpperMast", Vector3(0, 1.78, 0), 0.035, 0.83, ALLOY, lod)
+    _box(iv, "V32_IVCrossbar", Vector3(0, 2.18, 0), Vector3(0.58, 0.075, 0.075), ALLOY, 0.018, 0.44)
+    if damage < 2:
+        for side in [-1, 1]:
+            var x: float = float(side) * 0.23
+            _box(iv, "V32_IVHook_%d" % side, Vector3(x, 2.13, 0), Vector3(0.055, 0.11, 0.055), ALLOY, 0.012, 0.43)
+            _box(iv, "V32_IVPouch_%d" % side, Vector3(x, 1.93, 0), Vector3(0.20, 0.30, 0.11), CANVAS, 0.044, 0.0)
+            _box(iv, "V32_IVLabel_%d" % side, Vector3(x, 1.96, -0.059), Vector3(0.13, 0.11, 0.016), WHITE, 0.008, 0.0)
+            _round(iv, "V32_IVOutlet_%d" % side, Vector3(x, 1.74, 0), 0.027, 0.11, FRAME, lod)
+    var monitor: Node3D = core.get_node("V2_MonitorPortatil") as Node3D
+    _clear_equipment(monitor)
+    _box(monitor, "V32_MonitorCart", Vector3(0, 0.49, 0), Vector3(0.76, 0.70, 0.65), FRAME, 0.06, 0.36)
+    _box(monitor, "V32_CartBase", Vector3(0, 0.18, 0), Vector3(0.79, 0.14, 0.70), FRAME, 0.03, 0.36)
+    for side in [-1, 1]:
+        for end in [-1, 1]:
+            _wheel(monitor, "V32_CartCaster_%d_%d" % [side, end], Vector3(float(side) * 0.31, 0.18, float(end) * 0.25), 0.07, 0.09, RUBBER, lod)
+    _box(monitor, "V32_CartDrawer", Vector3(0, 0.61, -0.35), Vector3(0.64, 0.24, 0.075), WHITE, 0.025, 0.16)
+    _box(monitor, "V32_CartGrip", Vector3(0, 0.63, -0.40), Vector3(0.30, 0.052, 0.06), ALLOY, 0.014, 0.38)
+    _box(monitor, "V32_CartIdentity", Vector3(0, 0.35, -0.342), Vector3(0.55, 0.14, 0.05), accent, 0.018, 0.2)
+    _box(monitor, "V32_Worktop", Vector3(0, 0.89, 0), Vector3(0.85, 0.10, 0.74), WHITE, 0.035, 0.1)
+    _box(monitor, "V32_DisplayMount", Vector3(0, 0.98, 0.07), Vector3(0.42, 0.14, 0.26), FRAME, 0.026, 0.4)
+    var display: Node3D = _group(monitor, "V32_DisplayPivot", Vector3(0, 1.04, 0.07))
+    _box(display, "V32_DisplayHousing", Vector3(0, 0.26, 0), Vector3(0.77, 0.49, 0.26), FRAME, 0.055, 0.24)
+    _box(display, "V32_OpaqueScreen", Vector3(0, 0.29, -0.142), Vector3(0.63, 0.31, 0.032), RUBBER, 0.024, 0.03)
+    if damage < 2:
+        # Abstract decorative status bars, no patient data or transparent glass.
+        for i in range(3):
+            _box(display, "V32_DisplayStatus_%d" % i, Vector3(-0.13 + float(i) * 0.13, 0.29, -0.161), Vector3(0.085, 0.055 + float(i) * 0.04, 0.012), TEAL, 0.005, 0.0)
+    for i in range(3 if lod == 13 else 2):
+        _box(display, "V32_Control_%d" % i, Vector3(-0.22 + float(i) * 0.22, 0.068, -0.15), Vector3(0.09, 0.045, 0.032), ALLOY, 0.009, 0.3)
+    display.rotation_degrees.x = -12.0 if damage < 2 else 12.0
+    _box(monitor, "V32_InstrumentTray", Vector3(-0.24, 0.97, -0.22), Vector3(0.28, 0.065, 0.24), ALLOY, 0.02, 0.42)
+    if lod == 13 and damage < 2:
+        for i in range(2):
+            _box(monitor, "V32_SealedInstrument_%d" % i, Vector3(-0.29 + float(i) * 0.10, 1.02, -0.22), Vector3(0.073, 0.04, 0.15), CANVAS, 0.012, 0.0)
+    # A retained power lead runs along the rear housing, not through walking space.
+    var points: Array[Vector3] = [Vector3(0.25, 1.10, 0.20), Vector3(0.31, 1.01, 0.30), Vector3(0.31, 0.72, 0.355), Vector3(0.25, 0.61, 0.355)]
+    for i in range(points.size() - 1):
+        _bar(monitor, "V32_PowerLead_%d" % i, points[i], points[i + 1], 0.035, RUBBER)
+    _box(monitor, "V32_PowerSocket", Vector3(0.25, 0.61, 0.34), Vector3(0.10, 0.10, 0.08), FRAME, 0.02, 0.25)
+
 static func _wreck(root: Node3D, accent: Color, lod: int) -> void:
     var wreck: Node3D = _group(root, "V3_MedicalWreck")
     for side in [-1, 1]:
@@ -255,7 +340,7 @@ static func apply(root: Node3D, accent: Color, lod: int, damage: int) -> bool:
     if root == null or root.get_meta("camp_kind", "") != "medico":
         return false
     root.set_meta("medical_art_v3", 3)
-    root.set_meta("medical_art_revision", "3.1")
+    root.set_meta("medical_art_revision", "3.2")
     _replace(root, "PlataformaDesmontable", 0.045, FLOOR, 0.06)
     if damage == 3:
         _wreck(root, accent, lod)
@@ -265,6 +350,7 @@ static func apply(root: Node3D, accent: Color, lod: int, damage: int) -> bool:
     _tent(tent, accent, lod, damage)
     _floor(core, accent, lod)
     _bed(core, accent, lod, damage)
+    _clinical_equipment(core, accent, lod, damage)
     return pose(root, 1.0)
 
 static func pose(root: Node3D, progress: float) -> bool:
