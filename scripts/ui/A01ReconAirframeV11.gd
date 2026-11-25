@@ -347,7 +347,7 @@ static func apply(root:Node3D,faction_color:Color,hero:bool)->bool:
             return false
     var shell:=_mat(Color.WHITE,0.19,0.63)
     shell.vertex_color_use_as_albedo=true
-    var paint:=_mat(faction_color,0.24,0.41)
+    var paint:=_mat(faction_color,0.12,0.64)
     var graphite:=_mat(Color("#344853"),0.34,0.57)
     var hull:=_fuselage(body,hero,shell,faction_color)
     var dorsal:=_dorsal_skin(body,paint,hero)
@@ -367,12 +367,22 @@ static func apply(root:Node3D,faction_color:Color,hero:bool)->bool:
             [-9.0,0.0,9.0],hero,service)
         _flush_service_panel(body,V10.SEAM_L,[-1.075,-0.940,-0.910],
             [171.0,180.0,189.0],hero,service)
+        # V23 audit: retire the remaining V2 box presentation. These are
+        # the original three node IDs, seated on the real hull facets.
+        # The nose access seam and aft intake remain outside the dorsal crest.
+        _flush_service_panel(body,"A01_V2_NoseCompositeSeam",
+            [-1.230,-1.185,-1.135],[67.5,90.0,112.5],hero,service)
+        _flush_service_panel(body,"A01_V2_ProtectedAirIntake",
+            [0.805,0.865,0.925],[67.5,90.0,112.5],hero,graphite)
+        _flush_service_panel(body,"A01_V2_SensorIdentificationPlate",
+            [-1.075,-0.940,-0.850],[247.5,270.0,292.5],hero,paint)
     var mast:=_antenna(body,hero,graphite)
     if hull.mesh==null or dorsal.mesh==null or mast.mesh==null:
         return false
     for name in obsolete:
         if not _retire(body,str(name)):
             return false
+    root.set_meta("tarvoka_a01_v23_service_finish",true)
     root.set_meta("tarvoka_a01_v19_integrated_composite_pigment",true)
     root.set_meta("tarvoka_a01_unified_nose_shell",true)
     root.set_meta(FLAG,true)
