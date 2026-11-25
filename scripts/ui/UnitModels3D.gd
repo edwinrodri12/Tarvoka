@@ -1099,6 +1099,70 @@ static func _destroyer_deck_equipment(root: Node3D, art_level: int) -> void:
             Vector3(sign*0.45,0.97,-0.48),
             Vector3(0.17,0.04,0.32),ARMOR)
 
+# Fictional navigation silhouette: rigid closed meshes, independent
+# visual rotation, and detail tiers. Does not affect detection or combat.
+static func _destroyer_navigation(root: Node3D, art_level: int) -> void:
+    var detail: bool = art_level >= 13
+    var sides: int = 20 if detail else 10
+    var mast := Node3D.new()
+    mast.name = "TorreMastil"
+    mast.position = Vector3(0,1.585,0.28)
+    root.add_child(mast)
+    var sections: Array = [
+        [-0.13,0.125,-0.015,0.22],[-0.075,0.14,-0.015,0.43],
+        [0.075,0.14,-0.015,0.43],[0.13,0.125,-0.015,0.22]]
+    _destroyer_shell(mast,"CarcasaMastil",sections,STEEL)
+    _box(mast,"PlataformaSuperior",Vector3(0,0.425,0),
+        Vector3(0.31,0.07,0.29),DARK)
+    _cylinder(mast,"BaseSensor",Vector3(0,0.48,0),
+        0.10,0.07,STEEL,Vector3.ZERO,sides)
+    var rotor := Node3D.new()
+    rotor.name = "RadarPivot"
+    rotor.position = Vector3(0,0.52,0)
+    mast.add_child(rotor)
+    _box(rotor,"SoporteRadar",Vector3(0,0.04,0),
+        Vector3(0.16,0.10,0.15),DARK)
+    var panel: Array = [
+        [-0.07,0.32,0.06,0.17],[-0.035,0.39,0.06,0.24],
+        [0.035,0.39,0.06,0.24],[0.07,0.32,0.06,0.17]]
+    _destroyer_shell(rotor,"Radar",panel,ARMOR)
+    _box(rotor,"FrenteSensor",Vector3(0,0.148,-0.077),
+        Vector3(0.56,0.105,0.024),DARK)
+    if detail:
+        for i in range(5):
+            _box(rotor,"DetalleSensor_%d" % i,
+                Vector3(-0.22+float(i)*0.11,0.148,-0.094),
+                Vector3(0.068,0.074,0.014),STEEL)
+    for side in [-1,1]:
+        var sign: float = float(side)
+        _box(mast,"SoporteLateral_%d" % side,Vector3(sign*0.16,0.24,0.04),
+            Vector3(0.15,0.065,0.15),STEEL)
+        _box(mast,"SensorLateral_%d" % side,Vector3(sign*0.195,0.30,0.04),
+            Vector3(0.13,0.095,0.13),DARK)
+        _box(root,"BaseAntena_%d" % side,Vector3(sign*0.26,1.56,0.49),
+            Vector3(0.13,0.07,0.12),STEEL)
+        _antenna(root,"RadarRadio%s" % side,Vector3(sign*0.26,1.59,0.49),0.35)
+        _box(root,"LuzNavegacion_%d" % side,Vector3(sign*0.37,1.53,0.30),
+            Vector3(0.10,0.09,0.13),DARK)
+        _box(root,"LenteNavegacion_%d" % side,Vector3(sign*0.42,1.54,0.30),
+            Vector3(0.025,0.055,0.085),Color("#C94B47") if side < 0 else Color("#48AD85"))
+        if detail:
+            for i in range(3):
+                _box(mast,"Peldano_%d_%d" % [side,i],
+                    Vector3(sign*0.14,0.075+float(i)*0.09,0.09),
+                    Vector3(0.07,0.022,0.09),METAL)
+    root.set_meta("destroyer_navigation_revision","1.3")
+
+# Studio-only pose; rotation is independent of the mast and all game data.
+static func pose_destroyer_radar(root: Node3D, progress: float) -> bool:
+    if root == null or root.get_meta("destroyer_navigation_revision","") != "1.3":
+        return false
+    var pivot: Node3D = root.get_node_or_null("TorreMastil/RadarPivot") as Node3D
+    if pivot == null:
+        return false
+    pivot.rotation_degrees.y = fposmod(progress,1.0)*360.0
+    return true
+
 static func _destroyer(root: Node3D, art_level: int = 10) -> void:
     var stations: Array = [
         [-2.26,0.045,0.36,0.76],[-2.04,0.28,0.18,0.76],
@@ -1119,16 +1183,10 @@ static func _destroyer(root: Node3D, art_level: int = 10) -> void:
         _box(root,"FaccionIdentidadNaval_%d" % side,
             Vector3(float(side)*0.775,0.76,0.02),
             Vector3(0.07,0.10,0.48),ARMOR)
-    root.set_meta("destroyer_art_revision","1.2")
+    root.set_meta("destroyer_art_revision","1.3")
     _destroyer_bridge(root)
-    _box(root,"TorreMastil",Vector3(0,1.74,0.28),
-        Vector3(0.17,0.81,0.18),DARK)
-    _box(root,"Radar",Vector3(0,2.16,0.28),
-        Vector3(0.82,0.20,0.13),ARMOR)
+    _destroyer_navigation(root,art_level)
     _destroyer_deck_equipment(root,art_level)
-    for side in [-1,1]:
-        _antenna(root,"RadarRadio%s" % side,
-            Vector3(float(side)*0.29,1.45,0.50),0.47)
     _box(root,"Helipuerto",Vector3(0,0.82,0.93),
         Vector3(1.06,0.08,0.58),DARK)
     _box(root,"MarcaHelipuerto",Vector3(0,0.87,0.92),
