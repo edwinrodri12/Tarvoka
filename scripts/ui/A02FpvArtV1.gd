@@ -211,23 +211,29 @@ static func build(root:Node3D,faction:Color,hero:bool)->bool:
     puff_mesh.height=1.0
     puff_mesh.radial_segments=16 if hero else 10
     puff_mesh.rings=8 if hero else 4
-    var plume_positions:Array[Vector3]=[Vector3(0.08,1.29,0.12),
-        Vector3(0.04,1.39,0.135),Vector3(0.105,1.49,0.105)]
-    var plume_sizes:Array[Vector3]=[Vector3(0.16,0.22,0.16),
-        Vector3(0.23,0.25,0.20),Vector3(0.27,0.27,0.24)]
+    # V16: an asymmetrical, layered decorative plume. Keep the same
+    # shared opaque mesh and triangle budget; no physical simulation.
+    var plume_positions:Array[Vector3]=[Vector3(0.08,1.27,0.12),
+        Vector3(0.015,1.36,0.13),Vector3(-0.065,1.45,0.095)]
+    var plume_sizes:Array[Vector3]=[Vector3(0.20,0.17,0.19),
+        Vector3(0.28,0.23,0.24),Vector3(0.34,0.24,0.29)]
+    var plume_tilts:Array[float]=[-12.0,17.0,-24.0]
     for i in range(3):
-        var shade:Color=Color("#424b50").lerp(Color("#737d83"),float(i)/2.0)
+        var shade:Color=Color("#394349").lerp(Color("#788188"),float(i)/2.0)
         var smoke:=_mat(shade,0.0,1.0)
         var puff:=_part(effects,"A02_V8_Smoke_"+str(i),puff_mesh,
             plume_positions[i],plume_sizes[i],smoke)
+        puff.rotation_degrees.z=plume_tilts[i]
         puff.set_meta("tarvoka_a02_v9_rest_scale",puff.scale)
         puff.set_meta("tarvoka_a02_v9_rest_position",puff.position)
+        puff.set_meta("tarvoka_a02_v16_rest_rotation",puff.rotation)
         puff.visible=false
     for node in body.find_children("*","MeshInstance3D",true,false):
         var part:=node as MeshInstance3D
         if part.get_parent()!=effects:
             part.set_meta(BASE_MATERIAL,part.material_override)
     root.set_meta(DAMAGE,0)
+    root.set_meta("tarvoka_a02_v16_damage_presentation",true)
     root.set_meta("tarvoka_a02_v12_smoke_finish",true)
     root.set_meta("tarvoka_a02_v9_damage_finish",true)
     root.set_meta("tarvoka_a02_v8_damage_art",true)
@@ -296,8 +302,11 @@ static func _effect_pose(body:Node3D,progress:float)->void:
         var puff:=effect.get_child(i) as Node3D
         var original_scale:Vector3=puff.get_meta("tarvoka_a02_v9_rest_scale",Vector3.ONE)
         var original_position:Vector3=puff.get_meta("tarvoka_a02_v9_rest_position",puff.position)
-        puff.scale=original_scale*(1.0+0.12*envelope*sin(p*TAU+float(i)))
-        puff.position=original_position+Vector3(0.018*envelope*sin(p*TAU+float(i)),0.025*envelope,0.0)
+        var original_rotation:Vector3=puff.get_meta("tarvoka_a02_v16_rest_rotation",Vector3.ZERO)
+        var wave:float=envelope*sin(p*TAU+float(i))
+        puff.scale=original_scale*Vector3(1.0+0.10*wave,1.0+0.08*envelope,1.0+0.07*wave)
+        puff.position=original_position+Vector3(0.026*wave,0.024*envelope,0.012*wave)
+        puff.rotation=original_rotation+Vector3(0.0,0.0,deg_to_rad(5.0)*wave)
 
 static func pose_wreck(root:Node3D,progress:float)->bool:
     if not is_instance_valid(root) or stage(root)!=4:
@@ -327,7 +336,9 @@ static func restore(root:Node3D)->void:
         var rotor:=body.find_child("A02_VisualRotor_"+str(i),false,false) as Node3D
         if rotor!=null:
             rotor.rotation=Vector3.ZERO
-            rotor.visible=stage(root)<4
+            # Preserve the authored decorative silhouette at D4 rather
+            # than making whole visible pieces disappear. No movement.
+            rotor.visible=true
 
 static func pose(root:Node3D,kind:String,progress:float)->bool:
     if root==null or not bool(root.get_meta(FLAG,false)) or not kind in ["idle","move","hover","hit"]:
