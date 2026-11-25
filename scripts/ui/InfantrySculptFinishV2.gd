@@ -182,6 +182,72 @@ static func _refine_core(model: Node3D, hero: bool) -> bool:
         for row in range(3):
             _hide(model,"V2_PliseManga_%d_%d"%[side,row])
     model.set_meta(FAMILY_ANATOMY_V5,true)
+    return _attach_family_grips(model,hero)
+
+const FAMILY_GRIPS_V5 := "tarvoka_infantry_grip_contacts_v5"
+
+static func family_grip_point(side: int) -> Vector3:
+    return Vector3(-0.04,-0.225,-0.052) if side>0 else Vector3(0.44,-0.155,-0.065)
+
+# Reuse the existing gloves, fingers and forearms. No new draw calls.
+# The forearm becomes a tapered link with its origin/length solved in
+# the original arm frame; the palm is a child of the actual weapon rig.
+static func _attach_family_grips(model: Node3D, hero: bool) -> bool:
+    var gun: Node3D = _find(model,"ArmamentoRig")
+    if gun==null:
+        return false
+    for side in [-1,1]:
+        if _find(model,"BrazoRig_%d"%side)==null or _find(model,"V2_PalmaGuante_%d"%side)==null or _find(model,"V2_AntebrazoCerrado_%d"%side)==null:
+            return false
+    for side in [-1,1]:
+        var arm: Node3D = _find(model,"BrazoRig_%d"%side)
+        var palm: MeshInstance3D = _find(model,"V2_PalmaGuante_%d"%side) as MeshInstance3D
+        var link: MeshInstance3D = _find(model,"V2_AntebrazoCerrado_%d"%side) as MeshInstance3D
+        if palm.get_parent()!=arm or link.get_parent()!=arm:
+            return false
+        arm.remove_child(palm)
+        gun.add_child(palm)
+        palm.position=family_grip_point(side)
+        palm.rotation_degrees=Vector3.ZERO
+        palm.scale=Vector3(0.165,0.18,0.185)
+        for finger in range(4):
+            var digit: Node3D = _find(model,"V2_DedoGuante_%d_%d"%[side,finger])
+            if digit==null:
+                continue
+            arm.remove_child(digit)
+            gun.add_child(digit)
+            digit.position=family_grip_point(side)+Vector3((float(finger)-1.5)*0.041,-0.071,-0.046)
+            digit.rotation_degrees=Vector3(12,0,0)
+            digit.scale=Vector3(0.85,0.76,0.85)
+        link.mesh=_organic_mesh([
+            Vector3(0.095,-0.5,0.108),Vector3(0.118,-0.31,0.126),
+            Vector3(0.112,-0.05,0.118),Vector3(0.091,0.24,0.096),
+            Vector3(0.066,0.5,0.072)],16 if hero else 10)
+    model.set_meta(FAMILY_GRIPS_V5,true)
+    return _sync_family_grips(model)
+
+static func _sync_family_grips(model: Node3D) -> bool:
+    if not bool(model.get_meta(FAMILY_GRIPS_V5,false)):
+        return false
+    var gun: Node3D = _find(model,"ArmamentoRig")
+    if gun==null:
+        return false
+    for side in [-1,1]:
+        var arm: Node3D = _find(model,"BrazoRig_%d"%side)
+        var link: MeshInstance3D = _find(model,"V2_AntebrazoCerrado_%d"%side) as MeshInstance3D
+        if arm==null or link==null:
+            return false
+        # Both arm and weapon are children of TorsoRig. Local transforms
+        # work even in native QA before the model enters a SceneTree.
+        var target: Vector3 = arm.transform.affine_inverse()*(gun.transform*family_grip_point(side))
+        var elbow := Vector3(0,-0.47,-0.035)
+        var delta: Vector3 = target-elbow
+        var length: float = delta.length()
+        if length<0.0001:
+            return false
+        link.position=elbow+delta*0.5
+        link.quaternion=Quaternion(Vector3.UP,delta/length)
+        link.scale=Vector3(1,length,1)
     return true
 
 # Eight-point rounded ballistic plate, a closed bevelled ArrayMesh, instead
@@ -571,6 +637,8 @@ static func pose(model: Node3D, kind: String, t: float) -> bool:
     var scar: Node3D=_find(model,"V2_CicatrizCasco")
     if scar!=null:
         scar.visible=stage>=3
+    if bool(model.get_meta(FAMILY_GRIPS_V5,false)):
+        return _sync_family_grips(model)
     return true
 
 static func restore(model: Node3D) -> void:

@@ -72,6 +72,19 @@ func closed_solid(mesh: Mesh) -> bool:
                 return false
     return true
 
+# The actual forearm endpoint must meet the actual palm after every
+# native pose, not merely appear close in one camera view.
+func family_grip_contact(model: Node3D, side: int) -> bool:
+    var gun: Node3D=model.find_child("ArmamentoRig",true,false) as Node3D
+    var arm: Node3D=model.find_child("BrazoRig_%d"%side,true,false) as Node3D
+    var palm: Node3D=model.find_child("V2_PalmaGuante_%d"%side,true,false) as Node3D
+    var link: Node3D=model.find_child("V2_AntebrazoCerrado_%d"%side,true,false) as Node3D
+    if gun==null or arm==null or palm==null or link==null or palm.get_parent()!=gun or link.get_parent()!=arm:
+        return false
+    var endpoint: Vector3=arm.transform*(link.transform*Vector3(0,0.5,0))
+    var contact: Vector3=gun.transform*palm.position
+    return endpoint.distance_to(contact)<0.0001 and palm.visible and link.visible
+
 func _initialize() -> void:
     call_deferred("_run")
 
@@ -228,6 +241,18 @@ func _run() -> void:
                                 is_equal_approx(sole.mesh.get_aabb().position.y,-0.9675),
                                 "boot and outsole overlap; original floor contact retained")
                         check(toe!=null and not toe.visible,"old detached toe hidden")
+                    check(bool(model.get_meta(Finish.FAMILY_GRIPS_V5,false)),
+                        "V5 physical hand contacts installed")
+                    for action in ["idle","move","aim","attack","capture","work"]:
+                        for phase in [0.0,0.27,0.5,0.91]:
+                            check(Models.pose_model(role,model,action,phase),
+                                "family contact pose "+action)
+                            for side in [-1,1]:
+                                check(family_grip_contact(model,side),
+                                    "no floating hand "+role+" "+action)
+                    Models.restore_model_pose(role,model)
+                    check(family_grip_contact(model,-1) and family_grip_contact(model,1),
+                        "restore retains physical grips")
                     if Specialist.supports(role):
                         check(bool(model.get_meta(Specialist.KIT_V5,false)),
                             "specialist kit revision present")
@@ -301,6 +326,10 @@ func _run() -> void:
                     "V2_DestelloDisparo3D",true,false) as MeshInstance3D
                 check(flash!=null and flash.visible,
                     "real moving muzzle flash mounted at weapon muzzle")
+                if flash!=null and role=="infantry_sniper":
+                    check(is_equal_approx(flash.position.x,1.355),"sniper visual flash follows specialist mesh")
+                if flash!=null and role=="infantry_commando":
+                    check(is_equal_approx(flash.position.x,1.21),"FS24 visual flash follows specialist mesh")
                 var brass: MeshInstance3D=model.find_child(
                     "V2_CasquilloFisico",true,false) as MeshInstance3D
                 if bool(model.get_meta("tarvoka_infantry_v2_hero",false)) and role!="infantry_antitank":

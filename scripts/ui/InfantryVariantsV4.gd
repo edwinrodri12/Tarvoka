@@ -201,6 +201,13 @@ static func apply(model: Node3D, role: String, faction_color: Color,
         if cross_v!=null and cross_h!=null:
             cross_v.position.z=0.692
             cross_h.position.z=0.705
+    # Align the existing native flash to the visible specialist silhouette.
+    var flash: Node3D=gun.find_child("V2_DestelloDisparo3D",true,false) as Node3D
+    if flash!=null:
+        if role=="infantry_sniper":
+            flash.position.x=1.355
+        elif role=="infantry_commando":
+            flash.position.x=1.21
     model.set_meta(KIT_V5,true)
     model.set_meta(FLAG,role)
     model.set_meta("tarvoka_infantry_variant_visual_only",true)
