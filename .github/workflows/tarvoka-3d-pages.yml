@@ -2738,6 +2738,46 @@ jobs:
           if-no-files-found: error
           retention-days: 14
 
+      - name: Verify and expose exact Engineer V17 web build identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          cmp -s scripts/ui/InfantryEngineerOuterArmorV17.gd hq-android-v15/scripts/ui/InfantryEngineerOuterArmorV17.gd
+          cmp -s scripts/ui/UnitModels3D.gd hq-android-v15/scripts/ui/UnitModels3D.gd
+          source_sha="$(git -C hq-android-v15 rev-parse HEAD)"
+          export STUDIO_SOURCE_SHA="$source_sha"
+          python3 - <<'PY'
+          from pathlib import Path
+          import hashlib
+          import html
+          import json
+          import os
+          root = Path('build/web')
+          source = Path('scripts/ui/InfantryEngineerOuterArmorV17.gd')
+          commit = os.environ['STUDIO_SOURCE_SHA']
+          info = {
+              'engineer': 'G05 V17',
+              'source_commit': commit,
+              'engineer_source_sha256': hashlib.sha256(source.read_bytes()).hexdigest(),
+              'bundle_sha256': hashlib.sha256((root / 'index.pck').read_bytes()).hexdigest(),
+          }
+          (root / 'studio-version.json').write_text(json.dumps(info, indent=2) + '\n', encoding='utf-8')
+          viewer = root / 'index.html'
+          page = viewer.read_text(encoding='utf-8')
+          assert page.count('</body>') == 1
+          badge = (
+              '<div id="tarvoka-engineer-build" role="status" '
+              'style="position:fixed;right:8px;bottom:8px;z-index:950;'
+              'padding:4px 7px;background:#14202acc;color:#ffe3a5;'
+              'font:600 11px system-ui,Arial,sans-serif">'
+              'Estudio · G05 V17 incluido · ' + html.escape(commit[:12])
+              + ' · <a style="color:inherit" href="studio-version.json">versión</a></div>'
+          )
+          viewer.write_text(page.replace('</body>', badge + '\n</body>'), encoding='utf-8')
+          assert commit[:12] in viewer.read_text(encoding='utf-8')
+          print('Verified Engineer V17 export source:', commit)
+          PY
+
       - name: Upload GitHub Pages web site
         uses: actions/upload-pages-artifact@v3
         with:
