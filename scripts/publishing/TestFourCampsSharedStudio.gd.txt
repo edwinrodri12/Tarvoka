@@ -291,6 +291,8 @@ func _run() -> void:
             studio.call("_camp_pose", 0.0)
             var barrier: Node3D = camp.get_node("EquipamientoDesplegable/DefenseV2_EngineerOutpost/V2_BarreraArticulada_-1") as Node3D
             _check(absf(barrier.rotation_degrees.z + 78.0) < 0.01 and absf(barrier.rotation_degrees.y) < 0.01, "Physical axle folds")
+            var brace: Node3D = barrier.get_parent().get_node("V31_Brace_-1_91") as Node3D
+            _check(brace != null and float(brace.get_meta("span", 0.0)) >= 0.42, "Articulated support follows wall in original studio")
             studio.call("_camp_pose", 1.0)
             defense_finish.select(1)
             defense_finish.item_selected.emit(1)

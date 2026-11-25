@@ -130,6 +130,95 @@ static func _rear(rear: Node3D, accent: Color, lod: int, damage: int) -> void:
     if damage >= 2:
         fascia.rotation_degrees.z = -4.0
 
+# V3.1: two-stage support links follow the moving attachment without
+# scaling the rigid armor. Links use a telescopic sleeve and captive shaft.
+static func _brace(core: Node3D, wall: Node3D, side: int, z: float, lod: int) -> void:
+    var suffix: String = "%d_%d" % [side, int(z * 100)]
+    var fixed: Vector3 = wall.position + Vector3(-float(side) * 0.55, -0.15, z + signf(z) * 0.40)
+    var moving := Vector3(-float(side) * 0.19, 0.80, z)
+    _box(core, "V31_BraceBase_" + suffix, fixed - Vector3(0, 0.055, 0),
+        Vector3(0.34, 0.17, 0.36), DARK, 0.045)
+    _cyl(core, "V31_BraceBasePin_" + suffix, fixed, 0.09, 0.30, Vector3.BACK, ALLOY, lod)
+    _box(wall, "V31_BraceLug_" + str(int(z * 100)), moving,
+        Vector3(0.24, 0.24, 0.24), DARK, 0.035)
+    _cyl(wall, "V31_BraceWallPin_" + str(int(z * 100)), moving, 0.08, 0.29, Vector3.BACK, ALLOY, lod)
+    var rig: Node3D = _group(core, "V31_Brace_" + suffix, fixed)
+    rig.set_meta("wall_side", side)
+    rig.set_meta("wall_anchor", moving)
+    rig.set_meta("base_anchor", fixed)
+    _cyl(rig, "Sleeve", Vector3.ZERO, 0.083, 0.40, Vector3.UP, STEEL, lod)
+    _cyl(rig, "Middle", Vector3.ZERO, 0.065, 0.42, Vector3.UP, STEEL, lod)
+    _cyl(rig, "Shaft", Vector3.ZERO, 0.047, 0.42, Vector3.UP, ALLOY, lod)
+    _cyl(rig, "Seal", Vector3.ZERO, 0.095, 0.055, Vector3.UP, RUBBER, lod)
+
+static func _brace_pose(core: Node3D) -> void:
+    for child in core.get_children():
+        if not str(child.name).begins_with("V31_Brace_"):
+            continue
+        var rig: Node3D = child as Node3D
+        var side: int = int(rig.get_meta("wall_side"))
+        var wall: Node3D = core.get_node("V2_BarreraArticulada_%d" % side) as Node3D
+        var start: Vector3 = rig.get_meta("base_anchor")
+        var end: Vector3 = wall.transform * Vector3(rig.get_meta("wall_anchor"))
+        var diff: Vector3 = end - start
+        var length: float = diff.length()
+        rig.position = start
+        rig.quaternion = Quaternion(Vector3.UP, diff.normalized())
+        var sleeve: Node3D = rig.get_node("Sleeve") as Node3D
+        var middle: Node3D = rig.get_node("Middle") as Node3D
+        var shaft: Node3D = rig.get_node("Shaft") as Node3D
+        var seal: Node3D = rig.get_node("Seal") as Node3D
+        # Physical rigid lengths. At compact poses the shaft is nested
+        # inside the sleeve; neither endpoint detaches.
+        sleeve.position.y = 0.20
+        middle.position.y = length * 0.5
+        shaft.position.y = length - 0.21
+        seal.position.y = 0.40
+        rig.set_meta("span", length)
+        rig.set_meta("tip", end)
+
+static func _armor_v31(core: Node3D, wall: Node3D, side: int, accent: Color, lod: int) -> void:
+    var inside: float = -float(side)
+    # Conformal inner armor pads over the flat original face. Tall pads
+    # flank, rather than cover, the official faction stripe.
+    for z in [-0.93, 0.93]:
+        _box(wall, "V31_InnerArmorPad_%d" % int(z * 100),
+            Vector3(inside * 0.245, 0.54, z), Vector3(0.12, 0.95, 0.57),
+            STEEL, 0.055, 0.46)
+        _box(wall, "V31_InnerVerticalRib_%d" % int(z * 100),
+            Vector3(inside * 0.30, 0.55, z), Vector3(0.11, 1.00, 0.095),
+            DARK, 0.024, 0.55)
+        _box(wall, "V31_InnerEndCap_%d" % int(z * 100),
+            Vector3(inside * 0.31, 0.96, z), Vector3(0.14, 0.11, 0.44),
+            ALLOY, 0.018, 0.50)
+    _box(wall, "V31_InnerLowerRail", Vector3(inside * 0.255, 0.16, 0),
+        Vector3(0.13, 0.16, 2.51), STEEL, 0.025, 0.53)
+    _box(wall, "V31_IdentityBacking", Vector3(inside * 0.266, 0.77, -0.42),
+        Vector3(0.09, 0.40, 1.30), DARK, 0.018)
+    # The retained faction plate is moved onto its new backing.
+    var identity: Node3D = wall.get_node("PlacaFaccionInterior") as Node3D
+    identity.position.x = inside * 0.323
+    for z in [-1.23, 1.23]:
+        _box(wall, "V31_EndCap_%d" % int(z * 100), Vector3(0, 0.57, z),
+            Vector3(0.38, 1.07, 0.15), DARK, 0.04, 0.50)
+        _box(wall, "V31_UpperLock_%d" % int(z * 100), Vector3(inside * 0.16, 1.10, z),
+            Vector3(0.22, 0.20, 0.25), STEEL, 0.04)
+        _cyl(wall, "V31_LockPin_%d" % int(z * 100), Vector3(inside * 0.16, 1.10, z),
+            0.057, 0.33, Vector3.BACK, ALLOY, lod)
+    for z in [-0.64, 0.64]:
+        _box(wall, "V31_OuterInset_%d" % int(z * 100),
+            Vector3(float(side) * 0.222, 0.39, z), Vector3(0.065, 0.50, 0.64),
+            DARK, 0.022, 0.46)
+        _box(wall, "V31_OuterInsetEdge_%d" % int(z * 100),
+            Vector3(float(side) * 0.26, 0.16, z), Vector3(0.04, 0.07, 0.58),
+            accent, 0.009, 0.35)
+    for z in ([-0.91, 0.91] if lod == 13 else [0.91]):
+        _brace(core, wall, side, z, lod)
+    if lod == 13:
+        for z in [-1.06, -0.34, 0.34, 1.06]:
+            _cyl(wall, "V31_InnerFastener_%d" % int(z * 100),
+                Vector3(inside * 0.33, 0.22, z), 0.042, 0.05, Vector3.RIGHT, ALLOY, lod)
+
 static func _wall(core: Node3D, side: int, accent: Color, lod: int) -> void:
     var wall: Node3D = core.get_node_or_null("V2_BarreraArticulada_%d" % side) as Node3D
     if wall == null:
@@ -172,6 +261,8 @@ static func _wall(core: Node3D, side: int, accent: Color, lod: int) -> void:
             _cyl(wall, "V3_ArmorFastener_%d" % int(z * 100), Vector3(float(side) * 0.225, 0.55, z),
                 0.052, 0.055, Vector3.RIGHT, ALLOY, lod)
 
+    _armor_v31(core, wall, side, accent, lod)
+
 static func _deck(core: Node3D, accent: Color, lod: int) -> void:
     _replace(core, "V2_SueloCentralOcupable", 0.012, CANVAS_DARK, 0.05)
     # Low traction deck; no object at infantry standing height.
@@ -194,7 +285,7 @@ static func apply(root: Node3D, accent: Color, lod: int, damage: int) -> bool:
     if root == null or root.get_meta("camp_kind", "") != "defensivo":
         return false
     root.set_meta("defense_art_v3", 3)
-    root.set_meta("defense_art_revision", "3.0")
+    root.set_meta("defense_art_revision", "3.1")
     _replace(root, "PlataformaDesmontable", 0.045, CANVAS_DARK, 0.06)
     if damage == 3:
         var wreck: Node3D = _group(root, "V3_DefenseWreck")
@@ -231,5 +322,6 @@ static func pose(root: Node3D, progress: float) -> bool:
             var wall: Node3D = core.get_node_or_null("V2_BarreraArticulada_%d" % side) as Node3D
             if wall != null:
                 wall.rotation_degrees = Vector3(0, 0, float(side) * lerpf(78.0, 0.0, t))
+        _brace_pose(core)
     root.set_meta("defense_v3_deploy_progress", t)
     return true

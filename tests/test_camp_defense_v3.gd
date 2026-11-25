@@ -67,7 +67,7 @@ func _audit(faction: int, lod: int, damage: int) -> Node3D:
     if camp == null:
         return null
     audits += 1
-    check(camp.get_meta("defense_art_v3", 0) == 3 and camp.get_meta("no_gameplay_effects", false), "Visual only")
+    check(camp.get_meta("defense_art_v3", 0) == 3 and camp.get_meta("defense_art_revision", "") == "3.1" and camp.get_meta("no_gameplay_effects", false), "V3.1 visual only")
     check(camp.get_meta("builder_role", "") == "infantry_engineer", "Engineer identity")
     var core: Node3D = camp.get_node_or_null("EquipamientoDesplegable/" + Defense.CORE) as Node3D
     if damage == 3:
@@ -80,11 +80,24 @@ func _audit(faction: int, lod: int, damage: int) -> Node3D:
             check(core.has_node("V2_MurallaTrasera/V3_FasciaBeam") and core.has_node("V3_DeckPanel_1"), "Supported fascia and deck")
             var left: Node3D = core.get_node("V2_BarreraArticulada_-1") as Node3D
             check(core.has_node("V3_FixedHingeAxle_-1_-105"), "Fixed physical axle")
+            check(left.has_node("V31_InnerArmorPad_93") and left.has_node("V31_OuterInset_64") and left.has_node("V31_UpperLock_123"), "Detailed armor on both sides")
+            var brace: Node3D = core.get_node("V31_Brace_-1_91") as Node3D
+            check(brace.has_node("Middle") and brace.has_node("Shaft"), "Three-stage physical support")
             var original: Vector3 = left.position
             check(CampPose(camp, 0.0) and absf(left.rotation_degrees.z + 78.0) < 0.01 and absf(left.rotation_degrees.y) < 0.01, "Fold along real axle")
             check(CampPose(camp, 0.5) and absf(left.rotation_degrees.z + 39.0) < 0.01, "Intermediate pose")
             check(left.position == original and left.scale == Vector3.ONE, "Fixed hinge, rigid panel")
             check(CampPose(camp, 1.0) and absf(left.rotation_degrees.z) < 0.01, "Restored deployed")
+            for p in [0.0, 0.25, 0.5, 0.75, 1.0]:
+                check(CampPose(camp, p), "Support motion")
+                var span: float = float(brace.get_meta("span"))
+                var tip: Vector3 = brace.transform * Vector3(0, span, 0)
+                var anchor: Vector3 = left.transform * Vector3(brace.get_meta("wall_anchor"))
+                check(tip.distance_to(anchor) < 0.001 and brace.position == Vector3(brace.get_meta("base_anchor")), "Both support ends stay connected")
+                check(span >= 0.42 and span <= 1.23, "Rigid nested support length")
+                var middle: Node3D = brace.get_node("Middle") as Node3D
+                var shaft: Node3D = brace.get_node("Shaft") as Node3D
+                check(middle.position.y - 0.21 <= 0.40 and shaft.position.y - 0.21 <= middle.position.y + 0.21, "No gap between telescoping sections")
             check(core.has_node("V2_BarreraArticulada_1") == (damage < 2), "D2 no intact right wall")
             var parts: Array[MeshInstance3D] = []
             _meshes(core, parts)
@@ -172,6 +185,15 @@ func _run() -> void:
                         await _capture(viewport,
                             "defense_f%02d_lod%d_view%d.png" %
                             [faction, lod, view])
+                    if faction == 0 and lod == 13:
+                        camera.size = 4.4
+                        camera.position = Vector3(0.0, 3.2, -5.3)
+                        camera.look_at(Vector3(-2.05, 0.85, -0.42), Vector3.UP)
+                        await _capture(viewport, "defense_v31_inner_brace.png")
+                        camera.position = Vector3(-6.8, 3.1, -4.2)
+                        camera.look_at(Vector3(-2.32, 0.85, -0.42), Vector3.UP)
+                        await _capture(viewport, "defense_v31_outer_armor.png")
+                        camera.size = 10.9
                     check(CampPose(camp, 0.0), "Fold barriers in place")
                     camera.position = VIEWS[0]
                     camera.look_at(Vector3(0, 0.83, 0), Vector3.UP)
@@ -192,13 +214,13 @@ func _run() -> void:
                     stage.remove_child(camp)
                 camp.free()
     check(audits == 72, "9 factions x 2 LOD x 4 damages = 72")
-    check(screenshots == 24,
-        "4 angles x 2 factions x 2 LOD + 4 folded + 3 damage + top")
+    check(screenshots == 26,
+        "24 base captures plus 2 armor closeups")
     viewport.queue_free()
     await process_frame
     if errors > 0:
         printerr("FAIL DEFENSE CAMP V3 NATIVE: %d issues" % errors)
         quit(1)
         return
-    print("PASS DEFENSE CAMP V3 NATIVE: 72 audits, 24 PNGs")
+    print("PASS DEFENSE CAMP V3 NATIVE: 72 audits, 26 PNGs")
     quit(0)

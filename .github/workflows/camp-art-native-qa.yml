@@ -244,8 +244,8 @@ jobs:
           if grep -E 'SCRIPT ERROR:|ERROR:|Parse Error:|Assertion failed' /tmp/camp-defense-v3-native.log; then
             exit 1
           fi
-          grep -F 'PASS DEFENSE CAMP V3 NATIVE: 72 audits, 24 PNGs' /tmp/camp-defense-v3-native.log
-          test "$(find build/qa/defense-camp-v3 -name '*.png' | wc -l)" -eq 24
+          grep -F 'PASS DEFENSE CAMP V3 NATIVE: 72 audits, 26 PNGs' /tmp/camp-defense-v3-native.log
+          test "$(find build/qa/defense-camp-v3 -name '*.png' | wc -l)" -eq 26
       - name: Upload actual Godot screenshots for visual review
         if: always()
         uses: actions/upload-artifact@v4
