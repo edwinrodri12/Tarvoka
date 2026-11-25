@@ -1,0 +1,3 @@
+# Campamento de reconocimiento V3 — escultura inicial
+
+Suministros V4.5 ya integrado y publicado. Recon V3 rediseña la torre con perfiles cerrados biselados, zapatas y articulaciones, cabezal con lentes opacas, cojinetes, alas y carcasa posterior; consola de observación con paneles traseros y ventilación. El mástil telescópico usa traslación de piezas rígidas, no escalado del sensor. D2 desactiva el cabezal y D3 conserva restos, no torre funcional. Se mantiene V2 como comparación en el mismo estudio. 72 variantes (ocho facciones + neutral, dos LOD, cuatro daños), 25 PNG y pruebas del mismo visor. Primera revisión artística, pendiente comprobar CI, renders, animaciones, microacabado y aprobación. No modifica lógica táctica.

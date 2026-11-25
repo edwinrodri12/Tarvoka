@@ -7,13 +7,14 @@ extends "res://scripts/ui/HeadquartersV24SharedStudioAdapter.gd"
 # because the upstream HQ/Workshop viewer scripts live in pinned source branches.
 const CampArt = preload("res://scripts/ui/CampModels3DV1.gd")
 const CampStyle = preload("res://scripts/ui/VisualStyle.gd")
+const ReconOptics = preload("res://scripts/ui/CampReconFinishV2.gd")
 const SupplyV43 = preload("res://scripts/ui/CampSupplySculptV4.gd")
 const CampRoster = preload("res://scripts/ui/InfantryCampRosterV1.gd")
 const FIRST_CAMP_INDEX: int = 7
 const CAMP_KEYS := ["suministros", "reconocimiento", "defensivo", "medico"]
 const CAMP_LABELS := [
     "Campamento de Suministros · V4.5",
-    "Campamento de Reconocimiento · V2",
+    "Campamento de Reconocimiento · V3",
     "Campamento Defensivo · V2",
     "Campamento Médico · V2"
 ]
@@ -22,6 +23,8 @@ var camp_faction_picker: OptionButton
 var camp_lod_picker: OptionButton
 var camp_damage_picker: OptionButton
 var camp_finish_picker: OptionButton
+var camp_recon_finish: OptionButton
+var camp_recon_actions: VBoxContainer
 var camp_status: Label
 var camp_supply_actions: VBoxContainer
 var _camp_service_tween: Tween
@@ -101,6 +104,17 @@ func _camp_create_controls() -> void:
     camp_finish_picker.select(0)
     camp_finish_picker.item_selected.connect(_camp_option_changed)
     camp_controls.add_child(camp_finish_picker)
+    camp_recon_finish = OptionButton.new()
+    camp_recon_finish.name = "ReconocimientoComparacionV2V3"
+    camp_recon_finish.add_item("Reconocimiento V3 · torre y óptica")
+    camp_recon_finish.add_item("Reconocimiento V2 · comparación anterior")
+    camp_recon_finish.select(0)
+    camp_recon_finish.item_selected.connect(_camp_option_changed)
+    camp_controls.add_child(camp_recon_finish)
+    camp_recon_actions = VBoxContainer.new()
+    camp_controls.add_child(camp_recon_actions)
+    _add_paired(camp_recon_actions, "ÓPTICA −85°", func(): _camp_scan(-85.0), "ÓPTICA +85°", func(): _camp_scan(85.0))
+    _button(camp_recon_actions, "CENTRAR ÓPTICA", func(): _camp_scan(0.0))
     _title(camp_controls, "Estado de daño", 12)
     camp_damage_picker = OptionButton.new()
     camp_damage_picker.name = "CampamentosCuatroEstadosDanio"
@@ -215,9 +229,11 @@ func _camp_display() -> void:
     var lod: int = 8 if camp_lod_picker.selected == 0 else 13
     var damage: int = camp_damage_picker.selected
     camp_finish_picker.visible = camp_kind == "suministros"
+    camp_recon_finish.visible = camp_kind == "reconocimiento"
+    camp_recon_actions.visible = camp_kind == "reconocimiento" and damage < 2
     camp_damage_actions.visible = camp_kind == "suministros" and camp_finish_picker.selected == 0
     camp_supply_actions.visible = camp_kind == "suministros" and camp_finish_picker.selected == 0 and damage < 2
-    model_root = CampArt.build(camp_kind, faction, lod, damage, camp_finish_picker.selected == 0)
+    model_root = CampArt.build(camp_kind, faction, lod, damage, camp_finish_picker.selected == 0, camp_recon_finish.selected == 0)
     if model_root == null:
         push_error("CAMP STUDIO: cannot assemble actual camp " + camp_kind)
         camp_status.text = "ERROR: modelo nativo no disponible"
@@ -237,6 +253,10 @@ func _camp_display() -> void:
     _update_camera()
     _update_details()
     _refresh_unified_studio_navigation()
+
+func _camp_scan(angle: float) -> void:
+    if model_root != null and _role == "camp_reconocimiento":
+        ReconOptics.pose_scan(model_root, angle)
 
 func _camp_pose(progress: float) -> void:
     if model_root == null or not _role.begins_with("camp_"):
