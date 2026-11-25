@@ -183,6 +183,8 @@ static func _wheel(parent: Node3D, label: String, at: Vector3, radius: float, wi
 
 static func _bed(core: Node3D, accent: Color, lod: int, damage: int) -> void:
     var bed: Node3D = core.get_node("V2_CamillaClinica") as Node3D
+    # Leave clearance between the outward-folding rail and the side wall.
+    bed.position.x = 1.08
     for old in bed.get_children():
         bed.remove_child(old)
         old.free()
@@ -319,6 +321,45 @@ static func _clinical_equipment(core: Node3D, accent: Color, lod: int, damage: i
         _bar(monitor, "V32_PowerLead_%d" % i, points[i], points[i + 1], 0.035, RUBBER)
     _box(monitor, "V32_PowerSocket", Vector3(0.25, 0.61, 0.34), Vector3(0.10, 0.10, 0.08), FRAME, 0.02, 0.25)
 
+# Deterministic staged deployment. All moving pieces keep their native size.
+static func _equipment_pose(core: Node3D, progress: float, damage: int) -> void:
+    var t: float = smoothstep(0.05, 0.66, progress)
+    var iv: Node3D = core.get_node("V2_SoporteSueros") as Node3D
+    var lift: float = lerpf(-0.48, 0.0, t)
+    if damage >= 2:
+        lift = minf(lift, -0.20)
+    for item in iv.get_children():
+        if item is Node3D and (item.name == "V32_IVUpperMast" or item.name == "V32_IVCrossbar" or str(item.name).begins_with("V32_IVHook_") or str(item.name).begins_with("V32_IVPouch_") or str(item.name).begins_with("V32_IVLabel_") or str(item.name).begins_with("V32_IVOutlet_")):
+            var part: Node3D = item as Node3D
+            if not part.has_meta("v33_rest_y"):
+                part.set_meta("v33_rest_y", part.position.y)
+            part.position.y = float(part.get_meta("v33_rest_y")) + lift
+    var monitor: Node3D = core.get_node("V2_MonitorPortatil") as Node3D
+    var display: Node3D = monitor.get_node("V32_DisplayPivot") as Node3D
+    display.rotation_degrees.x = lerpf(26.0, -12.0 if damage < 2 else 12.0, t)
+
+# Decorative screen cycle, independent of game data. No damaged/packed operation.
+static func monitor_frame(root: Node3D, progress: float) -> bool:
+    if root == null or root.get_meta("medical_art_revision", "") != "3.3" or int(root.get_meta("visual_damage", 0)) >= 2:
+        return false
+    if float(root.get_meta("medical_v3_deploy_progress", 0.0)) < 0.99:
+        return false
+    var display: Node3D = root.get_node("EquipamientoDesplegable/" + Base.CORE + "/V2_MonitorPortatil/V32_DisplayPivot") as Node3D
+    var t: float = clampf(progress, 0.0, 1.0)
+    for i in range(3):
+        var indicator: MeshInstance3D = display.get_node("V32_DisplayStatus_%d" % i) as MeshInstance3D
+        var mat: StandardMaterial3D = indicator.material_override as StandardMaterial3D
+        mat.albedo_color = TEAL.lerp(WHITE, 0.60 * pow(maxf(0.0, sin(t * TAU - float(i) * 1.4)), 2.0))
+    root.set_meta("medical_monitor_phase", t)
+    return true
+
+static func _monitor_reset(core: Node3D) -> void:
+    var display: Node3D = core.get_node("V2_MonitorPortatil/V32_DisplayPivot") as Node3D
+    for i in range(3):
+        var indicator: MeshInstance3D = display.get_node_or_null("V32_DisplayStatus_%d" % i) as MeshInstance3D
+        if indicator != null:
+            (indicator.material_override as StandardMaterial3D).albedo_color = TEAL
+
 static func _wreck(root: Node3D, accent: Color, lod: int) -> void:
     var wreck: Node3D = _group(root, "V3_MedicalWreck")
     for side in [-1, 1]:
@@ -340,7 +381,7 @@ static func apply(root: Node3D, accent: Color, lod: int, damage: int) -> bool:
     if root == null or root.get_meta("camp_kind", "") != "medico":
         return false
     root.set_meta("medical_art_v3", 3)
-    root.set_meta("medical_art_revision", "3.2")
+    root.set_meta("medical_art_revision", "3.3")
     _replace(root, "PlataformaDesmontable", 0.045, FLOOR, 0.06)
     if damage == 3:
         _wreck(root, accent, lod)
@@ -361,13 +402,16 @@ static func pose(root: Node3D, progress: float) -> bool:
     if int(root.get_meta("visual_damage", 0)) < 3:
         var core: Node3D = root.get_node("EquipamientoDesplegable/" + Base.CORE) as Node3D
         var bed: Node3D = core.get_node("V2_CamillaClinica") as Node3D
-        _pose_bed(bed, t)
+        _pose_bed(bed, smoothstep(0.20, 0.78, t))
+        _equipment_pose(core, t, int(root.get_meta("visual_damage", 0)))
+        _monitor_reset(core)
+        root.set_meta("medical_monitor_phase", 0.0)
         var tent: Node3D = core.get_node("V2_CarpaDesmontable") as Node3D
         for side in [-1, 1]:
             var pivot: Node3D = tent.get_node_or_null("V2_CubiertaArticulada_%d" % side) as Node3D
             if pivot != null:
                 # Open upward/outward, preserving clearance above the bed.
-                pivot.rotation_degrees.z = float(side) * lerpf(72.0, 23.0, t)
+                pivot.rotation_degrees.z = float(side) * lerpf(72.0, 23.0, smoothstep(0.66, 1.0, t))
                 # Positive rotation of the left-to-right roof vector raises
                 # its inner edge; signs are mirrored for the opposite leaf.
                 pivot.rotation_degrees.z *= -1.0
