@@ -436,6 +436,8 @@ jobs:
           test -s hq-android-v15/scripts/ui/A01ReconWingRootV12.gd
           test -s hq-android-v15/scripts/ui/A01ReconTailOpticsV13.gd
           test -s hq-android-v15/scripts/ui/A01ReconDamageFinishV14.gd
+          test -s hq-android-v15/scripts/ui/A02FpvArtV1.gd
+          cp hq-android-v15/scripts/ui/A02FpvArtV1.gd scripts/ui/
           cp hq-android-v15/scripts/ui/A01ReconDroneV1.gd scripts/ui/
           cp hq-android-v15/scripts/ui/A01ReconFinishV2.gd scripts/ui/
           cp hq-android-v15/scripts/ui/A01ReconFinishV3.gd scripts/ui/

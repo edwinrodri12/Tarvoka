@@ -309,6 +309,11 @@ func _ready() -> void:
             role_picker.add_item(P06Models.ROLES[role_picker.item_count])
         role_picker.set_item_text(recon_index,
             "A01 · Dron de reconocimiento · V30 FINAL")
+    var fpv_index:int=P06Models.ROLES.find("fpv")
+    if fpv_index>=0 and role_picker!=null:
+        while role_picker.item_count<=fpv_index:
+            role_picker.add_item(P06Models.ROLES[role_picker.item_count])
+        role_picker.set_item_text(fpv_index,"A02 · Dron FPV · V1 EN DESARROLLO")
     # Preserve existing roles/indices; these are additional native 3D variants.
     for entry in [
         ["line","★ INFANTERÍA BÁSICA · Guardia"],
@@ -353,6 +358,8 @@ func _studio_role_from_link_key(value:String) -> String:
             return "logistics_mobile"
         "a01", "uav_recon", "dron_recon":
             return "uav_recon"
+        "a02", "fpv":
+            return "fpv"
         _:
             return "apc"
 
@@ -1884,6 +1891,7 @@ func _refresh_unified_studio_navigation() -> void:
             "mlrs": label="G11 · Lanzador · V33"
             "attack_heli": label="A01 · Helicóptero HAT-29 · V14"
             "uav_recon": label="A01 · Dron de reconocimiento · V30 FINAL"
+            "fpv": label="A02 · Dron FPV · V1 EN DESARROLLO"
             "logistics_mobile": label="G16 · Logística blindada 6×6 · V6 PBR y suministros articulados"
             "ew_mobile": label="G15 · Guerra electrónica · V11 (neumáticos, óptica y electrónica 3D)"
             "aa_mobile": label="G13 · Antiaéreo · V54 caucho y rodadura 3D"
@@ -4558,6 +4566,19 @@ func _display_role(role: String) -> void:
     if not _g13_reflection_saved_v53.is_empty():
         _g13_v53_set_reflections(false)
     super._display_role(role)
+    if role=="fpv":
+        if model_root!=null:
+            preview.remove_child(model_root)
+            model_root.queue_free()
+        model_root=P06Models.build("fpv",_faction,true,13)
+        if model_root==null:
+            push_error("A02 native model missing")
+            return
+        preview.add_child(model_root)
+        model_root.rotation_degrees.y=_yaw
+        faction_picker.visible=true
+        faction_picker.select(_faction)
+        _update_camera()
     if role=="uav_recon":
         # UnitArtStudioWeb builds neutral paint (-1) for every role other
         # than the tank. Rebuild this same viewport's A01 with _faction.
@@ -4789,6 +4810,19 @@ func _switch_category(index: int) -> void:
     _refresh_unified_studio_navigation()
 
 func _on_faction(index: int) -> void:
+    if _role=="fpv":
+        if index<0 or index>=Factions.FACTIONS.size():
+            return
+        var saved_yaw:float=_yaw
+        var saved_zoom:float=_zoom
+        _faction=index
+        _display_role("fpv")
+        _yaw=saved_yaw
+        _zoom=saved_zoom
+        if model_root!=null:
+            model_root.rotation_degrees.y=_yaw
+        _update_camera()
+        return
     if InfantryV1.supports(_role):
         if index<0 or index>=Factions.FACTIONS.size():
             return

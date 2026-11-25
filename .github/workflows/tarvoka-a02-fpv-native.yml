@@ -1,0 +1,73 @@
+name: TARVOKA A02 FPV V1 native visual QA
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/tarvoka-a02-fpv-native.yml"
+      - "scripts/ui/A02Fpv*.gd"
+      - "scripts/ui/UnitModels3D.gd"
+      - "scripts/ui/BastionStudioAdapter.gd"
+      - "tests/test_a02_fpv*.gd"
+      - "docs/A02_FPV_ART_V1.md"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: a02-fpv-v1-native-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  godot-a02-fpv:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 25
+    steps:
+      - name: Checkout exactly this A02 PR snapshot
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Install software rendering tools and Godot 4.3
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq xvfb libgl1 libgl1-mesa-dri unzip
+          curl -fL --retry 3 --retry-delay 2 \
+            https://github.com/godotengine/godot/releases/download/4.3-stable/Godot_v4.3-stable_linux.x86_64.zip \
+            -o /tmp/godot-a01.zip
+          unzip -q /tmp/godot-a01.zip -d /tmp
+          chmod +x /tmp/Godot_v4.3-stable_linux.x86_64
+          /tmp/Godot_v4.3-stable_linux.x86_64 --version
+
+      - name: Import native scenes and scripts
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p build/qa/a02-v1
+          timeout 140s xvfb-run -a -s "-screen 0 1280x720x24" \
+            env LIBGL_ALWAYS_SOFTWARE=1 \
+            /tmp/Godot_v4.3-stable_linux.x86_64 \
+            --rendering-method gl_compatibility --audio-driver Dummy \
+            --headless --path . --editor --quit \
+            2>&1 | tee /tmp/a01-import.log
+          if grep -E 'SCRIPT ERROR:|Parse Error:|ERROR: Cannot open file|Failed loading resource' /tmp/a01-import.log; then
+            echo "::error::Godot native source import failed"
+            exit 1
+          fi
+
+      - name: Validate native A02 and 16 faction renders
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout 190s xvfb-run -a -s "-screen 0 1280x720x24" env LIBGL_ALWAYS_SOFTWARE=1 /tmp/Godot_v4.3-stable_linux.x86_64 --rendering-method gl_compatibility --audio-driver Dummy --path . --script res://tests/test_a02_fpv_art_v1.gd 2>&1 | tee /tmp/a02-native.log
+          if grep -E 'SCRIPT ERROR:|Parse Error:|ERROR:|Assertion failed' /tmp/a02-native.log; then exit 1; fi
+          grep -F 'PASS A02 FPV ART V1:' /tmp/a02-native.log
+          test "$(find build/qa/a02-v1 -name 'a02-f*-lod*.png' -size +2k | wc -l)" -eq 16
+      - name: Archive authentic A02 captures
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: tarvoka-a02-v1-native-visual-evidence
+          path: build/qa/a02-v1/*.png
