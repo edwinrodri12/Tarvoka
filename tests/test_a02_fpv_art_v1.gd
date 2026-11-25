@@ -250,6 +250,7 @@ func _run()->void:
                 var effects:=visual_body.find_child(Art.EFFECT,false,false) as Node3D
                 check(effects!=null,"V8 presentation effects")
                 check(bool(model.get_meta("tarvoka_a02_v12_smoke_finish",false)),"V12 plume finish")
+                check(bool(model.get_meta("tarvoka_a02_v16_damage_presentation",false)),"V16 presentation active")
                 if effects!=null and effects.get_child_count()==3:
                     var first:=effects.get_child(0) as MeshInstance3D
                     var second:=effects.get_child(1) as MeshInstance3D
@@ -261,6 +262,13 @@ func _run()->void:
                     check((first.transform*first.mesh.get_aabb()).intersects(second.transform*second.mesh.get_aabb())
                         and (second.transform*second.mesh.get_aabb()).intersects(third.transform*third.mesh.get_aabb()),
                         "V12 overlapping decorative plume")
+                    check(first.position.y<second.position.y and second.position.y<third.position.y,
+                        "V16 ascending decorative layers")
+                    check(first.position.x>second.position.x and second.position.x>third.position.x
+                        and first.scale.x<second.scale.x and second.scale.x<third.scale.x,
+                        "V16 asymmetric widening plume")
+                    check(first.rotation.z<0.0 and second.rotation.z>0.0 and third.rotation.z<0.0,
+                        "V16 alternating decorative tilt")
                 for damage in range(5):
                     check(Art.set_stage(model,damage) and Art.stage(model)==damage,"V8 stage")
                     var inventory:Dictionary=_inventory(model)
@@ -284,9 +292,19 @@ func _run()->void:
                             check((effects.get_child(i) as Node3D).visible==(damage>=i+2),"V8 staged stylized effect")
                     Models.restore_model_pose("fpv",model)
                     check(Art.stage(model)==damage,"V8 stop preserves damage")
+                    check(not Art.set_stage(model,-1) and not Art.set_stage(model,5)
+                        and Art.stage(model)==damage,"V16 invalid presentation state is non-mutating")
+                    for i in range(4):
+                        var parked:=visual_body.find_child("A02_VisualRotor_"+str(i),false,false) as Node3D
+                        check(parked!=null and parked.visible and parked.rotation.is_zero_approx(),
+                            "V16 stationary visible parts after restore")
                     check(Models.pose_model("fpv",model,"move",0.31)==(damage<4),"V8 wreck pose lock")
                 check(Art.pose_wreck(model,0.0) and visual_body.position.is_zero_approx(),"V9 wreck start")
                 check(Art.pose_wreck(model,0.5) and visual_body.position.y<0.0 and visual_body.position.y> -0.40,"V9 wreck midpoint")
+                if effects!=null and effects.get_child_count()==3:
+                    var animated_puff:=effects.get_child(1) as Node3D
+                    var rest_rotation:Vector3=animated_puff.get_meta("tarvoka_a02_v16_rest_rotation")
+                    check(not animated_puff.rotation.is_equal_approx(rest_rotation),"V16 animated decorative tilt")
                 check(Art.pose_wreck(model,1.0) and is_equal_approx(visual_body.position.y,-0.40),"V9 wreck endpoint")
                 check(Art.set_stage(model,0),"V8 repair")
                 check(not Art.pose_wreck(model,0.5),"V9 intact model rejects wreck preview")
@@ -296,8 +314,9 @@ func _run()->void:
                     for child in effects.get_children():
                         var puff:=child as Node3D
                         check(puff.scale.is_equal_approx(puff.get_meta("tarvoka_a02_v9_rest_scale")) and
-                            puff.position.is_equal_approx(puff.get_meta("tarvoka_a02_v9_rest_position")),
-                            "V9 effect returns to authored transform")
+                            puff.position.is_equal_approx(puff.get_meta("tarvoka_a02_v9_rest_position")) and
+                            puff.rotation.is_equal_approx(puff.get_meta("tarvoka_a02_v16_rest_rotation")),
+                            "V16 effect returns to exact authored transform")
                 check(paint.material_override==pristine and visual_body.position.is_zero_approx() and visual_body.rotation.is_zero_approx(),"V8 exact original material and pose")
                 for i in range(4):
                     var pivot:=visual_body.find_child("A02_VisualRotor_"+str(i),false,false) as Node3D
@@ -396,7 +415,7 @@ func _run()->void:
     var report:=FileAccess.open(out+"/a02-v10-workload.json",FileAccess.WRITE)
     check(report!=null,"V10 resource report created")
     if report!=null:
-        report.store_string(JSON.stringify({"revision":"V12","measurement":"visible native Godot mesh resources; not FPS or RAM","states":workload},"  "))
+        report.store_string(JSON.stringify({"revision":"V16","measurement":"visible native Godot mesh resources; not FPS or RAM","states":workload},"  "))
         report.close()
     check(Arsenal.profile("fpv")==profile,"no catalogue changes")
     vp.queue_free()
