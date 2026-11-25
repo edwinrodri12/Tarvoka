@@ -58,11 +58,16 @@ func _audit(faction: int, lod: int, damage: int) -> Node3D:
     if camp == null:
         return null
     audits += 1
-    check(camp.get_meta("medical_art_v3", 0) == 3 and camp.get_meta("medical_art_revision", "") == "3.4" and camp.get_meta("no_gameplay_effects", false), "Art only")
+    check(camp.get_meta("medical_art_v3", 0) == 3 and camp.get_meta("medical_art_revision", "") == "3.5" and camp.get_meta("no_gameplay_effects", false), "Art only")
     check(camp.get_meta("builder_role", "") == "infantry_medic", "Medic identity")
     var core: Node3D = camp.get_node_or_null("EquipamientoDesplegable/" + Medical.CORE) as Node3D
     if damage == 3:
         check(core == null and camp.has_node("V3_MedicalWreck/V3_FallenRoof_1"), "Collapsed roof, no standing clinic")
+        var fallen: MeshInstance3D = camp.get_node("V3_MedicalWreck/V3_FallenRoof_1") as MeshInstance3D
+        var low: float = INF
+        for vertex in fallen.mesh.get_faces():
+            low = minf(low, (fallen.transform * vertex).y)
+        check(absf(low - 0.012) < 0.001, "Rotated wreck roof rests on platform")
         check(not Sculpt.inspect_interior(camp, true), "Destroyed clinic cannot open")
         check(camp.has_node("V3_MedicalWreck/V34_CollapsedTrolley") and camp.has_node("V3_MedicalWreck/V34_BrokenMonitor") and camp.has_node("V3_MedicalWreck/V34_FallenIV"), "Recognizable clinical wreckage")
     else:
@@ -74,15 +79,25 @@ func _audit(faction: int, lod: int, damage: int) -> Node3D:
             var roof: MeshInstance3D = left.get_node("PanelLonaRefuerzo") as MeshInstance3D
             check(roof.mesh is ArrayMesh and _closed(roof.mesh), "Closed fabric geometry")
             var size: Vector3 = roof.mesh.get_aabb().size
-            check(Art.pose_deploy(camp, 0.0) and absf(left.rotation_degrees.z - 72.0) < 0.01, "Raised rigid transport pose")
-            check(Art.pose_deploy(camp, 1.0) and absf(left.rotation_degrees.z - 23.0) < 0.01 and roof.mesh.get_aabb().size == size, "Rigid roof restores")
+            var hinge: Node3D = left.get_node("V35_SecondaryRoofHinge") as Node3D
+            var inner: MeshInstance3D = hinge.get_node("V35_InnerRoof") as MeshInstance3D
+            check(_closed(inner.mesh), "Closed inner roof leaf")
+            check(Art.pose_deploy(camp, 0.0) and absf(left.rotation_degrees.z - 80.0) < 0.01, "Raised rigid transport pose")
+            check(absf(hinge.rotation_degrees.z - 180.0) < 0.01, "Folded secondary leaf")
+            var packed_tip: Vector3 = left.transform * (hinge.transform * Vector3(1.075, -0.145, 0))
+            check(packed_tip.y < 2.55, "Secondary leaf returns toward eave, not upright")
+            check(Art.pose_deploy(camp, 1.0) and absf(hinge.rotation_degrees.z) < 0.01 and absf(left.rotation_degrees.z - 23.0) < 0.01 and roof.mesh.get_aabb().size == size, "Rigid roof restores")
             if damage < 2:
                 var right: Node3D = tent.get_node("V2_CubiertaArticulada_1") as Node3D
-                var tip_l: Vector3 = left.transform * Vector3(2.15, 0, 0)
-                var tip_r: Vector3 = right.transform * Vector3(-2.15, 0, 0)
+                var right_hinge: Node3D = right.get_node("V35_SecondaryRoofHinge") as Node3D
+                var tip_l: Vector3 = left.transform * (hinge.transform * Vector3(1.075, -0.145, 0))
+                var tip_r: Vector3 = right.transform * (right_hinge.transform * Vector3(-1.075, -0.145, 0))
                 check(tip_l.distance_to(tip_r) < 0.01, "Roof leaves meet at ridge")
                 check(Sculpt.inspect_interior(camp, true) and absf(left.rotation_degrees.z - 112.0) < 0.01, "Interior roof opens")
                 check(Sculpt.inspect_interior(camp, false) and absf(left.rotation_degrees.z - 23.0) < 0.01, "Interior roof closes")
+                for side in [-1, 1]:
+                    var foot: MeshInstance3D = tent.get_node("V3_Foot_%d_105" % side) as MeshInstance3D
+                    check(absf(foot.position.y - foot.mesh.get_aabb().size.y * 0.5) < 0.001, "Footplate meets platform")
             else:
                 check(not tent.has_node("V2_CubiertaArticulada_1") and not Sculpt.inspect_interior(camp, true), "D2 missing right roof")
             var bed: Node3D = core.get_node("V2_CamillaClinica") as Node3D
@@ -259,6 +274,15 @@ func _run() -> void:
                         await _capture(viewport, "medical_v32_iv.png")
                         Sculpt.inspect_interior(camp, false)
                         camera.size = 11.5
+                        Art.pose_deploy(camp, 0.0)
+                        camera.position = Vector3(-10.0, 5.0, 10.4)
+                        camera.look_at(Vector3(0, 1.2, 0), Vector3.UP)
+                        await _capture(viewport, "medical_v35_folded_rear.png")
+                        Art.pose_deploy(camp, 0.42)
+                        camera.position = VIEWS[0]
+                        camera.look_at(Vector3(0, 1.5, 0), Vector3.UP)
+                        await _capture(viewport, "medical_v35_hinge_midpoint.png")
+                        Art.pose_deploy(camp, 1.0)
                     check(Art.pose_deploy(camp, 0.0),
                         "Packed camp state for visual inspection")
                     camera.position = VIEWS[0]
@@ -289,13 +313,13 @@ func _run() -> void:
                     stage.remove_child(camp)
                 camp.free()
     check(audits == 72, "Exact 72 faction, LOD and damage variants")
-    check(screenshots == 33,
-        "16 diagonal + 4 packed + 3 damage + 1 overhead + 2 interiors + 2 trolley + 3 equipment + 2 impact PNG")
+    check(screenshots == 35,
+        "16 diagonal + 4 packed + 3 damage + 1 overhead + 2 interiors + 2 trolley + 3 equipment + 2 impact + 2 roof PNG")
     viewport.queue_free()
     await process_frame
     if failures > 0:
         printerr("FAIL MEDICAL CAMP V3 NATIVE: %d failures" % failures)
         quit(1)
         return
-    print("PASS MEDICAL CAMP V3 NATIVE: 72 audits, 33 PNGs")
+    print("PASS MEDICAL CAMP V3 NATIVE: 72 audits, 35 PNGs")
     quit(0)
