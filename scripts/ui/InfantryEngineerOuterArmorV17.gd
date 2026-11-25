@@ -427,7 +427,7 @@ static func surface_kind(label: String) -> String:
     if label in HAND_PALMS or label in HAND_CUFFS or label in [
             "V7_MascaraResistenciaIngeniero","V8_EmpunaduraAntideslizante"]:
         return "rubber"
-    if label in cloth_labels() or label=="V2_MochilaOrganica":
+    if label in cloth_labels() or label in BODY_PARTS or label=="V2_MochilaOrganica":
         return "fabric"
     for prefix in [SHOULDER,ELBOW,KNEE,"V12_CorazaExteriorBarreraCerrada",
             "V12_RevestimientoAlaArticulada","V12_TapaEstucheBiselada"]:
@@ -584,6 +584,41 @@ static func show_finish(model: Node3D, enabled: bool) -> bool:
     model.set_meta("tarvoka_engineer_v17_visible",enabled)
     return true
 
+# Rebalance the real body underneath the armor. Keep the original rig
+# positions, leg lengths, movement pivots and silhouette height.
+# A deeper ribcage makes contact with the front armor; the wider lower
+# torso and tapered pelvis overlap rather than appearing as separate beads.
+const BODY_PARTS: Array[String]=["PetoBase","CinturaEquipo"]
+static func _sculpt_body(model: Node3D,hero: bool) -> bool:
+    var torso: Node3D=model.find_child("TorsoRig",true,false) as Node3D
+    var hips: Node3D=model.find_child("CaderaRig",true,false) as Node3D
+    var core: MeshInstance3D=_find(model,BODY_PARTS[0])
+    var pelvis: MeshInstance3D=_find(model,BODY_PARTS[1])
+    if core==null or pelvis==null or torso==null or hips==null or (
+            core.get_parent()!=torso or pelvis.get_parent()!=hips):
+        return false
+    var trunk: Array=[
+        Vector3(0.207,-0.477,0.153),
+        Vector3(0.282,-0.405,0.202),
+        Vector3(0.332,-0.252,0.238),
+        Vector3(0.377,-0.046,0.286),
+        Vector3(0.394,0.155,0.304),
+        Vector3(0.351,0.323,0.265),
+        Vector3(0.194,0.435,0.160)]
+    var waist: Array=[
+        Vector3(0.181,-0.188,0.120),
+        Vector3(0.277,-0.125,0.185),
+        Vector3(0.311,0.008,0.211),
+        Vector3(0.279,0.117,0.191),
+        Vector3(0.186,0.176,0.136)]
+    if not _change(model,BODY_PARTS[0],V13._lathe(trunk,hero,-0.034),
+            core.scale,core.position):
+        return false
+    if not _change(model,BODY_PARTS[1],V13._lathe(waist,hero,-0.008),
+            pelvis.scale,pelvis.position):
+        return false
+    return true
+
 static func apply(model: Node3D, hero: bool) -> bool:
     if model==null or has_model(model) or not V16.has_model(model):
         return false
@@ -594,6 +629,9 @@ static func apply(model: Node3D, hero: bool) -> bool:
     var pelvis: Node3D=model.find_child(
         "CaderaRig",true,false) as Node3D
     if torso==null or pelvis==null:
+        return false
+
+    if not _sculpt_body(model,hero):
         return false
 
     # Exterior replaces the previously almost-flat V8 chest plate.

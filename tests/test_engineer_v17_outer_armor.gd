@@ -146,6 +146,33 @@ func _run() -> void:
                 "TorsoRig",true,false) as Node3D
             var chest: MeshInstance3D=model.find_child(
                 V17.FRONT,true,false) as MeshInstance3D
+            var pelvis_rig: Node3D=model.find_child("CaderaRig",true,false) as Node3D
+            var core: MeshInstance3D=model.find_child(V17.BODY_PARTS[0],true,false) as MeshInstance3D
+            var waist: MeshInstance3D=model.find_child(V17.BODY_PARTS[1],true,false) as MeshInstance3D
+            for body in [core,waist]:
+                check(body!=null and body.has_meta(V17.OLD) and
+                    closed_outward(body.mesh),"closed reshaped anatomical body")
+                if body==null or not body.has_meta(V17.OLD):
+                    continue
+                var previous: Dictionary=body.get_meta(V17.OLD)
+                var old_mesh: Mesh=previous["mesh"]
+                var old_box: AABB=old_mesh.get_aabb()
+                var new_box: AABB=body.mesh.get_aabb()
+                check(body.mesh!=old_mesh and body.position==previous["position"] and
+                    body.scale==previous["scale"] and face_count(body.mesh)==face_count(old_mesh) and
+                    absf(old_box.position.y-new_box.position.y)<0.00001 and
+                    absf(old_box.size.y-new_box.size.y)<0.00001 and
+                    new_box.size.z>old_box.size.z,
+                    "body depth improves without altering height, pivot or budget")
+            if core!=null and waist!=null and pelvis_rig!=null and chest!=null:
+                check(core.get_parent()==torso and waist.get_parent()==pelvis_rig,
+                    "core and pelvis retain their own animated rigs")
+                var rib_box: AABB=core.transform*core.mesh.get_aabb()
+                var armor_box: AABB=chest.transform*chest.mesh.get_aabb()
+                var hip_box: AABB=pelvis_rig.transform*waist.transform*waist.mesh.get_aabb()
+                var body_box: AABB=torso.transform*rib_box
+                check(rib_box.intersects(armor_box),"ribcage volume reaches outer cuirass")
+                check(body_box.intersects(hip_box),"waist overlaps pelvic volume in rest pose")
             var symbol: MeshInstance3D=model.find_child(
                 V17.INSIGNIA,true,false) as MeshInstance3D
             check(chest!=null and chest.get_parent()==torso and

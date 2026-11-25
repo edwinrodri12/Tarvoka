@@ -6,6 +6,7 @@ const V6=preload("res://scripts/ui/InfantryEngineerFinishV6.gd")
 const V12=preload("res://scripts/ui/InfantryEngineerDorsalV12.gd")
 const V15=preload("res://scripts/ui/InfantryEngineerGearV15.gd")
 const V16=preload("res://scripts/ui/InfantryEngineerSilhouetteV16.gd")
+const V17=preload("res://scripts/ui/InfantryEngineerOuterArmorV17.gd")
 const OUT: String="res://build/qa/engineer-v16"
 var errors: int=0
 var count_png: int=0
@@ -109,6 +110,9 @@ func _run() -> void:
             if not V16.has_model(model):
                 model.free()
                 continue
+            # Isolate the historical V16 pass before comparing its original
+            # torso mesh; V17 now sculpts the same real body nodes.
+            check(V17.show_finish(model,false),"isolate original V16 geometry")
             var original_count: int=mesh_count(model)
             var torso: Node3D=model.find_child(
                 "TorsoRig",true,false) as Node3D
@@ -192,6 +196,7 @@ func _run() -> void:
         "hero silhouette visible for 360 render")
     if soldier!=null:
         view.add_child(soldier)
+        check(V17.show_finish(soldier,false),"historical V16 render excludes later V17 body")
         var views: Dictionary={
             "front":Vector3(0,2.2,-4.7),
             "left":Vector3(-4.1,2.25,-2.6),
