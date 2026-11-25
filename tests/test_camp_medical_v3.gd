@@ -58,7 +58,7 @@ func _audit(faction: int, lod: int, damage: int) -> Node3D:
     if camp == null:
         return null
     audits += 1
-    check(camp.get_meta("medical_art_v3", 0) == 3 and camp.get_meta("medical_art_revision", "") == "3.1" and camp.get_meta("no_gameplay_effects", false), "Art only")
+    check(camp.get_meta("medical_art_v3", 0) == 3 and camp.get_meta("medical_art_revision", "") == "3.2" and camp.get_meta("no_gameplay_effects", false), "Art only")
     check(camp.get_meta("builder_role", "") == "infantry_medic", "Medic identity")
     var core: Node3D = camp.get_node_or_null("EquipamientoDesplegable/" + Medical.CORE) as Node3D
     if damage == 3:
@@ -99,6 +99,23 @@ func _audit(faction: int, lod: int, damage: int) -> Node3D:
             var limit: float = 0.35 if damage >= 2 else 1.0
             check(absf(back.rotation_degrees.x + 28.0 * limit) < 0.01 and absf(rail.rotation_degrees.z + 65.0 * (1.0 - limit)) < 0.01, "Backrest and rail respect damage")
             check((back.get_node("V31_BackrestCushion") as MeshInstance3D).mesh.get_aabb().size == back_size and back.scale == Vector3.ONE and rail.scale == Vector3.ONE, "No stretching of clinical equipment")
+            var cabinet: Node3D = core.get_node("V2_ModuloMedicamentos") as Node3D
+            for i in range(3):
+                check(cabinet.has_node("V32_Drawer_%d" % i) and cabinet.has_node("V32_DrawerGrip_%d" % i), "Clinical drawer and attached handle")
+            check(cabinet.has_node("V32_UpperDoor") and cabinet.has_node("V32_EmblemPlate"), "Cabinet identity")
+            var iv: Node3D = core.get_node("V2_SoporteSueros") as Node3D
+            for i in range(4):
+                var pad: MeshInstance3D = iv.get_node("V32_IVPad_%d" % i) as MeshInstance3D
+                check(absf(pad.position.y - (pad.mesh as CylinderMesh).height * 0.5) < 0.001, "IV feet touch platform")
+            for side in [-1, 1]:
+                check(iv.has_node("V32_IVPouch_%d" % side) == (damage < 2), "No intact IV pouch at D2")
+            var monitor: Node3D = core.get_node("V2_MonitorPortatil") as Node3D
+            check(monitor.has_node("V32_DisplayPivot/V32_OpaqueScreen") and monitor.has_node("V32_PowerSocket") and monitor.has_node("V32_PowerLead_2"), "Enclosed monitor with terminated lead")
+            check(monitor.has_node("V32_DisplayPivot/V32_DisplayStatus_0") == (damage < 2), "Disabled monitor indication at D2")
+            check(monitor.has_node("V32_SealedInstrument_0") == (lod == 13 and damage < 2), "Instrument detail follows LOD and damage")
+            for side in [-1, 1]:
+                for end in [-1, 1]:
+                    check(monitor.has_node("V32_CartCaster_%d_%d" % [side, end]), "Four cart casters at both LODs")
     var parts: Array[MeshInstance3D] = []
     _meshes(camp, parts)
     var count: int = 0
@@ -196,6 +213,18 @@ func _run() -> void:
                         await _capture(viewport, "medical_v31_trolley_folded.png")
                         Sculpt.inspect_interior(camp, false)
                         Art.pose_deploy(camp, 1.0)
+                        Sculpt.inspect_interior(camp, true)
+                        camera.size = 3.5
+                        camera.position = Vector3(-5.4, 3.4, -4.2)
+                        camera.look_at(Vector3(-2.62, 1.0, -1.34), Vector3.UP)
+                        await _capture(viewport, "medical_v32_cabinet.png")
+                        camera.position = Vector3(-3.5, 4.0, -1.0)
+                        camera.look_at(Vector3(-0.85, 0.9, 1.80), Vector3.UP)
+                        await _capture(viewport, "medical_v32_monitor.png")
+                        camera.position = Vector3(4.0, 3.4, -4.0)
+                        camera.look_at(Vector3(1.39, 1.12, -0.95), Vector3.UP)
+                        await _capture(viewport, "medical_v32_iv.png")
+                        Sculpt.inspect_interior(camp, false)
                         camera.size = 11.5
                     check(Art.pose_deploy(camp, 0.0),
                         "Packed camp state for visual inspection")
@@ -220,13 +249,13 @@ func _run() -> void:
                     stage.remove_child(camp)
                 camp.free()
     check(audits == 72, "Exact 72 faction, LOD and damage variants")
-    check(screenshots == 28,
-        "16 diagonal + 4 packed + 3 damage + 1 overhead + 2 interiors + 2 trolley PNG")
+    check(screenshots == 31,
+        "16 diagonal + 4 packed + 3 damage + 1 overhead + 2 interiors + 2 trolley + 3 equipment PNG")
     viewport.queue_free()
     await process_frame
     if failures > 0:
         printerr("FAIL MEDICAL CAMP V3 NATIVE: %d failures" % failures)
         quit(1)
         return
-    print("PASS MEDICAL CAMP V3 NATIVE: 72 audits, 28 PNGs")
+    print("PASS MEDICAL CAMP V3 NATIVE: 72 audits, 31 PNGs")
     quit(0)
