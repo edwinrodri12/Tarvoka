@@ -610,6 +610,28 @@ func _run() -> void:
                 Models.pose_model("infantry_engineer",model,"idle",0.0)
                 check(absf(soldier.rotation_degrees.z)<0.001,"idle clears residual impact roll")
                 Models.restore_model_pose("infantry_engineer",model)
+            # Actual existing prop meshes remain on their original moving
+            # rigs; no change to grip centers, effect anchors or transforms.
+            for label in V17.equipment_labels(lod==13):
+                var prop: MeshInstance3D=model.find_child(label,true,false) as MeshInstance3D
+                check(prop!=null and prop.has_meta(V17.OLD) and closed_outward(prop.mesh),
+                    "closed opaque equipment sculpt "+label)
+                if prop==null or not prop.has_meta(V17.OLD):
+                    continue
+                var previous: Dictionary=prop.get_meta(V17.OLD)
+                var original: Mesh=previous["mesh"]
+                check(prop.get_parent().name==("ArmamentoRig" if label in V17.EQUIPMENT_GUN else
+                        "V6_HerramientaArticuladaRig") and
+                    prop.position==previous["position"] and prop.scale==previous["scale"],
+                    "prop retains animated attachment "+label)
+                if label in V17.EQUIPMENT_GUN:
+                    check(face_count(prop.mesh)==face_count(original) and
+                        prop.mesh.get_aabb().is_equal_approx(original.get_aabb()),
+                        "visual housing keeps existing geometry budget and envelope "+label)
+                if label=="V6_IndicadorEmpunadura":
+                    check(V17.surface_kind(label).is_empty() and
+                        not prop.has_meta(V17.FINISH_NEW),
+                        "tool faction paint remains unchanged")
             var material_kinds: Dictionary={}
             for item in model.find_children("*","MeshInstance3D",true,false):
                 var part: MeshInstance3D=item as MeshInstance3D
@@ -816,12 +838,26 @@ func _run() -> void:
             check(V6.pose(hero,"inspect",phase),"actual shield inspection phase")
             await snapshot(viewport,"v17_shield_"+str(roundi(phase*100)))
         V6.reset(hero)
+        # Macro screenshots of actual animated props. Aim around their
+        # existing grip rigs rather than moving the props for the camera.
+        camera.size=1.35
+        for spec in [["aim","ArmamentoRig",0.8],["repair","V6_HerramientaArticuladaRig",0.25]]:
+            check(Models.pose_model("infantry_engineer",hero,str(spec[0]),float(spec[2])),
+                "actual equipped inspection pose")
+            var equipment_rig: Node3D=hero.find_child(str(spec[1]),true,false) as Node3D
+            check(equipment_rig!=null,"animated equipment macro rig")
+            if equipment_rig!=null:
+                var center: Vector3=equipment_rig.global_position
+                camera.position=center+Vector3(-2.6,0.55,-2.7)
+                camera.look_at(center,Vector3.UP)
+                await snapshot(viewport,"v17_equipment_"+str(spec[0]))
+        Models.restore_model_pose("infantry_engineer",hero)
         hero.queue_free()
         await process_frame
-    check(photos==22,"ten comparison PNGs, six poses, three helmet macros and three shield phases")
+    check(photos==24,"ten comparison PNGs, six poses, three helmet macros, three shield phases and two equipment macros")
     if failed>0:
         push_error("FAIL ENGINEER V17: %d violations"%failed)
         quit(1)
     else:
-        print("PASS ENGINEER V17: 8 factions x 2 LOD, closed hard-surface chest, shoulder, knees, boots; 22 native comparison, pose, helmet and shield renders")
+        print("PASS ENGINEER V17: 8 factions x 2 LOD, closed hard-surface chest, shoulder, knees, boots; 24 native comparison, pose, helmet, shield and equipment renders")
         quit(0)

@@ -496,6 +496,10 @@ static func surface_kind(label: String) -> String:
             "V8_RielOpticoSuperior","V8_CarcasaFusilIngeniero",
             "V8_GuardamanosPerforado"]:
         return "metal"
+    if label=="V6_CabezalLlave" or label.begins_with("V6_DedosLlave_"):
+        return "metal"
+    if label=="V6_EmpunaduraHerramienta" or label=="V8_ApoyoManoIzquierda":
+        return "rubber"
     if label in HAND_PALMS or label in HAND_CUFFS or label in [
             "V7_MascaraResistenciaIngeniero","V8_EmpunaduraAntideslizante"]:
         return "rubber"
@@ -996,6 +1000,59 @@ static func _sculpt_industrial(model: Node3D,hero: bool) -> bool:
             return false
     return true
 
+# Cosmetic equipment sculpt: replace the existing fictional game props
+# in place; contact centers, animation pivots and effect sockets are unchanged.
+const EQUIPMENT_GUN: Array[String]=["V8_CarcasaFusilIngeniero",
+    "V8_GuardamanosPerforado","V8_RielOpticoSuperior",
+    "V8_EmpunaduraAntideslizante","V8_ApoyoManoIzquierda"]
+const EQUIPMENT_TOOL: Array[String]=["V6_EmpunaduraHerramienta","V6_CabezalLlave"]
+const EQUIPMENT_TOOL_HERO: Array[String]=["V6_DedosLlave_-1",
+    "V6_DedosLlave_1","V6_IndicadorEmpunadura"]
+
+static func equipment_labels(hero: bool) -> Array[String]:
+    var labels: Array[String]=[]
+    labels.append_array(EQUIPMENT_GUN)
+    labels.append_array(EQUIPMENT_TOOL)
+    if hero:
+        labels.append_array(EQUIPMENT_TOOL_HERO)
+    return labels
+
+static func _sculpt_equipment(model: Node3D,hero: bool) -> bool:
+    var gun: Node3D=model.find_child("ArmamentoRig",true,false) as Node3D
+    var tool: Node3D=model.find_child("V6_HerramientaArticuladaRig",true,false) as Node3D
+    if gun==null or tool==null:
+        return false
+    for label in equipment_labels(hero):
+        var part: MeshInstance3D=_find(model,label)
+        if part==null or part.mesh==null:
+            return false
+        var weapon_prop: bool=label in EQUIPMENT_GUN
+        if part.get_parent()!=(gun if weapon_prop else tool):
+            return false
+        var mesh: ArrayMesh
+        if weapon_prop:
+            # The previous V15 housing is already closed. Preserve its
+            # exact vertex/index budget while refining the stylized silhouette.
+            if not part.mesh is ArrayMesh:
+                return false
+            mesh=_forged_profile(part.mesh as ArrayMesh,0.17)
+        else:
+            # The repair prop is an inert visual. Keep its original
+            # overall envelope and transforms, with closed bevels.
+            var dims: Vector3=part.mesh.get_aabb().size
+            if label=="V6_EmpunaduraHerramienta":
+                mesh=_conformal_press(dims.x,dims.y,dims.z,
+                    0.019,0.003,0.008,hero)
+            elif label=="V6_IndicadorEmpunadura":
+                mesh=_conformal_press(dims.x,dims.y,dims.z,
+                    0.006,0.001,0.004,hero)
+            else:
+                mesh=V13._rounded_press(dims.x,dims.y,dims.z,
+                    minf(dims.x,dims.y)*0.16,0.003,hero)
+        if not _change(model,label,mesh,part.scale,part.position):
+            return false
+    return true
+
 static func apply(model: Node3D, hero: bool) -> bool:
     if model==null or has_model(model) or not V16.has_model(model):
         return false
@@ -1222,7 +1279,7 @@ static func apply(model: Node3D, hero: bool) -> bool:
         return false
     if not _sculpt_harness(model,hero) or not _sculpt_dorsal(model,hero):
         return false
-    if not _sculpt_industrial(model,hero):
+    if not _sculpt_industrial(model,hero) or not _sculpt_equipment(model,hero):
         return false
     if not _local_wear(model,hero) or not _surface_finish(model,hero):
         return false
