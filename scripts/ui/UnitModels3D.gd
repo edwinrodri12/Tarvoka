@@ -992,10 +992,10 @@ static func _destroyer_shell(root: Node3D, label: String, stations: Array,
             var j: int = (i + 1) % 6
             var a: int = ring * 6
             var b: int = a + 6
-            faces.append([a + i, b + i, b + j, a + j])
-    faces.append([0,1,2,3,4,5])
+            faces.append([a + i, a + j, b + j, b + i])
+    faces.append([5,4,3,2,1,0])
     var last: int = (stations.size() - 1) * 6
-    faces.append([last+5,last+4,last+3,last+2,last+1,last])
+    faces.append([last,last+1,last+2,last+3,last+4,last+5])
     return _hull(root,label,points,faces,tint)
 
 static func _destroyer(root: Node3D) -> void:
