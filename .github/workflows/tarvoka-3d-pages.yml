@@ -4,6 +4,8 @@ on:
   push:
     branches: [main, feat/campamentos-visor-integrado-20261123, art/camp-supply-v4-20261124, art/camp-recon-v3-20261124]
     paths:
+      - "scripts/ui/A01Recon*.gd"
+      - "tests/test_a01_recon_*.gd"
       - "scripts/publishing/CampUnifiedStudioAdapterV1.gd.txt"
       - "scripts/ui/CampSupplySculptV4.gd"
       - "scripts/ui/CampReconSculptV3.gd"
@@ -224,6 +226,8 @@ on:
   # Verify publication inside the same workflow before touching live Pages.
   pull_request:
     paths:
+      - "scripts/ui/A01Recon*.gd"
+      - "tests/test_a01_recon_*.gd"
       - ".github/workflows/tarvoka-3d-pages.yml"
       - "scripts/publishing/CampUnifiedStudioAdapterV1.gd.txt"
       - "scripts/ui/CampSupplySculptV4.gd"
@@ -486,7 +490,7 @@ jobs:
           grep -Fq 'A01TailOpticsV13.apply' scripts/ui/UnitModels3D.gd
           grep -Fq 'A01DamageFinishV14.apply' scripts/ui/UnitModels3D.gd
           grep -Fq 'func _a01_review_look' scripts/ui/BastionStudioAdapter.gd
-          grep -Fq 'A01 · Dron de reconocimiento · V25 EN DESARROLLO' scripts/ui/BastionStudioAdapter.gd
+          grep -Fq 'A01 · Dron de reconocimiento · V30 FINAL' scripts/ui/BastionStudioAdapter.gd
           test -s scripts/ui/G16ArmoredLogisticsV1.gd
           test -s scripts/ui/G16LogisticsExteriorV2.gd
           test -s scripts/ui/G16LogisticsMechanicsDamageV3.gd
@@ -1068,7 +1072,7 @@ jobs:
           # The editor draws its original HQ base from a pinned feature
           # branch, but Bastion P06 is overlaid from this main revision.
           # Show the deployed revision, not the misleading older HQ SHA.
-          printf 'TARVOKA Estudio 3D · A01 V13.5 / Bastión P06 V25 · revisión %s\n' "${GITHUB_SHA:0:12}" > assets/art_studio_revision.txt
+          printf 'TARVOKA Estudio 3D · A01 V30 FINAL / Bastión P06 V25 · revisión %s\n' "${GITHUB_SHA:0:12}" > assets/art_studio_revision.txt
           test "$(git branch --show-current)" = "feat/infantry-barracks-v5-final-corner-clearance-20261116" || test "$(git rev-parse HEAD)" = "$(git rev-parse origin/feat/infantry-barracks-v5-final-corner-clearance-20261116)"
           test -s scripts/ui/HeadquartersFinishV8.gd
           test -s scripts/ui/HeadquartersArchitectureV7.gd
@@ -1678,6 +1682,7 @@ jobs:
             echo '::error::A01 V7 mobile triangle/mesh budget or 12-UAV proxy failed' >&2; exit 1
           fi
           grep -F 'PASS A01 V7 MOBILE BUDGET:' /tmp/a01-v7-mobile-budget.log
+          test -s build/qa/a01-v7/a01-v30-workload.json
           test "$(find build/qa/a01-v7 -maxdepth 1 -name 'a01-v7-12-*.png' | wc -l)" -eq 2
           timeout 190s xvfb-run -a -s '-screen 0 1280x720x24' env LIBGL_ALWAYS_SOFTWARE=1 \
             /tmp/Godot_v4.3-stable_linux.x86_64 \
@@ -2625,7 +2630,7 @@ jobs:
                    '?unidad=g16', 'G16 V6 · REVISAR LOGÍSTICA 3D',
                    'Ver manguera, rueda, facción y animaciones de G16 V6', 256)
           add_link(Path('build/web/index.html'),
-                   '?unidad=a01', 'A01 V25 · DRON DE RECONOCIMIENTO',
+                   '?unidad=a01', 'A01 V30 FINAL · DRON DE RECONOCIMIENTO',
                    'Revisar nuevo dron sin armas, sensores y ocho facciones', 316)
           add_link(Path('build/web/tanque/index.html'),
                    '../apc/', 'BASTIÓN P06 V25 · ACTUAL',
@@ -2659,7 +2664,7 @@ jobs:
           grep -q 'BASTIÓN P06 V25 · MODELO ACTUAL' build/web/index.html
           grep -Fq 'href="?unidad=g16"' build/web/index.html
           grep -Fq 'href="?unidad=a01"' build/web/index.html
-          grep -Fq 'A01 V25 · DRON DE RECONOCIMIENTO' build/web/index.html
+          grep -Fq 'A01 V30 FINAL · DRON DE RECONOCIMIENTO' build/web/index.html
           grep -Fq 'G16 V6 · REVISAR LOGÍSTICA 3D' build/web/index.html
           grep -Fq "URLSearchParams(window.location.search)" scripts/ui/BastionStudioAdapter.gd
           grep -Fq 'G16ServiceV6.has_model(model_root)' scripts/ui/BastionStudioAdapter.gd
@@ -2690,6 +2695,7 @@ jobs:
             build/qa/a01-v1/*.png
             build/qa/a01-v6/*.png
             build/qa/a01-v7/*.png
+            build/qa/a01-v7/a01-v30-workload.json
             build/qa/a01-v8/*.png
             build/qa/a01-v9/*.png
             build/qa/a01-v10/*.png
@@ -2698,6 +2704,7 @@ jobs:
             build/qa/a01-v13/*.png
             build/qa/a01-v14/*.png
             build/qa/a01-v16/*.png
+            build/qa/a01-v28/*.png
           if-no-files-found: warn
           retention-days: 14
 

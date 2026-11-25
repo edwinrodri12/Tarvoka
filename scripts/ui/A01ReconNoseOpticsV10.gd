@@ -194,10 +194,10 @@ static func _refine_optics(root:Node3D,body:Node3D,pivot:Node3D,hero:bool)->bool
     glass.position=Vector3(-0.035,0.010,-0.292)
     glass.rotation=Vector3.ZERO
     glass.scale=Vector3(0.124,0.124,0.050)
-    glass.material_override=_mat(Color("#357d91"),0.18,0.19)
+    glass.material_override=_mat(Color("#4393a9"),0.18,0.21)
     thermal.position=Vector3(0.060,-0.021,-0.298)
     thermal.scale=Vector3(0.062,0.062,0.036)
-    thermal.material_override=_mat(Color("#815c55"),0.12,0.23)
+    thermal.material_override=_mat(Color("#a06f50"),0.12,0.24)
     plate.material_override=_mat(Color("#202a32"),0.24,0.61)
     # The fixed rounded cradle overlaps both hull and rotating pod.
     var mount:=SphereMesh.new()
@@ -211,11 +211,22 @@ static func _refine_optics(root:Node3D,body:Node3D,pivot:Node3D,hero:bool)->bool
     cradle.material_override=trim
     legacy_lens.visible=false
     brow.visible=false
-    for suffix in ["_L","_R"]:
+    # V27: stepped coaxial bearing housings replace the plain cylinders.
+    # The internal shoulder is embedded in the pod; only the metal outer
+    # race and tapered cap are visible. Both still rotate with the sensor.
+    for side in [-1,1]:
+        var suffix:String="_L" if side<0 else "_R"
         var bearing:=pivot.find_child("A01_V3_EOIRTrunnion"+suffix,false,false) as MeshInstance3D
-        if bearing!=null:
-            bearing.scale=Vector3(0.78,0.84,0.78)
-            bearing.material_override=trim
+        if bearing==null:
+            return false
+        bearing.mesh=_pod_loft([
+            [-0.025,0.083,0.083],[0.015,0.107,0.107],
+            [0.048,0.094,0.094],[0.065,0.068,0.068]],12 if hero else 8)
+        bearing.position=Vector3(float(side)*0.165,0,0)
+        bearing.rotation_degrees=Vector3(0,float(side)*90.0,0)
+        bearing.scale=Vector3.ONE
+        bearing.material_override=_mat(Color("#526774"),0.43,0.48)
+    root.set_meta("tarvoka_a01_v27_mechanical_bearings",true)
     root.set_meta("tarvoka_a01_v20_sculpted_eoir",true)
     return true
 

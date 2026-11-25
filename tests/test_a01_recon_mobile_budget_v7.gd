@@ -7,10 +7,13 @@ const Models=preload("res://scripts/ui/UnitModels3D.gd")
 const Damage=preload("res://scripts/ui/A01ReconDamageV6.gd")
 const Arsenal=preload("res://scripts/core/ModernArsenal.gd")
 const OUT="res://build/qa/a01-v7"
-const MOBILE_MESH_LIMIT=70
-const HERO_MESH_LIMIT=95
-const MOBILE_TRIANGLE_LIMIT=12000
-const HERO_TRIANGLE_LIMIT=24000
+## V30: regression ceilings based on V29 native measured workload.
+const MOBILE_MESH_LIMIT=60
+const HERO_MESH_LIMIT=70
+const MOBILE_TRIANGLE_LIMIT=4000
+const HERO_TRIANGLE_LIMIT=7000
+const MOBILE_MATERIAL_LIMIT=48
+const HERO_MATERIAL_LIMIT=50
 const STRESS_COUNT=12
 var failures:int=0
 
@@ -90,6 +93,7 @@ func _run()->void:
     # 8 factions x 2 real LODs. Explicit geometry/material count at D0/D4.
     var mobile_tris:int=0
     var hero_tris:int=0
+    var report_rows:Array=[]
     for team in range(8):
         for lod in [8,13]:
             var model:Node3D=Models.build("uav_recon",team,true,lod)
@@ -102,6 +106,9 @@ func _run()->void:
             var triangle_limit:int=(
                 MOBILE_TRIANGLE_LIMIT if lod==8 else HERO_TRIANGLE_LIMIT)
             var mesh_limit:int=MOBILE_MESH_LIMIT if lod==8 else HERO_MESH_LIMIT
+            var material_limit:int=MOBILE_MATERIAL_LIMIT if lod==8 else HERO_MATERIAL_LIMIT
+            check(int(original["materials"])<=material_limit,"D0 stays within material budget")
+            report_rows.append({"faction":team,"lod":lod,"damage":0,"geometry":original})
             check(int(original["meshes"])<=mesh_limit,
                 "undamaged visible mesh count stays under LOD budget")
             check(int(original["triangles"])<=triangle_limit,
@@ -116,6 +123,9 @@ func _run()->void:
             for stage in [1,2,3,4]:
                 check(Damage.set_stage(model,stage),"D%d stage toggles" % stage)
                 var metrics:Dictionary=_stats(model)
+                report_rows.append({"faction":team,"lod":lod,"damage":stage,"geometry":metrics})
+                check(int(metrics["materials"])<=material_limit,
+                    "D%d remains under LOD%d material budget" % [stage,lod])
                 check(int(metrics["meshes"])<=mesh_limit,
                     "D%d remains under LOD%d mesh budget" % [stage,lod])
                 check(int(metrics["triangles"])<=triangle_limit,
@@ -126,12 +136,14 @@ func _run()->void:
             check(Damage.repair(model),"repair leaves no damage meshes visible")
             var clean:Dictionary=_stats(model)
             check(clean["meshes"]==original["meshes"] and
-                clean["triangles"]==original["triangles"],
+                clean["triangles"]==original["triangles"] and
+                clean["materials"]==original["materials"],
                 "repair restores identical mesh and triangle budget")
             vp.remove_child(model)
             model.free()
-    check(mobile_tris>0 and hero_tris>mobile_tris,
-        "real Android LOD has fewer triangles than hero model")
+    check(mobile_tris>0 and hero_tris>0 and float(mobile_tris)<=0.60*float(hero_tris),
+        "V30 Android LOD saves at least 40 percent intact triangles")
+    check(report_rows.size()==80,"V30 full 8 factions x 2 LODs x 5 states inventory")
 
     # 12 full UAVs, not fake icon billboards: an actual multi-unit scene.
     var fleet:Array[Node3D]=[]
@@ -187,6 +199,17 @@ func _run()->void:
         check(Damage.repair(aircraft),"12 destroyed UAVs all restore")
         vp.remove_child(aircraft)
         aircraft.free()
+    var report:Dictionary={
+        "version":"V30","measurement":"Godot native CI visible mesh proxy; not Android FPS",
+        "limits":{"lod8":{"meshes":MOBILE_MESH_LIMIT,"triangles":MOBILE_TRIANGLE_LIMIT,"materials":MOBILE_MATERIAL_LIMIT},
+            "lod13":{"meshes":HERO_MESH_LIMIT,"triangles":HERO_TRIANGLE_LIMIT,"materials":HERO_MATERIAL_LIMIT}},
+        "states":report_rows,
+        "fleet_d4":{"count":fleet.size(),"meshes":total_meshes,"triangles":total_tris,"build_ms":float(cold_build_us)/1000.0}}
+    var file:=FileAccess.open(OUT+"/a01-v30-workload.json",FileAccess.WRITE)
+    check(file!=null,"V30 save machine-readable geometry inventory")
+    if file!=null:
+        file.store_string(JSON.stringify(report,"\t"))
+        file.close()
     check(Arsenal.profile("uav_recon")==reference,
         "geometry stress test changed no combat values, vision or cost")
     vp.queue_free()

@@ -188,6 +188,20 @@ func _run()->void:
                             "V17 blade connects hub to swept tip")
                         check(real_blade.mesh.get_faces().size()/3==(92 if lod==13 else 56),
                             "V17 bounded closed blade geometry per LOD")
+                        var blade_mat:=real_blade.material_override as StandardMaterial3D
+                        check(blade_mat!=null and blade_mat.vertex_color_use_as_albedo and
+                            blade_mat.vertex_color_is_srgb,
+                            "V27 native blade pigments are color-managed")
+                        var arrays:Array=real_blade.mesh.surface_get_arrays(0)
+                        var vertices:PackedVector3Array=arrays[Mesh.ARRAY_VERTEX]
+                        var pigments:PackedColorArray=arrays[Mesh.ARRAY_COLOR]
+                        check(pigments.size()==vertices.size(),
+                            "V27 every original blade vertex has pigment")
+                        var tones:Dictionary={}
+                        for pigment in pigments:
+                            tones[pigment.to_html()]=true
+                            check(pigment.a>=0.999,"V27 opaque blade pigment")
+                        check(tones.size()>=3,"V27 root, graphite and tip colors")
                     check(old_blade!=null and not old_blade.visible,
                         "V1 centered six-spoke silhouette is not rendered")
             var housing:=model.find_child("A01_V17_FixedMotorHousing",true,false) as MeshInstance3D

@@ -156,7 +156,7 @@ static func apply(root:Node3D,color:Color,hero:bool)->bool:
         return false
     retired.append(old_pod)
     var paint:=_mat(color,0.24,0.42)
-    var composite:=_mat(Color("#c3cfd2"),0.29,0.46)
+    var composite:=_mat(Color("#8899a5"),0.12,0.72)
     var graphite:=_mat(Color("#303e47"),0.28,0.60)
     for side in [-1,1]:
         var s:float=float(side)

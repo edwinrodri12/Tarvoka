@@ -107,6 +107,7 @@ jobs:
             exit 1
           fi
           grep -F 'PASS A01 V7 MOBILE BUDGET:' /tmp/a01-v7-mobile-budget.log
+          test -s build/qa/a01-v7/a01-v30-workload.json
           test "$(find build/qa/a01-v7 -maxdepth 1 -name 'a01-v7-12-*.png' | wc -l)" -eq 2
 
       - name: Verify closed tapered V8 wingtips and 5 real Godot angle captures
@@ -236,6 +237,8 @@ jobs:
           test "$(find build/qa/a01-v14 -maxdepth 1 -name 'a01-v14-*.png' | wc -l)" -eq 8
           test "$(find build/qa/a01-v16 -maxdepth 1 -name 'a01-v16-*.png' | wc -l)" -eq 12
           find build/qa/a01-v16 -name 'a01-v16-*.png' -size +2k | wc -l | grep -qx '12'
+          test "$(find build/qa/a01-v28 -maxdepth 1 -name 'a01-v28-*.png' | wc -l)" -eq 4
+          find build/qa/a01-v28 -name 'a01-v28-*.png' -size +2k | wc -l | grep -qx '4'
 
       - name: Enforce same-viewer QA in the full native Studio publisher
         shell: bash
@@ -271,6 +274,7 @@ jobs:
             build/qa/a01-v1/*.png
             build/qa/a01-v6/*.png
             build/qa/a01-v7/*.png
+            build/qa/a01-v7/a01-v30-workload.json
             build/qa/a01-v8/*.png
             build/qa/a01-v9/*.png
             build/qa/a01-v10/*.png
@@ -279,5 +283,6 @@ jobs:
             build/qa/a01-v13/*.png
             build/qa/a01-v14/*.png
             build/qa/a01-v16/*.png
+            build/qa/a01-v28/*.png
           if-no-files-found: warn
           retention-days: 14

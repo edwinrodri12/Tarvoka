@@ -82,7 +82,7 @@ static func apply(root:Node3D,paint:Color,hero:bool)->bool:
     var body:=root.find_child(V1.BODY,true,false) as Node3D
     if body==null:
         return false
-    var shell:=_finish(Color("#c3cfd2"),0.29,0.44)
+    var shell:=_finish(Color("#8899a5"),0.12,0.72)
     var alloy:=_finish(Color("#8799a1"),0.49,0.45)
     var faction:=_finish(paint,0.24,0.41)
     var hinges:=_finish(Color("#3c4b54"),0.37,0.66)
