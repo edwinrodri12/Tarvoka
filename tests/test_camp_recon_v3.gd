@@ -1,7 +1,7 @@
 extends SceneTree
 
 # Offline Godot 4.3 regression for the genuine 3D reconnaissance camp.
-# 8 factions x 2 LOD x 4 damage = 64 builds and 25 real rendered images.
+# Eight factions plus neutral x 2 LOD x 4 damage = 72 builds, 25 native images.
 const Art = preload("res://scripts/ui/CampModels3DV1.gd")
 const Recon = preload("res://scripts/ui/CampReconFinishV2.gd")
 const Style = preload("res://scripts/ui/VisualStyle.gd")
@@ -31,6 +31,9 @@ func _meshes(node: Node, list: Array[MeshInstance3D]) -> void:
     for child in node.get_children():
         _meshes(child, list)
 
+func _key(p: Vector3) -> String:
+    return "%d,%d,%d" % [roundi(p.x * 100000.0), roundi(p.y * 100000.0), roundi(p.z * 100000.0)]
+
 func _closed(mesh: Mesh) -> bool:
     var tris: PackedVector3Array = mesh.get_faces()
     if tris.size() < 12 or tris.size() % 3 != 0:
@@ -54,21 +57,21 @@ func _audit(faction: int, lod: int, damage: int) -> Node3D:
     if camp == null:
         return null
     audits += 1
-    check(camp.get_meta("recon_art_v3", 0) == 3 and camp.get_meta("no_gameplay_effects", false), "V3 art only")
+    check(camp.get_meta("recon_art_v3", 0) == 3 and camp.get_meta("recon_art_revision", "") == "3.1" and camp.get_meta("no_gameplay_effects", false), "V3.1 art only")
     var core: Node3D = camp.get_node_or_null("EquipamientoDesplegable/" + Recon.CORE) as Node3D
     if damage == 3:
         check(core == null and camp.has_node("V3_ReconWreck"), "Closed wreck, no intact tower")
     else:
         check(core != null, "Actual tower and station")
         if core != null:
-            check(core.has_node("V2_CentroControl/V3_RearHatch_1"), "Detailed rear station")
+            check(core.has_node("V2_CentroControl/V3_RearHatch_1") and core.has_node("V31_StationTowerConduit"), "Detailed station and connected cable")
             var tower: Node3D = core.get_node("V2_TorreTripode") as Node3D
             check(tower.has_node("V3_FootSocket_-1_-1"), "Anchored supports")
             if damage < 2:
                 var mast: Node3D = tower.get_node("V2_MastilDesplegable") as Node3D
                 var shaft: MeshInstance3D = mast.get_node("V3_SlidingShaft") as MeshInstance3D
                 var head: Node3D = mast.get_node("V2_CabezalOpticoGiratorio") as Node3D
-                check(head.has_node("V3_OpaqueLens_1") and head.has_node("V3_YawBearing"), "Closed optics and physical bearing")
+                check(head.has_node("V3_OpaqueLens_1") and head.has_node("V3_YawBearing") and head.has_node("V31_OpticalHeadCable") and head.has_node("V31_OpticBrow_1"), "Closed optics and attached hardware")
                 var head_size: Vector3 = (head.get_node("CarcasaSensorCerrada") as MeshInstance3D).mesh.get_aabb().size
                 var length: float = (shaft.mesh as CylinderMesh).height
                 var extended: float = head.position.y
@@ -83,6 +86,7 @@ func _audit(faction: int, lod: int, damage: int) -> Node3D:
     var parts: Array[MeshInstance3D] = []
     _meshes(camp, parts)
     var sculpted: int = 0
+    var mapped: int = 0
     var paint: int = 0
     var accent: Color = Art.STEEL if faction < 0 else Style.faction_color(faction)
     for part in parts:
@@ -90,10 +94,14 @@ func _audit(faction: int, lod: int, damage: int) -> Node3D:
         check(material != null and material.transparency == BaseMaterial3D.TRANSPARENCY_DISABLED and material.cull_mode == BaseMaterial3D.CULL_BACK, "Opaque mesh")
         if material != null and material.albedo_color == accent:
             paint += 1
+        if material != null and material.has_meta("recon_v31_finish"):
+            check(material.albedo_texture is ImageTexture and material.uv1_triplanar, "Native grain finish")
+            mapped += 1
         if part.mesh is ArrayMesh:
             sculpted += 1
             check(_closed(part.mesh), "Closed custom topology " + str(part.name))
     check(sculpted >= (3 if damage == 3 else 24), "Substantial 3D sculpture")
+    check(mapped >= (3 if damage == 3 else 18), "Distinct industrial material finish")
     check(paint >= (3 if damage == 3 else 9), "Faction/neutral color retained")
     return camp
 

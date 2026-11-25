@@ -20,6 +20,20 @@ static func _mat(tint: Color, metallic: float, rough: float = 0.55) -> StandardM
     mat.roughness = rough
     mat.transparency = BaseMaterial3D.TRANSPARENCY_DISABLED
     mat.cull_mode = BaseMaterial3D.CULL_BACK
+    # Reuse validated, deterministic 64px material grain, not alpha decals.
+    # Faction pigments retain the exact official albedo.
+    var kind: String = ""
+    if tint in [GREY, FRAME, ALLOY]:
+        kind = "metal"
+    elif tint == PANEL:
+        kind = "fabric"
+    elif tint == GASKET:
+        kind = "rubber"
+    if not kind.is_empty():
+        mat.albedo_texture = Solid._finish_map(kind)
+        mat.uv1_triplanar = true
+        mat.uv1_scale = Vector3(2.8, 2.8, 2.8)
+        mat.set_meta("recon_v31_finish", kind)
     return mat
 
 static func _group(parent: Node3D, label: String, at: Vector3 = Vector3.ZERO) -> Node3D:
@@ -62,6 +76,31 @@ static func _replace(parent: Node3D, label: String, bevel: float, tint: Color, m
     node.set_meta("recon_v3_solid", true)
     return true
 
+# Closed swept cable: one continuous tube, no disconnected sticks or flat
+# billboard. Endpoints sit on the existing control station and tower frame.
+static func _cable(parent: Node3D, label: String, points: Array[Vector3], radius: float, lod: int) -> MeshInstance3D:
+    var curve := Curve3D.new()
+    curve.bake_interval = 0.08
+    for point in points:
+        curve.add_point(point)
+    var rings: Array = []
+    var length: float = curve.get_baked_length()
+    var steps: int = 28 if lod == 13 else 14
+    var sides: int = 12 if lod == 13 else 8
+    for i in range(steps + 1):
+        var t: float = length * float(i) / float(steps)
+        var center: Vector3 = curve.sample_baked(t)
+        var direction: Vector3 = (curve.sample_baked(minf(length, t + 0.03)) - curve.sample_baked(maxf(0.0, t - 0.03))).normalized()
+        var reference: Vector3 = Vector3.RIGHT if absf(direction.dot(Vector3.RIGHT)) < 0.90 else Vector3.UP
+        var u: Vector3 = direction.cross(reference).normalized()
+        var v: Vector3 = direction.cross(u).normalized()
+        var ring: Array[Vector3] = []
+        for j in range(sides):
+            var angle: float = TAU * float(j) / float(sides)
+            ring.append(center + radius * (u * cos(angle) + v * sin(angle)))
+        rings.append(ring)
+    return _part(parent, label, Solid._loft(rings), Vector3.ZERO, GASKET, 0.05, 0.86)
+
 static func _tower(tower: Node3D, accent: Color, lod: int, damage: int) -> bool:
     # Replace cylinders with chamfered rigid struts, preserving attachment points.
     for xs in [-1, 1]:
@@ -100,7 +139,16 @@ static func _tower(tower: Node3D, accent: Color, lod: int, damage: int) -> bool:
     _cyl(mast, "V3_OuterMast", Vector3(0, 0.53, 0), 0.245, 1.12, Vector3.UP, GREY, lod)
     _cyl(mast, "V3_FixedUpperCollar", Vector3(0, 1.10, 0), 0.29, 0.19, Vector3.UP, accent, lod)
     _cyl(mast, "V3_FixedSeal", Vector3(0, 1.205, 0), 0.205, 0.07, Vector3.UP, GASKET, lod)
-    _cyl(mast, "V3_SlidingShaft", Vector3(0, 1.52, 0), 0.135, 1.25, Vector3.UP, ALLOY, lod, 0.29)
+    _cyl(mast, "V3_SlidingShaft", Vector3(0, 1.17, 0), 0.135, 1.12, Vector3.UP, ALLOY, lod, 0.29)
+    _box(mast, "V31_ActuatorMotorHousing", Vector3(0, 0.32, 0.28),
+        Vector3(0.42, 0.45, 0.23), FRAME, 0.045)
+    _box(mast, "V31_ActuatorMotorPanel", Vector3(0, 0.32, 0.415),
+        Vector3(0.27, 0.29, 0.05), accent, 0.018)
+    for z in [-1, 1]:
+        _cyl(mast, "V31_ActuatorCollar_%d" % z, Vector3(0, 0.57 + float(z) * 0.37, 0), 0.26, 0.09, Vector3.UP, FRAME, lod)
+    var fixed: Array[Vector3] = [Vector3(0, 0.31, 0.41), Vector3(0.20, 0.24, 0.43),
+        Vector3(0.32, 0.45, 0.33), Vector3(0.32, 0.87, 0.22), Vector3(0.18, 1.10, 0.19)]
+    _cable(mast, "V31_FixedActuatorCable", fixed, 0.035, lod)
     var head: Node3D = mast.get_node("V2_CabezalOpticoGiratorio") as Node3D
     _cyl(head, "V3_YawBearing", Vector3(0, -0.35, 0), 0.32, 0.15, Vector3.UP, FRAME, lod)
     _cyl(head, "V3_BearingAccent", Vector3(0, -0.28, 0), 0.30, 0.09, Vector3.UP, accent, lod)
@@ -108,6 +156,22 @@ static func _tower(tower: Node3D, accent: Color, lod: int, damage: int) -> bool:
     _replace(head, "FrontalSensor", 0.045, FRAME, 0.48)
     _replace(head, "TapaSensorBlindada", 0.05, PANEL, 0.35)
     _replace(head, "AcopleRadioSuperior", 0.07, GREY, 0.45)
+    # Distinct central electronics housing and mechanically anchored sides.
+    _box(head, "V31_CentralOpticsBridge", Vector3(0, 0.02, -0.57),
+        Vector3(0.24, 0.43, 0.22), GREY, 0.055)
+    _box(head, "V31_RearServiceBlock", Vector3(0, -0.08, 0.51),
+        Vector3(0.37, 0.28, 0.16), FRAME, 0.045)
+    _cyl(head, "V31_RearConnector", Vector3(0, -0.08, 0.62), 0.085, 0.095, Vector3.BACK, ALLOY, lod)
+    var wire: Array[Vector3] = [Vector3(0, -0.08, 0.67), Vector3(0, -0.20, 0.76),
+        Vector3(0.10, -0.34, 0.61), Vector3(0.14, -0.35, 0.28)]
+    _cable(head, "V31_OpticalHeadCable", wire, 0.032, lod)
+    for side in [-1, 1]:
+        _box(head, "V31_SideHingeBracket_%d" % side, Vector3(float(side) * 0.72, -0.08, 0.26),
+            Vector3(0.23, 0.32, 0.43), FRAME, 0.045)
+        if lod == 13:
+            for i in range(3):
+                _box(head, "V31_HeatSink_%d_%d" % [side, i], Vector3(float(side) * (0.22 + float(i) * 0.16), 0.485, 0.30),
+                    Vector3(0.055, 0.09, 0.27), FRAME, 0.012)
     for side in [-1, 1]:
         var x: float = float(side) * 0.42
         (head.get_node("OpticaCircular_%d" % side) as Node3D).visible = false
@@ -115,12 +179,23 @@ static func _tower(tower: Node3D, accent: Color, lod: int, damage: int) -> bool:
         _cyl(head, "V3_LensBezel_%d" % side, Vector3(x, 0.04, -0.73), 0.205, 0.075, Vector3.FORWARD, ALLOY, lod)
         _cyl(head, "V3_OpaqueLens_%d" % side, Vector3(x, 0.04, -0.779), 0.165, 0.045, Vector3.FORWARD, OPTIC, lod, 0.22)
         _cyl(head, "V3_LensCore_%d" % side, Vector3(x, 0.04, -0.806), 0.093, 0.017, Vector3.FORWARD, OPTIC_LIGHT, lod, 0.20)
+        # Opaque solid rim and hood; lenses remain readable front and side.
+        _box(head, "V31_OpticBrow_%d" % side, Vector3(x, 0.27, -0.66),
+            Vector3(0.49, 0.095, 0.34), FRAME, 0.028)
+        if lod == 13:
+            for bolt in [-1, 1]:
+                _cyl(head, "V31_OpticBolt_%d_%d" % [side, bolt],
+                    Vector3(x + float(bolt) * 0.18, -0.14, -0.67), 0.033, 0.04, Vector3.FORWARD, ALLOY, lod)
+        _cyl(head, "V31_OpticAuxPort_%d" % side, Vector3(x * 0.38, -0.12, -0.70),
+            0.045, 0.08, Vector3.FORWARD, OPTIC, lod)
         _box(head, "V3_RearFactionPlate_%d" % side, Vector3(float(side) * 0.45, 0.01, 0.48),
             Vector3(0.49, 0.27, 0.085), accent, 0.025)
         var wing: Node3D = head.get_node("V2_PanelAntenaAbatible_%d" % side) as Node3D
         _replace(wing, "PanelActuadorFaccion", 0.04, accent)
         _replace(wing, "EstructuraRadiadora", 0.035, FRAME)
         _cyl(wing, "V3_WingHinge", Vector3(0.055 * float(side), 0.05, 0), 0.11, 0.48, Vector3.BACK, ALLOY, lod)
+        _box(wing, "V31_WingRootClevis", Vector3(float(side) * 0.12, -0.025, 0),
+            Vector3(0.24, 0.20, 0.42), FRAME, 0.03)
         for z in [-0.25, 0.25]:
             _box(wing, "V3_WingEdge_%d" % int(z * 100), Vector3(float(side) * 0.65, 0.18, z),
                 Vector3(1.08, 0.075, 0.07), GREY, 0.012)
@@ -161,6 +236,7 @@ static func apply(root: Node3D, accent: Color, lod: int, damage: int) -> bool:
     if root == null or root.get_meta("camp_kind", "") != "reconocimiento":
         return false
     root.set_meta("recon_art_v3", 3)
+    root.set_meta("recon_art_revision", "3.1")
     root.set_meta("recon_v3_art_only", true)
     _replace(root, "PlataformaDesmontable", 0.045, PANEL, 0.12)
     if damage == 3:
@@ -177,6 +253,16 @@ static func apply(root: Node3D, accent: Color, lod: int, damage: int) -> bool:
     _station(station, accent, lod, damage)
     if not _tower(tower, accent, lod, damage):
         return false
+    # Low conduit from control housing to the rear leg; fixed wiring stays
+    # attached as the sensor telescopes and rotates.
+    var cable_points: Array[Vector3] = [Vector3(-0.53, 0.39, 2.10), Vector3(-0.49, 0.17, 2.23),
+        Vector3(-0.15, 0.12, 2.42), Vector3(0.19, 0.21, 2.45), Vector3(0.35, 0.80, 2.31),
+        Vector3(0.61, 1.70, 2.11), Vector3(0.82, 2.70, 1.90)]
+    _cable(core, "V31_StationTowerConduit", cable_points, 0.055, lod)
+    _box(station, "V31_CableJunction", Vector3(1.02, 0.39, 0.72), Vector3(0.24, 0.28, 0.20), FRAME, 0.045)
+    for i in range(3 if lod == 13 else 1):
+        _box(core, "V31_DeckConduitClamp_%d" % i, Vector3(-0.43 + float(i) * 0.27, 0.135, 2.32 + float(i) * 0.055),
+            Vector3(0.12, 0.16, 0.20), ALLOY, 0.022)
     for side in [-1, 1]:
         _replace(core, "V2_EstabilizadorSensor_%d" % side, 0.07, FRAME)
         _replace(core, "V2_PuntaFaccion_%d" % side, 0.05, accent)
@@ -192,7 +278,7 @@ static func pose(root: Node3D, progress: float) -> bool:
     var t: float = clampf(progress, 0.0, 1.0)
     var shaft: Node3D = mast.get_node("V3_SlidingShaft") as Node3D
     var head: Node3D = mast.get_node("V2_CabezalOpticoGiratorio") as Node3D
-    shaft.position.y = lerpf(0.91, 1.52, t)
+    shaft.position.y = lerpf(0.56, 1.17, t)
     head.position.y = lerpf(1.46, 2.07, t)
     root.set_meta("recon_v3_deploy_progress", t)
     return true

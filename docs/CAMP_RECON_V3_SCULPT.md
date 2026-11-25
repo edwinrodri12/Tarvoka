@@ -1,3 +1,7 @@
 # Campamento de reconocimiento V3 — escultura inicial
 
 Suministros V4.5 ya integrado y publicado. Recon V3 rediseña la torre con perfiles cerrados biselados, zapatas y articulaciones, cabezal con lentes opacas, cojinetes, alas y carcasa posterior; consola de observación con paneles traseros y ventilación. El mástil telescópico usa traslación de piezas rígidas, no escalado del sensor. D2 desactiva el cabezal y D3 conserva restos, no torre funcional. Se mantiene V2 como comparación en el mismo estudio. 72 variantes (ocho facciones + neutral, dos LOD, cuatro daños), 25 PNG y pruebas del mismo visor. Primera revisión artística, pendiente comprobar CI, renders, animaciones, microacabado y aprobación. No modifica lógica táctica.
+
+## V3.1 — cableado, óptica y materiales
+
+La V3 pasó la exportación del estudio; la QA nativa y reglas fallaron por una función de cuantización de vértices omitida en el test. Se restituye el helper exacto sin reducir comprobaciones. Captura real del estudio mostró una torre robusta pero ópticas básicas y cableado ausente. V3.1 agrega conducto continuo cerrado entre centro de control y torre, cableado de actuador/cabezal, motor, conexiones, bisagras, disipadores y viseras; ajusta el eje deslizante para no atravesar el cabezal. Materiales opacos con mapas procedurales compartidos de 64px y pintura de facción exacta. Pendiente CI y revisión 360; no altera gameplay.
