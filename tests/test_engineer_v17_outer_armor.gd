@@ -268,7 +268,8 @@ func _run() -> void:
                 check(shoulder!=null and shoulder.get_parent()==arm and
                     closed_outward(shoulder.mesh) and
                     shoulder.has_meta(V17.OLD) and
-                    shoulder.scale.x>=0.65 and shoulder.scale.x<=0.72,
+                    shoulder.scale.x>=0.63 and shoulder.scale.x<=0.66 and
+                    shoulder.scale.z<=0.60,
                     "real anatomically broadened shoulder still on arm rig")
                 var elbow: MeshInstance3D=model.find_child(
                     V17.ELBOW+suffix,true,false) as MeshInstance3D
@@ -332,6 +333,23 @@ func _run() -> void:
                         and closed_outward(part.mesh) and
                         part.has_meta(V17.OLD),
                         "solid no-gap knee, pouch or boot: "+label)
+                var boot: MeshInstance3D=model.find_child(
+                    V16.BOOT+suffix,true,false) as MeshInstance3D
+                var outsole: MeshInstance3D=model.find_child(
+                    V17.SOLE+suffix,true,false) as MeshInstance3D
+                var toe_cap: MeshInstance3D=model.find_child(
+                    V17.TOE+suffix,true,false) as MeshInstance3D
+                check(boot!=null and boot.get_parent()==leg and
+                    boot.has_meta(V17.OLD) and closed_outward(boot.mesh),
+                    "new continuous ankle-to-vamp boot on original leg")
+                if boot!=null and outsole!=null and toe_cap!=null:
+                    var ub: AABB=boot.transform*boot.mesh.get_aabb()
+                    var sb: AABB=outsole.transform*outsole.mesh.get_aabb()
+                    var tb: AABB=toe_cap.transform*toe_cap.mesh.get_aabb()
+                    check(ub.intersects(sb) and ub.intersects(tb) and
+                        sb.intersects(tb) and absf(sb.position.y+0.975)<0.005 and
+                        absf(tb.position.z-sb.position.z)<0.030,
+                        "continuous boot, toe and flat outsole share foot envelope and ground height")
                 var case_part: MeshInstance3D=model.find_child(
                     V17.CASE+suffix,true,false) as MeshInstance3D
                 check(case_part!=null and case_part.get_parent()==torso and
@@ -567,6 +585,11 @@ func _run() -> void:
                     check(wrist.distance_to(target)<0.04 and
                         elbow.distance_to(Vector3(0,-0.58,-0.10))<0.04,
                         "sleeve reaches real wrist and elbow "+pose)
+                    var link_bounds: AABB=link.mesh.get_aabb()
+                    check(link_bounds.size.x>=0.19 and link_bounds.size.x<=0.21 and
+                        link_bounds.size.z>=0.18 and link_bounds.size.z<=0.21 and
+                        absf(link_bounds.size.y-1.0)<0.0001,
+                        "forearm has muscular taper rather than narrow rod, same contact length")
                     var saved: Transform3D=link.transform
                     var sculpt: Mesh=link.mesh
                     check(V17.show_finish(model,false) and link.mesh!=sculpt and

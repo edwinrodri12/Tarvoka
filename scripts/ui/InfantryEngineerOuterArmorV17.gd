@@ -762,15 +762,40 @@ const LINK_PREFIX: String="V9_AntebrazoHaciaEmpunadura"
 const LINK_OLD: String="tarvoka_v17_link_original"
 const LINK_NEW: String="tarvoka_v17_link_anatomic"
 
+# Continuous ankle-to-vamp shell: curved collar toward shin, no added nodes.
+static func _boot_upper(hero: bool) -> ArrayMesh:
+    var source: ArrayMesh=V13._lathe([
+        Vector3(0.109,-0.921,0.158),
+        Vector3(0.127,-0.875,0.186),
+        Vector3(0.128,-0.812,0.184),
+        Vector3(0.116,-0.743,0.155),
+        Vector3(0.103,-0.663,0.129)
+    ],hero)
+    var arrays: Array=source.surface_get_arrays(0)
+    var points: PackedVector3Array=arrays[Mesh.ARRAY_VERTEX]
+    var normals: PackedVector3Array=arrays[Mesh.ARRAY_NORMAL]
+    for i in range(points.size()):
+        var p: Vector3=points[i]
+        var n: Vector3=normals[i]
+        var t: float=clampf((p.y+0.921)/0.258,0.0,1.0)
+        p.z+=0.086*t*t
+        points[i]=p
+        normals[i]=Vector3(n.x,n.y-0.172*t*n.z/0.258,n.z).normalized()
+    arrays[Mesh.ARRAY_VERTEX]=points
+    arrays[Mesh.ARRAY_NORMAL]=normals
+    var result:=ArrayMesh.new()
+    result.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES,arrays)
+    return result
+
 static func _sculpt_contact_links(model: Node3D, hero: bool) -> bool:
     var sleeve: ArrayMesh=V13._lathe([
-        Vector3(0.067,-0.5,0.071),
-        Vector3(0.076,-0.37,0.075),
-        Vector3(0.073,-0.20,0.071),
-        Vector3(0.059,-0.04,0.063),
-        Vector3(0.063,0.12,0.066),
-        Vector3(0.053,0.29,0.055),
-        Vector3(0.050,0.5,0.052)
+        Vector3(0.082,-0.5,0.085),
+        Vector3(0.100,-0.37,0.095),
+        Vector3(0.097,-0.20,0.091),
+        Vector3(0.086,-0.04,0.083),
+        Vector3(0.076,0.12,0.074),
+        Vector3(0.065,0.29,0.064),
+        Vector3(0.059,0.5,0.058)
     ],hero)
     for side in [-1,1]:
         var link: MeshInstance3D=_find(model,LINK_PREFIX+"_%d"%side)
@@ -1536,7 +1561,7 @@ static func apply(model: Node3D, hero: bool) -> bool:
             return false
         if not _change(model,SHOULDER+suffix,
                 _shoulder_anatomy(_forged_profile(V13._lathe(shoulder_rings,hero),0.19),side),
-                Vector3(0.68,0.55,0.65),
+                Vector3(0.64,0.55,0.59),
                 Vector3(0.0,-0.083,-0.065)):
             return false
         # Place existing painted faction shoulder strip ON the outer
@@ -1588,17 +1613,23 @@ static func apply(model: Node3D, hero: bool) -> bool:
                     0.018,hero),Vector3.ONE,
                 Vector3(float(side)*0.145,-0.266,-0.011)):
             return false
+        var boot: MeshInstance3D=_find(model,V16.BOOT+suffix)
+        if boot==null or boot.get_parent()!=leg:
+            return false
+        if not _change(model,boot.name,_boot_upper(hero),Vector3.ONE,
+                Vector3(0,0,-0.14)):
+            return false
         var sole: MeshInstance3D=_find(model,SOLE+suffix)
         if sole==null or sole.get_parent()!=leg:
             return false
         if not _change(model,SOLE+suffix,
                 _forged_profile(V13._lathe([
-                    Vector3(0.099,-0.045,0.194),
-                    Vector3(0.130,-0.028,0.226),
-                    Vector3(0.132,0.014,0.229),
-                    Vector3(0.116,0.043,0.210)
+                    Vector3(0.110,-0.045,0.192),
+                    Vector3(0.130,-0.035,0.211),
+                    Vector3(0.131,0.022,0.214),
+                    Vector3(0.119,0.040,0.204)
                 ],hero),0.23),Vector3.ONE,
-                Vector3(0,-0.930,-0.128)):
+                Vector3(0,-0.930,-0.145)):
             return false
 
         # Replace the isolated sphere at the toe with a low, reinforced
@@ -1607,12 +1638,12 @@ static func apply(model: Node3D, hero: bool) -> bool:
         if toe==null or toe.get_parent()!=leg:
             return false
         if not _change(model,TOE+suffix,_forged_profile(V13._lathe([
-                    Vector3(0.091,-0.066,0.074),
-                    Vector3(0.119,-0.042,0.105),
-                    Vector3(0.120,0.006,0.112),
-                    Vector3(0.093,0.043,0.093),
-                    Vector3(0.049,0.061,0.052)
-                ],hero),0.20),Vector3.ONE,Vector3(0,-0.850,-0.300)):
+                    Vector3(0.095,-0.065,0.077),
+                    Vector3(0.118,-0.043,0.097),
+                    Vector3(0.117,-0.008,0.099),
+                    Vector3(0.103,0.030,0.088),
+                    Vector3(0.071,0.052,0.062)
+                ],hero),0.23),Vector3.ONE,Vector3(0,-0.850,-0.264)):
             return false
 
         # Existing rear case gets a more structured rounded housing,
