@@ -977,26 +977,83 @@ static func _destroyer_shell(root: Node3D, label: String, stations: Array,
         tint: Color) -> MeshInstance3D:
     var points: Array = []
     var faces: Array = []
+    # Chamfer all transverse corners with a pair of nearby points.
+    # Interpolation preserves the established silhouette and contact heights.
     for station in stations:
         var z: float = station[0]
         var w: float = station[1]
         var bottom: float = station[2]
         var top: float = station[3]
-        points.append_array([
-            Vector3(-w * 0.86, top, z), Vector3(w * 0.86, top, z),
-            Vector3(w, lerpf(bottom, top, 0.64), z),
-            Vector3(w * 0.67, bottom, z), Vector3(-w * 0.67, bottom, z),
-            Vector3(-w, lerpf(bottom, top, 0.64), z)])
-    for ring in range(stations.size() - 1):
+        var ring: Array[Vector3] = [
+            Vector3(-w*0.86,top,z),Vector3(w*0.86,top,z),
+            Vector3(w,lerpf(bottom,top,0.64),z),
+            Vector3(w*0.67,bottom,z),Vector3(-w*0.67,bottom,z),
+            Vector3(-w,lerpf(bottom,top,0.64),z)]
         for i in range(6):
-            var j: int = (i + 1) % 6
-            var a: int = ring * 6
-            var b: int = a + 6
-            faces.append([a + i, a + j, b + j, b + i])
-    faces.append([5,4,3,2,1,0])
-    var last: int = (stations.size() - 1) * 6
-    faces.append([last,last+1,last+2,last+3,last+4,last+5])
+            points.append(ring[i].lerp(ring[(i+5)%6],0.10))
+            points.append(ring[i].lerp(ring[(i+1)%6],0.10))
+    var count: int = 12
+    for ring in range(stations.size()-1):
+        for i in range(count):
+            var j: int = (i+1)%count
+            var a: int = ring*count
+            var b: int = a+count
+            faces.append([a+i,a+j,b+j,b+i])
+    var front: Array = []
+    var rear: Array = []
+    var last: int = (stations.size()-1)*count
+    for i in range(count):
+        front.append(count-1-i)
+        rear.append(last+i)
+    faces.append(front)
+    faces.append(rear)
     return _hull(root,label,points,faces,tint)
+
+# Only the naval model receives this opaque surface treatment. No textures,
+# transparency, real-world systems or battle logic are introduced.
+static func _destroyer_finish(node: Node, detail: bool) -> void:
+    if node is MeshInstance3D:
+        var part: MeshInstance3D = node as MeshInstance3D
+        var mat: StandardMaterial3D = part.material_override as StandardMaterial3D
+        if mat != null:
+            var label: String = str(part.name)
+            mat.transparency = BaseMaterial3D.TRANSPARENCY_DISABLED
+            mat.cull_mode = BaseMaterial3D.CULL_BACK
+            mat.metallic = 0.32
+            mat.roughness = 0.58
+            if label.begins_with("Cristal") or label.begins_with("Lente"):
+                mat.metallic = 0.12
+                mat.roughness = 0.24
+            elif label.begins_with("Faccion"):
+                mat.metallic = 0.13
+                mat.roughness = 0.54
+            elif label.contains("Pasamanos") or label.contains("Amarre") or label.contains("Tirador"):
+                mat.metallic = 0.60
+                mat.roughness = 0.43
+            elif label.contains("Helipuerto") or label.contains("Estela"):
+                mat.metallic = 0.0
+                mat.roughness = 0.88
+            elif label.contains("CascoNaval"):
+                mat.metallic = 0.24
+                mat.roughness = 0.66
+            part.set_meta("destroyer_surface_v15",true)
+    for child in node.get_children():
+        _destroyer_finish(child,detail)
+
+# Closed conformal enamel bands following the silhouette, instead of
+# detached rectangular patches. The outer hull remains one sealed mesh.
+static func _destroyer_enamel(root: Node3D, stations: Array) -> void:
+    var stripe: Array = []
+    for station in stations:
+        var y: float = lerpf(float(station[2]),float(station[3]),0.64)
+        stripe.append([station[0],float(station[1])*1.008,y-0.024,y+0.038])
+    _destroyer_shell(root,"FaccionFranjaNaval",stripe,ARMOR)
+    for side in [-1,1]:
+        # The tapered center plate sits against the stripe and shares its color family.
+        _box(root,"FaccionIdentidadNaval_%d" % side,
+            Vector3(float(side)*0.892,0.548,0.02),
+            Vector3(0.040,0.075,0.33),ARMOR)
+
 
 # Native solid bridge: compact footprint between existing forward deck
 # equipment and aft landing area. Windows are opaque inserts, not planes.
@@ -1253,16 +1310,8 @@ static func _destroyer(root: Node3D, art_level: int = 10) -> void:
     for station in stations:
         deck_stations.append([station[0],station[1]*0.86,0.738,0.802])
     _destroyer_shell(root,"Cubierta",deck_stations,ARMOR)
-    # Thin closed enamel plates along the broad central hull. Their outer
-    # surfaces slightly overlap the tapered side rather than floating.
-    for side in [-1,1]:
-        _box(root,"FaccionFranjaNaval_%d" % side,
-            Vector3(float(side)*0.744,0.69,0.02),
-            Vector3(0.07,0.095,1.32),ARMOR)
-        _box(root,"FaccionIdentidadNaval_%d" % side,
-            Vector3(float(side)*0.775,0.76,0.02),
-            Vector3(0.07,0.10,0.48),ARMOR)
-    root.set_meta("destroyer_art_revision","1.4")
+    _destroyer_enamel(root,stations)
+    root.set_meta("destroyer_art_revision","1.5")
     _destroyer_bridge(root)
     _destroyer_navigation(root,art_level)
     _destroyer_deck_equipment(root,art_level)
@@ -1392,6 +1441,7 @@ static func build(role: String, faction: int = -1, finish_enabled: bool = true, 
         "destroyer":
             _destroyer(model,art_level)
             apply_faction_palette(model,faction)
+            _destroyer_finish(model,art_level >= 13)
         "logistics_mobile":
             # G16 remains Studio visual-only. Tactical role logistics is
             # unchanged; V2 is genuine Godot mesh detail on the same V1 rig.
