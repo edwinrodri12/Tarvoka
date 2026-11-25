@@ -85,9 +85,20 @@ static func apply(root:Node3D,color:Color,hero:bool)->bool:
             Vector3(sg*1.31,1.13,-0.098),
             Vector3(0.39,0.032,0.42),faction,Vector3(0,0,sg*2.0))
         var tip_material:Material=light_port if side<0 else light_starboard
-        _box(airframe,WING_LIGHT_L if side<0 else WING_LIGHT_R,
-            Vector3(sg*1.69,1.11,-0.22),
-            Vector3(0.060,0.050,0.091),tip_material)
+        # V24: rounded opaque navigation lamp, seated in the wing edge.
+        # Keep its exact ID for D4 removal and D0 repair.
+        var lamp:=MeshInstance3D.new()
+        lamp.name=WING_LIGHT_L if side<0 else WING_LIGHT_R
+        var lens_shape:=SphereMesh.new()
+        lens_shape.radius=0.5
+        lens_shape.height=1.0
+        lens_shape.radial_segments=12 if hero else 8
+        lens_shape.rings=5 if hero else 3
+        lamp.mesh=lens_shape
+        lamp.material_override=tip_material
+        lamp.position=Vector3(sg*1.69,1.105,-0.22)
+        lamp.scale=Vector3(0.060,0.050,0.091)
+        airframe.add_child(lamp)
         _box(airframe,"A01_V2_TailServoBridge_"+tag,
             Vector3(sg*0.47,0.91,1.36),
             Vector3(0.13,0.15,0.13),graphite)
