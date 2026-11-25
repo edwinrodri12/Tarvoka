@@ -955,13 +955,35 @@ func _run() -> void:
             Models.pose_model("infantry_engineer",hero,kind,0.18)
             await snapshot(viewport,"v17_impact_"+kind)
         Models.restore_model_pose("infantry_engineer",hero)
+        # Compare real rendered pixels, not just visible_instance_count:
+        # an enabled particle batch can still be hidden behind the model.
         for spec in [["move",0.40],["hit_explosive",0.55]]:
             Models.pose_model("infantry_engineer",hero,str(spec[0]),float(spec[1]))
-            await snapshot(viewport,"v17_fx_"+str(spec[0]))
+            var with_fx: Image=await snapshot(viewport,"v17_fx_"+str(spec[0]))
+            var batch: MultiMeshInstance3D=hero.get_node_or_null(V17.EFFECT_BATCH) as MultiMeshInstance3D
+            if batch!=null:
+                batch.visible=false
+                await process_frame
+                await process_frame
+                var without_fx: Image=viewport.get_texture().get_image()
+                var changed: int=image_diff(with_fx,without_fx)
+                print("V17 visible FX pixels ",str(spec[0]),": ",changed)
+                check(changed>=12,"transient FX genuinely visible in native image "+str(spec[0]))
+                batch.visible=true
         for stage in [3,4]:
             DamageFamily.set_damage(hero,stage)
             Models.pose_model("infantry_engineer",hero,"idle",0.55)
-            await snapshot(viewport,"v17_smoke_D"+str(stage))
+            var with_smoke: Image=await snapshot(viewport,"v17_smoke_D"+str(stage))
+            var batch: MultiMeshInstance3D=hero.get_node_or_null(V17.EFFECT_BATCH) as MultiMeshInstance3D
+            if batch!=null:
+                batch.visible=false
+                await process_frame
+                await process_frame
+                var without_smoke: Image=viewport.get_texture().get_image()
+                var changed: int=image_diff(with_smoke,without_smoke)
+                print("V17 visible smoke pixels D",stage,": ",changed)
+                check(changed>=40,"critical smoke actually visible beyond silhouette D"+str(stage))
+                batch.visible=true
         Models.restore_model_pose("infantry_engineer",hero)
         hero.queue_free()
         await process_frame

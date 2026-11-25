@@ -1124,7 +1124,10 @@ static func _damage_surface(part: MeshInstance3D,stage: int) -> void:
     var variants: Dictionary=part.get_meta(DAMAGE_MATERIALS,{})
     if not variants.has(stage):
         var variant: StandardMaterial3D=base.duplicate() as StandardMaterial3D
-        var amount: float=[0.0,0.07,0.16,0.28,0.42][stage]
+        # Native 360 renders showed that the original darkening was
+        # barely readable at tactical scale. Preserve faction accents
+        # while increasing contrast on selected non-paint armor.
+        var amount: float=[0.0,0.12,0.25,0.43,0.58][stage]
         var pigment: Color=base.albedo_color
         variant.albedo_color=Color(pigment.r*(1.0-amount),
             pigment.g*(1.0-amount),pigment.b*(1.0-amount),pigment.a)
@@ -1202,14 +1205,18 @@ static func sync_combat_fx(model: Node3D,kind: String,progress: float) -> void:
     # Reserve part of the same batch for persistent smoke in D3/D4.
     if smoke:
         var count: int=4 if hero else 2
-        var origin: Vector3=_fx_anchor(model,"TorsoRig",Vector3(0.12,0.05,0.10))
+        # The former chest anchor was occluded by the torso, shoulders
+        # and folded shield in the actual native images. Emit from the
+        # upper exterior equipment edge, then rise in model space.
+        var origin: Vector3=_fx_anchor(model,"TorsoRig",
+            Vector3(-0.44,0.25,0.08) if stage==3 else Vector3(-0.23,0.12,-0.30))
         for i in range(count):
             var p: float=fposmod(t+float(i)/float(count),1.0)
-            var at: Vector3=origin+Vector3(0.10*sin(float(i)*2.4+p*3.0),
-                0.19+0.55*p,0.10*cos(float(i)*2.4+p*3.0))
-            var size: float=0.11+0.17*p
-            var shade: Color=Color("#62666a").lerp(Color("#939599"),p)
-            pool.set_instance_transform(used,Transform3D(Basis.from_scale(Vector3(size,size*1.15,size)),at))
+            var at: Vector3=origin+Vector3(-0.08-0.16*p+0.07*sin(float(i)*2.4+p*3.0),
+                0.25+0.94*p,0.08*cos(float(i)*2.4+p*3.0))
+            var size: float=0.17+0.22*p
+            var shade: Color=Color("#484e53").lerp(Color("#969b9e"),p)
+            pool.set_instance_transform(used,Transform3D(Basis.from_scale(Vector3(size,size*1.22,size)),at))
             pool.set_instance_color(used,shade)
             used+=1
     if impact or dust:
@@ -1225,8 +1232,13 @@ static func sync_combat_fx(model: Node3D,kind: String,progress: float) -> void:
             var at: Vector3=origin+Vector3(cos(angle)*spread,
                 (0.10+0.20*p if dust else sin(angle)*spread),
                 sin(angle)*spread if dust else -0.08-0.18*p)
-            var size: float=(0.14 if blast else 0.075)*(1.0-0.65*p)
-            var shade: Color=Color("#a69478") if dust else (
+            var size: float=(0.19 if blast else (0.17 if dust else 0.085))*(1.0-0.55*p)
+            if dust:
+                # Separate the dust from the boot silhouette; stay near ground.
+                var side: float=-1.0 if i%2==0 else 1.0
+                at=Vector3(side*(0.23+0.23*p),0.08+0.13*p,
+                    0.12+0.30*p+0.08*sin(angle))
+            var shade: Color=Color("#b6a486") if dust else (
                 Color("#e0a15f").lerp(Color("#777879"),p) if blast else Color("#e4c69a"))
             pool.set_instance_transform(used,Transform3D(Basis.from_scale(Vector3.ONE*size),at))
             pool.set_instance_color(used,shade)
