@@ -284,6 +284,24 @@ func _run() -> void:
             damage.select(0)
             damage.item_selected.emit(0)
             await _frames(4)
+        if i == 2:
+            _check(camp.get_meta("defense_art_v3", 0) == 3, "Defense V3 in original studio")
+            var defense_finish: OptionButton = studio.get("camp_defense_finish") as OptionButton
+            _check(defense_finish != null and defense_finish.visible, "Defense comparison visible")
+            studio.call("_camp_pose", 0.0)
+            var barrier: Node3D = camp.get_node("EquipamientoDesplegable/DefenseV2_EngineerOutpost/V2_BarreraArticulada_-1") as Node3D
+            _check(absf(barrier.rotation_degrees.z + 78.0) < 0.01 and absf(barrier.rotation_degrees.y) < 0.01, "Physical axle folds")
+            studio.call("_camp_pose", 1.0)
+            defense_finish.select(1)
+            defense_finish.item_selected.emit(1)
+            await _frames(4)
+            camp = studio.get("model_root") as Node3D
+            _check(not camp.has_meta("defense_art_v3"), "V2 baseline retained")
+            defense_finish.select(0)
+            defense_finish.item_selected.emit(0)
+            await _frames(4)
+            camp = studio.get("model_root") as Node3D
+            _check(camp.get_meta("defense_art_v3", 0) == 3, "V3 restored")
         if i == 3:
             studio.call("_camp_pose", 0.0)
             await _shot(studio, "medico_plegado_en_visor_unificado.png")

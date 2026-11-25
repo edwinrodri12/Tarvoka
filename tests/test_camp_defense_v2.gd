@@ -42,7 +42,7 @@ func _part_position_in_core(part: Node3D, core: Node3D) -> Vector3:
     return full_transform.origin
 
 func _audit(faction: int, lod: int, damage: int) -> Node3D:
-    var camp: Node3D = Art.build("defensivo", faction, lod, damage)
+    var camp: Node3D = Art.build("defensivo", faction, lod, damage, true, true, false)
     check(camp != null, "A defensive camp must build")
     if camp == null:
         return null
