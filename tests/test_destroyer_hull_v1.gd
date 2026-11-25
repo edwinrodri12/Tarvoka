@@ -26,6 +26,24 @@ func _closed(mesh: Mesh) -> bool:
             return false
     return true
 
+# Godot uses clockwise front faces. A closed outward-wound volume
+# therefore has negative signed volume under the mathematical convention.
+func _outward(mesh: Mesh) -> bool:
+    var v: PackedVector3Array = mesh.get_faces()
+    var volume: float = 0.0
+    for i in range(0,v.size(),3):
+        volume += v[i].dot(v[i+1].cross(v[i+2])) / 6.0
+    return volume < -0.0000001
+
+func _check_surface(node: Node) -> void:
+    if node is MeshInstance3D:
+        var part: MeshInstance3D = node as MeshInstance3D
+        var mat: StandardMaterial3D = part.material_override as StandardMaterial3D
+        check(part.get_meta("destroyer_surface_v15",false), "Naval surface finish: " + str(part.name))
+        check(mat != null and mat.transparency == BaseMaterial3D.TRANSPARENCY_DISABLED and mat.cull_mode == BaseMaterial3D.CULL_BACK, "Opaque material: " + str(part.name))
+    for child in node.get_children():
+        _check_surface(child)
+
 func _run() -> void:
     for faction in range(-1, 8):
         for lod in [8, 13]:
@@ -33,14 +51,19 @@ func _run() -> void:
             check(model != null, "Destroyer builds")
             if model == null:
                 continue
-            check(model.get_meta("destroyer_art_revision", "") == "1.4", "V1.4 aft active")
-            for key in ["CascoNaval", "Cubierta", "Superestructura/ZocaloNaval", "Superestructura/CarcasaInferior", "Superestructura/Puente", "Superestructura/TechoPuente", "TorretaNavalPivot/CarcasaTorreta", "TorreMastil/CarcasaMastil", "TorreMastil/RadarPivot/Radar", "ConjuntoPopa/Helipuerto", "ConjuntoPopa/Propulsion_-1/TimonPivot/TimonVisual", "ConjuntoPopa/Propulsion_1/TimonPivot/TimonVisual"]:
+            check(model.get_meta("destroyer_art_revision", "") == "1.5", "V1.5 finish active")
+            for key in ["CascoNaval", "Cubierta", "FaccionFranjaNaval", "Superestructura/ZocaloNaval", "Superestructura/CarcasaInferior", "Superestructura/Puente", "Superestructura/TechoPuente", "TorretaNavalPivot/CarcasaTorreta", "TorreMastil/CarcasaMastil", "TorreMastil/RadarPivot/Radar", "ConjuntoPopa/Helipuerto", "ConjuntoPopa/Propulsion_-1/TimonPivot/TimonVisual", "ConjuntoPopa/Propulsion_1/TimonPivot/TimonVisual"]:
                 var part: MeshInstance3D = model.get_node_or_null(key) as MeshInstance3D
                 check(part != null, "Native " + key)
                 if part != null:
                     check(_closed(part.mesh), "Closed shell " + key)
+                    check(_outward(part.mesh), "Outward winding " + key)
                     var mat: StandardMaterial3D = part.material_override as StandardMaterial3D
                     check(mat != null and mat.transparency == BaseMaterial3D.TRANSPARENCY_DISABLED and mat.cull_mode == BaseMaterial3D.CULL_BACK, "Opaque outward shell")
+            _check_surface(model)
+            var hull: MeshInstance3D = model.get_node_or_null("CascoNaval") as MeshInstance3D
+            if hull != null:
+                check(hull.mesh.get_faces().size() == 188*3, "Twelve-point chamfered hull profile")
             for side in [-1, 1]:
                 var badge: MeshInstance3D = model.get_node_or_null("FaccionIdentidadNaval_%d" % side) as MeshInstance3D
                 check(badge != null, "Faction markings on both sides")
@@ -122,7 +145,7 @@ func _run() -> void:
     if failures != 0:
         quit(1)
         return
-    print("PASS DESTROYER HULL V1.4: 18 variants, 10 PNGs")
+    print("PASS DESTROYER HULL V1.5: 18 variants, 12 PNGs")
     quit(0)
 
 func _render() -> void:
@@ -157,12 +180,15 @@ func _render() -> void:
         view.queue_free()
         return
     stage.add_child(model)
-    var angles: Array[Vector3] = [Vector3(5,4,-6),Vector3(-5,4,6),Vector3(3,2,-3),Vector3(-3,2,3),Vector3(2.6,2.8,-3.8),Vector3(-2.4,3.0,-2.0),Vector3(2.4,2.6,-1.7),Vector3(-2.4,2.5,2.1),Vector3(2.8,2.7,3.8),Vector3(-2.2,-1.4,3.2)]
-    for i in range(10):
+    var angles: Array[Vector3] = [Vector3(5,4,-6),Vector3(-5,4,6),Vector3(3,2,-3),Vector3(-3,2,3),Vector3(2.6,2.8,-3.8),Vector3(-2.4,3.0,-2.0),Vector3(2.4,2.6,-1.7),Vector3(-2.4,2.5,2.1),Vector3(2.8,2.7,3.8),Vector3(-2.2,-1.4,3.2),Vector3(3.0,0.45,-0.8),Vector3(-3.0,0.55,0.9)]
+    for i in range(12):
         camera.size = 5.1 if i < 2 else (2.0 if i < 4 else (1.85 if i < 6 else 1.4))
         camera.position = angles[i]
         camera.look_at(Vector3(0,0.7,0.15) if i < 2 else (Vector3(0,0.96,0.3) if i < 4 else (Vector3(0,0.82,-0.78) if i < 6 else Vector3(0,1.45,0.22))),Vector3.UP)
-        if i >= 8:
+        if i >= 10:
+            camera.size = 2.1
+            camera.look_at(Vector3(0,0.44,0.02),Vector3.UP)
+        elif i >= 8:
             camera.look_at(Vector3(0,0.55 if i == 8 else 0.04,1.03),Vector3.UP)
             model.get_node("EstelaEspuma").hide()
             Art.pose_destroyer_aft(model,0.25*float(i-8),0.5)
@@ -174,5 +200,5 @@ func _render() -> void:
         var img: Image = view.get_texture().get_image()
         check(img != null and not img.is_empty(), "Real Godot image")
         if img != null and not img.is_empty():
-            check(img.save_png(output + "/destroyer_v14_%d.png" % i) == OK, "Capture saved")
+            check(img.save_png(output + "/destroyer_v15_%d.png" % i) == OK, "Capture saved")
     view.queue_free()
