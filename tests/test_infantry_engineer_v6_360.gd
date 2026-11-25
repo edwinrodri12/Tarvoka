@@ -207,12 +207,17 @@ func _run() -> void:
                                 wrist_radius=maxf(wrist_radius,radius)
                             elif absf(p.y+0.5)<0.00001:
                                 elbow_radius=maxf(elbow_radius,radius)
-                        check(wrist_radius>0.0 and wrist_radius<=0.055 and
-                            elbow_radius>0.0 and elbow_radius<=0.075 and
-                            max_radius<=0.077 and
+                        # The revised V17 anatomy has a fuller forearm,
+                        # tapered wrist and elbow ends at the same contact
+                        # coordinates. The original V10 cylinder is still
+                        # independently checked above with its old limits.
+                        check(wrist_radius>=0.055 and wrist_radius<=0.061 and
+                            elbow_radius>=0.080 and elbow_radius<=0.087 and
+                            max_radius>=0.098 and max_radius<=0.104 and
+                            wrist_radius<elbow_radius and elbow_radius<max_radius and
                             absf(bounds.position.y+0.5)<0.00001 and
                             absf(bounds.size.y-1.0)<0.00001,
-                            "V17 retains slender wrist/elbow, bounded fold relief and exact unit length")
+                            "V17 anatomical forearm tapers to wrist and elbow while preserving exact unit length")
                 check(anatomy!=null and anatomy.mesh is SphereMesh and
                     anatomy.get_parent().name=="TorsoRig",
                     "V10 anatomical rib fairings have solid native PBR geometry")
