@@ -58,12 +58,13 @@ func _audit(faction: int, lod: int, damage: int) -> Node3D:
     if camp == null:
         return null
     audits += 1
-    check(camp.get_meta("medical_art_v3", 0) == 3 and camp.get_meta("medical_art_revision", "") == "3.3" and camp.get_meta("no_gameplay_effects", false), "Art only")
+    check(camp.get_meta("medical_art_v3", 0) == 3 and camp.get_meta("medical_art_revision", "") == "3.4" and camp.get_meta("no_gameplay_effects", false), "Art only")
     check(camp.get_meta("builder_role", "") == "infantry_medic", "Medic identity")
     var core: Node3D = camp.get_node_or_null("EquipamientoDesplegable/" + Medical.CORE) as Node3D
     if damage == 3:
         check(core == null and camp.has_node("V3_MedicalWreck/V3_FallenRoof_1"), "Collapsed roof, no standing clinic")
         check(not Sculpt.inspect_interior(camp, true), "Destroyed clinic cannot open")
+        check(camp.has_node("V3_MedicalWreck/V34_CollapsedTrolley") and camp.has_node("V3_MedicalWreck/V34_BrokenMonitor") and camp.has_node("V3_MedicalWreck/V34_FallenIV"), "Recognizable clinical wreckage")
     else:
         check(core != null, "Clinic present")
         if core != null:
@@ -133,6 +134,21 @@ func _audit(faction: int, lod: int, damage: int) -> Node3D:
             check(absf(upper.position.y - extended_y) < 0.001, "IV returns to same pose")
             check(Sculpt.monitor_frame(camp, 0.25) == (damage < 2), "Monitor cycle available only when intact")
             check(Art.pose_deploy(camp, 1.0), "Restore standard pose after monitor cycle")
+    if core != null:
+        check(core.has_node("V2_CarpaDesmontable/V34_SurfaceWear") == (damage >= 1), "D1 physical wear")
+        check(core.has_node("V2_CarpaDesmontable/V34_BentBraceLow") == (damage >= 2), "D2 bent frame")
+        check(core.has_node("V2_MonitorPortatil/V32_DisplayPivot/V34_ScreenFracture") == (damage >= 2), "D2 broken display")
+    var fx: Node3D = camp.get_node(Sculpt.FX_ROOT) as Node3D
+    check(fx != null and fx.get_meta("presentation_only", false), "Dedicated visual effect rig")
+    if fx != null:
+        check(Sculpt.damage_fx_pose(camp, "bullet", 0.07) == (damage < 3), "Bullet effect damage guard")
+        if damage < 3:
+            check(fx.get_node("Flash").visible, "Impact flash")
+            check(Sculpt.damage_fx_pose(camp, "blast", 0.30), "Explosion pose")
+            check(fx.get_node("Chips/Chip_0").visible, "Solid fragments")
+        check(Sculpt.damage_fx_pose(camp, "clear", 0.0), "Clear effects")
+        check(not fx.get_node("Flash").visible and not fx.get_node("Smoke/Puff_0").visible, "No residual particles after clear")
+        check(Sculpt.damage_fx_pose(camp, "idle", 0.34), "Restore persistent damage")
     var parts: Array[MeshInstance3D] = []
     _meshes(camp, parts)
     var count: int = 0
@@ -263,16 +279,23 @@ func _run() -> void:
                     camera.position = Vector3(0, 12.5, -0.12)
                     camera.look_at(Vector3(0, 0, 0), Vector3(0, 0, -1))
                     await _capture(viewport, "medical_top_down.png")
+                    camera.position = VIEWS[0]
+                    camera.look_at(Vector3(0, 1.10, 0), Vector3.UP)
+                    Sculpt.damage_fx_pose(camp, "bullet", 0.07)
+                    await _capture(viewport, "medical_v34_bullet.png")
+                    Sculpt.damage_fx_pose(camp, "blast", 0.30)
+                    await _capture(viewport, "medical_v34_blast.png")
+                    Sculpt.damage_fx_pose(camp, "clear", 0.0)
                     stage.remove_child(camp)
                 camp.free()
     check(audits == 72, "Exact 72 faction, LOD and damage variants")
-    check(screenshots == 31,
-        "16 diagonal + 4 packed + 3 damage + 1 overhead + 2 interiors + 2 trolley + 3 equipment PNG")
+    check(screenshots == 33,
+        "16 diagonal + 4 packed + 3 damage + 1 overhead + 2 interiors + 2 trolley + 3 equipment + 2 impact PNG")
     viewport.queue_free()
     await process_frame
     if failures > 0:
         printerr("FAIL MEDICAL CAMP V3 NATIVE: %d failures" % failures)
         quit(1)
         return
-    print("PASS MEDICAL CAMP V3 NATIVE: 72 audits, 31 PNGs")
+    print("PASS MEDICAL CAMP V3 NATIVE: 72 audits, 33 PNGs")
     quit(0)
