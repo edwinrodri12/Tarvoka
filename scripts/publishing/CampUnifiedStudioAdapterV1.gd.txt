@@ -19,7 +19,7 @@ const CAMP_LABELS := [
     "Campamento de Suministros · V4.5",
     "Campamento de Reconocimiento · V3.5",
     "Campamento Defensivo · V3.5",
-    "Campamento Médico · V3.1"
+    "Campamento Médico · V3.2"
 ]
 var camp_controls: VBoxContainer
 var camp_faction_picker: OptionButton
@@ -130,7 +130,7 @@ func _camp_create_controls() -> void:
     camp_controls.add_child(camp_defense_finish)
     camp_medical_finish = OptionButton.new()
     camp_medical_finish.name = "MedicoComparacionV2V3"
-    camp_medical_finish.add_item("Médico V3.1 · camilla clínica")
+    camp_medical_finish.add_item("Médico V3.2 · equipamiento clínico")
     camp_medical_finish.add_item("Médico V2 · comparación anterior")
     camp_medical_finish.select(0)
     camp_medical_finish.item_selected.connect(_camp_option_changed)
