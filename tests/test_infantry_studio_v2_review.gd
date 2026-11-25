@@ -51,6 +51,22 @@ func _run() -> void:
     must(original_preview!=null,"same preview root exists")
     must(role_picker!=null and faction_picker!=null,
         "same role and faction selectors remain available")
+    # Regression: the public review URL previously fell back to Bastion,
+    # even though the same manual Engineer selector was working.
+    for key in ["ingeniero","g05","infantry_engineer"," INGENIERO "]:
+        must(str(studio.call("_studio_role_from_link_key",key))=="infantry_engineer",
+            "public Engineer review URL selects G05: "+key)
+    must(str(studio.call("_studio_role_from_link_key","g16"))=="logistics_mobile" and
+        str(studio.call("_studio_role_from_link_key","a01"))=="uav_recon" and
+        str(studio.call("_studio_role_from_link_key","unknown"))=="apc",
+        "existing safe public review routes and fallback preserved")
+    var entry_role: String=str(studio.call("_studio_role_from_link_key","ingeniero"))
+    studio.call("_display_role",entry_role)
+    await process_frame
+    var entry_model: Node3D=studio.get("model_root") as Node3D
+    must(entry_model!=null and OuterV17.has_model(entry_model) and
+        str(studio.call("_infantry_review_edition"))=="V17",
+        "public Engineer entry resolves to actual current V17 geometry")
     for role in UNITS:
         studio.call("_display_role",role)
         await process_frame

@@ -354,6 +354,8 @@ func _studio_role_from_link_key(value:String) -> String:
             return "logistics_mobile"
         "a01", "uav_recon", "dron_recon":
             return "uav_recon"
+        "g05", "ingeniero", "infantry_engineer":
+            return "infantry_engineer"
         _:
             return "apc"
 
