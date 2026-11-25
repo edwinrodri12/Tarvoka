@@ -58,7 +58,7 @@ func _audit(faction: int, lod: int, damage: int) -> Node3D:
     if camp == null:
         return null
     audits += 1
-    check(camp.get_meta("medical_art_v3", 0) == 3 and camp.get_meta("medical_art_revision", "") == "3.0" and camp.get_meta("no_gameplay_effects", false), "Art only")
+    check(camp.get_meta("medical_art_v3", 0) == 3 and camp.get_meta("medical_art_revision", "") == "3.1" and camp.get_meta("no_gameplay_effects", false), "Art only")
     check(camp.get_meta("builder_role", "") == "infantry_medic", "Medic identity")
     var core: Node3D = camp.get_node_or_null("EquipamientoDesplegable/" + Medical.CORE) as Node3D
     if damage == 3:
@@ -84,6 +84,21 @@ func _audit(faction: int, lod: int, damage: int) -> Node3D:
                 check(Sculpt.inspect_interior(camp, false) and absf(left.rotation_degrees.z - 23.0) < 0.01, "Interior roof closes")
             else:
                 check(not tent.has_node("V2_CubiertaArticulada_1") and not Sculpt.inspect_interior(camp, true), "D2 missing right roof")
+            var bed: Node3D = core.get_node("V2_CamillaClinica") as Node3D
+            var back: Node3D = bed.get_node("V31_BackrestPivot") as Node3D
+            var mattress: MeshInstance3D = bed.get_node("V31_FixedMattress") as MeshInstance3D
+            check(_closed(mattress.mesh), "Volumetric sealed mattress")
+            for side in [-1, 1]:
+                for end in [-1, 1]:
+                    var tire: MeshInstance3D = bed.get_node("V31_CasterTire_%d_%d" % [side, end]) as MeshInstance3D
+                    check(tire.mesh is CylinderMesh and absf(tire.position.y - (tire.mesh as CylinderMesh).top_radius - 0.11) < 0.001, "Four casters rest on clinical floor")
+            var rail: Node3D = bed.get_node("V31_RailPivot_1") as Node3D
+            var back_size: Vector3 = (back.get_node("V31_BackrestCushion") as MeshInstance3D).mesh.get_aabb().size
+            check(Art.pose_deploy(camp, 0.0) and absf(back.rotation_degrees.x) < 0.01 and absf(rail.rotation_degrees.z + 65.0) < 0.01, "Rigid trolley joints fold")
+            check(Art.pose_deploy(camp, 1.0), "Restore trolley")
+            var limit: float = 0.35 if damage >= 2 else 1.0
+            check(absf(back.rotation_degrees.x + 28.0 * limit) < 0.01 and absf(rail.rotation_degrees.z + 65.0 * (1.0 - limit)) < 0.01, "Backrest and rail respect damage")
+            check((back.get_node("V31_BackrestCushion") as MeshInstance3D).mesh.get_aabb().size == back_size and back.scale == Vector3.ONE and rail.scale == Vector3.ONE, "No stretching of clinical equipment")
     var parts: Array[MeshInstance3D] = []
     _meshes(camp, parts)
     var count: int = 0
@@ -171,7 +186,17 @@ func _run() -> void:
                         camera.position = Vector3(-7.0, 5.0, 7.5)
                         camera.look_at(Vector3(0, 1.1, 1.4), Vector3.UP)
                         await _capture(viewport, "medical_v3_frame_rear.png")
+                        camera.size = 3.4
+                        camera.position = Vector3(3.2, 4.0, -3.1)
+                        camera.look_at(Vector3(1.18, 0.82, 0.67), Vector3.UP)
+                        await _capture(viewport, "medical_v31_trolley_raised.png")
                         Sculpt.inspect_interior(camp, false)
+                        Art.pose_deploy(camp, 0.0)
+                        Sculpt.inspect_interior(camp, true)
+                        await _capture(viewport, "medical_v31_trolley_folded.png")
+                        Sculpt.inspect_interior(camp, false)
+                        Art.pose_deploy(camp, 1.0)
+                        camera.size = 11.5
                     check(Art.pose_deploy(camp, 0.0),
                         "Packed camp state for visual inspection")
                     camera.position = VIEWS[0]
@@ -195,13 +220,13 @@ func _run() -> void:
                     stage.remove_child(camp)
                 camp.free()
     check(audits == 72, "Exact 72 faction, LOD and damage variants")
-    check(screenshots == 26,
-        "16 diagonal + 4 packed + 3 damage + 1 overhead PNG")
+    check(screenshots == 28,
+        "16 diagonal + 4 packed + 3 damage + 1 overhead + 2 interiors + 2 trolley PNG")
     viewport.queue_free()
     await process_frame
     if failures > 0:
         printerr("FAIL MEDICAL CAMP V3 NATIVE: %d failures" % failures)
         quit(1)
         return
-    print("PASS MEDICAL CAMP V3 NATIVE: 72 audits, 26 PNGs")
+    print("PASS MEDICAL CAMP V3 NATIVE: 72 audits, 28 PNGs")
     quit(0)
