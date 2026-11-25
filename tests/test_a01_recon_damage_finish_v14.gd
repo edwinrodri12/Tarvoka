@@ -461,6 +461,38 @@ func _run()->void:
         vp.remove_child(inspected)
         inspected.free()
     verify(v16_captures==12,"12 real V16 360, join closeups and LOD8 PNGs")
+    # V28: fixed geometry, varied directional light for continuity inspection.
+    var light_dir:String="res://build/qa/a01-v28"
+    verify(DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(light_dir))==OK,
+        "V28 lighting audit directory")
+    var lighting:Array=[
+        ["key-left",Vector3(-20,-65,0),Vector3(4.2,3.6,-4.7),Vector3(0,0.96,0),1.55],
+        ["key-right",Vector3(-20,65,0),Vector3(4.2,3.6,-4.7),Vector3(0,0.96,0),1.55],
+        ["raking-top",Vector3(-8,95,0),Vector3(0,6.0,-0.8),Vector3(0,0.98,0),1.45],
+        ["underbody",Vector3(35,-25,0),Vector3(0,-4.0,2.4),Vector3(0,0.92,0),1.25]]
+    var lighting_captures:int=0
+    for shot in lighting:
+        var reviewed:Node3D=Models.build("uav_recon",0,true,13)
+        verify(reviewed!=null,"V28 real native airframe under alternate lighting")
+        if reviewed==null:
+            continue
+        vp.add_child(reviewed)
+        sun.rotation_degrees=shot[1]
+        sun.light_energy=float(shot[4])
+        env.ambient_light_energy=0.45
+        camera.position=shot[2]
+        camera.size=3.9
+        camera.look_at(shot[3],Vector3.UP)
+        await process_frame
+        await process_frame
+        await process_frame
+        var image:Image=vp.get_texture().get_image()
+        if image!=null and not image.is_empty() and image.save_png(
+                light_dir+"/a01-v28-"+str(shot[0])+".png")==OK:
+            lighting_captures+=1
+        vp.remove_child(reviewed)
+        reviewed.free()
+    verify(lighting_captures==4,"V28 four real directional-light inspection PNGs")
     verify(Arsenal.profile("uav_recon")==catalog,"cost/vision/fog/combat unchanged")
     vp.queue_free()
     if failures==0:

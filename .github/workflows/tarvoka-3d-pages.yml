@@ -2698,6 +2698,7 @@ jobs:
             build/qa/a01-v13/*.png
             build/qa/a01-v14/*.png
             build/qa/a01-v16/*.png
+            build/qa/a01-v28/*.png
           if-no-files-found: warn
           retention-days: 14
 

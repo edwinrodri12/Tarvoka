@@ -61,11 +61,14 @@ static func _hull_pigment(p:Vector3,faction:Color)->Color:
     var d:Vector2=_body_dimensions(p.z)
     var lateral:float=absf(p.x)/maxf(d.x,0.001)
     var elevation:float=(p.y-_center_y(p.z))/maxf(d.y,0.001)
-    var base:Color=Color("#53636e").lerp(Color("#91a0aa"),
+    var base:Color=Color("#627580").lerp(Color("#91a0aa"),
         smoothstep(-0.85,0.55,elevation))
     var axial:float=smoothstep(-1.30,-0.57,p.z)*(1.0-smoothstep(0.57,1.16,p.z))
     var shoulder:float=smoothstep(0.42,0.90,lateral)*smoothstep(-0.62,0.35,elevation)
-    var result:Color=base.lerp(faction,0.66*axial*shoulder)
+    # V28: blend shoulder tint into the upper enamel footprint.
+    var crown:float=smoothstep(0.40,0.82,elevation)
+    var crown_span:float=smoothstep(-0.94,-0.57,p.z)*(1.0-smoothstep(0.57,0.97,p.z))
+    var result:Color=base.lerp(faction,maxf(0.66*axial*shoulder,0.88*crown*crown_span))
     result.a=1.0
     return result
 
@@ -145,8 +148,8 @@ static func _dorsal_skin(body:Node3D,paint:Material,hero:bool)->MeshInstance3D:
             var a:float=deg_to_rad(float(angle))
             var normal:=Vector3(cos(a)/dims.x,sin(a)/dims.y,0.0).normalized()
             var base:Vector3=_body_surface(float(z),float(angle))
-            outer_row.append(base+normal*0.004)
-            inner_row.append(base-normal*0.002)
+            outer_row.append(base+normal*0.0025)
+            inner_row.append(base-normal*0.0025)
         outer.append(outer_row)
         inner.append(inner_row)
     var t:=SurfaceTool.new()
@@ -383,6 +386,7 @@ static func apply(root:Node3D,faction_color:Color,hero:bool)->bool:
     for name in obsolete:
         if not _retire(body,str(name)):
             return false
+    root.set_meta("tarvoka_a01_v28_continuous_enamel",true)
     root.set_meta("tarvoka_a01_v26_material_coherence",true)
     root.set_meta("tarvoka_a01_v23_service_finish",true)
     root.set_meta("tarvoka_a01_v19_integrated_composite_pigment",true)

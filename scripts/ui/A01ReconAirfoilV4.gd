@@ -37,7 +37,7 @@ static func _wing_pigment(p:Vector3,hero:bool)->Color:
     var thickness:float=lerpf(float(a[4]),float(b[4]),t)
     var chord:float=clampf((p.z-leading)/(trailing-leading),0.0,1.0)
     var elevation:float=(p.y-center_y)/thickness
-    var base:Color=Color("#52616c").lerp(Color("#8899a5"),
+    var base:Color=Color("#60737e").lerp(Color("#8899a5"),
         smoothstep(-0.45,0.52,elevation))
     var lip:float=1.0-smoothstep(0.0,0.19,chord)
     var trailing_lip:float=smoothstep(0.82,1.0,chord)
