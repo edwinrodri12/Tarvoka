@@ -9,6 +9,8 @@ on:
       - "scripts/ui/CampSupplySculptV4.gd"
       - "tests/test_camp_supply_v4.gd"
       - "scripts/ui/CampReconFinishV2.gd"
+      - "scripts/ui/CampReconSculptV3.gd"
+      - "tests/test_camp_recon_v3.gd"
       - "scripts/ui/CampDefenseFinishV2.gd"
       - "scripts/ui/CampMedicalFinishV2.gd"
       - "tests/test_camp_models_v1.gd"
@@ -22,7 +24,7 @@ on:
       - "scripts/publishing/TestFourCampsSharedStudio.gd.txt"
       - ".github/workflows/tarvoka-3d-pages.yml"
   push:
-    branches: [main, feat/campamentos-visor-integrado-20261123, art/camp-supply-v4-20261124]
+    branches: [main, feat/campamentos-visor-integrado-20261123, art/camp-supply-v4-20261124, art/camp-recon-v3-20261124]
     paths:
       - "scripts/ui/CampModels3DV1.gd"
       - "scripts/ui/CampSupplyFinishV2.gd"
@@ -30,6 +32,8 @@ on:
       - "scripts/ui/CampSupplySculptV4.gd"
       - "tests/test_camp_supply_v4.gd"
       - "scripts/ui/CampReconFinishV2.gd"
+      - "scripts/ui/CampReconSculptV3.gd"
+      - "tests/test_camp_recon_v3.gd"
       - "scripts/ui/CampDefenseFinishV2.gd"
       - "scripts/ui/CampMedicalFinishV2.gd"
       - "tests/test_camp_models_v1.gd"
@@ -206,6 +210,22 @@ jobs:
           fi
           grep -F 'PASS SUPPLY CAMP V4 NATIVE' /tmp/camp-v4-native.log
           test "$(find build/qa/camps-supply-v4 -name '*.png' | wc -l)" -eq 18
+      - name: Verify Recon V3 rigid mast, closed sculpt and optical views
+        run: |
+          set -euo pipefail
+          mkdir -p build/qa/recon-camp-v3
+          timeout --signal=TERM --kill-after=5s 300s \
+            xvfb-run -a -s '-screen 0 1280x720x24' \
+            env LIBGL_ALWAYS_SOFTWARE=1 \
+            /tmp/Godot_v4.3-stable_linux.x86_64 \
+            --rendering-method gl_compatibility --audio-driver Dummy --path . \
+            --script res://tests/test_camp_recon_v3.gd \
+            2>&1 | tee /tmp/camp-recon-v3-native.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Parse Error:|Assertion failed' /tmp/camp-recon-v3-native.log; then
+            exit 1
+          fi
+          grep -F 'PASS RECON CAMP V3 NATIVE: 72 audits, 32 PNGs' /tmp/camp-recon-v3-native.log
+          test "$(find build/qa/recon-camp-v3 -name '*.png' | wc -l)" -eq 32
       - name: Upload actual Godot screenshots for visual review
         if: always()
         uses: actions/upload-artifact@v4
@@ -217,6 +237,7 @@ jobs:
             build/qa/camps-supply-v3/*.png
             build/qa/camps-supply-v4/*.png
             build/qa/recon-camp-v2/*.png
+            build/qa/recon-camp-v3/*.png
             build/qa/defense-camp-v2/*.png
             build/qa/medical-camp-v2/*.png
           if-no-files-found: warn
