@@ -1394,7 +1394,7 @@ static func pose_destroyer(root: Node3D, kind: String, progress: float,
         target_heading: Vector2i = Vector2i(0,-1)) -> bool:
     if root == null or not root.get_meta("destroyer_motion_v16",false):
         return false
-    if kind not in ["idle","move","attack","fire","aim"]:
+    if kind not in ["idle","move","attack","fire","aim","hit"]:
         return false
     if int(root.get_meta("destroyer_damage_stage",0)) >= 3:
         return false
@@ -1408,6 +1408,7 @@ static func pose_destroyer(root: Node3D, kind: String, progress: float,
     var firing: bool = kind in ["attack","fire"]
     var aiming: bool = firing or kind == "aim"
     var pulse: float = sin(t*TAU)
+    var impact: float = sin(t*PI) if kind == "hit" else 0.0
     var recoil: float = sin(clampf(t/0.38,0.0,1.0)*PI) if firing else 0.0
     turret.rotation.y = atan2(-float(target_heading.x),-float(target_heading.y)) if aiming and target_heading != Vector2i.ZERO else 0.0
     pivot.rotation_degrees.x = -4.0*recoil
@@ -1417,7 +1418,7 @@ static func pose_destroyer(root: Node3D, kind: String, progress: float,
     pose_destroyer_aft(root,t*2.0 if moving else t*0.25,0.4*pulse if moving else 0.0)
     # Preserve the map heading, scale and position owned by the caller.
     root.rotation_degrees.x = (1.8 if moving else 0.7)*pulse
-    root.rotation_degrees.z = (2.0 if moving else 0.8)*sin(t*TAU)
+    root.rotation_degrees.z = (2.0 if moving else 0.8)*sin(t*TAU) + 2.0*impact
     for child in wake.get_children():
         if child is MeshInstance3D:
             var patch: MeshInstance3D = child as MeshInstance3D
@@ -2035,8 +2036,8 @@ static func pose_model(role: String, model: Node3D, kind: String,
         "attack_heli":
             return AttackHelicopterV1.pose(model,kind,progress,target_heading)
         "destroyer":
-            if kind in ["damage","damaged"]:
-                return set_destroyer_damage(model,clampi(int(ceilf(progress*4.0)),0,4),progress)
+            if kind in ["damage","damaged","hit"]:
+                return pose_destroyer(model,"hit",progress,target_heading)
             if kind == "sink" or kind == "destroy":
                 return set_destroyer_damage(model,4,progress)
             return pose_destroyer(model,kind,progress,target_heading)
