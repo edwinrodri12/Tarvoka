@@ -264,7 +264,7 @@ static func _clinical_equipment(core: Node3D, accent: Color, lod: int, damage: i
     _box(cabinet, "V32_DoorGrip", Vector3(0.27, 1.42, -0.54), Vector3(0.062, 0.23, 0.07), FRAME, 0.018, 0.45)
     _box(cabinet, "V32_EmblemPlate", Vector3(-0.045, 1.42, -0.527), Vector3(0.42, 0.43, 0.035), WHITE, 0.017, 0.05)
     _box(cabinet, "V32_EmblemVertical", Vector3(-0.045, 1.42, -0.55), Vector3(0.09, 0.30, 0.025), TEAL, 0.008, 0.0)
-    _box(cabinet, "V32_EmblemHorizontal", Vector3(-0.045, 1.42, -0.55), Vector3(0.30, 0.09, 0.025), TEAL, 0.008, 0.0)
+    _box(cabinet, "V32_EmblemHorizontal", Vector3(-0.045, 1.42, -0.554), Vector3(0.30, 0.09, 0.025), TEAL, 0.008, 0.0)
     # IV is moved next to the foot of the trolley, clear of the entrance.
     var iv: Node3D = core.get_node("V2_SoporteSueros") as Node3D
     _clear_equipment(iv)
