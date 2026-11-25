@@ -1551,7 +1551,7 @@ func _infantry_review_edition() -> String:
         if EngineerFinishV9.has_model(model_root):
             return "V9"
     if model_root!=null and str(model_root.get_meta("tarvoka_infantry_role_identity_v6",""))==_role:
-        return "V6"
+        return "V7" if bool(model_root.get_meta("tarvoka_infantry_material_finish_v7",false)) else "V6"
     return "V2"
 
 func _engineer_v12_compare(new_finish: bool) -> void:

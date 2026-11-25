@@ -11,3 +11,7 @@ Reutiliza guantes, dedos y antebrazos existentes, con las manos fijadas al rig d
 ## V6 — identidad individual y herramientas de servicio
 
 Casco cerrado con perfil, color de armadura neutro y coraza ajustados por rol; visor opaco curvo y cuello sellado. No se cambia pintura de facción. Médico y Logístico: prop físico de servicio bajo TorsoRig, visible solo durante la fase de trabajo; la mano derecha y sus dedos se transfieren al accesorio y vuelven al equipo en reposo. Sin nueva lógica de curación o suministro. Cinco enlaces directos permitidos y etiqueta V6 basada en metadatos reales del modelo en el mismo Studio. QA exige 60 PNG, incluidas 5 vistas de casco y 2 de servicio; comprueba cambio reversible de manos y visibilidad. No fusionar hasta validar los renders reales.
+
+## V7 — materiales y desgaste persistente
+
+Tres texturas procedurales compartidas de 64×64 solo en detalle LOD13; LOD8 sin texturas nuevas. Materiales opacos diferenciados de tejido, cerámica y goma, sin repintar emblemas. Cinco estados D0-D4 alteran únicamente materiales existentes, con restauración exacta de D0 y reutilización de marcas físicas. D4 inhibe destellos y casquillos; recupera inclinación del modelo tras reparación. 70 capturas reales exigidas (10 nuevas D2/D4) y pruebas de materiales y restauración en cada facción/LOD. Sin modificación de reglas ni de G05 V17. Pendiente CI nativa y revisión.

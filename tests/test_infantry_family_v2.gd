@@ -230,6 +230,28 @@ func _run() -> void:
                 if refined:
                     check(str(model.get_meta(Finish.FAMILY_IDENTITY_V6,""))==role,
                         "V6 role-specific head and chest")
+                    check(bool(model.get_meta(Finish.SURFACE_V7,false)),
+                        "V7 native material finish applied")
+                    var helmet_surface: MeshInstance3D=model.find_child("V2_CascoEsferoideCerrado",true,false) as MeshInstance3D
+                    if helmet_surface!=null:
+                        var clean: StandardMaterial3D=helmet_surface.material_override as StandardMaterial3D
+                        check(clean!=null and clean.transparency==BaseMaterial3D.TRANSPARENCY_DISABLED and
+                            (clean.albedo_texture!=null)==bool(model.get_meta("tarvoka_infantry_v2_hero",false)),
+                            "native texture on LOD13 only; opacity preserved")
+                        for damage in range(5):
+                            check(Infantry.set_damage(model,damage) and Models.pose_model(role,model,"idle",0.0),
+                                "V7 stage update "+str(damage))
+                            var worn: StandardMaterial3D=helmet_surface.material_override as StandardMaterial3D
+                            check(int(model.get_meta(Finish.DAMAGE_V7,-1))==damage and
+                                worn!=null and worn.albedo_color.a==1.0 and
+                                ((worn==clean)==(damage==0)),
+                                "stage-specific opaque materials")
+                            if damage>0:
+                                check(worn.albedo_color!=clean.albedo_color,
+                                    "damage has distinct surface color")
+                        Models.restore_model_pose(role,model)
+                        check(helmet_surface.material_override==clean and int(model.get_meta(Finish.DAMAGE_V7,-1))==0,
+                            "exact original surface restored after D4")
                     for name in ["V2_CascoEsferoideCerrado","V2_VisorOpacoPBR","CuelloProtegido"]:
                         var head_piece: MeshInstance3D=model.find_child(name,true,false) as MeshInstance3D
                         check(head_piece!=null and head_piece.mesh is ArrayMesh and closed_solid(head_piece.mesh),
@@ -399,6 +421,11 @@ func _run() -> void:
                             check(Models.pose_model(role,hero,"work",0.5),"specialist service animation")
                             await save_frame(view,"v6_%s_service"%role)
                             Models.restore_model_pose(role,hero)
+                        for damage in [2,4]:
+                            check(Infantry.set_damage(hero,damage) and Models.pose_model(role,hero,"idle",0.0),
+                                "V7 damage capture")
+                            await save_frame(view,"v7_%s_damage_%d"%[role,damage])
+                        Models.restore_model_pose(role,hero)
                 hero.get_parent().remove_child(hero)
             # Tactical camera uses the SAME real renderer with reduced
             # visible model size, NOT a second artist-only 3D fake.
@@ -411,7 +438,7 @@ func _run() -> void:
                 camera.size=3.6
             hero.free()
             mobile.free()
-    check(rendered==60,"60 real 3D comparison / tactical frames")
+    check(rendered==70,"70 real 3D comparison / tactical frames")
     # Art-only variants must never enter the tactical roster.
     for role in ["infantry_urban","infantry_defense",
             "infantry_antitank","infantry_engineer",
@@ -422,5 +449,5 @@ func _run() -> void:
         push_error("FAIL INFANTRY V2 NATIVE 3D: %d failures"%failed)
         quit(1)
     else:
-        print("PASS INFANTRY V2 NATIVE 3D: 160 models (6 core + 4 legacy), 8 factions, 2 LOD, 60 true PNG")
+        print("PASS INFANTRY V2 NATIVE 3D: 160 models (6 core + 4 legacy), 8 factions, 2 LOD, 70 true PNG")
         quit(0)

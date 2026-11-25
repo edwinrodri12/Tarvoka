@@ -265,6 +265,109 @@ static func _refine_head_and_armor(model: Node3D, hero: bool) -> bool:
     model.set_meta(FAMILY_IDENTITY_V6,role)
     return true
 
+const SURFACE_V7 := "tarvoka_infantry_material_finish_v7"
+const DAMAGE_V7 := "tarvoka_infantry_visual_damage_v7"
+const CLEAN_MAT := "tarvoka_infantry_v7_clean_material"
+const STAGE_MATS := "tarvoka_infantry_v7_stage_materials"
+static var _family_textures: Dictionary={}
+
+# Small, shared procedural textures; no external resources and no
+# textures at tactical LOD8. Color is grayscale to preserve the palette.
+static func _family_texture(kind: String) -> ImageTexture:
+    if _family_textures.has(kind):
+        return _family_textures[kind] as ImageTexture
+    var img: Image=Image.create(64,64,false,Image.FORMAT_RGBA8)
+    for y in range(64):
+        for x in range(64):
+            var u: float=TAU*float(x)/64.0
+            var v: float=TAU*float(y)/64.0
+            var grain: float=sin(13*u+17*v)*cos(19*u-11*v)
+            var tone: float=0.96+0.022*grain
+            if kind=="fabric":
+                tone=0.92+0.035*cos(8*u)*cos(8*v)+0.023*grain
+            elif kind=="rubber":
+                tone=0.94+0.025*sin(12*u)*sin(12*v)+0.015*grain
+            img.set_pixel(x,y,Color(tone,tone,tone,1.0))
+    img.generate_mipmaps()
+    var tex: ImageTexture=ImageTexture.create_from_image(img)
+    _family_textures[kind]=tex
+    return tex
+
+static func _finish_kind(label: String) -> String:
+    if label in ["V2_CascoEsferoideCerrado","V2_CorazaPectoralHermetica"] or label.begins_with("Hombrera_") or label.begins_with("Rodillera_"):
+        return "armor"
+    if label in ["PetoBase","CinturaEquipo","V2_MochilaOrganica","CuelloProtegido"] or label.begins_with("V2_MangaCerrada_") or label.begins_with("V2_AntebrazoCerrado_") or label.begins_with("V2_MusloTaper_") or label.begins_with("V2_PantorrillaTaper_"):
+        return "fabric"
+    if label.begins_with("V2_BotaMoldeada_") or label.begins_with("V2_Suela_") or label.begins_with("V2_PalmaGuante_"):
+        return "rubber"
+    return ""
+
+static func _finish_family_materials(model: Node3D,hero: bool) -> bool:
+    if not bool(model.get_meta(FAMILY_ANATOMY_V5,false)):
+        return true
+    var cache: Dictionary={}
+    for item in model.find_children("*","MeshInstance3D",true,false):
+        var part: MeshInstance3D=item as MeshInstance3D
+        var kind: String=_finish_kind(str(part.name))
+        if kind.is_empty():
+            continue
+        var src: StandardMaterial3D=part.material_override as StandardMaterial3D
+        if src==null:
+            return false
+        var key: String=str(src.get_instance_id())+":"+kind
+        if not cache.has(key):
+            var clean: StandardMaterial3D=src.duplicate() as StandardMaterial3D
+            clean.transparency=BaseMaterial3D.TRANSPARENCY_DISABLED
+            clean.cull_mode=BaseMaterial3D.CULL_BACK
+            clean.metallic=0.09 if kind=="armor" else 0.0
+            clean.roughness=0.58 if kind=="armor" else (0.92 if kind=="fabric" else 0.84)
+            clean.metallic_specular=0.38 if kind=="armor" else 0.24
+            if hero:
+                clean.albedo_texture=_family_texture(kind)
+                clean.uv1_triplanar=true
+                clean.uv1_world_triplanar=false
+                clean.uv1_scale=Vector3.ONE*4.0
+                clean.texture_filter=BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
+            var stages: Array[StandardMaterial3D]=[clean]
+            for stage in range(1,5):
+                var weathered: StandardMaterial3D=clean.duplicate() as StandardMaterial3D
+                var c: Color=clean.albedo_color
+                c=c.lerp(Color("#39352e"),float(stage)*0.11)
+                c.a=1.0
+                weathered.albedo_color=c
+                weathered.roughness=minf(1.0,clean.roughness+float(stage)*0.065)
+                stages.append(weathered)
+            cache[key]=stages
+        var palette: Array=cache[key]
+        part.material_override=palette[0]
+        part.set_meta(CLEAN_MAT,palette[0])
+        part.set_meta(STAGE_MATS,palette)
+    # Reuse the existing four damage meshes and seat them on the new
+    # armor front. No added effects or permanent changes to the model.
+    var chest: MeshInstance3D=_find(model,"V2_CorazaPectoralHermetica") as MeshInstance3D
+    if chest!=null:
+        for stage in range(1,5):
+            var mark: Node3D=_find(model,"Impacto_%d"%stage)
+            if mark!=null:
+                mark.position.z=chest.position.z+chest.mesh.get_aabb().position.z*chest.scale.z-0.010
+                mark.position.y=0.14-float(stage)*0.09
+    model.set_meta(SURFACE_V7,true)
+    model.set_meta(DAMAGE_V7,0)
+    return true
+
+static func sync_family_damage(model: Node3D,stage: int) -> void:
+    if not bool(model.get_meta(SURFACE_V7,false)):
+        return
+    var level: int=clampi(stage,0,4)
+    if int(model.get_meta(DAMAGE_V7,-1))==level:
+        return
+    for item in model.find_children("*","MeshInstance3D",true,false):
+        var part: MeshInstance3D=item as MeshInstance3D
+        if part.has_meta(STAGE_MATS):
+            var palette: Array=part.get_meta(STAGE_MATS)
+            part.material_override=palette[level]
+    model.set_meta(DAMAGE_V7,level)
+
 const FAMILY_GRIPS_V5 := "tarvoka_infantry_grip_contacts_v5"
 
 static func family_grip_point(side: int) -> Vector3:
@@ -660,8 +763,9 @@ static func apply(model: Node3D, faction_paint: Color, hero: bool) -> bool:
             Vector3(0.13,0.24,0.04),rubber)
         _plate(upper,"V2_FaccionHerramientas",Vector3(-0.34,-0.13,0.51),
             0.20,0.095,0.026,faction)
-    if role in FAMILY_ANATOMY_ROLES and not _refine_core(model,hero):
-        return false
+    if role in FAMILY_ANATOMY_ROLES:
+        if not _refine_core(model,hero) or not _finish_family_materials(model,hero):
+            return false
     model.set_meta(FLAG,true)
     model.set_meta("tarvoka_infantry_v2_hero",hero)
     model.set_meta("tarvoka_infantry_v2_opaque",true)
@@ -755,6 +859,19 @@ static func pose(model: Node3D, kind: String, t: float) -> bool:
         case_mesh.position=Vector3(0.09,0.10+0.09*pulse,0.21+0.13*pulse)
     # Damage remains owned by V1 and survives pose changes. Never amend HP.
     var stage: int=int(model.get_meta("tarvoka_infantry_damage",0))
+    if bool(model.get_meta(SURFACE_V7,false)):
+        sync_family_damage(model,stage)
+        var body: Node3D=_find(model,"Infanteria_3D")
+        if stage>=4:
+            if body!=null:
+                body.rotation_degrees.z=-74.0
+                body.position.y=-0.22
+            if flash!=null:
+                flash.visible=false
+            if case_mesh!=null:
+                case_mesh.visible=false
+        elif body!=null and not kind in ["damage","damaged","hit_bullet","hit_explosive"]:
+            body.rotation_degrees.z=0.0
     var scar: Node3D=_find(model,"V2_CicatrizCasco")
     if scar!=null:
         scar.visible=stage>=3

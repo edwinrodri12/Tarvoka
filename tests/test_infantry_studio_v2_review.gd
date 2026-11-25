@@ -115,9 +115,10 @@ func _run() -> void:
         must(v2!=null and v2.get_parent()==original_preview,
             role+" V2 comparison remains in same 3D viewport")
         if role!="infantry_engineer":
-            must(str(studio.call("_infantry_review_edition"))=="V6" and
-                str(v2.get_meta("tarvoka_infantry_role_identity_v6",""))==role,
-                role+" real new V6 geometry correctly identified by studio")
+            must(str(studio.call("_infantry_review_edition"))=="V7" and
+                str(v2.get_meta("tarvoka_infantry_role_identity_v6",""))==role and
+                bool(v2.get_meta("tarvoka_infantry_material_finish_v7",false)),
+                role+" real new V7 geometry correctly identified by studio")
         # Switch between genuine dense 3D hero and smaller tactical LOD8
         # without changing the original Godot SubViewport or controls.
         studio.call("_infantry_review_lod",8)
