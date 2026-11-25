@@ -2764,6 +2764,8 @@ jobs:
           commit = os.environ['STUDIO_SOURCE_SHA']
           info = {
               'engineer': 'G05 V17',
+              'a02': 'V11 EN REVISION',
+              'a02_source_sha256': hashlib.sha256(Path('scripts/ui/A02FpvArtV1.gd').read_bytes()).hexdigest(),
               'source_commit': commit,
               'engineer_source_sha256': hashlib.sha256(source.read_bytes()).hexdigest(),
               'bundle_sha256': hashlib.sha256((root / 'index.pck').read_bytes()).hexdigest(),
@@ -2829,6 +2831,58 @@ jobs:
         with:
           name: tarvoka-g05-v17-actual-browser
           path: build/qa/engineer-browser/
+          if-no-files-found: warn
+          retention-days: 14
+
+      - name: Verify A02 direct links in the real shared WebGL studio
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p build/qa/a02-browser
+          python3 -m http.server 8124 --directory build/web > /tmp/a02-browser-http.log 2>&1 &
+          server=$!
+          trap 'kill "$server" 2>/dev/null || true' EXIT
+          cat > /tmp/a02-browser.cjs <<'JS'
+          const {chromium}=require(process.cwd()+'/node_modules/playwright-core');
+          const {PNG}=require(process.cwd()+'/node_modules/pngjs');
+          const fs=require('node:fs');
+          (async()=>{
+            const browser=await chromium.launch({headless:true,executablePath:'/usr/bin/google-chrome',
+              args:['--no-sandbox','--disable-dev-shm-usage','--enable-webgl','--use-gl=angle','--use-angle=swiftshader','--enable-unsafe-swiftshader']});
+            const reports=[];
+            try {
+              for(const [alias,width,height] of [['a02',1280,720],['fpv',844,390]]){
+                const page=await browser.newPage({viewport:{width,height},deviceScaleFactor:1});
+                const errors=[];
+                page.on('pageerror',e=>errors.push(String(e)));
+                page.on('console',m=>{if(/SCRIPT ERROR:|Parse Error:|Could not create render/.test(m.text())) errors.push(m.text());});
+                await page.goto('http://127.0.0.1:8124/?unidad='+alias,{waitUntil:'domcontentloaded',timeout:60000});
+                await page.waitForFunction(()=>window.__tarvokaA02Entry!==undefined,null,{timeout:180000});
+                const info=await page.evaluate(()=>window.__tarvokaA02Entry);
+                if(info.role!=='fpv'||info.edition!=='V11'||!info.native_model||info.lod!==13||info.stage!==0)
+                  throw Error('Incorrect A02 shared studio entry: '+JSON.stringify(info));
+                if(info.visible_meshes!==34||info.triangles!==5688||info.transparent_meshes.length!==0||!info.faction_selector)
+                  throw Error('A02 differs from native V10 evidence: '+JSON.stringify(info));
+                for(const action of ['a02_move','a02_hover','a02_hit','a02_d0','a02_d1','a02_d2','a02_d3','a02_d4','stop'])
+                  if(!info.actions.includes(action))throw Error('Missing A02 action '+action);
+                await page.waitForTimeout(1200);
+                const png=PNG.sync.read(await page.screenshot({path:'build/qa/a02-browser/a02-'+alias+'.png'}));
+                if(png.width!==width||png.height!==height)throw Error('Unexpected A02 capture dimensions');
+                reports.push({alias,width,height,info,errors});
+                if(errors.length)throw Error(errors.join('\n'));
+                await page.close();
+              }
+              fs.writeFileSync('build/qa/a02-browser/report.json',JSON.stringify(reports,null,2));
+            } finally {await browser.close();}
+          })().catch(e=>{console.error(e);process.exitCode=1;});
+          JS
+          node /tmp/a02-browser.cjs
+      - name: Archive A02 shared browser proof
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: tarvoka-a02-v11-shared-studio-browser
+          path: build/qa/a02-browser/
           if-no-files-found: warn
           retention-days: 14
 

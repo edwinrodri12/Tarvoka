@@ -37,3 +37,7 @@ Variación tonal de desgaste entre superficies ornamentales, preservación del c
 ## V10 — inventario de recursos de presentación
 
 Se añade informe JSON de las 80 combinaciones de las ocho facciones, dos LOD y cinco estados visuales, con instancias visibles, triángulos y recursos únicos de malla y material. Se conserva la geometría y el presupuesto existente de triángulos; se verifica un máximo inicial de 40 instancias visibles. No se presentan estos conteos como FPS, memoria o batería medida en Android. Pendientes ejecución, sincronización segura con main y publicación. No se alteran mecánicas ni modelos de otras unidades.
+
+## V11 — candidato de revisión y validación del visor
+
+V10 verificada en 80 estados (45672543112, artefacto 15049803591); APK 45672543084, reglas 45672543209 y construcción Studio 45672542959 correctos. En D0 LOD8: 27 instancias / 2436 triángulos; LOD13: 34 / 5688. Máximo D3: LOD8 29 / 2636, LOD13 36 / 5888. El trabajo no mide FPS o RAM de teléfono. V11 conserva el arte V10 sin cambios: añade evidencia de entrada WebGL de solo lectura y prueba Chromium de las dos rutas A02/fpv, selector, opacidad y catálogo de animaciones. La marca de revisión de Studio identifica el código exacto. El despliegue público está reservado a main, no se declara publicado ni aprobado. Pendiente prueba de navegador V11, decisión artística y regresión independiente G13.
