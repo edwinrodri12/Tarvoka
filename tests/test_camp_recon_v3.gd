@@ -1,7 +1,7 @@
 extends SceneTree
 
 # Offline Godot 4.3 regression for the genuine 3D reconnaissance camp.
-# Eight factions plus neutral x 2 LOD x 4 damage = 72 builds, 29 native images.
+# Eight factions plus neutral x 2 LOD x 4 damage = 72 builds, 32 native images.
 const Art = preload("res://scripts/ui/CampModels3DV1.gd")
 const Recon = preload("res://scripts/ui/CampReconFinishV2.gd")
 const ReconV3 = preload("res://scripts/ui/CampReconSculptV3.gd")
@@ -58,11 +58,12 @@ func _audit(faction: int, lod: int, damage: int) -> Node3D:
     if camp == null:
         return null
     audits += 1
-    check(camp.get_meta("recon_art_v3", 0) == 3 and camp.get_meta("recon_art_revision", "") == "3.3" and camp.get_meta("no_gameplay_effects", false), "V3.3 art only")
+    check(camp.get_meta("recon_art_v3", 0) == 3 and camp.get_meta("recon_art_revision", "") == "3.4" and camp.get_meta("no_gameplay_effects", false), "V3.4 art only")
     var core: Node3D = camp.get_node_or_null("EquipamientoDesplegable/" + Recon.CORE) as Node3D
     if damage == 3:
         check(core == null and camp.has_node("V3_ReconWreck"), "Closed wreck, no intact tower")
         check(not ReconV3.station_pose(camp, 0.25), "D3 electronics cannot animate")
+        check(camp.has_node("V3_ReconWreck/V34_FallenTowerFrame"), "Collapsed truss remains on ground")
     else:
         check(core != null, "Actual tower and station")
         if core != null:
@@ -112,6 +113,20 @@ func _audit(faction: int, lod: int, damage: int) -> Node3D:
                 Recon.pose_scan(camp, 0.0)
             else:
                 check(not tower.has_node("V2_MastilDesplegable") and not Recon.pose_scan(camp, 85.0), "D2 disabled optics")
+                check(tower.get_node("PataEstructural_1_-1").get_meta("recon_v34_bowed", false) and tower.has_node("V34_HangingBrokenConduit"), "Bent closed leg and broken conduit")
+    check(ReconV3.damage_fx_pose(camp, "idle", 0.34), "Damage rig present")
+    var fx: Node3D = camp.get_node("V34_ReconDamageFX") as Node3D
+    var fx_parts: Array[MeshInstance3D] = []
+    _meshes(fx, fx_parts)
+    check(fx.get_meta("presentation_only", false) and fx_parts.size() <= (26 if lod == 13 else 14), "Bounded presentation-only FX")
+    if damage < 3:
+        check(ReconV3.damage_fx_pose(camp, "bullet", 0.07) and (fx.get_node("Flash") as Node3D).visible, "Light impact flash")
+        check(ReconV3.damage_fx_pose(camp, "blast", 0.25) and (fx.get_node("Fire/Flame_0") as Node3D).visible and (fx.get_node("Chips/Chip_0") as Node3D).visible, "Explosion flame and chips")
+        check(ReconV3.damage_fx_pose(camp, "blast", 1.0) and camp.get_meta("recon_v34_fx_kind", "") == "idle", "FX resets")
+    else:
+        check(not ReconV3.damage_fx_pose(camp, "blast", 0.25), "Wreck cannot be struck again")
+    check(int(camp.get_meta("visual_damage", -1)) == damage, "Effects never change damage state")
+    ReconV3.damage_fx_pose(camp, "idle", 0.34)
     var parts: Array[MeshInstance3D] = []
     _meshes(camp, parts)
     var sculpted: int = 0
@@ -227,12 +242,23 @@ func _run() -> void:
                         camera.size = 5.8
                         await _shot(viewport, "recon_v33_deck_and_auxiliary.png")
                         camera.size = 12.8
+                        camera.position = VIEWS[0]
+                        camera.look_at(Vector3(0, 1.63, 0), Vector3.UP)
+                        ReconV3.damage_fx_pose(camp, "bullet", 0.07)
+                        await _shot(viewport, "recon_v34_impact.png")
+                        ReconV3.damage_fx_pose(camp, "blast", 0.25)
+                        await _shot(viewport, "recon_v34_blast.png")
+                        ReconV3.damage_fx_pose(camp, "idle", 0.34)
                     stage.remove_child(camp)
                 elif faction == 0 and lod == 13 and damage in [2, 3]:
                     stage.add_child(camp)
                     camera.position = VIEWS[0]
                     camera.look_at(Vector3(0, 1.63, 0), Vector3.UP)
                     await _shot(viewport, "recon_damage_%d.png" % damage)
+                    if damage == 3:
+                        camera.position = VIEWS[2]
+                        camera.look_at(Vector3(0, 0.70, 0), Vector3.UP)
+                        await _shot(viewport, "recon_v34_wreck_rear.png")
                     stage.remove_child(camp)
                 if faction == 0 and lod == 13 and damage == 1:
                     stage.add_child(camp)
@@ -242,13 +268,13 @@ func _run() -> void:
                     stage.remove_child(camp)
                 camp.free()
     check(audits == 72, "72 model audits including neutral")
-    check(screenshots == 29,
-        "27 existing views plus 2 ground equipment closeups")
+    check(screenshots == 32,
+        "29 existing views plus 3 damage and FX views")
     viewport.queue_free()
     await process_frame
     if failures > 0:
         printerr("FAIL RECON CAMP V3 NATIVE: %d issues" % failures)
         quit(1)
         return
-    print("PASS RECON CAMP V3 NATIVE: 72 audits, 29 PNGs")
+    print("PASS RECON CAMP V3 NATIVE: 72 audits, 32 PNGs")
     quit(0)

@@ -13,3 +13,7 @@ V3.1 superó QA nativa (72 modelos/25 PNG), reglas, APK y exportación web. Capt
 ## V3.3 — plataforma y equipos auxiliares
 
 V3.2 pasó todas las verificaciones, incluyendo 72 variantes, 27 PNG y exportación web. La revisión visual mostró una plataforma uniforme y sensores terrestres elementales. V3.3 agrega pavimento modular con paso central despejado, perfiles de acceso, anclajes, cajas de comunicaciones y batería portátil (solo arte, no producción), y sensores terrestres de carcasa opaca, lentes, base, columnas deslizantes y cables. Se integran al plegado y barrido de reconocimiento existentes. D2 inclina sensores y apaga indicador; D3 no recrea equipos. QA 72 variantes/29 renders, dos nuevas vistas cercanas, y comprobación de la animación en el mismo visor. Pendiente CI e inspección real, sin cambios de gameplay.
+
+## V3.4 — deterioro físico y efectos
+
+V3.3 pasó todas las verificaciones (72 variantes y 29 PNG). V3.4 agrega desgaste D1, perfiles estructurales cerrados y arqueados D2, pantalla dañada y cable desprendido; D3 muestra bastidor colapsado horizontal y consola aplastada sin reponer equipos. Rig de efectos visuales opacos acotado por LOD, reutiliza esferas del escultor de suministros sin tocar su comportamiento. Los controles de impacto, explosión, daño persistente y destrucción progresiva del visor ahora también operan reconocimiento, con cancelación por generación. 72 variantes y 32 capturas previstas; prueba de transición D2-D3 en el visor original. Sin cambios de combate. Pendiente validación y revisión visual.

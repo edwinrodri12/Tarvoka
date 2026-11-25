@@ -481,11 +481,164 @@ static func _ground_pose(root: Node3D, progress: float) -> void:
         head.position.y = lerpf(0.92, 1.25, t)
     root.set_meta("recon_v33_ground_deploy", t)
 
+# V3.4: closed, bowed structural profile with unchanged endpoints.
+static func _bowed_leg(length: float, bow: float) -> ArrayMesh:
+    var rings: Array = []
+    for i in range(5):
+        var t: float = float(i) / 4.0
+        var x: float = sin(t * PI) * bow
+        var y: float = (t - 0.5) * length
+        var ring: Array[Vector3] = []
+        for j in range(8):
+            var angle: float = TAU * float(j) / 8.0
+            ring.append(Vector3(x + cos(angle) * 0.13, y, -sin(angle) * 0.13))
+        rings.append(ring)
+    return Solid._loft(rings)
+
+static func _damage_v34(core: Node3D, station: Node3D, tower: Node3D, lod: int, damage: int) -> void:
+    if damage == 0:
+        return
+    var marks: Node3D = _group(core, "V34_ImpactWear")
+    for i in range(4 if lod == 13 else 2):
+        var at := Vector3(-2.0 + float(i) * 0.22, 1.42 - float(i % 2) * 0.10, 0.91)
+        var scar: MeshInstance3D = _box(marks, "V34_Scuff_%d" % i, at,
+            Vector3(0.16, 0.038, 0.028), ALLOY, 0.004)
+        scar.rotation_degrees.z = -22.0 + float(i) * 15.0
+    _box(station, "V34_ScorchedRadioPanel", Vector3(-0.84, 1.37, -0.36),
+        Vector3(0.12, 0.09, 0.025), GASKET, 0.006)
+    if damage < 2:
+        return
+    for suffix in ["1_-1", "1_1"]:
+        var leg: MeshInstance3D = tower.get_node("PataEstructural_" + suffix) as MeshInstance3D
+        var length: float = leg.mesh.get_aabb().size.y
+        leg.mesh = _bowed_leg(length, 0.32 if suffix == "1_-1" else -0.23)
+        leg.material_override = _mat(FRAME, 0.48, 0.80)
+        leg.set_meta("recon_v34_bowed", true)
+    var platform: Node3D = tower.get_node("PlataformaCabezalMaciza") as Node3D
+    platform.rotation_degrees.z = -8.0
+    var broken: Node3D = tower.get_node("MastilRotoFijo") as Node3D
+    broken.rotation_degrees.z = 76.0
+    _box(tower, "V34_DroppedBracket", Vector3(0.68, 0.24, -0.81),
+        Vector3(0.45, 0.16, 0.59), GASKET, 0.04).rotation_degrees = Vector3(9, 28, 13)
+    var torn: Array[Vector3] = [Vector3(0.51, 2.67, 0.48), Vector3(0.77, 2.23, 0.55),
+        Vector3(0.91, 1.85, 0.42), Vector3(0.65, 1.54, 0.27)]
+    _cable(tower, "V34_HangingBrokenConduit", torn, 0.039, lod)
+    var face: MeshInstance3D = station.get_node("PantallaTacticaOpaca") as MeshInstance3D
+    face.material_override = _mat(GASKET, 0.1, 0.88)
+    _box(station, "V34_FracturedScreenSeam", Vector3(0.11, 1.22, -0.312),
+        Vector3(0.035, 0.46, 0.014), ALLOY, 0.003).rotation_degrees.z = -28.0
+
+static func _wreck_v34(wreck: Node3D, accent: Color, lod: int) -> void:
+    # Collapsed truss lies flat within the original temporary footprint.
+    var truss: Node3D = _group(wreck, "V34_FallenTowerFrame", Vector3(0.58, 0.22, 0.89))
+    truss.rotation_degrees.y = -25.0
+    for side in [-1, 1]:
+        _box(truss, "V34_FallenChord_%d" % side, Vector3(float(side) * 0.40, 0.04, 0),
+            Vector3(0.18, 0.24, 3.10), FRAME, 0.035)
+    for i in range(3 if lod == 13 else 2):
+        _box(truss, "V34_Crossmember_%d" % i, Vector3(0, 0.09, -1.02 + float(i) * 1.04),
+            Vector3(0.88, 0.15, 0.17), GREY, 0.025).rotation_degrees.y = 19.0 if i % 2 == 0 else -19.0
+    _box(truss, "V34_TornFactionPlate", Vector3(0.42, 0.20, 0.73),
+        Vector3(0.32, 0.07, 0.72), accent, 0.018).rotation_degrees.z = 18.0
+    var cabinet: MeshInstance3D = _box(wreck, "V34_CrushedConsole", Vector3(-1.72, 0.31, -0.82),
+        Vector3(1.15, 0.46, 0.72), GASKET, 0.095)
+    cabinet.rotation_degrees = Vector3(8, -22, 17)
+    _box(wreck, "V34_FallenAntennaPanel", Vector3(2.23, 0.14, -0.69),
+        Vector3(1.18, 0.13, 0.57), GREY, 0.05).rotation_degrees.y = 32.0
+    _cyl(wreck, "V34_BrokenLensHousing", Vector3(1.36, 0.29, -1.73), 0.19, 0.18,
+        Vector3.FORWARD, FRAME, lod)
+
+# Dedicated, bounded opaque effect rig. No alpha surfaces on the building.
+const FX_ROOT := "V34_ReconDamageFX"
+
+static func _fx(root: Node3D) -> Node3D:
+    var existing: Node3D = root.get_node_or_null(FX_ROOT) as Node3D
+    if existing != null:
+        return existing
+    var lod: int = int(root.get_meta("visual_lod", 13))
+    var rig: Node3D = _group(root, FX_ROOT)
+    rig.set_meta("presentation_only", true)
+    var smoke: Node3D = _group(rig, "Smoke")
+    var fire: Node3D = _group(rig, "Fire")
+    var sparks: Node3D = _group(rig, "Sparks")
+    var chips: Node3D = _group(rig, "Chips")
+    for i in range(8 if lod == 13 else 4):
+        Solid._fx_blob(smoke, "Puff_%d" % i, Color("#455054").lerp(Color("#89928F"), float(i % 3) * 0.24), 0.0, lod)
+    for i in range(5 if lod == 13 else 3):
+        Solid._fx_blob(fire, "Flame_%d" % i, Color("#E37C31") if i % 2 == 0 else Color("#F6C36D"), 0.8, lod)
+    for i in range(8 if lod == 13 else 4):
+        Solid._fx_blob(sparks, "Spark_%d" % i, Color("#F5D08A"), 0.9, lod)
+    for i in range(4 if lod == 13 else 2):
+        _box(chips, "Chip_%d" % i, Vector3.ZERO, Vector3(0.12, 0.065, 0.15), FRAME, 0.012).visible = false
+    Solid._fx_blob(rig, "Flash", Color("#FFE2A6"), 1.2, lod)
+    return rig
+
+static func damage_fx_pose(root: Node3D, kind: String, progress: float) -> bool:
+    if root == null or root.get_meta("recon_art_v3", 0) != 3 or kind not in ["idle", "bullet", "blast", "clear"]:
+        return false
+    var damage: int = int(root.get_meta("visual_damage", 0))
+    if damage == 3 and kind in ["bullet", "blast"]:
+        return false
+    var rig: Node3D = _fx(root)
+    var t: float = clampf(progress, 0.0, 1.0)
+    for key in ["Smoke", "Fire", "Sparks", "Chips"]:
+        for child in rig.get_node(key).get_children():
+            child.visible = false
+    var flash: Node3D = rig.get_node("Flash") as Node3D
+    flash.visible = false
+    root.set_meta("recon_v34_fx_kind", kind)
+    root.set_meta("recon_v34_fx_phase", t)
+    if kind == "clear" or (kind == "idle" and damage == 0):
+        return true
+    var idle: bool = kind == "idle"
+    var blast: bool = kind == "blast"
+    if not idle and t >= 1.0:
+        return damage_fx_pose(root, "idle", 0.34)
+    var origin: Vector3 = Vector3(1.82, 3.18, 0.80) if damage == 1 else Vector3(1.84, 1.94, 0.74)
+    if damage == 3:
+        origin = Vector3(0.75, 0.37, 0.43)
+    if not idle:
+        origin = Vector3(1.87, 3.07, 0.80) if not blast else Vector3(1.88, 1.65, 0.34)
+    var smoke: Node3D = rig.get_node("Smoke") as Node3D
+    for i in range(smoke.get_child_count()):
+        var puff: Node3D = smoke.get_child(i) as Node3D
+        var p: float = fposmod(t + float(i) / float(smoke.get_child_count()), 1.0) if idle else clampf(t * 1.4 - float(i) * 0.035, 0.0, 1.0)
+        var size: float = (0.18 + p * 0.62) * sin(PI * p) * (1.0 if blast or damage >= 2 else 0.48)
+        puff.visible = p > 0.04 and p < 0.96 and (idle or t > 0.11) and (blast or damage >= 2 or i < 3)
+        puff.position = origin + Vector3(p * 0.46 + sin(float(i) * 2.4) * size * 0.54, p * 1.67, cos(float(i) * 1.8) * size * 0.6)
+        puff.scale = Vector3(size * 1.6, size * 1.35, size * 1.55)
+    var fire: Node3D = rig.get_node("Fire") as Node3D
+    for i in range(fire.get_child_count()):
+        var flame: Node3D = fire.get_child(i) as Node3D
+        var size: float = (0.65 + 0.22 * sin(t * TAU * 3.0 + float(i))) * (0.88 if idle else maxf(0.0, 1.38 - t * 1.6))
+        flame.visible = (idle and damage >= 2) or (blast and t > 0.06 and t < 0.62)
+        flame.position = origin + Vector3(sin(float(i) * 2.4) * 0.23, size * 0.35, cos(float(i) * 2.4) * 0.19)
+        flame.scale = Vector3(size * 0.47, size * 1.22, size * 0.43)
+        flame.rotation_degrees.z = sin(t * TAU + float(i)) * 18.0
+    if idle:
+        return true
+    flash.visible = t > 0.0 and t < (0.18 if blast else 0.12)
+    flash.position = origin
+    flash.scale = Vector3.ONE * maxf(0.025, (1.18 if blast else 0.34) * sin(PI * clampf(t / (0.18 if blast else 0.12), 0.0, 1.0)))
+    var sparks: Node3D = rig.get_node("Sparks") as Node3D
+    for i in range(sparks.get_child_count()):
+        var spark: Node3D = sparks.get_child(i) as Node3D
+        spark.visible = t > 0.02 and t < (0.65 if blast else 0.43)
+        spark.position = origin + Vector3(cos(float(i) * 2.4), 0.55, sin(float(i) * 2.4)) * t * (1.7 if blast else 0.65) - Vector3.UP * t * t * 0.48
+        spark.scale = Vector3(0.045, 0.15 if blast else 0.09, 0.045) * (1.0 - t * 0.7)
+    var chips: Node3D = rig.get_node("Chips") as Node3D
+    for i in range(chips.get_child_count()):
+        var chip: Node3D = chips.get_child(i) as Node3D
+        chip.visible = blast and t > 0.08 and t < 0.82
+        chip.position = origin + Vector3(cos(float(i) * 2.1) * t * 1.55, sin(PI * t) * 0.95 - t * 0.58, sin(float(i) * 2.1) * t * 1.3)
+        chip.rotation_degrees = Vector3(t * 280.0, float(i) * 37.0 + t * 190.0, t * 210.0)
+    return true
+
 static func apply(root: Node3D, accent: Color, lod: int, damage: int) -> bool:
     if root == null or root.get_meta("camp_kind", "") != "reconocimiento":
         return false
     root.set_meta("recon_art_v3", 3)
-    root.set_meta("recon_art_revision", "3.3")
+    root.set_meta("recon_art_revision", "3.4")
     root.set_meta("recon_v3_art_only", true)
     _replace(root, "PlataformaDesmontable", 0.045, PANEL, 0.12)
     if damage == 3:
@@ -495,7 +648,8 @@ static func apply(root: Node3D, accent: Color, lod: int, damage: int) -> bool:
                 Vector3(0.19, 0.23, 1.72), FRAME, 0.035).rotation_degrees.y = float(i) * 32.0 + 17.0
         _box(wreck, "V3_CollapsedOptic", Vector3(1.35, 0.22, -1.36),
             Vector3(0.93, 0.34, 0.65), GREY, 0.075).rotation_degrees = Vector3(9, 24, 12)
-        return true
+        _wreck_v34(wreck, accent, lod)
+        return damage_fx_pose(root, "idle", 0.34)
     var core: Node3D = root.get_node("EquipamientoDesplegable/" + BASE.CORE) as Node3D
     var station: Node3D = core.get_node("V2_CentroControl") as Node3D
     var tower: Node3D = core.get_node("V2_TorreTripode") as Node3D
@@ -517,6 +671,9 @@ static func apply(root: Node3D, accent: Color, lod: int, damage: int) -> bool:
         _replace(core, "V2_EstabilizadorSensor_%d" % side, 0.07, FRAME)
         _replace(core, "V2_PuntaFaccion_%d" % side, 0.05, accent)
     _ground_v33(core, accent, lod, damage)
+    _damage_v34(core, station, tower, lod, damage)
+    if damage > 0:
+        damage_fx_pose(root, "idle", 0.34)
     return pose(root, 1.0)
 
 static func pose(root: Node3D, progress: float) -> bool:
