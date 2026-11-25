@@ -307,6 +307,35 @@ func _run() -> void:
                         knee_faction.has_meta(V17.OLD) and
                         knee_faction.position.z<(-0.22),
                         "Android knee identity remains outside metal shell")
+            # Independently exercise the manufacturing-profile deformation
+            # at both native LODs. It must preserve every original vertex
+            # slot, triangle count, index ordering and exterior dimensions.
+            var finish_source: ArrayMesh=preload("res://scripts/ui/InfantryEngineerSmoothV13.gd")._lathe([
+                Vector3(0.08,-0.10,0.09),Vector3(0.14,0.0,0.16),
+                Vector3(0.08,0.10,0.09)],lod==13)
+            var forged: ArrayMesh=V17._forged_profile(finish_source,0.23)
+            var before: Array=finish_source.surface_get_arrays(0)
+            var after: Array=forged.surface_get_arrays(0)
+            var source_points: PackedVector3Array=before[Mesh.ARRAY_VERTEX]
+            var forged_points: PackedVector3Array=after[Mesh.ARRAY_VERTEX]
+            var max_displacement: float=0.0
+            for i in range(source_points.size()):
+                max_displacement=maxf(max_displacement,source_points[i].distance_to(forged_points[i]))
+            check(closed_outward(forged) and face_count(forged)==face_count(finish_source) and
+                before[Mesh.ARRAY_INDEX]==after[Mesh.ARRAY_INDEX] and
+                source_points.size()==forged_points.size() and
+                forged.get_aabb().is_equal_approx(finish_source.get_aabb()) and
+                max_displacement>0.005,
+                "forged armor genuinely reshaped without extra geometry or envelope growth")
+            for side in [-1,1]:
+                var suffix: String="_%d"%side
+                var toe: MeshInstance3D=model.find_child(V17.TOE+suffix,true,false) as MeshInstance3D
+                var sole: MeshInstance3D=model.find_child(V17.SOLE+suffix,true,false) as MeshInstance3D
+                if toe!=null and sole!=null:
+                    check(V17.surface_kind(str(toe.name))=="ceramic" and
+                        V17.surface_kind(str(sole.name))=="rubber" and
+                        (toe.transform*toe.mesh.get_aabb()).intersects(sole.transform*sole.mesh.get_aabb()),
+                        "manufactured toe protection overlaps distinct rubber outsole")
             for label in V17.cloth_labels():
                 var cloth: MeshInstance3D=model.find_child(label,true,false) as MeshInstance3D
                 check(cloth!=null and cloth.has_meta(V17.OLD) and

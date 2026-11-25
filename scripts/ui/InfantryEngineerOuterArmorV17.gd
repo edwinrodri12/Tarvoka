@@ -147,6 +147,37 @@ static func _rear_badge_mesh(hero: bool) -> ArrayMesh:
         out.add_vertex(p)
     return out.commit()
 
+# A monotonic coordinate deformation squares the round cross-section
+# into a manufactured armor profile without cutting the shell, adding
+# vertices, or changing its extreme width, height or depth.
+# Its positive diagonal Jacobian preserves winding; inverse-transpose
+# normals preserve lighting on the flatter panels and curved bevels.
+static func _forged_profile(source: ArrayMesh, strength: float) -> ArrayMesh:
+    var box: AABB=source.get_aabb()
+    var center: Vector3=box.get_center()
+    var rx: float=maxf(0.001,box.size.x*0.5)
+    var rz: float=maxf(0.001,box.size.z*0.5)
+    var k: float=clampf(strength,0.0,0.24)
+    var arrays: Array=source.surface_get_arrays(0)
+    var points: PackedVector3Array=arrays[Mesh.ARRAY_VERTEX]
+    var normals: PackedVector3Array=arrays[Mesh.ARRAY_NORMAL]
+    for i in range(points.size()):
+        var p: Vector3=points[i]-center
+        var n: Vector3=normals[i]
+        var x: float=p.x/rx
+        var z: float=p.z/rz
+        var dx: float=1.0+k*(1.0-3.0*x*x)
+        var dz: float=1.0+k*(1.0-3.0*z*z)
+        p.x*=1.0+k*(1.0-x*x)
+        p.z*=1.0+k*(1.0-z*z)
+        points[i]=p+center
+        normals[i]=Vector3(n.x/dx,n.y,n.z/dz).normalized()
+    arrays[Mesh.ARRAY_VERTEX]=points
+    arrays[Mesh.ARRAY_NORMAL]=normals
+    var result:=ArrayMesh.new()
+    result.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES,arrays)
+    return result
+
 # Existing gloves use their weapon/tool rig as parent. Preserve the
 # contact centres and all V9 visibility switching, changing meshes only.
 static func _sculpt_hands(model: Node3D, hero: bool) -> bool:
@@ -477,7 +508,9 @@ static func surface_kind(label: String) -> String:
             "V9_ArnesDorsalFijo",LINK_PREFIX]:
         if label.begins_with(prefix+"_"):
             return "fabric"
-    for prefix in [SOLE,TOE,"V9_DedosCerrados","V10_DedoHerramienta"]:
+    if label.begins_with(TOE+"_"):
+        return "ceramic"
+    for prefix in [SOLE,"V9_DedosCerrados","V10_DedoHerramienta"]:
         if label.begins_with(prefix+"_"):
             return "rubber"
     for prefix in ["V9_BrocheArnesFijo","V12_CierrePouchMetalico",
@@ -1025,7 +1058,7 @@ static func apply(model: Node3D, hero: bool) -> bool:
         if shoulder==null or shoulder.get_parent()!=arm:
             return false
         if not _change(model,SHOULDER+suffix,
-                V13._lathe(shoulder_rings,hero),
+                _forged_profile(V13._lathe(shoulder_rings,hero),0.19),
                 Vector3(0.68,0.55,0.65),
                 Vector3(0.0,-0.083,-0.065)):
             return false
@@ -1060,8 +1093,8 @@ static func apply(model: Node3D, hero: bool) -> bool:
         if pad==null or pad.get_parent()!=leg:
             return false
         if not _change(model,KNEE+suffix,
-                V13._rounded_press(0.282,0.196,0.083,0.072,
-                    0.016,hero),
+                _conformal_press(0.282,0.196,0.083,0.043,
+                    0.010,0.018,hero),
                 Vector3.ONE,
                 Vector3(0,-0.476,-0.165)):
             return false
@@ -1080,12 +1113,12 @@ static func apply(model: Node3D, hero: bool) -> bool:
         if sole==null or sole.get_parent()!=leg:
             return false
         if not _change(model,SOLE+suffix,
-                V13._lathe([
+                _forged_profile(V13._lathe([
                     Vector3(0.099,-0.045,0.194),
                     Vector3(0.130,-0.028,0.226),
                     Vector3(0.132,0.014,0.229),
                     Vector3(0.116,0.043,0.210)
-                ],hero),Vector3.ONE,
+                ],hero),0.23),Vector3.ONE,
                 Vector3(0,-0.930,-0.128)):
             return false
 
@@ -1094,13 +1127,13 @@ static func apply(model: Node3D, hero: bool) -> bool:
         var toe: MeshInstance3D=_find(model,TOE+suffix)
         if toe==null or toe.get_parent()!=leg:
             return false
-        if not _change(model,TOE+suffix,V13._lathe([
+        if not _change(model,TOE+suffix,_forged_profile(V13._lathe([
                     Vector3(0.091,-0.066,0.074),
                     Vector3(0.119,-0.042,0.105),
                     Vector3(0.120,0.006,0.112),
                     Vector3(0.093,0.043,0.093),
                     Vector3(0.049,0.061,0.052)
-                ],hero),Vector3.ONE,Vector3(0,-0.850,-0.300)):
+                ],hero),0.20),Vector3.ONE,Vector3(0,-0.850,-0.300)):
             return false
 
         # Existing rear case gets a more structured rounded housing,
