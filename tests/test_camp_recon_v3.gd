@@ -1,7 +1,7 @@
 extends SceneTree
 
 # Offline Godot 4.3 regression for the genuine 3D reconnaissance camp.
-# Eight factions plus neutral x 2 LOD x 4 damage = 72 builds, 27 native images.
+# Eight factions plus neutral x 2 LOD x 4 damage = 72 builds, 29 native images.
 const Art = preload("res://scripts/ui/CampModels3DV1.gd")
 const Recon = preload("res://scripts/ui/CampReconFinishV2.gd")
 const ReconV3 = preload("res://scripts/ui/CampReconSculptV3.gd")
@@ -58,7 +58,7 @@ func _audit(faction: int, lod: int, damage: int) -> Node3D:
     if camp == null:
         return null
     audits += 1
-    check(camp.get_meta("recon_art_v3", 0) == 3 and camp.get_meta("recon_art_revision", "") == "3.2" and camp.get_meta("no_gameplay_effects", false), "V3.2 art only")
+    check(camp.get_meta("recon_art_v3", 0) == 3 and camp.get_meta("recon_art_revision", "") == "3.3" and camp.get_meta("no_gameplay_effects", false), "V3.3 art only")
     var core: Node3D = camp.get_node_or_null("EquipamientoDesplegable/" + Recon.CORE) as Node3D
     if damage == 3:
         check(core == null and camp.has_node("V3_ReconWreck"), "Closed wreck, no intact tower")
@@ -67,6 +67,18 @@ func _audit(faction: int, lod: int, damage: int) -> Node3D:
         check(core != null, "Actual tower and station")
         if core != null:
             check(core.has_node("V2_CentroControl/V3_RearHatch_1") and core.has_node("V31_StationTowerConduit"), "Detailed station and connected cable")
+            check(core.has_node("V33_ModularDeck/V33_AccessMat_1") and core.has_node("V33_AuxiliaryEquipment/V33_PortableBatteryCase"), "Modular deck and portable support equipment")
+            var ground: Node3D = core.get_node("V33_GroundSensor_1/V33_SensorMastPivot") as Node3D
+            var ground_head: Node3D = ground.get_node("V33_SensorHead") as Node3D
+            check(ground_head.has_node("V33_OpaqueGroundLens") and core.has_node("V33_GroundSensorConduit_1"), "Actual enclosed sensor and cable")
+            if damage < 2:
+                var extended_ground: float = ground_head.position.y
+                check(Art.pose_deploy(camp, 0.0) and absf(ground_head.position.y - extended_ground) > 0.30 and ground.scale == Vector3.ONE, "Ground sensor slides without scaling")
+                check(Art.pose_deploy(camp, 1.0) and absf(ground_head.position.y - extended_ground) < 0.01, "Ground sensor restores")
+                check(ReconV3.station_pose(camp, 0.25) and absf(ground_head.rotation_degrees.y - 35.0) < 0.01, "Synchronized ground sensor")
+                ReconV3.station_pose(camp, 0.0)
+            else:
+                check(absf(ground.rotation_degrees.z) > 40.0, "Damaged ground sensor bent")
             var station: Node3D = core.get_node("V2_CentroControl") as Node3D
             var instrument: Node3D = station.get_node("V32_InstrumentDeck") as Node3D
             check(instrument.has_node("V32_RadioHousing_1") and instrument.has_node("V32_Display/V32_ScopePivot"), "Physical comms and monitor")
@@ -206,6 +218,14 @@ func _run() -> void:
                         camera.look_at(Vector3(-1.55, 1.1, 1.38), Vector3.UP)
                         await _shot(viewport, "recon_v32_canopy_rear.png")
                         ReconV3.station_pose(camp, 0.0)
+                        camera.position = Vector3(6.0, 3.2, -7.0)
+                        camera.look_at(Vector3(2.55, 0.75, -1.9), Vector3.UP)
+                        camera.size = 3.8
+                        await _shot(viewport, "recon_v33_ground_sensor.png")
+                        camera.position = Vector3(-6.0, 4.0, -6.0)
+                        camera.look_at(Vector3(-1.45, 0.38, -1.2), Vector3.UP)
+                        camera.size = 5.8
+                        await _shot(viewport, "recon_v33_deck_and_auxiliary.png")
                         camera.size = 12.8
                     stage.remove_child(camp)
                 elif faction == 0 and lod == 13 and damage in [2, 3]:
@@ -222,13 +242,13 @@ func _run() -> void:
                     stage.remove_child(camp)
                 camp.free()
     check(audits == 72, "72 model audits including neutral")
-    check(screenshots == 27,
-        "25 existing views plus 2 station closeups")
+    check(screenshots == 29,
+        "27 existing views plus 2 ground equipment closeups")
     viewport.queue_free()
     await process_frame
     if failures > 0:
         printerr("FAIL RECON CAMP V3 NATIVE: %d issues" % failures)
         quit(1)
         return
-    print("PASS RECON CAMP V3 NATIVE: 72 audits, 27 PNGs")
+    print("PASS RECON CAMP V3 NATIVE: 72 audits, 29 PNGs")
     quit(0)

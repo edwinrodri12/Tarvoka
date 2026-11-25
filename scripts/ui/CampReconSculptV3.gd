@@ -329,6 +329,11 @@ static func station_pose(root: Node3D, progress: float) -> bool:
         var led: MeshInstance3D = instrument.get_node("V32_RadioLED_%d" % side) as MeshInstance3D
         var mat: StandardMaterial3D = led.material_override as StandardMaterial3D
         mat.emission_energy_multiplier = 0.18 + 0.42 * (0.5 + 0.5 * sin(t * TAU * 2.0 + float(side)))
+    var core: Node3D = root.get_node("EquipamientoDesplegable/" + BASE.CORE) as Node3D
+    for side in [-1, 1]:
+        var sensor: Node3D = core.get_node_or_null("V33_GroundSensor_%d/V33_SensorMastPivot/V33_SensorHead" % side) as Node3D
+        if sensor != null:
+            sensor.rotation_degrees.y = float(side) * 35.0 * sin(t * TAU)
     root.set_meta("recon_v32_station_phase", t)
     return true
 
@@ -363,11 +368,124 @@ static func _station(station: Node3D, accent: Color, lod: int, damage: int) -> v
     if damage >= 1:
         _box(station, "V3_AbradedRearPanel", Vector3(0.57, 1.36, 0.81), Vector3(0.30, 0.045, 0.035), ALLOY, 0.005).rotation_degrees.z = 24.0
 
+# V3.3: the auxiliary equipment lives in two side zones. Keep the
+# central walkway and operator access open. No credit/energy mechanics.
+static func _equipment_case(parent: Node3D, label: String, at: Vector3, accent: Color, lod: int, damage: int) -> Node3D:
+    var item: Node3D = _group(parent, label, at)
+    _box(item, "V33_CaseBody", Vector3(0, 0.27, 0),
+        Vector3(0.82, 0.49, 0.69), GREY, 0.075, 0.43)
+    _box(item, "V33_SealedLid", Vector3(0, 0.535, 0),
+        Vector3(0.87, 0.12, 0.73), FRAME, 0.035)
+    _box(item, "V33_IdentityInset", Vector3(0, 0.35, -0.351),
+        Vector3(0.57, 0.16, 0.045), accent, 0.013)
+    for side in [-1, 1]:
+        _box(item, "V33_CornerRail_%d" % side, Vector3(float(side) * 0.35, 0.26, -0.325),
+            Vector3(0.12, 0.42, 0.095), FRAME, 0.018)
+        _box(item, "V33_Latch_%d" % side, Vector3(float(side) * 0.25, 0.48, -0.383),
+            Vector3(0.105, 0.15, 0.07), ALLOY, 0.014)
+        _box(item, "V33_Handle_%d" % side, Vector3(float(side) * 0.425, 0.32, 0),
+            Vector3(0.07, 0.12, 0.25), FRAME, 0.022)
+    if lod == 13:
+        for i in range(3):
+            _box(item, "V33_CaseVent_%d" % i, Vector3(0, 0.13 + float(i) * 0.052, 0.356),
+                Vector3(0.49, 0.023, 0.035), FRAME, 0.004)
+    if damage >= 2:
+        item.rotation_degrees.y = 13.0
+        _box(item, "V33_Scrape", Vector3(0.12, 0.40, -0.382),
+            Vector3(0.22, 0.032, 0.026), ALLOY, 0.004).rotation_degrees.z = 22.0
+    return item
+
+static func _ground_v33(core: Node3D, accent: Color, lod: int, damage: int) -> void:
+    var deck: Node3D = _group(core, "V33_ModularDeck")
+    # Inset panels above the original closed platform, all below equipment feet.
+    for i in range(3):
+        var z: float = -1.67 + float(i) * 0.55
+        _box(deck, "V33_AccessMat_%d" % i, Vector3(0.15, 0.034, z),
+            Vector3(1.45, 0.062, 0.51), GASKET, 0.010, 0.08)
+        for side in [-1, 1]:
+            _box(deck, "V33_AccessEdge_%d_%d" % [i, side], Vector3(0.15 + float(side) * 0.65, 0.072, z),
+                Vector3(0.09, 0.023, 0.43), accent, 0.005)
+        if lod == 13:
+            for bar in [-1, 1]:
+                _box(deck, "V33_AccessGrip_%d_%d" % [i, bar], Vector3(0.15, 0.074, z + float(bar) * 0.14),
+                    Vector3(1.16, 0.018, 0.035), ALLOY, 0.004, 0.21)
+    for side in [-1, 1]:
+        var x: float = float(side) * 2.67
+        _box(deck, "V33_SensorDeck_%d" % side, Vector3(x, 0.034, -1.45),
+            Vector3(1.22, 0.063, 1.12), GREY, 0.022)
+        for z in [-2.86, 2.83]:
+            _box(deck, "V33_EdgeTieDown_%d_%d" % [side, int(z * 100)], Vector3(float(side) * 3.11, 0.115, z),
+                Vector3(0.36, 0.21, 0.34), FRAME, 0.045)
+            _cyl(deck, "V33_TiePin_%d_%d" % [side, int(z * 100)], Vector3(float(side) * 3.11, 0.235, z),
+                0.065, 0.065, Vector3.UP, ALLOY, lod)
+    for z in [-0.18, 2.67]:
+        _box(deck, "V33_DeckJoint_%d" % int(z * 100), Vector3(0, 0.024, z),
+            Vector3(6.22, 0.044, 0.07), FRAME, 0.008, 0.30)
+    var auxiliary: Node3D = _group(core, "V33_AuxiliaryEquipment")
+    _equipment_case(auxiliary, "V33_CommunicationsCase", Vector3(-2.96, 0.0, -0.34), accent, lod, damage)
+    var battery: Node3D = _equipment_case(auxiliary, "V33_PortableBatteryCase", Vector3(2.65, 0.0, -2.60), accent, lod, damage)
+    # Portable visual battery, not a power plant or a resource generator.
+    var indicator: MeshInstance3D = _box(battery, "V33_BatteryIndicator", Vector3(0, 0.608, -0.09),
+        Vector3(0.31, 0.035, 0.13), OPTIC if damage < 2 else FRAME, 0.008, 0.0)
+    _lit(indicator, OPTIC_LIGHT, 0.26 if damage < 2 else 0.0)
+    for side in [-1, 1]:
+        var x: float = float(side) * 2.67
+        var rig: Node3D = _group(core, "V33_GroundSensor_%d" % side, Vector3(x, 0, -1.45))
+        (core.get_node("V2_AntenaBaja_%d" % side) as Node3D).visible = false
+        (core.get_node("V2_PuntaFaccion_%d" % side) as Node3D).visible = false
+        var old_seal: Node3D = core.get_node_or_null("V2_Aislador_%d" % side) as Node3D
+        if old_seal != null:
+            old_seal.visible = false
+        for offset in [-1, 1]:
+            _box(rig, "V33_StabilizerFoot_%d" % offset, Vector3(float(offset) * 0.37, 0.14, 0),
+                Vector3(0.30, 0.18, 0.54), FRAME, 0.038)
+        _cyl(rig, "V33_BaseSocket", Vector3(0, 0.37, 0), 0.245, 0.22, Vector3.UP, ALLOY, lod)
+        var pivot: Node3D = _group(rig, "V33_SensorMastPivot", Vector3(0, 0.47, 0))
+        _cyl(pivot, "V33_OuterColumn", Vector3(0, 0.39, 0), 0.145, 0.78, Vector3.UP, GREY, lod)
+        _cyl(pivot, "V33_ColumnSeal", Vector3(0, 0.78, 0), 0.18, 0.12, Vector3.UP, FRAME, lod)
+        _cyl(pivot, "V33_SlidingColumn", Vector3(0, 0.89, 0), 0.09, 0.62, Vector3.UP, ALLOY, lod, 0.27)
+        var sensor: Node3D = _group(pivot, "V33_SensorHead", Vector3(0, 1.25, 0))
+        _cyl(sensor, "V33_HeadBearing", Vector3(0, -0.18, 0), 0.15, 0.14, Vector3.UP, FRAME, lod)
+        _box(sensor, "V33_WeatherproofHead", Vector3.ZERO,
+            Vector3(0.52, 0.36, 0.38), GREY, 0.075)
+        _box(sensor, "V33_HeadCap", Vector3(0, 0.19, 0),
+            Vector3(0.54, 0.09, 0.40), accent, 0.025)
+        _box(sensor, "V33_FrontWindow", Vector3(0, 0, -0.20),
+            Vector3(0.36, 0.23, 0.07), FRAME, 0.022)
+        _cyl(sensor, "V33_OpaqueGroundLens", Vector3(0, 0, -0.248),
+            0.09, 0.055, Vector3.FORWARD, OPTIC if damage < 2 else GASKET, lod, 0.28)
+        if lod == 13:
+            for j in [-1, 1]:
+                _box(sensor, "V33_HeadFastener_%d" % j, Vector3(float(j) * 0.19, -0.09, -0.24),
+                    Vector3(0.039, 0.038, 0.032), ALLOY, 0.005)
+        if damage >= 2:
+            pivot.rotation_degrees.z = float(side) * 47.0
+            sensor.rotation_degrees.y = float(side) * 28.0
+            (sensor.get_node("V33_HeadCap") as Node3D).rotation_degrees.z = 12.0
+        var route: Array[Vector3] = [Vector3(x, 0.27, -1.10), Vector3(x, 0.10, -0.93),
+            Vector3(x, 0.09, -0.72), Vector3(x - float(side) * 0.04, 0.09, -0.48),
+            Vector3(x - float(side) * 0.15, 0.20, -0.20)]
+        _cable(core, "V33_GroundSensorConduit_%d" % side, route, 0.038, lod)
+
+# Rigid telescoping columns and heading. Motion is purely presentational.
+static func _ground_pose(root: Node3D, progress: float) -> void:
+    if int(root.get_meta("visual_damage", 0)) >= 2:
+        return
+    var core: Node3D = root.get_node("EquipamientoDesplegable/" + BASE.CORE) as Node3D
+    var t: float = clampf(progress, 0.0, 1.0)
+    for side in [-1, 1]:
+        var pivot: Node3D = core.get_node("V33_GroundSensor_%d/V33_SensorMastPivot" % side) as Node3D
+        var shaft: Node3D = pivot.get_node("V33_SlidingColumn") as Node3D
+        var head: Node3D = pivot.get_node("V33_SensorHead") as Node3D
+        shaft.position.y = lerpf(0.56, 0.89, t)
+        head.position.y = lerpf(0.92, 1.25, t)
+    root.set_meta("recon_v33_ground_deploy", t)
+
 static func apply(root: Node3D, accent: Color, lod: int, damage: int) -> bool:
     if root == null or root.get_meta("camp_kind", "") != "reconocimiento":
         return false
     root.set_meta("recon_art_v3", 3)
-    root.set_meta("recon_art_revision", "3.2")
+    root.set_meta("recon_art_revision", "3.3")
     root.set_meta("recon_v3_art_only", true)
     _replace(root, "PlataformaDesmontable", 0.045, PANEL, 0.12)
     if damage == 3:
@@ -398,6 +516,7 @@ static func apply(root: Node3D, accent: Color, lod: int, damage: int) -> bool:
     for side in [-1, 1]:
         _replace(core, "V2_EstabilizadorSensor_%d" % side, 0.07, FRAME)
         _replace(core, "V2_PuntaFaccion_%d" % side, 0.05, accent)
+    _ground_v33(core, accent, lod, damage)
     return pose(root, 1.0)
 
 static func pose(root: Node3D, progress: float) -> bool:
@@ -412,5 +531,6 @@ static func pose(root: Node3D, progress: float) -> bool:
     var head: Node3D = mast.get_node("V2_CabezalOpticoGiratorio") as Node3D
     shaft.position.y = lerpf(0.56, 1.17, t)
     head.position.y = lerpf(1.46, 2.07, t)
+    _ground_pose(root, t)
     root.set_meta("recon_v3_deploy_progress", t)
     return true

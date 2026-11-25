@@ -244,6 +244,8 @@ func _run() -> void:
             _check(recon_finish != null and recon_finish.visible, "Recon comparison picker")
             studio.call("_camp_recon_frame", 0.25)
             _check(absf(float(camp.get_meta("recon_v32_station_phase", 0.0)) - 0.25) < 0.01, "Console operates in the same viewport")
+            var ground_head: Node3D = camp.get_node("EquipamientoDesplegable/ReconV2_OpticalOutpost/V33_GroundSensor_1/V33_SensorMastPivot/V33_SensorHead") as Node3D
+            _check(absf(ground_head.rotation_degrees.y - 35.0) < 0.01, "Ground sensor follows same animation")
             _check(absf(float(camp.get_meta("recon_v2_visual_scan_degrees", 0.0)) - 85.0) < 0.01, "Optics and console synchronized")
             studio.call("_camp_stop_recon")
             studio.call("_camp_scan", 85.0)
