@@ -287,6 +287,24 @@ func _run() -> void:
                     var outer_x: float=bounds.size.x*0.5*shoulder.scale.x
                     check(absf(absf(stripe.position.x)-outer_x)<0.035,
                         "shoulder stripe remains close to real exterior")
+                    # The cap centers are mirrored, sloping toward the
+                    # neck above and toward the biceps below.
+                    var verts: PackedVector3Array=shoulder.mesh.surface_get_arrays(0)[Mesh.ARRAY_VERTEX]
+                    var top_center: float=0.0
+                    var bottom_center: float=0.0
+                    var top_n: int=0
+                    var bottom_n: int=0
+                    for p in verts:
+                        if absf(p.y-bounds.end.y)<0.00001:
+                            top_center+=p.x
+                            top_n+=1
+                        elif absf(p.y-bounds.position.y)<0.00001:
+                            bottom_center+=p.x
+                            bottom_n+=1
+                    check(top_n>0 and bottom_n>0 and
+                        float(side)*top_center/float(maxi(1,top_n))< -0.025 and
+                        float(side)*bottom_center/float(maxi(1,bottom_n))>0.025,
+                        "mirrored shoulder shell has anatomically sloped cap centers")
                 for label in [V17.KNEE+suffix,V17.POCKET+suffix,
                         V17.SOLE+suffix,V17.TOE+suffix]:
                     var part: MeshInstance3D=model.find_child(
@@ -985,12 +1003,23 @@ func _run() -> void:
                 check(changed>=40,"critical smoke actually visible beyond silhouette D"+str(stage))
                 batch.visible=true
         Models.restore_model_pose("infantry_engineer",hero)
+        # Dedicated frontal and three-quarter silhouettes of limbs in
+        # motion, at the native scale; no isolated replacement models.
+        camera.size=2.05
+        for spec in [["upper",Vector3(-2.9,0.40,-3.2),Vector3(0,1.30,0)],
+                ["lower",Vector3(2.9,0.35,-3.2),Vector3(0,0.52,0)]]:
+            Models.pose_model("infantry_engineer",hero,"move",0.375)
+            var target: Vector3=spec[2]
+            camera.position=target+Vector3(spec[1])
+            camera.look_at(target,Vector3.UP)
+            await snapshot(viewport,"v17_anatomy_"+str(spec[0]))
+        Models.restore_model_pose("infantry_engineer",hero)
         hero.queue_free()
         await process_frame
-    check(photos==35,"31 previous views plus four dust, impact and smoke views")
+    check(photos==37,"35 previous views plus two moving limb inspection views")
     if failed>0:
         push_error("FAIL ENGINEER V17: %d violations"%failed)
         quit(1)
     else:
-        print("PASS ENGINEER V17: 8 factions x 2 LOD, closed hard-surface chest, shoulder, knees, boots; 35 native comparison, pose, helmet, shield, equipment, damage and effects renders")
+        print("PASS ENGINEER V17: 8 factions x 2 LOD, closed hard-surface chest, shoulder, knees, boots; 37 native comparison, pose, helmet, shield, equipment, damage, effects and anatomy renders")
         quit(0)

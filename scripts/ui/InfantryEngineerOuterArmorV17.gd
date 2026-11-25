@@ -178,6 +178,31 @@ static func _forged_profile(source: ArrayMesh, strength: float) -> ArrayMesh:
     result.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES,arrays)
     return result
 
+# Sculpt left/right deltoid shells as mirrored anatomical shapes,
+# not identical symmetric caps. Lower edge follows the outside biceps,
+# upper edge slopes inward to the neck. The central stripe stays at
+# the same attachment height. Closed topology and vertex budget stay.
+static func _shoulder_anatomy(source: ArrayMesh,side: int) -> ArrayMesh:
+    var arrays: Array=source.surface_get_arrays(0)
+    var points: PackedVector3Array=arrays[Mesh.ARRAY_VERTEX]
+    var normals: PackedVector3Array=arrays[Mesh.ARRAY_NORMAL]
+    var bounds: AABB=source.get_aabb()
+    var span: float=maxf(0.001,bounds.size.y)
+    for i in range(points.size()):
+        var p: Vector3=points[i]
+        var n: Vector3=normals[i]
+        var t: float=clampf((p.y-bounds.position.y)/span,0.0,1.0)
+        var shift: float=float(side)*(0.052*pow(1.0-t,2.0)-0.045*t*t)
+        var derivative: float=float(side)*(-0.104*(1.0-t)-0.090*t)/span
+        p.x+=shift
+        points[i]=p
+        normals[i]=Vector3(n.x,n.y-derivative*n.x,n.z).normalized()
+    arrays[Mesh.ARRAY_VERTEX]=points
+    arrays[Mesh.ARRAY_NORMAL]=normals
+    var result:=ArrayMesh.new()
+    result.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES,arrays)
+    return result
+
 # Existing gloves use their weapon/tool rig as parent. Preserve the
 # contact centres and all V9 visibility switching, changing meshes only.
 static func _sculpt_hands(model: Node3D, hero: bool) -> bool:
@@ -273,12 +298,20 @@ static func _cloth_relief(source: Mesh, hero: bool,
         var fz: float=amp*envelope*cos(phase)*az
         var fy: float=amp*(PI*sin(2.0*PI*t)*wave+
             envelope*cos(phase)*frequency)/span
+        # Slight curved centerline through the soft tissue, with zero
+        # displacement and zero slope at both original rig contacts.
+        # Avoid the rigid straight-tube silhouette without moving joints.
+        var bend_x: float=float(side)*rx*0.065*envelope
+        var bend_z: float=rz*0.11*envelope
+        var envelope_slope: float=PI*sin(2.0*PI*t)/span
+        var bend_dx: float=float(side)*rx*0.065*envelope_slope
+        var bend_dz: float=rz*0.11*envelope_slope
         var jacobian:=Basis(
             Vector3(f+p.x*fx,0,p.z*fx),
-            Vector3(p.x*fy,1,p.z*fy),
+            Vector3(p.x*fy+bend_dx,1,p.z*fy+bend_dz),
             Vector3(p.x*fz,0,f+p.z*fz))
         out.set_normal((jacobian.inverse().transposed()*n).normalized())
-        out.add_vertex(Vector3(p.x*f,p.y,p.z*f))
+        out.add_vertex(Vector3(p.x*f+bend_x,p.y,p.z*f+bend_z))
     return out.commit()
 
 static func _sculpt_uniform(model: Node3D, hero: bool) -> bool:
@@ -1395,7 +1428,7 @@ static func apply(model: Node3D, hero: bool) -> bool:
         if shoulder==null or shoulder.get_parent()!=arm:
             return false
         if not _change(model,SHOULDER+suffix,
-                _forged_profile(V13._lathe(shoulder_rings,hero),0.19),
+                _shoulder_anatomy(_forged_profile(V13._lathe(shoulder_rings,hero),0.19),side),
                 Vector3(0.68,0.55,0.65),
                 Vector3(0.0,-0.083,-0.065)):
             return false
