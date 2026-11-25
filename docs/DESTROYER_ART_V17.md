@@ -1,0 +1,3 @@
+# Destructor naval TARVOKA — V1.7
+
+Arte ficticio nativo; sin cambios de estadísticas, navegación táctica ni reglas de hundimiento. Incluye casco, puente, módulos, sensores, popa, materiales opacos, animaciones reversibles y daño D0–D4. El hundimiento desplaza únicamente la geometría del modelo, no la posición de batalla. Visor compartido: selector de unidad y controles de facción/LOD/daño/animaciones, enlace `?unidad=destroyer`. QA prevista: 18 combinaciones, 90 estados de daño, 19 capturas nativas y una captura del mismo visor. Pendientes resultados de CI, revisión de renders y rendimiento real en Android; no fusionar hasta validar.

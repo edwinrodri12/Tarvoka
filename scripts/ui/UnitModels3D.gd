@@ -1370,7 +1370,7 @@ static func set_destroyer_damage(root: Node3D, stage: int, progress: float = 0.0
             child.transform = child.get_meta("naval_rest_transform")
     for child in fx.get_children():
         var label: String = str(child.name)
-        child.visible = (label.begins_with("Marca") and d>=1) or (label.begins_with("Humo") and d>=2) or (label.begins_with("Fuego") and d>=3) or (label=="FragmentoCubierta" and d>=3)
+        (child as Node3D).visible = (label.begins_with("Marca") and d>=1) or (label.begins_with("Humo") and d>=2) or (label.begins_with("Fuego") and d>=3) or (label=="FragmentoCubierta" and d>=3)
     var mast: Node3D = root.get_node("TorreMastil") as Node3D
     var bridge: Node3D = root.get_node("Superestructura") as Node3D
     if d >= 2:
@@ -2035,7 +2035,7 @@ static func pose_model(role: String, model: Node3D, kind: String,
         "attack_heli":
             return AttackHelicopterV1.pose(model,kind,progress,target_heading)
         "destroyer":
-            if kind == "damage":
+            if kind in ["damage","damaged"]:
                 return set_destroyer_damage(model,clampi(int(ceilf(progress*4.0)),0,4),progress)
             if kind == "sink" or kind == "destroy":
                 return set_destroyer_damage(model,4,progress)
