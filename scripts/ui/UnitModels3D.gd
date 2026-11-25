@@ -1163,6 +1163,85 @@ static func pose_destroyer_radar(root: Node3D, progress: float) -> bool:
     pivot.rotation_degrees.y = fposmod(progress,1.0)*360.0
     return true
 
+# Aft deck and stylized propulsion silhouettes for the fictional game model.
+# Dimensions below are artistic scene units, not real ship specifications.
+static func _destroyer_aft(root: Node3D, art_level: int) -> void:
+    var detail: bool = art_level >= 13
+    var sides: int = 20 if detail else 10
+    var aft := Node3D.new()
+    aft.name = "ConjuntoPopa"
+    root.add_child(aft)
+    var landing: Array = [
+        [0.79,0.49,0.784,0.836],[0.86,0.63,0.784,0.836],
+        [1.32,0.57,0.784,0.836],[1.44,0.46,0.784,0.836]]
+    _destroyer_shell(aft,"Helipuerto",landing,DARK)
+    for side in [-1,1]:
+        var sign: float = float(side)
+        _box(aft,"MarcaHelipuerto_%d" % side,Vector3(sign*0.15,0.842,1.11),
+            Vector3(0.055,0.014,0.36),METAL)
+        _box(aft,"BordeHelipuerto_%d" % side,Vector3(sign*0.41,0.846,1.11),
+            Vector3(0.035,0.020,0.35),ARMOR)
+        _box(aft,"BaseAmarre_%d" % side,Vector3(sign*0.32,0.824,1.49),
+            Vector3(0.17,0.065,0.13),STEEL)
+        _cylinder(aft,"Amarre_%d" % side,Vector3(sign*0.32,0.904,1.49),
+            0.048,0.105,DARK,Vector3.ZERO,sides)
+        _box(aft,"LuzPopa_%d" % side,Vector3(sign*0.38,0.855,1.40),
+            Vector3(0.07,0.055,0.075),METAL)
+        if detail:
+            for i in range(3):
+                var z: float = 0.86 + float(i)*0.16
+                _box(aft,"PostePopa_%d_%d" % [side,i],Vector3(sign*0.49,0.914,z),
+                    Vector3(0.035,0.18,0.035),STEEL)
+            _box(aft,"PasamanosPopa_%d" % side,Vector3(sign*0.49,0.997,1.02),
+                Vector3(0.035,0.035,0.35),STEEL)
+        var group := Node3D.new()
+        group.name = "Propulsion_%d" % side
+        group.position = Vector3(sign*0.31,0.18,1.34)
+        aft.add_child(group)
+        _cylinder(group,"CarcasaVisual",Vector3(0,0.04,-0.09),
+            0.105,0.30,STEEL,Vector3(90,0,0),sides)
+        var rotor := Node3D.new()
+        rotor.name = "HelicePivot"
+        rotor.position = Vector3(0,0.02,0.10)
+        group.add_child(rotor)
+        _cylinder(rotor,"Cubo",Vector3.ZERO,0.061,0.12,METAL,Vector3(90,0,0),sides)
+        # Three abstract rounded lobes; only a visible rotation effect.
+        for i in range(3):
+            var blade := Node3D.new()
+            blade.name = "Lobulo_%d" % i
+            blade.rotation.z = float(i)*TAU/3.0
+            rotor.add_child(blade)
+            _sphere(blade,"PalaVisual",Vector3(0,0.081,0),
+                Vector3(0.085,0.16,0.045),ARMOR)
+        _box(group,"SoporteInferior",Vector3(0,0.07,-0.18),
+            Vector3(0.14,0.19,0.14),STEEL)
+        var rudder := Node3D.new()
+        rudder.name = "TimonPivot"
+        rudder.position = Vector3(0,0.09,0.23)
+        group.add_child(rudder)
+        _destroyer_shell(rudder,"TimonVisual",
+            [[-0.02,0.048,-0.13,0.15],[0.07,0.052,-0.14,0.15],
+             [0.16,0.032,-0.08,0.11]],DARK)
+    _box(aft,"MarcaHelipuertoCentro",Vector3(0,0.842,1.11),
+        Vector3(0.30,0.014,0.06),METAL)
+    # Static wake is purely decorative and may be hidden for inspection.
+    _box(root,"EstelaEspuma",Vector3(0,0.07,1.81),
+        Vector3(1.10,0.035,0.34),WATER)
+    root.set_meta("destroyer_aft_revision","1.4")
+
+static func pose_destroyer_aft(root: Node3D, progress: float, steering: float = 0.0) -> bool:
+    if root == null or root.get_meta("destroyer_aft_revision","") != "1.4":
+        return false
+    for side in [-1,1]:
+        var group: Node3D = root.get_node_or_null("ConjuntoPopa/Propulsion_%d" % side) as Node3D
+        if group == null:
+            return false
+        var rotor: Node3D = group.get_node("HelicePivot") as Node3D
+        var rudder: Node3D = group.get_node("TimonPivot") as Node3D
+        rotor.rotation.z = float(side)*fposmod(progress,1.0)*TAU
+        rudder.rotation_degrees.y = clampf(steering,-1.0,1.0)*25.0
+    return true
+
 static func _destroyer(root: Node3D, art_level: int = 10) -> void:
     var stations: Array = [
         [-2.26,0.045,0.36,0.76],[-2.04,0.28,0.18,0.76],
@@ -1183,17 +1262,11 @@ static func _destroyer(root: Node3D, art_level: int = 10) -> void:
         _box(root,"FaccionIdentidadNaval_%d" % side,
             Vector3(float(side)*0.775,0.76,0.02),
             Vector3(0.07,0.10,0.48),ARMOR)
-    root.set_meta("destroyer_art_revision","1.3")
+    root.set_meta("destroyer_art_revision","1.4")
     _destroyer_bridge(root)
     _destroyer_navigation(root,art_level)
     _destroyer_deck_equipment(root,art_level)
-    _box(root,"Helipuerto",Vector3(0,0.82,0.93),
-        Vector3(1.06,0.08,0.58),DARK)
-    _box(root,"MarcaHelipuerto",Vector3(0,0.87,0.92),
-        Vector3(0.06,0.02,0.38),ACCENT)
-    # Static white wake is part of the ship model, not map-water mechanics.
-    _box(root,"EstelaEspuma",Vector3(0,0.07,1.71),
-        Vector3(1.43,0.04,0.37),WATER)
+    _destroyer_aft(root,art_level)
 
 static func build(role: String, faction: int = -1, finish_enabled: bool = true, art_level: int = 10) -> Node3D:
     if not supports(role):
