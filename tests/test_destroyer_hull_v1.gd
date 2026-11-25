@@ -33,8 +33,8 @@ func _run() -> void:
             check(model != null, "Destroyer builds")
             if model == null:
                 continue
-            check(model.get_meta("destroyer_art_revision", "") == "1.2", "V1.2 deck equipment active")
-            for key in ["CascoNaval", "Cubierta", "Superestructura/ZocaloNaval", "Superestructura/CarcasaInferior", "Superestructura/Puente", "Superestructura/TechoPuente", "TorretaNavalPivot/CarcasaTorreta"]:
+            check(model.get_meta("destroyer_art_revision", "") == "1.3", "V1.3 navigation active")
+            for key in ["CascoNaval", "Cubierta", "Superestructura/ZocaloNaval", "Superestructura/CarcasaInferior", "Superestructura/Puente", "Superestructura/TechoPuente", "TorretaNavalPivot/CarcasaTorreta", "TorreMastil/CarcasaMastil", "TorreMastil/RadarPivot/Radar"]:
                 var part: MeshInstance3D = model.get_node_or_null(key) as MeshInstance3D
                 check(part != null, "Native " + key)
                 if part != null:
@@ -83,12 +83,26 @@ func _run() -> void:
                     for z in range(3):
                         check(module.has_node("TapaModulo_%d_%d" % [x,z]), "Closed module lid")
                         check(module.has_node("BisagraTapa_%d_%d" % [x,z]) == (lod >= 13), "Hinge LOD")
+            var mast: Node3D = model.get_node_or_null("TorreMastil") as Node3D
+            var radar: Node3D = model.get_node_or_null("TorreMastil/RadarPivot") as Node3D
+            check(mast != null and radar != null, "Native mast and navigation pivot")
+            if mast != null and radar != null:
+                var panel: MeshInstance3D = radar.get_node("Radar") as MeshInstance3D
+                var local: Transform3D = panel.transform
+                var fixed: Transform3D = mast.transform
+                for phase in [0.0, 0.25, 0.5, 0.75, 1.0]:
+                    check(Art.pose_destroyer_radar(model, phase), "Visual sensor rotation")
+                    check(radar.basis.is_equal_approx(Basis(Vector3.UP, fposmod(phase,1.0)*TAU)), "Deterministic radar phase")
+                    check(panel.transform == local and mast.transform == fixed and radar.scale.is_equal_approx(Vector3.ONE), "Rigid sensor, fixed mast")
+                check(radar.has_node("DetalleSensor_0") == (lod >= 13), "Sensor LOD")
+                for side in [-1,1]:
+                    check(model.has_node("LenteNavegacion_%d" % side) and model.has_node("BaseAntena_%d" % side), "Both navigation sides")
             model.free()
     await _render()
     if failures != 0:
         quit(1)
         return
-    print("PASS DESTROYER HULL V1.2: 18 variants, 6 PNGs")
+    print("PASS DESTROYER HULL V1.3: 18 variants, 8 PNGs")
     quit(0)
 
 func _render() -> void:
@@ -123,16 +137,18 @@ func _render() -> void:
         view.queue_free()
         return
     stage.add_child(model)
-    var angles: Array[Vector3] = [Vector3(5,4,-6),Vector3(-5,4,6),Vector3(3,2,-3),Vector3(-3,2,3),Vector3(2.6,2.8,-3.8),Vector3(-2.4,3.0,-2.0)]
-    for i in range(6):
-        camera.size = 5.1 if i < 2 else (2.0 if i < 4 else 1.85)
+    var angles: Array[Vector3] = [Vector3(5,4,-6),Vector3(-5,4,6),Vector3(3,2,-3),Vector3(-3,2,3),Vector3(2.6,2.8,-3.8),Vector3(-2.4,3.0,-2.0),Vector3(2.4,2.6,-1.7),Vector3(-2.4,2.5,2.1)]
+    for i in range(8):
+        camera.size = 5.1 if i < 2 else (2.0 if i < 4 else (1.85 if i < 6 else 1.4))
         camera.position = angles[i]
-        camera.look_at(Vector3(0,0.7,0.15) if i < 2 else (Vector3(0,0.96,0.3) if i < 4 else Vector3(0,0.82,-0.78)),Vector3.UP)
+        camera.look_at(Vector3(0,0.7,0.15) if i < 2 else (Vector3(0,0.96,0.3) if i < 4 else (Vector3(0,0.82,-0.78) if i < 6 else Vector3(0,1.45,0.22))),Vector3.UP)
+        if i >= 6:
+            Art.pose_destroyer_radar(model, 0.25 * float(i - 6))
         await process_frame
         await process_frame
         await process_frame
         var img: Image = view.get_texture().get_image()
         check(img != null and not img.is_empty(), "Real Godot image")
         if img != null and not img.is_empty():
-            check(img.save_png(output + "/destroyer_v12_%d.png" % i) == OK, "Capture saved")
+            check(img.save_png(output + "/destroyer_v13_%d.png" % i) == OK, "Capture saved")
     view.queue_free()
