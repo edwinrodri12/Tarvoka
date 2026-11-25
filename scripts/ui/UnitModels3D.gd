@@ -998,6 +998,52 @@ static func _destroyer_shell(root: Node3D, label: String, stations: Array,
     faces.append([last,last+1,last+2,last+3,last+4,last+5])
     return _hull(root,label,points,faces,tint)
 
+# Native solid bridge: compact footprint between existing forward deck
+# equipment and aft landing area. Windows are opaque inserts, not planes.
+static func _destroyer_bridge(root: Node3D) -> void:
+    var bridge: Node3D = Node3D.new()
+    bridge.name = "Superestructura"
+    root.add_child(bridge)
+    var foundation: Array = [
+        [0.13,0.39,0.785,0.94],[0.22,0.49,0.785,0.94],
+        [0.63,0.49,0.785,0.94],[0.75,0.38,0.785,0.94]]
+    _destroyer_shell(bridge,"ZocaloNaval",foundation,DARK)
+    var lower: Array = [
+        [0.16,0.35,0.92,1.19],[0.23,0.46,0.92,1.19],
+        [0.59,0.46,0.92,1.19],[0.70,0.35,0.92,1.19]]
+    _destroyer_shell(bridge,"CarcasaInferior",lower,STEEL)
+    var upper: Array = [
+        [0.13,0.36,1.16,1.48],[0.23,0.47,1.16,1.48],
+        [0.54,0.47,1.16,1.48],[0.66,0.36,1.16,1.48]]
+    _destroyer_shell(bridge,"Puente",upper,ARMOR)
+    var roof: Array = [
+        [0.115,0.37,1.465,1.54],[0.21,0.49,1.465,1.54],
+        [0.55,0.49,1.465,1.54],[0.68,0.37,1.465,1.54]]
+    _destroyer_shell(bridge,"TechoPuente",roof,STEEL)
+    var window_tint := Color("#38566A")
+    for i in range(3):
+        var x: float = float(i - 1) * 0.19
+        _box(bridge,"MarcoFrontal_%d" % i,Vector3(x,1.375,0.119),
+            Vector3(0.181,0.145,0.035),DARK)
+        _box(bridge,"CristalFrontal_%d" % i,Vector3(x,1.375,0.099),
+            Vector3(0.147,0.111,0.023),window_tint)
+    for side in [-1,1]:
+        var sign: float = float(side)
+        for i in range(2):
+            var z: float = 0.30 + float(i) * 0.16
+            _box(bridge,"MarcoLateral_%d_%d" % [side,i],Vector3(sign*0.445,1.37,z),
+                Vector3(0.045,0.14,0.145),DARK)
+            _box(bridge,"CristalLateral_%d_%d" % [side,i],Vector3(sign*0.470,1.37,z),
+                Vector3(0.026,0.107,0.113),window_tint)
+        _box(bridge,"FaccionPuente_%d" % side,Vector3(sign*0.43,1.11,0.41),
+            Vector3(0.07,0.085,0.29),ARMOR)
+        _box(bridge,"PuertaServicio_%d" % side,Vector3(sign*0.425,1.045,0.55),
+            Vector3(0.047,0.19,0.15),DARK)
+        _box(bridge,"TiradorServicio_%d" % side,Vector3(sign*0.455,1.055,0.56),
+            Vector3(0.021,0.055,0.025),METAL)
+    _box(bridge,"ApoyoMastil",Vector3(0,1.55,0.28),
+        Vector3(0.29,0.08,0.29),DARK)
+
 static func _destroyer(root: Node3D) -> void:
     var stations: Array = [
         [-2.26,0.045,0.36,0.76],[-2.04,0.28,0.18,0.76],
@@ -1018,10 +1064,8 @@ static func _destroyer(root: Node3D) -> void:
         _box(root,"FaccionIdentidadNaval_%d" % side,
             Vector3(float(side)*0.775,0.76,0.02),
             Vector3(0.07,0.10,0.48),ARMOR)
-    root.set_meta("destroyer_art_revision","1.0")
-    _body(root,"Superestructura",0.43,0.25,0.50,0.80,1.36,METAL)
-    _box(root,"Puente",Vector3(0,1.30,0),
-        Vector3(0.79,0.26,0.50),GLASS)
+    root.set_meta("destroyer_art_revision","1.1")
+    _destroyer_bridge(root)
     _box(root,"TorreMastil",Vector3(0,1.74,0.28),
         Vector3(0.17,0.81,0.18),DARK)
     _box(root,"Radar",Vector3(0,2.16,0.28),
