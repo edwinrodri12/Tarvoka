@@ -51,7 +51,7 @@ func _run() -> void:
             check(model != null, "Destroyer builds")
             if model == null:
                 continue
-            check(model.get_meta("destroyer_art_revision", "") == "1.6", "V1.6 motion active")
+            check(model.get_meta("destroyer_art_revision", "") == "1.7", "V1.7 damage active")
             for key in ["CascoNaval", "Cubierta", "FaccionFranjaNaval", "Superestructura/ZocaloNaval", "Superestructura/CarcasaInferior", "Superestructura/Puente", "Superestructura/TechoPuente", "TorretaNavalPivot/CarcasaTorreta", "TorreMastil/CarcasaMastil", "TorreMastil/RadarPivot/Radar", "ConjuntoPopa/Helipuerto", "ConjuntoPopa/Propulsion_-1/TimonPivot/TimonVisual", "ConjuntoPopa/Propulsion_1/TimonPivot/TimonVisual"]:
                 var part: MeshInstance3D = model.get_node_or_null(key) as MeshInstance3D
                 check(part != null, "Native " + key)
@@ -160,12 +160,35 @@ func _run() -> void:
             check(absf(model.rotation_degrees.x)<0.01 and absf(model.rotation_degrees.z)<0.01, "Restored hull attitude")
             for patch in wake.get_children():
                 check(not patch.visible, "Restored wake")
+            var fx: Node3D = model.get_node("DanoNavalVisual") as Node3D
+            var hull_rest: Transform3D = hull.transform
+            var mast_rest: Transform3D = mast.transform
+            for damage in range(5):
+                check(Art.set_destroyer_damage(model,damage,0.50), "Damage stage applied")
+                check(int(model.get_meta("destroyer_damage_stage",-1)) == damage, "Damage revision")
+                check((fx.get_node("Marca_0") as Node3D).visible == (damage>=1), "Surface wear")
+                check((fx.get_node("Humo_0") as Node3D).visible == (damage>=2), "Smoke stage")
+                check((fx.get_node("Fuego_0") as Node3D).visible == (damage>=3), "Fire stage")
+                check((fx.get_node("FragmentoCubierta") as Node3D).visible == (damage>=3), "Physical deck fragment")
+                if damage in [2,3]:
+                    check(absf(mast.rotation_degrees.z)>10.0, "Visible mast damage")
+                if damage == 4:
+                    check(hull.position.y < -0.9, "Visual sinking")
+                    var sunk: Transform3D = hull.transform
+                    check(not Art.pose_model("destroyer",model,"move",0.25), "Destroyed model rejects navigation")
+                    Art.restore_model_pose("destroyer",model)
+                    check(hull.transform.is_equal_approx(sunk), "Restore cannot resurrect")
+                    Art.set_destroyer_damage(model,4,0.5)
+                    check(hull.transform.is_equal_approx(sunk), "No accumulated sinking")
+                check(model.position == base_position and model.scale.is_equal_approx(base_scale), "Damage preserves tactical transform")
+            check(Art.set_destroyer_damage(model,0), "Reset damage")
+            check(hull.transform.is_equal_approx(hull_rest) and mast.transform.is_equal_approx(mast_rest), "Original geometry restored")
             model.free()
     await _render()
     if failures != 0:
         quit(1)
         return
-    print("PASS DESTROYER HULL V1.6: 18 variants, 14 PNGs")
+    print("PASS DESTROYER HULL V1.7: 18 variants, 19 PNGs")
     quit(0)
 
 func _render() -> void:
@@ -225,5 +248,18 @@ func _render() -> void:
         var img: Image = view.get_texture().get_image()
         check(img != null and not img.is_empty(), "Real Godot image")
         if img != null and not img.is_empty():
-            check(img.save_png(output + "/destroyer_v16_%d.png" % i) == OK, "Capture saved")
+            check(img.save_png(output + "/destroyer_v17_%d.png" % i) == OK, "Capture saved")
+    Art.restore_model_pose("destroyer",model)
+    for d in range(5):
+        Art.set_destroyer_damage(model,d,0.52 if d == 4 else 0.0)
+        camera.position = Vector3(5,3.5,-6)
+        camera.size = 5.1
+        camera.look_at(Vector3(0,0.4 if d < 4 else -0.35,0),Vector3.UP)
+        await process_frame
+        await process_frame
+        await process_frame
+        var img: Image = view.get_texture().get_image()
+        check(img != null and not img.is_empty(), "Damage image")
+        if img != null and not img.is_empty():
+            check(img.save_png(output + "/destroyer_v17_D%d.png" % d) == OK, "Damage capture saved")
     view.queue_free()
