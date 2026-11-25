@@ -68,12 +68,13 @@ func _audit(faction: int, lod: int, damage: int) -> Node3D:
     if camp == null:
         return null
     audits += 1
-    check(camp.get_meta("defense_art_v3", 0) == 3 and camp.get_meta("defense_art_revision", "") == "3.3" and camp.get_meta("no_gameplay_effects", false), "V3.3 visual only")
+    check(camp.get_meta("defense_art_v3", 0) == 3 and camp.get_meta("defense_art_revision", "") == "3.4" and camp.get_meta("no_gameplay_effects", false), "V3.4 visual only")
     check(camp.get_meta("builder_role", "") == "infantry_engineer", "Engineer identity")
     var core: Node3D = camp.get_node_or_null("EquipamientoDesplegable/" + Defense.CORE) as Node3D
     if damage == 3:
         check(core == null and camp.has_node("V3_DefenseWreck"), "No intact fort in D3")
         check(not Motion.deployment_frame(camp, 0.5), "D3 cannot animate deployment")
+        check(camp.has_node("V3_DefenseWreck/V34_CollapsedRearWall") and camp.has_node("V3_DefenseWreck/V34_CrumpledArmor_1"), "Recognizable collapsed structure")
     else:
         check(core != null, "Fort present")
         if core != null:
@@ -95,6 +96,9 @@ func _audit(faction: int, lod: int, damage: int) -> Node3D:
             var left: Node3D = core.get_node("V2_BarreraArticulada_-1") as Node3D
             check(core.has_node("V3_FixedHingeAxle_-1_-105"), "Fixed physical axle")
             check(left.has_node("V31_InnerArmorPad_93") and left.has_node("V31_OuterInset_64") and left.has_node("V31_UpperLock_123"), "Detailed armor on both sides")
+            check(left.has_node("V34_ArmorScars") == (damage >= 1), "Persistent panel-local scuffs")
+            if damage == 2:
+                check(core.get_node("V2_SeccionBarreraCaida").get_meta("defense_v34_buckled", false) and core.has_node("V34_BrokenSupport") and core.has_node("V34_DisplacedSandbag_0"), "Physical D2 damage")
             var brace: Node3D = core.get_node("V31_Brace_-1_91") as Node3D
             check(brace.has_node("Middle") and brace.has_node("Shaft"), "Three-stage physical support")
             var original: Vector3 = left.position
@@ -131,6 +135,19 @@ func _audit(faction: int, lod: int, damage: int) -> Node3D:
                 var pos: Vector3 = _part_position_in_core(part, core)
                 if absf(pos.x) < 1.0 and absf(pos.z) < 1.0:
                     check(pos.y <= 0.14, "Clear standing center")
+    check(Motion.damage_fx_pose(camp, "idle", 0.34), "Damage rig ready")
+    var fx: Node3D = camp.get_node("V34_DefenseDamageFX") as Node3D
+    var fx_parts: Array[MeshInstance3D] = []
+    _meshes(fx, fx_parts)
+    check(fx.get_meta("presentation_only", false) and fx_parts.size() <= (26 if lod == 13 else 14), "Bounded LOD effects")
+    if damage < 3:
+        check(Motion.damage_fx_pose(camp, "bullet", 0.07) and (fx.get_node("Flash") as Node3D).visible, "Light impact flash")
+        check(Motion.damage_fx_pose(camp, "blast", 0.25) and (fx.get_node("Fire/Flame_0") as Node3D).visible and (fx.get_node("Chips/Chip_0") as Node3D).visible, "Explosion and fragments")
+        check(Motion.damage_fx_pose(camp, "blast", 1.0) and camp.get_meta("defense_v34_fx_kind", "") == "idle", "Reset transient effect")
+    else:
+        check(not Motion.damage_fx_pose(camp, "blast", 0.25), "Destroyed camp cannot be struck again")
+    check(int(camp.get_meta("visual_damage", -1)) == damage, "Visual effects do not change damage")
+    Motion.damage_fx_pose(camp, "idle", 0.34)
     var parts: Array[MeshInstance3D] = []
     _meshes(camp, parts)
     var closed: int = 0
@@ -235,6 +252,11 @@ func _run() -> void:
                         Motion.deployment_frame(camp, 0.65)
                         await _capture(viewport, "defense_v33_deploy_late.png")
                         Motion.deployment_frame(camp, 1.0)
+                        Motion.damage_fx_pose(camp, "bullet", 0.07)
+                        await _capture(viewport, "defense_v34_impact.png")
+                        Motion.damage_fx_pose(camp, "blast", 0.25)
+                        await _capture(viewport, "defense_v34_blast.png")
+                        Motion.damage_fx_pose(camp, "idle", 0.34)
                     check(CampPose(camp, 0.0), "Fold barriers in place")
                     camera.position = VIEWS[0]
                     camera.look_at(Vector3(0, 0.83, 0), Vector3.UP)
@@ -246,6 +268,10 @@ func _run() -> void:
                     camera.position = VIEWS[0]
                     camera.look_at(Vector3(0, 0.83, 0), Vector3.UP)
                     await _capture(viewport, "defense_damage%d.png" % damage)
+                    if damage == 3:
+                        camera.position = VIEWS[2]
+                        camera.look_at(Vector3(0, 0.65, 0), Vector3.UP)
+                        await _capture(viewport, "defense_v34_wreck_rear.png")
                     stage.remove_child(camp)
                 if faction == 0 and lod == 13 and damage == 0:
                     stage.add_child(camp)
@@ -255,13 +281,13 @@ func _run() -> void:
                     stage.remove_child(camp)
                 camp.free()
     check(audits == 72, "9 factions x 2 LOD x 4 damages = 72")
-    check(screenshots == 30,
-        "28 base captures plus 2 intermediate deployment views")
+    check(screenshots == 33,
+        "30 base captures plus 3 damage FX views")
     viewport.queue_free()
     await process_frame
     if errors > 0:
         printerr("FAIL DEFENSE CAMP V3 NATIVE: %d issues" % errors)
         quit(1)
         return
-    print("PASS DEFENSE CAMP V3 NATIVE: 72 audits, 30 PNGs")
+    print("PASS DEFENSE CAMP V3 NATIVE: 72 audits, 33 PNGs")
     quit(0)

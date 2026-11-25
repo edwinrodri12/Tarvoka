@@ -285,7 +285,7 @@ func _run() -> void:
             damage.item_selected.emit(0)
             await _frames(4)
         if i == 2:
-            _check(camp.get_meta("defense_art_v3", 0) == 3 and camp.get_meta("defense_art_revision", "") == "3.3", "Defense V3.3 in original studio")
+            _check(camp.get_meta("defense_art_v3", 0) == 3 and camp.get_meta("defense_art_revision", "") == "3.4", "Defense V3.4 in original studio")
             _check(camp.has_node("EquipamientoDesplegable/DefenseV2_EngineerOutpost/V32_EngineeringGear/V32_EngineeringBay_-1/V32_BenchTop"), "Engineer equipment in original viewport")
             var defense_finish: OptionButton = studio.get("camp_defense_finish") as OptionButton
             _check(defense_finish != null and defense_finish.visible, "Defense comparison visible")
@@ -315,6 +315,26 @@ func _run() -> void:
             await _frames(4)
             camp = studio.get("model_root") as Node3D
             _check(camp.get_meta("defense_art_v3", 0) == 3, "V3 restored")
+            var damage_actions: VBoxContainer = studio.get("camp_damage_actions") as VBoxContainer
+            _check(damage_actions.visible, "Defense uses original damage controls")
+            studio.call("_camp_fx_frame", "blast", 0.25)
+            _check(camp.get_meta("defense_v34_fx_kind", "") == "blast", "Defense blast in same viewport")
+            studio.call("_camp_stop_fx")
+            damage.select(2)
+            damage.item_selected.emit(2)
+            await _frames(4)
+            camp = studio.get("model_root") as Node3D
+            _check(not controls.visible and camp.has_node("EquipamientoDesplegable/DefenseV2_EngineerOutpost/V34_BrokenSupport"), "D2 broken support, no operational sequence")
+            studio.call("_camp_destroy_sequence")
+            var generation: int = int(studio.get("_camp_fx_generation"))
+            studio.call("_camp_advance_damage", camp.get_instance_id(), generation)
+            await _frames(4)
+            camp = studio.get("model_root") as Node3D
+            _check(int(camp.get_meta("visual_damage", -1)) == 3 and camp.has_node("V3_DefenseWreck/V34_CollapsedRearWall"), "Defense destruction reaches wreck")
+            studio.call("_camp_stop_fx")
+            damage.select(0)
+            damage.item_selected.emit(0)
+            await _frames(4)
         if i == 3:
             studio.call("_camp_pose", 0.0)
             await _shot(studio, "medico_plegado_en_visor_unificado.png")

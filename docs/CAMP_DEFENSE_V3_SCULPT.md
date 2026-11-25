@@ -13,3 +13,7 @@ V3.1 pasó QA nativa (72 variantes, 26 PNG) y compilación Android. La revisión
 ## V3.3 — despliegue y recogida animados
 
 V3.2 todavía en CI al preparar esta iteración. V3.3 añade seguros cautivos, discos de bloqueo y pasadores que deslizan por el eje; ciclo visual reversible de 3.2 s: desbloqueo, elevación suavizada con riostras articuladas y bloqueo final. El visor original conserva poses instantáneas y agrega animar despliegue/recogida y detener; cancela tween al cambiar modelo o pose. D2/D3 no ofrecen animación operativa. 72 combinaciones y 30 capturas previstas, pruebas de fases, reversibilidad, cierre y cancelación. Sin reglas nuevas. Pendiente validación visual y nativa.
+
+## V3.4 — daños físicos y destrucción
+
+V3.3 superó las nueve ejecuciones de CI (72 variantes, 30 capturas). Inspección visual: D2 y D3 tenían pocos restos reconocibles. V3.4 añade marcas de desgaste opacas solidarias a las barreras, blindaje caído con malla cerrada deformada, riostra rota, sacos desplazados y bastidor posterior colapsado con restos de cofres e identidad de facción. FX reutilizables por LOD, origen de impacto sigue el transform de la barrera y efectos de humo/fuego/chispas/fragmentos. Comparte los controles de daño del visor, cancela despliegue antes del efecto y no altera combate. 72 variantes y 33 renders previstos; pendiente CI y revisión visual.
