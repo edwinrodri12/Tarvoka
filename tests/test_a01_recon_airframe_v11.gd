@@ -129,6 +129,24 @@ func _run()->void:
                                 correct_side=false
                         check(correct_side,"no mirrored/interior wing-tip paint")
             var body:=model.find_child(V1.BODY,true,false) as Node3D
+            check(bool(model.get_meta("tarvoka_a01_v23_service_finish",false)),
+                "V23 final service finish applied")
+            for panel_name in ["A01_V2_NoseCompositeSeam","A01_V2_ProtectedAirIntake",
+                    "A01_V2_SensorIdentificationPlate"]:
+                var panel:=body.find_child(panel_name,false,false) as MeshInstance3D
+                if lod==13:
+                    check(panel!=null and panel.visible and panel.mesh is ArrayMesh,
+                        "V23 replaces raised box with closed hull skin: "+panel_name)
+                    if panel!=null and panel.mesh is ArrayMesh:
+                        check(_closed(panel.mesh) and panel.position.is_equal_approx(Vector3.ZERO),
+                            "V23 panel uses true hull coordinates and closed geometry")
+                else:
+                    check(panel==null,"V23 no extra hero panel in Android LOD8")
+            var crest:=body.find_child(V11.CREST,false,false) as MeshInstance3D
+            if crest!=null and crest.material_override is StandardMaterial3D:
+                var enamel:=crest.material_override as StandardMaterial3D
+                check(enamel.roughness>=0.60 and enamel.metallic<=0.15,
+                    "V23 matte enamel retains team color without harsh reflections")
             var hidden:Array=[
                 "A01_V1_SealedCompositeFuselage","A01_V1_FactionSpine",
                 "A01_V1_AntennaSpine",
