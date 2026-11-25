@@ -349,7 +349,47 @@ func _run()->void:
             if image!=null and not image.is_empty() and image.save_png(out+"/a02-v8-d%d.png"%damage)==OK:
                 damage_captures+=1
         check(damage_captures==5,"V8 five native damage renders")
-        Art.set_stage(inspection,0)
+        check(Art.set_stage(inspection,0),"V14 intact turntable")
+        var turntable_count:int=0
+        camera.size=2.75
+        for angle in range(0,360,30):
+            var radians:float=deg_to_rad(float(angle))
+            camera.position=Vector3(sin(radians)*4.5,2.65,cos(radians)*4.5)
+            camera.look_at(Vector3(0,0.95,0),Vector3.UP)
+            await process_frame
+            await process_frame
+            await process_frame
+            var frame:Image=vp.get_texture().get_image()
+            if frame!=null and not frame.is_empty() and frame.save_png(out+"/a02-v14-orbit-%03d.png"%angle)==OK:
+                turntable_count+=1
+        check(turntable_count==12,"V14 full 360 degree native turntable")
+        camera.position=Vector3(3.3,3.2,-4)
+        camera.look_at(Vector3(0,0.90,0),Vector3.UP)
+        var animation_count:int=0
+        for kind in ["move","hover","hit"]:
+            for step in range(3):
+                var progress:float=[0.25,0.5,0.75][step]
+                check(Models.pose_model("fpv",inspection,kind,progress),"V14 animation capture "+kind)
+                await process_frame
+                await process_frame
+                await process_frame
+                var frame:Image=vp.get_texture().get_image()
+                if frame!=null and not frame.is_empty() and frame.save_png(out+"/a02-v14-%s-%d.png"%[kind,step])==OK:
+                    animation_count+=1
+            Models.restore_model_pose("fpv",inspection)
+        check(Art.set_stage(inspection,4),"V14 wreck capture stage")
+        for step in range(3):
+            var progress:float=[0.0,0.5,1.0][step]
+            check(Art.pose_wreck(inspection,progress),"V14 wreck capture pose")
+            await process_frame
+            await process_frame
+            await process_frame
+            var frame:Image=vp.get_texture().get_image()
+            if frame!=null and not frame.is_empty() and frame.save_png(out+"/a02-v14-wreck-%d.png"%step)==OK:
+                animation_count+=1
+        check(animation_count==12,"V14 twelve native animation frames")
+        check(Art.set_stage(inspection,0),"V14 restore after capture")
+        Models.restore_model_pose("fpv",inspection)
         vp.remove_child(inspection)
         inspection.free()
     check(workload.size()==80,"V10 complete 8x2x5 workload")
