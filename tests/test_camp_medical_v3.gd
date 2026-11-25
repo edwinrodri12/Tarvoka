@@ -58,7 +58,7 @@ func _audit(faction: int, lod: int, damage: int) -> Node3D:
     if camp == null:
         return null
     audits += 1
-    check(camp.get_meta("medical_art_v3", 0) == 3 and camp.get_meta("medical_art_revision", "") == "3.2" and camp.get_meta("no_gameplay_effects", false), "Art only")
+    check(camp.get_meta("medical_art_v3", 0) == 3 and camp.get_meta("medical_art_revision", "") == "3.3" and camp.get_meta("no_gameplay_effects", false), "Art only")
     check(camp.get_meta("builder_role", "") == "infantry_medic", "Medic identity")
     var core: Node3D = camp.get_node_or_null("EquipamientoDesplegable/" + Medical.CORE) as Node3D
     if damage == 3:
@@ -116,6 +116,23 @@ func _audit(faction: int, lod: int, damage: int) -> Node3D:
             for side in [-1, 1]:
                 for end in [-1, 1]:
                     check(monitor.has_node("V32_CartCaster_%d_%d" % [side, end]), "Four cart casters at both LODs")
+            var upper: MeshInstance3D = iv.get_node("V32_IVUpperMast") as MeshInstance3D
+            var lower: MeshInstance3D = iv.get_node("V32_IVLowerMast") as MeshInstance3D
+            var upper_size: Vector3 = upper.mesh.get_aabb().size
+            var extended_y: float = upper.position.y
+            var display: Node3D = monitor.get_node("V32_DisplayPivot") as Node3D
+            for progress in [0.0, 0.25, 0.5, 0.75, 1.0]:
+                check(Art.pose_deploy(camp, progress), "Staged deployment sample")
+                var lower_top: float = lower.position.y + (lower.mesh as CylinderMesh).height * 0.5
+                var upper_bottom: float = upper.position.y - (upper.mesh as CylinderMesh).height * 0.5
+                check(lower_top >= upper_bottom and upper.mesh.get_aabb().size == upper_size and upper.scale == Vector3.ONE, "IV telescopes without gap or scaling")
+                if progress < 0.99:
+                    check(not Sculpt.monitor_frame(camp, 0.25), "Monitor inactive in transit")
+                if progress == 0.0:
+                    check(upper.position.y < extended_y - 0.20 and absf(display.rotation_degrees.x - 26.0) < 0.01, "Equipment transport pose")
+            check(absf(upper.position.y - extended_y) < 0.001, "IV returns to same pose")
+            check(Sculpt.monitor_frame(camp, 0.25) == (damage < 2), "Monitor cycle available only when intact")
+            check(Art.pose_deploy(camp, 1.0), "Restore standard pose after monitor cycle")
     var parts: Array[MeshInstance3D] = []
     _meshes(camp, parts)
     var count: int = 0
