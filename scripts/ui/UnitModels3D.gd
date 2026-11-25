@@ -1362,6 +1362,7 @@ static func set_destroyer_damage(root: Node3D, stage: int, progress: float = 0.0
     var d: int = clampi(stage,0,4)
     var t: float = clampf(progress,0.0,1.0)
     # Reset from stored transforms rather than accumulating offsets.
+    root.set_meta("destroyer_damage_stage",0)
     restore_destroyer_pose(root)
     var fx: Node3D = root.get_node("DanoNavalVisual") as Node3D
     for child in root.get_children():
@@ -1384,7 +1385,8 @@ static func set_destroyer_damage(root: Node3D, stage: int, progress: float = 0.0
             if child is Node3D:
                 var initial: Transform3D = child.transform
                 child.transform = Transform3D(tilt*initial.basis,tilt*initial.origin+Vector3(0,-2.1*t,0))
-    root.get_node("EstelaEspuma").visible = d < 3
+    var wake: Node3D = root.get_node("EstelaEspuma") as Node3D
+    wake.visible = d < 3
     root.set_meta("destroyer_damage_stage",d)
     return true
 
@@ -1393,6 +1395,8 @@ static func pose_destroyer(root: Node3D, kind: String, progress: float,
     if root == null or not root.get_meta("destroyer_motion_v16",false):
         return false
     if kind not in ["idle","move","attack","fire","aim"]:
+        return false
+    if int(root.get_meta("destroyer_damage_stage",0)) >= 3:
         return false
     var t: float = clampf(progress,0.0,1.0)
     var turret: Node3D = root.get_node("TorretaNavalPivot") as Node3D
@@ -1425,7 +1429,8 @@ static func pose_destroyer(root: Node3D, kind: String, progress: float,
 static func restore_destroyer_pose(root: Node3D) -> void:
     if root == null or not root.get_meta("destroyer_motion_v16",false):
         return
-    pose_destroyer(root,"idle",0.0)
+    if int(root.get_meta("destroyer_damage_stage",0)) < 3:
+        pose_destroyer(root,"idle",0.0)
 
 
 static func build(role: String, faction: int = -1, finish_enabled: bool = true, art_level: int = 10) -> Node3D:
