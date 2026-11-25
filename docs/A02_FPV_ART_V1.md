@@ -17,3 +17,7 @@ V3 aprobada en QA nativa 45662716883; 21 renders del artefacto 15046441455. V4 c
 ## V5 — identidad gráfica de la escultura
 
 V4 pasó QA nativa 45663568352 y compilación Android 45663568410. Se revisaron 23 capturas reales del artefacto 15046861780. V5 añade relieves ornamentales cerrados de la corona y parte posterior en los dos LOD, más dos acentos y una insignia inferior solo en LOD13. Se conservan la silueta, colores principales, lógica y animaciones previas. QA verifica presencia, cierre, solapamiento AABB y separación de LOD. Pendientes nuevas capturas, CI y publicación. Sin cambios a otros modelos ni mecánicas.
+
+## V6 — coherencia de materiales y recursos visuales
+
+Acabado tonal opaco en el frontal decorativo y su marco, carcasa gris ligeramente más clara y contraste neutro automático para la insignia superior según luminancia de la pintura oficial. Los cuatro protectores comparten una sola malla y material por instancia; se mantienen posiciones, topología y cantidad de triángulos. QA añade comprobación de recursos compartidos, contraste, pigmentos y opacidad. V5 aún estaba en CI al iniciar V6; ambas revisiones requieren validación. Sin cambios de armamento, mecanismos reales, animaciones, estadísticas ni otras unidades.

@@ -127,9 +127,24 @@ static func build(root:Node3D,faction:Color,hero:bool)->bool:
     enamel.vertex_color_use_as_albedo=true
     enamel.vertex_color_is_srgb=true
     var crown_mesh:=_shell_finish(sculpt,Color.WHITE,Color("#a0adb5"))
-    var glass:=_mat(Color("#286477"),0.15,0.34)
-    var dark_trim:=_mat(Color("#263740"),0.10,0.70)
-    var shell_mesh:=_shell_finish(sculpt,Color("#72838d"),Color("#46545d"))
+    # V6: a restrained blue-gray decorative face with opaque tonal finish.
+    var glass:=_mat(Color.WHITE,0.10,0.46)
+    glass.vertex_color_use_as_albedo=true
+    glass.vertex_color_is_srgb=true
+    var face_mesh:=_shell_finish(sculpt,Color("#4a8295"),Color("#264a5b"))
+    var dark_trim:=_mat(Color.WHITE,0.10,0.76)
+    dark_trim.vertex_color_use_as_albedo=true
+    dark_trim.vertex_color_is_srgb=true
+    var trim_mesh:=_shell_finish(sculpt,Color("#455761"),Color("#263740"))
+    var shell_mesh:=_shell_finish(sculpt,Color("#788891"),Color("#46545d"))
+    # The four repeated ornamental rings reference one mesh resource.
+    # This is resource reuse, not a change to the displayed geometry.
+    var ring:=TorusMesh.new()
+    ring.inner_radius=0.28
+    ring.outer_radius=0.42
+    ring.rings=24 if hero else 12
+    ring.ring_segments=10 if hero else 6
+    var guard_mesh:=_guard_finish(ring,faction)
     _part(body,"A02_ClosedCentralShell",shell_mesh,Vector3(0,0.96,0),
         Vector3(0.72,0.44,1.05),coated_shell)
     _part(body,PAINT,crown_mesh,Vector3(0,1.105,-0.045),
@@ -137,9 +152,9 @@ static func build(root:Node3D,faction:Color,hero:bool)->bool:
     # V3: a stylized opaque faceplate, not a real imaging assembly.
     # The bevelled dark frame overlaps the existing sculpture; the inset
     # colored face overlaps the frame, with no detached or transparent panel.
-    _part(body,"A02_VisorFrame",sculpt,Vector3(0,0.98,-0.485),
+    _part(body,"A02_VisorFrame",trim_mesh,Vector3(0,0.98,-0.485),
         Vector3(0.43,0.25,0.16),dark_trim)
-    _part(body,"A02_FrontVisor",sculpt,Vector3(0,0.98,-0.552),
+    _part(body,"A02_FrontVisor",face_mesh,Vector3(0,0.98,-0.552),
         Vector3(0.32,0.16,0.065),glass)
     _part(body,"A02_SealedUndershell",shell_mesh,Vector3(0,0.805,0.07),
         Vector3(0.57,0.25,0.77),coated_shell)
@@ -150,12 +165,7 @@ static func build(root:Node3D,faction:Color,hero:bool)->bool:
         var shoulder:=_part(body,"A02_SculptedShoulder_"+str(i),sculpt,
             Vector3(side*0.34,0.96,depth*0.28),Vector3(0.75,0.24,0.32),shell)
         shoulder.rotation_degrees.y=-side*depth*34.0
-        var ring:=TorusMesh.new()
-        ring.inner_radius=0.28
-        ring.outer_radius=0.42
-        ring.rings=24 if hero else 12
-        ring.ring_segments=10 if hero else 6
-        _part(body,"A02_ClosedRotorGuard_"+str(i),_guard_finish(ring,faction),
+        _part(body,"A02_ClosedRotorGuard_"+str(i),guard_mesh,
             at,Vector3.ONE,coated_guard)
         var rotor:=Node3D.new()
         rotor.name="A02_VisualRotor_"+str(i)
@@ -172,10 +182,13 @@ static func build(root:Node3D,faction:Color,hero:bool)->bool:
     # V5: decorative sculpted graphics, not functional equipment.
     # Retain the faction crown as the dominant surface, with restrained
     # neutral reliefs embedded into the same fictional game silhouette.
-    var emblem:=_mat(Color("#a8b8c0"),0.14,0.78)
+    # Keep the faction paint itself unchanged; choose a contrasting
+    # neutral graphic for readability on both light and dark palettes.
+    var insignia_color:Color=Color("#26323a") if faction.get_luminance()>=0.50 else Color("#d8e1e4")
+    var emblem:=_mat(insignia_color,0.08,0.82)
     var dark_mark:=_mat(Color("#41535e"),0.08,0.80)
     _part(body,"A02_V5_CrownInsignia",sculpt,Vector3(0,1.205,-0.09),
-        Vector3(0.16,0.018,0.23),dark_mark)
+        Vector3(0.16,0.018,0.23),emblem)
     _part(body,"A02_V5_RearBadge",sculpt,Vector3(0,0.965,0.510),
         Vector3(0.30,0.15,0.055),dark_mark)
     if hero:
@@ -184,6 +197,7 @@ static func build(root:Node3D,faction:Color,hero:bool)->bool:
                 Vector3(side*0.145,1.205,0.14),Vector3(0.045,0.016,0.12),emblem)
         _part(body,"A02_V5_BellyInsignia",sculpt,Vector3(0,0.680,0.07),
             Vector3(0.18,0.018,0.23),dark_mark)
+    root.set_meta("tarvoka_a02_v6_material_coherence",true)
     root.set_meta("tarvoka_a02_v5_decorative_identity",true)
     root.set_meta("tarvoka_a02_v4_surface_normals",true)
     root.set_meta("tarvoka_a02_v3_surface_finish",true)

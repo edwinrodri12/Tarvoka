@@ -313,7 +313,7 @@ func _ready() -> void:
     if fpv_index>=0 and role_picker!=null:
         while role_picker.item_count<=fpv_index:
             role_picker.add_item(P06Models.ROLES[role_picker.item_count])
-        role_picker.set_item_text(fpv_index,"A02 · Dron FPV · V5 EN DESARROLLO")
+        role_picker.set_item_text(fpv_index,"A02 · Dron FPV · V6 EN DESARROLLO")
     # Preserve existing roles/indices; these are additional native 3D variants.
     for entry in [
         ["line","★ INFANTERÍA BÁSICA · Guardia"],
@@ -1891,7 +1891,7 @@ func _refresh_unified_studio_navigation() -> void:
             "mlrs": label="G11 · Lanzador · V33"
             "attack_heli": label="A01 · Helicóptero HAT-29 · V14"
             "uav_recon": label="A01 · Dron de reconocimiento · V30 FINAL"
-            "fpv": label="A02 · Dron FPV · V5 EN DESARROLLO"
+            "fpv": label="A02 · Dron FPV · V6 EN DESARROLLO"
             "logistics_mobile": label="G16 · Logística blindada 6×6 · V6 PBR y suministros articulados"
             "ew_mobile": label="G15 · Guerra electrónica · V11 (neumáticos, óptica y electrónica 3D)"
             "aa_mobile": label="G13 · Antiaéreo · V54 caucho y rodadura 3D"

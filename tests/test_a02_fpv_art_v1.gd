@@ -163,6 +163,34 @@ func _run()->void:
                 check(underside!=null and _closed(belly.mesh) and
                     (belly.transform*belly.mesh.get_aabb()).intersects(
                         underside.transform*underside.mesh.get_aabb()),"V5 underside relief embedded")
+            check(bool(model.get_meta("tarvoka_a02_v6_material_coherence",false)),"V6 material coherence")
+            var first_guard:=model.find_child("A02_ClosedRotorGuard_0",true,false) as MeshInstance3D
+            if first_guard!=null:
+                for i in range(1,4):
+                    var other_guard:=model.find_child("A02_ClosedRotorGuard_"+str(i),true,false) as MeshInstance3D
+                    check(other_guard!=null and other_guard.mesh==first_guard.mesh and
+                        other_guard.material_override==first_guard.material_override,"V6 shares identical ornamental resources")
+            if insignia!=null and paint!=null:
+                var graphic_material:=insignia.material_override as StandardMaterial3D
+                var crown_material:=paint.material_override as StandardMaterial3D
+                check(graphic_material!=null and crown_material!=null and
+                    absf(graphic_material.albedo_color.get_luminance()-crown_material.albedo_color.get_luminance())>=0.25,
+                    "V6 neutral insignia contrast with official faction paint")
+            for tag in ["A02_VisorFrame","A02_FrontVisor"]:
+                var ornamental:=model.find_child(tag,true,false) as MeshInstance3D
+                if ornamental!=null and ornamental.mesh is ArrayMesh:
+                    var finish:=ornamental.material_override as StandardMaterial3D
+                    check(finish!=null and finish.vertex_color_use_as_albedo and finish.vertex_color_is_srgb,
+                        "V6 opaque face pigment")
+                    var data:Array=ornamental.mesh.surface_get_arrays(0)
+                    var colors:PackedColorArray=data[Mesh.ARRAY_COLOR]
+                    var verts:PackedVector3Array=data[Mesh.ARRAY_VERTEX]
+                    var tones:Dictionary={}
+                    check(colors.size()==verts.size() and not colors.is_empty(),"V6 face color per vertex")
+                    for color in colors:
+                        tones[color.to_html()]=true
+                        check(color.a>=0.999,"V6 fully opaque decorative surface")
+                    check(tones.size()>=3,"V6 distinct surface tones")
             var tris:int=0
             for child in model.find_children("*","MeshInstance3D",true,false):
                 var part:=child as MeshInstance3D
