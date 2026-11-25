@@ -2828,7 +2828,7 @@ jobs:
             document.body.append(menu);
           })();
           </script>"""
-          viewer.write_text(page.replace('</body>', badge + a02_menu + '\\n</body>'), encoding='utf-8')
+          viewer.write_text(page.replace('</body>', badge + a02_menu + '\n</body>'), encoding='utf-8')
           assert commit[:12] in viewer.read_text(encoding='utf-8')
           with open(os.environ['GITHUB_OUTPUT'], 'a', encoding='utf-8') as output:
               output.write('source_commit=' + commit + '\n')
@@ -2923,6 +2923,7 @@ jobs:
                   throw Error('Missing accessible A02 review link in compact menu');
                 for(const link of await originalNavs.all())
                   if(!(await link.locator('a').isVisible()))throw Error('Hidden navigation destination in expanded menu');
+                await page.screenshot({path:'build/qa/a02-browser/a02-'+alias+'-menu.png'});
                 await summary.click();
                 if(await menu.getAttribute('open')!==null||await entryLink.isVisible())
                   throw Error('A02 compact menu did not close');
