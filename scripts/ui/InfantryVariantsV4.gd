@@ -208,6 +208,20 @@ static func apply(model: Node3D, role: String, faction_color: Color,
             flash.position.x=1.355
         elif role=="infantry_commando":
             flash.position.x=1.21
+    # Compact physical service props, distinct from the carried kits.
+    # They are hidden except during the original visual work animation.
+    if role in ["infantry_medic","infantry_logistic"]:
+        var service:=Node3D.new()
+        service.name=Sculpt.SERVICE_RIG
+        upper.add_child(service)
+        service.visible=false
+        if role=="infantry_medic":
+            _box(service,"V6_MedicalPouch",Vector3(0,0.045,-0.035),Vector3(0.22,0.15,0.13),pack)
+            _box(service,"V6_MedicalBandage",Vector3(0,0.08,-0.108),Vector3(0.13,0.045,0.02),white)
+        else:
+            _box(service,"V6_SupplyCase",Vector3(0,0.04,-0.045),Vector3(0.25,0.18,0.15),armor)
+            _box(service,"V6_SupplyFaction",Vector3(0,0.07,-0.128),Vector3(0.18,0.05,0.02),accent)
+        _box(service,"V6_ServiceHandle",Vector3(0,-0.04,0.018),Vector3(0.13,0.035,0.04),dark)
     model.set_meta(KIT_V5,true)
     model.set_meta(FLAG,role)
     model.set_meta("tarvoka_infantry_variant_visual_only",true)

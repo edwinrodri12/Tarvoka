@@ -381,6 +381,16 @@ func _studio_role_from_link_key(value:String) -> String:
             return "uav_recon"
         "g05", "ingeniero", "infantry_engineer":
             return "infantry_engineer"
+        "guardia", "line":
+            return "line"
+        "fs24", "fs-24", "comando", "infantry_commando":
+            return "infantry_commando"
+        "francotirador", "infantry_sniper":
+            return "infantry_sniper"
+        "logistico", "infantry_logistic":
+            return "infantry_logistic"
+        "medico", "infantry_medic":
+            return "infantry_medic"
         _:
             return "apc"
 
@@ -1540,6 +1550,8 @@ func _infantry_review_edition() -> String:
             return "V11"
         if EngineerFinishV9.has_model(model_root):
             return "V9"
+    if model_root!=null and str(model_root.get_meta("tarvoka_infantry_role_identity_v6",""))==_role:
+        return "V6"
     return "V2"
 
 func _engineer_v12_compare(new_finish: bool) -> void:

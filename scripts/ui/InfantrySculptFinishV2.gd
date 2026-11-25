@@ -182,7 +182,88 @@ static func _refine_core(model: Node3D, hero: bool) -> bool:
         for row in range(3):
             _hide(model,"V2_PliseManga_%d_%d"%[side,row])
     model.set_meta(FAMILY_ANATOMY_V5,true)
+    if not _refine_head_and_armor(model,hero):
+        return false
     return _attach_family_grips(model,hero)
+
+const FAMILY_IDENTITY_V6 := "tarvoka_infantry_role_identity_v6"
+# Role-specific closed helmets; scale and material changes apply only
+# to the five official non-engineer models. Paint is never recolored.
+static func _refine_head_and_armor(model: Node3D, hero: bool) -> bool:
+    var role: String = str(model.get_meta("tarvoka_infantry_role",""))
+    var sides: int = 20 if hero else 12
+    var width: float = 1.0
+    var height: float = 1.0
+    var depth: float = 1.0
+    var shade: Color = Color("#85938f")
+    var vest_scale := Vector3.ONE
+    match role:
+        "line":
+            shade=Color("#84918c")
+        "infantry_commando":
+            width=0.98
+            height=0.95
+            depth=1.02
+            shade=Color("#46545b")
+            vest_scale=Vector3(1.04,1.0,1.14)
+        "infantry_sniper":
+            width=1.03
+            height=0.96
+            depth=1.04
+            shade=Color("#65765f")
+            vest_scale=Vector3(0.91,0.94,0.82)
+        "infantry_logistic":
+            width=1.045
+            height=0.97
+            shade=Color("#838b74")
+            vest_scale=Vector3(1.0,1.0,0.9)
+        "infantry_medic":
+            width=0.96
+            height=1.01
+            shade=Color("#9da9a3")
+            vest_scale=Vector3(0.95,0.98,0.9)
+        _:
+            return false
+    var profile: Array[Vector3]=[]
+    for ring in [Vector3(0.175,0.105,0.18),Vector3(0.239,0.165,0.236),
+            Vector3(0.281,0.255,0.28),Vector3(0.290,0.39,0.292),
+            Vector3(0.267,0.505,0.265),Vector3(0.185,0.585,0.185),
+            Vector3(0.073,0.635,0.075)]:
+        profile.append(Vector3(ring.x*width,ring.y*height,ring.z*depth))
+    if not _resculpt(model,"V2_CascoEsferoideCerrado",profile,Vector3(0,0,0.016),sides):
+        return false
+    var helmet: MeshInstance3D=_find(model,"V2_CascoEsferoideCerrado") as MeshInstance3D
+    helmet.material_override=_coat(shade,0.10,0.57)
+    # Integrated curved opaque visor replaces the box without changing
+    # the original material or node identity used by damage/LOD QA.
+    var visor: MeshInstance3D=_find(model,"V2_VisorOpacoPBR") as MeshInstance3D
+    if visor==null:
+        return false
+    visor.mesh=_organic_mesh([Vector3(0.143,-0.069,0.037),
+        Vector3(0.181,-0.041,0.064),Vector3(0.190,0.021,0.067),
+        Vector3(0.151,0.068,0.041)],sides,PackedFloat32Array(),0.64)
+    visor.position=Vector3(0,0.235,-0.267)
+    visor.scale=Vector3.ONE
+    _hide(model,"V2_ReflejoCristalFisico")
+    var chest: MeshInstance3D=_find(model,"V2_CorazaPectoralHermetica") as MeshInstance3D
+    var collar: MeshInstance3D=_find(model,"CuelloProtegido") as MeshInstance3D
+    if chest==null or collar==null:
+        return false
+    chest.scale=vest_scale
+    chest.material_override=_coat(shade.lightened(0.05),0.11,0.59)
+    collar.mesh=_organic_mesh([Vector3(0.145,-0.10,0.13),
+        Vector3(0.175,-0.052,0.151),Vector3(0.167,0.067,0.151),
+        Vector3(0.14,0.125,0.13)],sides)
+    collar.position=Vector3(0,0.022,0.012)
+    collar.scale=Vector3.ONE
+    # keep badge on outer shell; use the existing exact faction paint
+    var cap_badge: Node3D=_find(model,"V2_FaccionCasco")
+    if cap_badge!=null:
+        cap_badge.position.y=0.56*height
+        cap_badge.position.z=-0.20*depth
+        cap_badge.rotation_degrees.x=-24.0
+    model.set_meta(FAMILY_IDENTITY_V6,role)
+    return true
 
 const FAMILY_GRIPS_V5 := "tarvoka_infantry_grip_contacts_v5"
 
@@ -239,7 +320,13 @@ static func _sync_family_grips(model: Node3D) -> bool:
             return false
         # Both arm and weapon are children of TorsoRig. Local transforms
         # work even in native QA before the model enters a SceneTree.
-        var target: Vector3 = arm.transform.affine_inverse()*(gun.transform*family_grip_point(side))
+        var palm: Node3D=_find(model,"V2_PalmaGuante_%d"%side)
+        if palm==null:
+            return false
+        var holder: Node3D=palm.get_parent() as Node3D
+        if holder==null or holder.get_parent()!=arm.get_parent():
+            return false
+        var target: Vector3 = arm.transform.affine_inverse()*(holder.transform*palm.position)
         var elbow := Vector3(0,-0.47,-0.035)
         var delta: Vector3 = target-elbow
         var length: float = delta.length()
@@ -580,6 +667,40 @@ static func apply(model: Node3D, faction_paint: Color, hero: bool) -> bool:
     model.set_meta("tarvoka_infantry_v2_opaque",true)
     return pose(model,"idle",0.0)
 
+const SERVICE_RIG := "V6_EquipoServicioRig"
+const SERVICE_FLAG := "tarvoka_infantry_service_pose_v6"
+
+# The service prop lives beside ArmamentoRig under TorsoRig. Transfer
+# the original right palm and fingers between these two real rigs.
+static func _service_pose(model: Node3D, kind: String, t: float) -> bool:
+    var service: Node3D=_find(model,SERVICE_RIG)
+    if service==null:
+        return true
+    var gun: Node3D=_find(model,"ArmamentoRig")
+    var palm: Node3D=_find(model,"V2_PalmaGuante_1")
+    if gun==null or palm==null:
+        return false
+    var active: bool=kind in ["work","repair"] and t>0.04 and t<0.96 and int(model.get_meta("tarvoka_infantry_damage",0))<4
+    var holder: Node3D=service if active else gun
+    var contact: Vector3=Vector3(0.0,-0.065,0.018) if active else family_grip_point(1)
+    service.visible=active
+    service.position=Vector3(0.25,-0.27-0.085*sin(t*PI),-0.54)
+    service.rotation_degrees=Vector3(-20.0+12.0*sin(t*TAU),0,-10)
+    if palm.get_parent()!=holder:
+        palm.get_parent().remove_child(palm)
+        holder.add_child(palm)
+    palm.position=contact
+    for finger in range(4):
+        var digit: Node3D=_find(model,"V2_DedoGuante_1_%d"%finger)
+        if digit==null:
+            continue
+        if digit.get_parent()!=holder:
+            digit.get_parent().remove_child(digit)
+            holder.add_child(digit)
+        digit.position=contact+Vector3((float(finger)-1.5)*0.041,-0.071,-0.046)
+    model.set_meta(SERVICE_FLAG,active)
+    return true
+
 static func has_model(model: Node3D) -> bool:
     return model!=null and bool(model.get_meta(FLAG,false))
 
@@ -638,7 +759,7 @@ static func pose(model: Node3D, kind: String, t: float) -> bool:
     if scar!=null:
         scar.visible=stage>=3
     if bool(model.get_meta(FAMILY_GRIPS_V5,false)):
-        return _sync_family_grips(model)
+        return _service_pose(model,kind,phase) and _sync_family_grips(model)
     return true
 
 static func restore(model: Node3D) -> void:

@@ -79,10 +79,14 @@ func family_grip_contact(model: Node3D, side: int) -> bool:
     var arm: Node3D=model.find_child("BrazoRig_%d"%side,true,false) as Node3D
     var palm: Node3D=model.find_child("V2_PalmaGuante_%d"%side,true,false) as Node3D
     var link: Node3D=model.find_child("V2_AntebrazoCerrado_%d"%side,true,false) as Node3D
-    if gun==null or arm==null or palm==null or link==null or palm.get_parent()!=gun or link.get_parent()!=arm:
+    if gun==null or arm==null or palm==null or link==null or link.get_parent()!=arm:
+        return false
+    var active: bool=bool(model.get_meta(Finish.SERVICE_FLAG,false)) and side>0
+    var holder: Node3D=model.find_child(Finish.SERVICE_RIG,true,false) as Node3D if active else gun
+    if holder==null or palm.get_parent()!=holder:
         return false
     var endpoint: Vector3=arm.transform*(link.transform*Vector3(0,0.5,0))
-    var contact: Vector3=gun.transform*palm.position
+    var contact: Vector3=holder.transform*palm.position
     return endpoint.distance_to(contact)<0.0001 and palm.visible and link.visible
 
 func _initialize() -> void:
@@ -224,6 +228,12 @@ func _run() -> void:
                 check(bool(model.get_meta(Finish.FAMILY_ANATOMY_V5,false))==refined,
                     "V5 anatomy limited to five intended core roles "+role)
                 if refined:
+                    check(str(model.get_meta(Finish.FAMILY_IDENTITY_V6,""))==role,
+                        "V6 role-specific head and chest")
+                    for name in ["V2_CascoEsferoideCerrado","V2_VisorOpacoPBR","CuelloProtegido"]:
+                        var head_piece: MeshInstance3D=model.find_child(name,true,false) as MeshInstance3D
+                        check(head_piece!=null and head_piece.mesh is ArrayMesh and closed_solid(head_piece.mesh),
+                            "closed helmet, collar and visor V6 "+name)
                     for side in [-1,1]:
                         var suffix: String="_%d"%side
                         for prefix in ["Hombrera","V2_MangaCerrada","V2_AntebrazoCerrado",
@@ -250,6 +260,12 @@ func _run() -> void:
                             for side in [-1,1]:
                                 check(family_grip_contact(model,side),
                                     "no floating hand "+role+" "+action)
+                            if role in ["infantry_logistic","infantry_medic"]:
+                                var service: Node3D=model.find_child(Finish.SERVICE_RIG,true,false) as Node3D
+                                var expected: bool=action=="work" and phase>0.04 and phase<0.96
+                                check(service!=null and service.visible==expected and
+                                    bool(model.get_meta(Finish.SERVICE_FLAG,false))==expected,
+                                    "service tool appears only during work phase")
                     Models.restore_model_pose(role,model)
                     check(family_grip_contact(model,-1) and family_grip_contact(model,1),
                         "restore retains physical grips")
@@ -371,7 +387,18 @@ func _run() -> void:
                         for angle in [90,180,270]:
                             hero.rotation_degrees.y=angle
                             await save_frame(view,"v5_%s_detail_%d"%[role,angle])
+                        camera.size=1.25
+                        camera.position=Vector3(1.35,2.6,2.1)
+                        camera.look_at(Vector3(0,1.95,0),Vector3.UP)
+                        hero.rotation_degrees.y=180
+                        await save_frame(view,"v6_%s_helmet"%role)
                         camera.size=3.6
+                        camera.position=Vector3(2.5,2.35,4.2)
+                        camera.look_at(Vector3(0,1.0,0),Vector3.UP)
+                        if role in ["infantry_logistic","infantry_medic"]:
+                            check(Models.pose_model(role,hero,"work",0.5),"specialist service animation")
+                            await save_frame(view,"v6_%s_service"%role)
+                            Models.restore_model_pose(role,hero)
                 hero.get_parent().remove_child(hero)
             # Tactical camera uses the SAME real renderer with reduced
             # visible model size, NOT a second artist-only 3D fake.
@@ -384,7 +411,7 @@ func _run() -> void:
                 camera.size=3.6
             hero.free()
             mobile.free()
-    check(rendered==53,"53 real 3D comparison / tactical frames")
+    check(rendered==60,"60 real 3D comparison / tactical frames")
     # Art-only variants must never enter the tactical roster.
     for role in ["infantry_urban","infantry_defense",
             "infantry_antitank","infantry_engineer",
@@ -395,5 +422,5 @@ func _run() -> void:
         push_error("FAIL INFANTRY V2 NATIVE 3D: %d failures"%failed)
         quit(1)
     else:
-        print("PASS INFANTRY V2 NATIVE 3D: 160 models (6 core + 4 legacy), 8 factions, 2 LOD, 53 true PNG")
+        print("PASS INFANTRY V2 NATIVE 3D: 160 models (6 core + 4 legacy), 8 factions, 2 LOD, 60 true PNG")
         quit(0)
