@@ -49,3 +49,7 @@ V11 nativa 45679598133 y APK 45679598443 correctas. La construcción WebGL V11 s
 ## V13 — reparación de la integración editorial
 
 V12 nativa 45680700033, APK 45680699952 y reglas 45680699891 correctas. Publicación 45680699971 falló al preparar los campamentos: el candidato estaba desfasado respecto de main y faltaba CampMedicalSculptV3.gd. Se integra main 71387f6b con sus archivos de campamento médico V3 y se conservan las siete rutas del A02; no se omite ninguna comprobación. Se añade un mensaje de error explícito con el archivo faltante y se fija la fuente de main a la revisión del evento. Sin cambios a arte V12 ni lógica. Pendiente nueva ejecución WebGL y publicación efectiva.
+
+## V13.1 — compatibilidad con la revisión del ingeniero
+
+QA nativa 45684237774, Android 45684238037 y cuatro campamentos 45684237874 correctas. Preparación de fuentes del Studio 45684237658 superada; exportación pendiente al sincronizar. Main 398650a5 incorpora tres commits adicionales del ingeniero; se aplican únicamente los cambios del A02 sobre esa revisión sin modificar su arte ni sus pruebas. El conflicto editorial se resuelve manteniendo ambos conjuntos de cambios. No se considera publicada ni aprobada esta unidad hasta verificar el navegador y el despliegue.
