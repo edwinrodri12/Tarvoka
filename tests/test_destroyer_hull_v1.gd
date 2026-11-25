@@ -33,8 +33,8 @@ func _run() -> void:
             check(model != null, "Destroyer builds")
             if model == null:
                 continue
-            check(model.get_meta("destroyer_art_revision", "") == "1.0", "V1 hull active")
-            for key in ["CascoNaval", "Cubierta"]:
+            check(model.get_meta("destroyer_art_revision", "") == "1.1", "V1.1 bridge active")
+            for key in ["CascoNaval", "Cubierta", "Superestructura/ZocaloNaval", "Superestructura/CarcasaInferior", "Superestructura/Puente", "Superestructura/TechoPuente"]:
                 var part: MeshInstance3D = model.get_node_or_null(key) as MeshInstance3D
                 check(part != null, "Native " + key)
                 if part != null:
@@ -46,9 +46,20 @@ func _run() -> void:
                 check(badge != null, "Faction markings on both sides")
                 if badge != null and faction >= 0:
                     check((badge.material_override as StandardMaterial3D).albedo_color == Art.faction_paint_color(faction), "Independent faction enamel")
+            var bridge: Node3D = model.get_node_or_null("Superestructura") as Node3D
+            check(bridge != null, "Bridge present")
+            if bridge != null:
+                for i in range(3):
+                    var pane: MeshInstance3D = bridge.get_node_or_null("CristalFrontal_%d" % i) as MeshInstance3D
+                    check(pane != null, "Front opaque window")
+                    if pane != null:
+                        check((pane.material_override as StandardMaterial3D).transparency == BaseMaterial3D.TRANSPARENCY_DISABLED, "No alpha glass")
+                for side in [-1, 1]:
+                    check(bridge.has_node("CristalLateral_%d_0" % side) and bridge.has_node("CristalLateral_%d_1" % side), "Both lateral panes")
+                    check(bridge.has_node("FaccionPuente_%d" % side), "Bridge faction panel")
             model.free()
     if failures != 0:
         quit(1)
         return
-    print("PASS DESTROYER HULL V1: 18 variants")
+    print("PASS DESTROYER HULL V1.1: 18 variants")
     quit(0)
