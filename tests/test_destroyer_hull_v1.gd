@@ -58,8 +58,55 @@ func _run() -> void:
                     check(bridge.has_node("CristalLateral_%d_0" % side) and bridge.has_node("CristalLateral_%d_1" % side), "Both lateral panes")
                     check(bridge.has_node("FaccionPuente_%d" % side), "Bridge faction panel")
             model.free()
+    await _render()
     if failures != 0:
         quit(1)
         return
-    print("PASS DESTROYER HULL V1.1: 18 variants")
+    print("PASS DESTROYER HULL V1.1: 18 variants, 4 PNGs")
     quit(0)
+
+func _render() -> void:
+    var output: String = ProjectSettings.globalize_path("res://build/qa/destroyer-v1")
+    check(DirAccess.make_dir_recursive_absolute(output) == OK, "Render directory")
+    var view := SubViewport.new()
+    view.size = Vector2i(900, 650)
+    view.own_world_3d = true
+    view.render_target_update_mode = SubViewport.UPDATE_ALWAYS
+    root.add_child(view)
+    var stage := Node3D.new()
+    view.add_child(stage)
+    var env := WorldEnvironment.new()
+    env.environment = Environment.new()
+    env.environment.background_mode = Environment.BG_COLOR
+    env.environment.background_color = Color("#263A48")
+    env.environment.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
+    env.environment.ambient_light_color = Color("#DDE9EF")
+    env.environment.ambient_light_energy = 0.75
+    stage.add_child(env)
+    var light := DirectionalLight3D.new()
+    light.rotation_degrees = Vector3(-50,-35,0)
+    light.light_energy = 1.4
+    stage.add_child(light)
+    var camera := Camera3D.new()
+    camera.projection = Camera3D.PROJECTION_ORTHOGONAL
+    camera.current = true
+    stage.add_child(camera)
+    var model: Node3D = Art.build("destroyer", 0, true, 13)
+    check(model != null, "Render model")
+    if model == null:
+        view.queue_free()
+        return
+    stage.add_child(model)
+    var angles: Array[Vector3] = [Vector3(5,4,-6),Vector3(-5,4,6),Vector3(3,2,-3),Vector3(-3,2,3)]
+    for i in range(4):
+        camera.size = 5.1 if i < 2 else 2.0
+        camera.position = angles[i]
+        camera.look_at(Vector3(0,0.7,0.15) if i < 2 else Vector3(0,0.96,0.3),Vector3.UP)
+        await process_frame
+        await process_frame
+        await process_frame
+        var img: Image = view.get_texture().get_image()
+        check(img != null and not img.is_empty(), "Real Godot image")
+        if img != null and not img.is_empty():
+            check(img.save_png(output + "/destroyer_v11_%d.png" % i) == OK, "Capture saved")
+    view.queue_free()
