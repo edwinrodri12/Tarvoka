@@ -163,6 +163,10 @@ func _run() -> void:
             var fx: Node3D = model.get_node("DanoNavalVisual") as Node3D
             var hull_rest: Transform3D = hull.transform
             var mast_rest: Transform3D = mast.transform
+            for hit_kind in ["damage","damaged","hit"]:
+                check(Art.pose_model("destroyer",model,hit_kind,0.5), "Temporary hit reaction")
+                check(int(model.get_meta("destroyer_damage_stage",-1)) == 0, "Hits never manufacture persistent damage")
+                Art.restore_model_pose("destroyer",model)
             for damage in range(5):
                 check(Art.set_destroyer_damage(model,damage,0.50), "Damage stage applied")
                 check(int(model.get_meta("destroyer_damage_stage",-1)) == damage, "Damage revision")
