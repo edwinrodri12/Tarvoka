@@ -219,6 +219,34 @@ func _run()->void:
                     for i in range(4):
                         var pivot:=visual_body.find_child("A02_VisualRotor_"+str(i),false,false) as Node3D
                         check(pivot!=null and pivot.rotation.is_zero_approx(),"V7 reset visual pivot")
+            check(bool(model.get_meta("tarvoka_a02_v8_damage_art",false)),"V8 damage art")
+            if paint!=null and visual_body!=null:
+                var pristine:Material=paint.material_override
+                var effects:=visual_body.find_child(Art.EFFECT,false,false) as Node3D
+                check(effects!=null,"V8 presentation effects")
+                for damage in range(5):
+                    check(Art.set_stage(model,damage) and Art.stage(model)==damage,"V8 stage")
+                    var current:=paint.material_override as StandardMaterial3D
+                    if current!=null:
+                        if damage>0:
+                            # Distance to final neutral shade decreases monotonically,
+                            # including faction colors darker than the neutral shade.
+                            var base:Color=(pristine as StandardMaterial3D).albedo_color
+                            var dist:float=Vector3(current.albedo_color.r-0.141,current.albedo_color.g-0.165,current.albedo_color.b-0.176).length()
+                            var original_dist:float=Vector3(base.r-0.141,base.g-0.165,base.b-0.176).length()
+                            check(dist<=original_dist+0.001,"V8 cumulative neutral tint")
+                        check(current.transparency==BaseMaterial3D.TRANSPARENCY_DISABLED,"V8 opaque material")
+                    if effects!=null:
+                        for i in range(effects.get_child_count()):
+                            check((effects.get_child(i) as Node3D).visible==(damage>=i+2),"V8 staged stylized effect")
+                    Models.restore_model_pose("fpv",model)
+                    check(Art.stage(model)==damage,"V8 stop preserves damage")
+                    check(Models.pose_model("fpv",model,"move",0.31)==(damage<4),"V8 wreck pose lock")
+                check(Art.set_stage(model,0),"V8 repair")
+                check(paint.material_override==pristine and visual_body.position.is_zero_approx() and visual_body.rotation.is_zero_approx(),"V8 exact original material and pose")
+                for i in range(4):
+                    var pivot:=visual_body.find_child("A02_VisualRotor_"+str(i),false,false) as Node3D
+                    check(pivot!=null and pivot.visible,"V8 repair restores visibility")
             Art.restore(model)
             await process_frame
             await process_frame
@@ -253,6 +281,20 @@ func _run()->void:
             if image!=null and not image.is_empty() and image.save_png(out+"/a02-v2-"+str(view[0])+".png")==OK:
                 captures+=1
         check(captures==7,"V4 seven real Godot inspection angles")
+        camera.position=Vector3(3.3,3.2,-4)
+        camera.size=2.75
+        camera.look_at(Vector3(0,0.90,0),Vector3.UP)
+        var damage_captures:int=0
+        for damage in range(5):
+            check(Art.set_stage(inspection,damage),"V8 capture stage")
+            await process_frame
+            await process_frame
+            await process_frame
+            var image:Image=vp.get_texture().get_image()
+            if image!=null and not image.is_empty() and image.save_png(out+"/a02-v8-d%d.png"%damage)==OK:
+                damage_captures+=1
+        check(damage_captures==5,"V8 five native damage renders")
+        Art.set_stage(inspection,0)
         vp.remove_child(inspection)
         inspection.free()
     check(Arsenal.profile("fpv")==profile,"no catalogue changes")

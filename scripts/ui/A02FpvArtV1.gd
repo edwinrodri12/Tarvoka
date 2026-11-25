@@ -5,6 +5,9 @@ class_name TarvokaA02FpvArtV1
 const FLAG:String="tarvoka_a02_fpv_art_v1"
 const BODY:String="A02_VisualBody"
 const PAINT:String="A02_FactionCrown"
+const DAMAGE:String="tarvoka_a02_visual_damage"
+const EFFECT:String="A02_V8_StylizedDamageEffect"
+const BASE_MATERIAL:String="tarvoka_a02_original_visual_material"
 
 static func _mat(color:Color,metal:float,rough:float)->StandardMaterial3D:
     var m:=StandardMaterial3D.new()
@@ -197,6 +200,22 @@ static func build(root:Node3D,faction:Color,hero:bool)->bool:
                 Vector3(side*0.145,1.205,0.14),Vector3(0.045,0.016,0.12),emblem)
         _part(body,"A02_V5_BellyInsignia",sculpt,Vector3(0,0.680,0.07),
             Vector3(0.18,0.018,0.23),dark_mark)
+    # V8: only fictional presentation effects; never change gameplay state.
+    var effects:=Node3D.new()
+    effects.name=EFFECT
+    body.add_child(effects)
+    var smoke:=_mat(Color("#48525a"),0.0,1.0)
+    for i in range(3):
+        var puff:=_oval(effects,"A02_V8_Smoke_"+str(i),
+            Vector3(0.08+0.035*i,1.31+0.12*i,0.12),
+            Vector3.ONE*(0.13+0.035*i),smoke,false)
+        puff.visible=false
+    for node in body.find_children("*","MeshInstance3D",true,false):
+        var part:=node as MeshInstance3D
+        if part.get_parent()!=effects:
+            part.set_meta(BASE_MATERIAL,part.material_override)
+    root.set_meta(DAMAGE,0)
+    root.set_meta("tarvoka_a02_v8_damage_art",true)
     root.set_meta("tarvoka_a02_v7_visual_pose",true)
     root.set_meta("tarvoka_a02_v6_material_coherence",true)
     root.set_meta("tarvoka_a02_v5_decorative_identity",true)
@@ -208,6 +227,45 @@ static func build(root:Node3D,faction:Color,hero:bool)->bool:
     root.set_meta("tarvoka_a02_lod",13 if hero else 8)
     return true
 
+static func stage(root:Node3D)->int:
+    return int(root.get_meta(DAMAGE,0)) if is_instance_valid(root) else 0
+
+static func set_stage(root:Node3D,value:int)->bool:
+    if not is_instance_valid(root) or not bool(root.get_meta(FLAG,false)) or value<0 or value>4:
+        return false
+    var body:=root.find_child(BODY,false,false) as Node3D
+    if body==null:
+        return false
+    # Shared per-stage tint resources; do not mutate the pristine materials
+    # or the colors of another model. No structural or physical simulation.
+    var cache:Dictionary={}
+    for node in body.find_children("*","MeshInstance3D",true,false):
+        var part:=node as MeshInstance3D
+        if not part.has_meta(BASE_MATERIAL):
+            continue
+        var original:=part.get_meta(BASE_MATERIAL) as StandardMaterial3D
+        if original==null:
+            continue
+        if value==0:
+            part.material_override=original
+        else:
+            var key:int=original.get_instance_id()
+            if not cache.has(key):
+                var tint:=original.duplicate() as StandardMaterial3D
+                tint.albedo_color=original.albedo_color.lerp(Color("#242a2d"),
+                    [0.0,0.13,0.30,0.55,0.85][value])
+                tint.roughness=lerpf(original.roughness,0.95,float(value)/4.0)
+                cache[key]=tint
+            part.material_override=cache[key]
+    var effect:=body.find_child(EFFECT,false,false) as Node3D
+    if effect!=null:
+        for i in range(effect.get_child_count()):
+            var puff:=effect.get_child(i) as Node3D
+            puff.visible=value>=i+2
+    root.set_meta(DAMAGE,value)
+    restore(root)
+    return true
+
 static func restore(root:Node3D)->void:
     if root==null or not bool(root.get_meta(FLAG,false)):
         return
@@ -216,16 +274,22 @@ static func restore(root:Node3D)->void:
         return
     body.rotation=Vector3.ZERO
     body.position=Vector3.ZERO
+    if stage(root)==4:
+        body.position.y=-0.40
+        body.rotation_degrees.z=14.0
     for i in range(4):
         var rotor:=body.find_child("A02_VisualRotor_"+str(i),false,false) as Node3D
         if rotor!=null:
             rotor.rotation=Vector3.ZERO
+            rotor.visible=stage(root)<4
 
 static func pose(root:Node3D,kind:String,progress:float)->bool:
     if root==null or not bool(root.get_meta(FLAG,false)) or not kind in ["idle","move","hover","hit"]:
         return false
     var body:=root.find_child(BODY,false,false) as Node3D
     if body==null:
+        return false
+    if stage(root)==4 and kind!="idle":
         return false
     var p:float=clampf(progress,0.0,1.0)
     # Stylized preview poses only; no simulation, navigation or attack logic.
