@@ -252,8 +252,8 @@ func _run() -> void:
                         camera.look_at(Vector3(0, 1.1, 1.4), Vector3.UP)
                         await _capture(viewport, "medical_v3_frame_rear.png")
                         camera.size = 3.4
-                        camera.position = Vector3(3.2, 4.0, -3.1)
-                        camera.look_at(Vector3(1.18, 0.82, 0.67), Vector3.UP)
+                        camera.position = Vector3(0.20, 1.85, -0.48)
+                        camera.look_at(Vector3(1.08, 0.84, 0.67), Vector3.UP)
                         await _capture(viewport, "medical_v31_trolley_raised.png")
                         Sculpt.inspect_interior(camp, false)
                         Art.pose_deploy(camp, 0.0)
@@ -266,9 +266,11 @@ func _run() -> void:
                         camera.position = Vector3(-5.4, 3.4, -4.2)
                         camera.look_at(Vector3(-2.62, 1.0, -1.34), Vector3.UP)
                         await _capture(viewport, "medical_v32_cabinet.png")
-                        camera.position = Vector3(-3.5, 4.0, -1.0)
-                        camera.look_at(Vector3(-0.85, 0.9, 1.80), Vector3.UP)
+                        camera.size = 2.5
+                        camera.position = Vector3(-0.85, 1.75, -0.26)
+                        camera.look_at(Vector3(-0.85, 0.97, 1.80), Vector3.UP)
                         await _capture(viewport, "medical_v32_monitor.png")
+                        camera.size = 3.5
                         camera.position = Vector3(4.0, 3.4, -4.0)
                         camera.look_at(Vector3(1.39, 1.12, -0.95), Vector3.UP)
                         await _capture(viewport, "medical_v32_iv.png")
@@ -303,6 +305,7 @@ func _run() -> void:
                     camera.position = Vector3(0, 12.5, -0.12)
                     camera.look_at(Vector3(0, 0, 0), Vector3(0, 0, -1))
                     await _capture(viewport, "medical_top_down.png")
+                    check(Art.pose_deploy(camp, 1.0), "Impact showcase uses fully deployed camp")
                     camera.position = VIEWS[0]
                     camera.look_at(Vector3(0, 1.10, 0), Vector3.UP)
                     Sculpt.damage_fx_pose(camp, "bullet", 0.07)
