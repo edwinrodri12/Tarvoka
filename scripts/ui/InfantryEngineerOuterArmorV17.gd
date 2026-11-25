@@ -128,31 +128,39 @@ static func _fitted_shoulder_stripe(stripe: MeshInstance3D,shell: MeshInstance3D
         side: int,center: Vector3) -> ArrayMesh:
     var arrays: Array=stripe.mesh.surface_get_arrays(0)
     var points: PackedVector3Array=arrays[Mesh.ARRAY_VERTEX]
-    var normals: PackedVector3Array=arrays[Mesh.ARRAY_NORMAL]
+    var raw: Variant=arrays[Mesh.ARRAY_INDEX]
+    var indices: PackedInt32Array=raw if raw is PackedInt32Array else PackedInt32Array()
     var samples: Dictionary={}
     for i in range(points.size()):
         var p: Vector3=points[i]
-        var n: Vector3=normals[i]
         var yz:=Vector2(p.y+center.y,p.z+center.z)
         if not samples.has(yz):
             var x: float=shoulder_surface_x(shell,yz.x,yz.y,side)
-            var dy: float=(shoulder_surface_x(shell,yz.x+0.002,yz.y,side)-
-                shoulder_surface_x(shell,yz.x-0.002,yz.y,side))/0.004
-            var dz: float=(shoulder_surface_x(shell,yz.x,yz.y+0.002,side)-
-                shoulder_surface_x(shell,yz.x,yz.y-0.002,side))/0.004
-            if not is_finite(x) or not is_finite(dy) or not is_finite(dz):
+            if not is_finite(x):
                 return null
-            samples[yz]=Vector3(x,dy,dz)
-        var sample: Vector3=samples[yz]
-        p.x=p.x*0.45+sample.x-center.x+float(side)*0.006
+            samples[yz]=x
+        p.x=p.x*0.45+float(samples[yz])-center.x+float(side)*0.006
         points[i]=p
-        normals[i]=Vector3(n.x/0.45,n.y-sample.y*n.x/0.45,
-            n.z-sample.z*n.x/0.45).normalized()
-    arrays[Mesh.ARRAY_VERTEX]=points
-    arrays[Mesh.ARRAY_NORMAL]=normals
-    var result:=ArrayMesh.new()
-    result.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES,arrays)
-    return result
+    # The sampled shoulder is piecewise triangular. A derivative taken
+    # at one vertex is not necessarily the normal of its deformed face.
+    # Emit each original triangle in its original order with its exact
+    # clockwise geometric normal. This also preserves flat bevel edges
+    # instead of interpolating normals across the crease.
+    var count: int=indices.size() if not indices.is_empty() else points.size()
+    var result:=SurfaceTool.new()
+    result.begin(Mesh.PRIMITIVE_TRIANGLES)
+    for i in range(0,count,3):
+        var a: Vector3=points[indices[i] if not indices.is_empty() else i]
+        var b: Vector3=points[indices[i+1] if not indices.is_empty() else i+1]
+        var c: Vector3=points[indices[i+2] if not indices.is_empty() else i+2]
+        var normal: Vector3=(c-a).cross(b-a)
+        if normal.length_squared()<1e-18:
+            return null
+        normal=normal.normalized()
+        for p in [a,b,c]:
+            result.set_normal(normal)
+            result.add_vertex(p)
+    return result.commit()
 
 static func knee_surface_z(shell: MeshInstance3D,x: float,y: float) -> float:
     return shoulder_surface_x(shell,y,x,-1,true)
