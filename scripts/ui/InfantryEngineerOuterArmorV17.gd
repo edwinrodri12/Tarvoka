@@ -707,6 +707,83 @@ static func _sculpt_dorsal(model: Node3D,hero: bool) -> bool:
             return false
     return true
 
+# Pose refinement after V1/V2/V6 and BEFORE V9 contact solving.
+# Deterministic sampling of the absolute phase (no per-frame accumulation).
+# Purely visual: no movement distance, turn timing, HP or combat rules.
+static func polish_pose(model: Node3D, kind: String, progress: float) -> bool:
+    if not has_model(model) or not bool(model.get_meta("tarvoka_engineer_v17_visible",true)):
+        return false
+    var soldier: Node3D=model.find_child("Infanteria_3D",true,false) as Node3D
+    var torso: Node3D=model.find_child("TorsoRig",true,false) as Node3D
+    var head: Node3D=model.find_child("CabezaRig",true,false) as Node3D
+    var gun: Node3D=model.find_child("ArmamentoRig",true,false) as Node3D
+    if soldier==null or torso==null or head==null or gun==null:
+        return false
+    var t: float=clampf(progress,0.0,1.0)
+    var stage: int=int(model.get_meta("tarvoka_infantry_damage",0))
+    # V1 leaves previous hit roll on later idle/move samples. Explicitly
+    # clear only transient roll, never resurrect a wreck.
+    if stage>=4:
+        soldier.rotation_degrees.z=-74.0
+        soldier.position.y=-0.22
+        return true
+    soldier.rotation_degrees.z=0.0
+    var envelope: float=smoothstep(0.0,0.18,t)*(1.0-smoothstep(0.82,1.0,t))
+    match kind:
+        "move":
+            var stride: float=sin(t*TAU*2.0)
+            var counter: float=cos(t*TAU*2.0)
+            soldier.position.y=0.038*envelope*(0.5+0.5*cos(t*TAU*4.0))
+            torso.rotation_degrees=Vector3(-4.0*envelope,
+                3.0*stride*envelope,1.5*counter*envelope)
+            head.rotation_degrees=Vector3(1.5*counter*envelope,
+                -2.0*stride*envelope,0.0)
+            for side in [-1,1]:
+                var leg: Node3D=model.find_child("PiernaRig_%d"%side,true,false) as Node3D
+                if leg==null:
+                    return false
+                leg.rotation_degrees.x=22.0*stride*float(side)*envelope
+            gun.position.y=-0.09+0.010*counter*envelope
+        "aim":
+            var ready: float=smoothstep(0.0,0.30,t)
+            torso.rotation_degrees.y=-10.0*ready
+            gun.position.y=-0.09+0.018*ready
+            gun.rotation_degrees.x=-6.0-1.8*ready
+            head.rotation_degrees.x=-3.0*ready
+        "attack":
+            var ready: float=smoothstep(0.0,0.13,t)
+            var recoil: float=smoothstep(0.13,0.22,t)*(1.0-smoothstep(0.22,0.60,t))
+            var settle: float=1.0-smoothstep(0.74,1.0,t)
+            # Real kick toward the torso (+Z), followed by a slower
+            # recovery. V2 still owns flash and casing timing.
+            torso.rotation_degrees=Vector3(-3.0*recoil,-10.0*ready*settle,0)
+            gun.position=Vector3(0.23,-0.09+0.015*ready*settle,
+                -0.48+0.065*recoil)
+            gun.rotation_degrees.x=-6.0-7.0*recoil
+            head.rotation_degrees.x=-2.5*ready*settle
+        "work","repair","capture":
+            var lean: float=sin(t*PI)
+            var stroke: float=sin(t*TAU)
+            torso.rotation_degrees=Vector3(16.0*lean,
+                -4.0*stroke*envelope,0.0)
+            head.rotation_degrees.x=5.0*lean
+            var panel: Node3D=model.find_child("V6_BarreraArticuladaRig",true,false) as Node3D
+            var tool: Node3D=model.find_child("V6_HerramientaArticuladaRig",true,false) as Node3D
+            if panel==null or tool==null:
+                return false
+            panel.rotation_degrees.x=-6.0*lean
+            # Maintain the existing full working stroke at quarter phase,
+            # but ease the tool in and out of its stowed orientation.
+            tool.rotation_degrees.z=(22.0+17.0*stroke)*envelope
+            tool.rotation_degrees.x=(-12.0+6.0*stroke)*envelope
+        "damage","damaged","hit_bullet","hit_explosive":
+            var impulse: float=smoothstep(0.0,0.20,t)*(1.0-smoothstep(0.20,0.86,t))
+            var strength: float=1.0 if kind=="hit_explosive" else 0.68
+            soldier.rotation_degrees.z=13.0*impulse*strength
+            torso.rotation_degrees.x=-17.0*impulse*strength
+            head.rotation_degrees.x=-5.0*impulse*strength
+    return true
+
 static func apply(model: Node3D, hero: bool) -> bool:
     if model==null or has_model(model) or not V16.has_model(model):
         return false

@@ -1580,6 +1580,9 @@ static func pose_model(role: String, model: Node3D, kind: String,
             InfantryFinishV2.pose(model,kind,progress)
         if posed and role=="infantry_engineer" and InfantryEngineerV6.has_model(model):
             InfantryEngineerV6.pose(model,kind,progress)
+            # Finish the visual pose before solving physical hand contacts.
+            if InfantryEngineerV17.has_model(model):
+                InfantryEngineerV17.polish_pose(model,kind,progress)
             if InfantryEngineerV9.has_model(model):
                 InfantryEngineerV9.sync(model,kind)
         return posed

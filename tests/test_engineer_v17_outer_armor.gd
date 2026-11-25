@@ -459,6 +459,55 @@ func _run() -> void:
                             is_equal_approx(panel.rotation_degrees.x,-54.0*progress),
                             "cargo stays fixed during independent shield sweep")
                     check(V6.reset(model),"shield resets after dorsal sweep")
+            # Exercise the actual shared game/studio entry point, not
+            # only the V9 contact solver. Use repeated arbitrary seeks to
+            # prove poses are deterministic and do not accumulate offsets.
+            var soldier: Node3D=model.find_child("Infanteria_3D",true,false) as Node3D
+            var gun: Node3D=model.find_child("ArmamentoRig",true,false) as Node3D
+            var left_leg: Node3D=model.find_child("PiernaRig_-1",true,false) as Node3D
+            if soldier!=null and gun!=null and left_leg!=null:
+                var poses: Array[String]=["move","aim","attack","work","repair",
+                    "capture","hit_bullet","hit_explosive","idle"]
+                for action in poses:
+                    for phase in [0.0,0.25,0.5,0.75,1.0]:
+                        check(Models.pose_model("infantry_engineer",model,action,phase),
+                            "actual native animation path "+action)
+                        var a: Transform3D=gun.transform
+                        var b: Transform3D=torso.transform
+                        var c: Transform3D=soldier.transform
+                        check(Models.pose_model("infantry_engineer",model,action,phase) and
+                            gun.transform.is_equal_approx(a) and
+                            torso.transform.is_equal_approx(b) and
+                            soldier.transform.is_equal_approx(c),
+                            "deterministic repeated phase "+action)
+                        for side in [-1,1]:
+                            var arm: Node3D=model.find_child("BrazoRig_%d"%side,true,false) as Node3D
+                            var link: MeshInstance3D=model.find_child(
+                                V17.LINK_PREFIX+"_%d"%side,true,false) as MeshInstance3D
+                            var tool_mode: bool=side>0 and action in ["work","repair","capture"]
+                            var hand: MeshInstance3D=model.find_child(
+                                V17.HAND_PALMS[2] if tool_mode else V17.HAND_PALMS[1 if side>0 else 0],
+                                true,false) as MeshInstance3D
+                            if arm!=null and link!=null and hand!=null:
+                                var wrist: Vector3=arm.transform*link.transform*Vector3(0,0.5,0)
+                                var grip: Vector3=hand.get_parent().transform*hand.position
+                                check(wrist.distance_to(grip)<0.04 and hand.visible,
+                                    "visible hand retains grip through native pose "+action)
+                Models.pose_model("infantry_engineer",model,"move",0.0)
+                check(absf(left_leg.rotation_degrees.x)<0.001,
+                    "gait starts from rest instead of snapping to full stride")
+                Models.pose_model("infantry_engineer",model,"move",1.0)
+                check(absf(left_leg.rotation_degrees.x)<0.001 and absf(soldier.position.y)<0.001,
+                    "gait ends at stable rest")
+                Models.pose_model("infantry_engineer",model,"attack",0.22)
+                check(gun.position.z>-0.44,"shot has real backward recoil")
+                Models.pose_model("infantry_engineer",model,"attack",1.0)
+                check(absf(gun.position.z+0.48)<0.001,"recoil returns to neutral")
+                Models.pose_model("infantry_engineer",model,"hit_explosive",0.2)
+                check(absf(soldier.rotation_degrees.z)>10.0,"explosive impulse visibly staggers")
+                Models.pose_model("infantry_engineer",model,"idle",0.0)
+                check(absf(soldier.rotation_degrees.z)<0.001,"idle clears residual impact roll")
+                Models.restore_model_pose("infantry_engineer",model)
             var material_kinds: Dictionary={}
             for item in model.find_children("*","MeshInstance3D",true,false):
                 var part: MeshInstance3D=item as MeshInstance3D
@@ -612,12 +661,20 @@ func _run() -> void:
         print("V17 real changed picture samples: ",count_changes)
         check(count_changes>150,
             "real new chest and deltoids visibly differ in native Godot")
+        camera.position=positions["left"]
+        camera.look_at(Vector3(0,1.40,0),Vector3.UP)
+        for spec in [["move",0.375],["aim",0.8],["attack",0.22],
+                ["repair",0.25],["capture",0.5],["hit_explosive",0.2]]:
+            check(Models.pose_model("infantry_engineer",hero,str(spec[0]),float(spec[1])),
+                "render real native animated pose "+str(spec[0]))
+            await snapshot(viewport,"v17_pose_"+str(spec[0]))
+        Models.restore_model_pose("infantry_engineer",hero)
         hero.queue_free()
         await process_frame
-    check(photos==10,"ten V16 versus V17 real native Godot PNGs")
+    check(photos==16,"ten native comparison PNGs and six animation poses")
     if failed>0:
         push_error("FAIL ENGINEER V17: %d violations"%failed)
         quit(1)
     else:
-        print("PASS ENGINEER V17: 8 factions x 2 LOD, closed hard-surface chest, shoulder, knees, boots; 10 real 3D comparison images")
+        print("PASS ENGINEER V17: 8 factions x 2 LOD, closed hard-surface chest, shoulder, knees, boots; 10 real 3D comparison images and 6 native animated poses")
         quit(0)
