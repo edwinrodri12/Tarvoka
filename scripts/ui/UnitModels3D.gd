@@ -1014,10 +1014,10 @@ static func _destroyer(root: Node3D) -> void:
     for side in [-1,1]:
         _box(root,"FaccionFranjaNaval_%d" % side,
             Vector3(float(side)*0.744,0.69,0.02),
-            Vector3(0.07,0.095,1.32),ACCENT)
+            Vector3(0.07,0.095,1.32),ARMOR)
         _box(root,"FaccionIdentidadNaval_%d" % side,
             Vector3(float(side)*0.775,0.76,0.02),
-            Vector3(0.07,0.10,0.48),ACCENT)
+            Vector3(0.07,0.10,0.48),ARMOR)
     root.set_meta("destroyer_art_revision","1.0")
     _body(root,"Superestructura",0.43,0.25,0.50,0.80,1.36,METAL)
     _box(root,"Puente",Vector3(0,1.30,0),
@@ -1169,6 +1169,7 @@ static func build(role: String, faction: int = -1, finish_enabled: bool = true, 
             _fighter(model)
         "destroyer":
             _destroyer(model)
+            apply_faction_palette(model,faction)
         "logistics_mobile":
             # G16 remains Studio visual-only. Tactical role logistics is
             # unchanged; V2 is genuine Godot mesh detail on the same V1 rig.
