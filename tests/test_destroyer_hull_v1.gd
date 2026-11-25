@@ -166,10 +166,16 @@ func _run() -> void:
             var fx: Node3D = model.get_node("DanoNavalVisual") as Node3D
             var hull_rest: Transform3D = hull.transform
             var mast_rest: Transform3D = mast.transform
-            for hit_kind in ["damage","damaged","hit"]:
+            var lid: Node3D = model.get_node("ModuloCubierta/TapaModulo_3_2") as Node3D
+            var lid_rest: Transform3D = lid.transform
+            for hit_kind in ["damage","damaged","hit","hit_bullet","hit_blast"]:
                 check(Art.pose_model("destroyer",model,hit_kind,0.5), "Temporary hit reaction")
                 check(int(model.get_meta("destroyer_damage_stage",-1)) == 0, "Hits never manufacture persistent damage")
                 Art.restore_model_pose("destroyer",model)
+            check(Art.pose_model("destroyer",model,"hit_blast",0.2), "Distinct transient blast")
+            check((fx.get_node("ImpactoAmplio") as Node3D).visible, "Blast effect appears")
+            Art.restore_model_pose("destroyer",model)
+            check(not (fx.get_node("ImpactoAmplio") as Node3D).visible, "Blast effect clears")
             for damage in range(5):
                 check(Art.set_destroyer_damage(model,damage,0.50), "Damage stage applied")
                 check(int(model.get_meta("destroyer_damage_stage",-1)) == damage, "Damage revision")
@@ -179,6 +185,7 @@ func _run() -> void:
                 check((fx.get_node("FragmentoCubierta") as Node3D).visible == (damage>=3), "Physical deck fragment")
                 if damage in [2,3]:
                     check(absf(mast.rotation_degrees.z)>10.0, "Visible mast damage")
+                    check(absf(lid.rotation_degrees.z)>10.0, "Visible displaced deck lid")
                 if damage == 4:
                     check(hull.position.y < -0.9, "Visual sinking")
                     var sunk: Transform3D = hull.transform
@@ -190,6 +197,7 @@ func _run() -> void:
                 check(model.position == base_position and model.scale.is_equal_approx(base_scale), "Damage preserves tactical transform")
             check(Art.set_destroyer_damage(model,0), "Reset damage")
             check(hull.transform.is_equal_approx(hull_rest) and mast.transform.is_equal_approx(mast_rest), "Original geometry restored")
+            check(lid.transform.is_equal_approx(lid_rest), "Deck detail restored")
             model.free()
     await _render()
     if failures != 0:

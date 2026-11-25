@@ -1385,6 +1385,12 @@ static func _destroyer_damage_setup(root: Node3D, art_level: int) -> void:
             Vector3(0.18,0.27,0.18),Color("#EE8846")).hide()
     _box(fx,"FragmentoCubierta",Vector3(0.35,0.87,0.84),
         Vector3(0.22,0.06,0.25),STEEL,Vector3(15,20,18)).hide()
+    _sphere(fx,"ImpactoBreve",Vector3(0.42,0.86,-0.72),
+        Vector3(0.14,0.16,0.14),Color("#FFD9A1")).hide()
+    _sphere(fx,"ImpactoAmplio",Vector3(0.39,0.91,-0.72),
+        Vector3(0.36,0.31,0.34),Color("#F19456")).hide()
+    var lid: Node3D = root.get_node("ModuloCubierta/TapaModulo_3_2") as Node3D
+    lid.set_meta("naval_rest_transform",lid.transform)
     for child in root.get_children():
         if child is Node3D:
             child.set_meta("naval_rest_transform",child.transform)
@@ -1407,18 +1413,25 @@ static func set_destroyer_damage(root: Node3D, stage: int, progress: float = 0.0
         (child as Node3D).visible = (label.begins_with("Marca") and d>=1) or (label.begins_with("Humo") and d>=2) or (label.begins_with("Fuego") and d>=3) or (label=="FragmentoCubierta" and d>=3)
     var mast: Node3D = root.get_node("TorreMastil") as Node3D
     var bridge: Node3D = root.get_node("Superestructura") as Node3D
+    var lid: Node3D = root.get_node("ModuloCubierta/TapaModulo_3_2") as Node3D
+    lid.transform = lid.get_meta("naval_rest_transform")
     if d >= 2:
         mast.rotation_degrees.z = 12.0
+        lid.rotation_degrees.z = -12.0
+        lid.position.y += 0.015
     if d >= 3:
         mast.rotation_degrees.z = 28.0
-        bridge.rotation_degrees.z = -5.0
-        bridge.position.x = -0.04
+        var hinge := Vector3(0,0.80,0.41)
+        var lean := Basis(Vector3.BACK,deg_to_rad(-5.0))
+        bridge.transform = Transform3D(lean,hinge-lean*hinge)
+        lid.rotation_degrees.z = -28.0
+        lid.position += Vector3(0.025,0.025,0.0)
     if d == 4:
         var tilt := Basis(Vector3.BACK,deg_to_rad(22.0*t))
         for child in root.get_children():
             if child is Node3D:
                 var initial: Transform3D = child.transform
-                child.transform = Transform3D(tilt*initial.basis,tilt*initial.origin+Vector3(0,-2.1*t,0))
+                child.transform = Transform3D(tilt*initial.basis,tilt*initial.origin+Vector3(0,-2.85*t,0))
     var wake: Node3D = root.get_node("EstelaEspuma") as Node3D
     wake.visible = d < 3
     root.set_meta("destroyer_damage_stage",d)
@@ -1428,7 +1441,7 @@ static func pose_destroyer(root: Node3D, kind: String, progress: float,
         target_heading: Vector2i = Vector2i(0,-1)) -> bool:
     if root == null or not root.get_meta("destroyer_motion_v16",false):
         return false
-    if kind not in ["idle","move","attack","fire","aim","hit"]:
+    if kind not in ["idle","move","attack","fire","aim","hit","hit_bullet","hit_blast"]:
         return false
     if int(root.get_meta("destroyer_damage_stage",0)) >= 3:
         return false
@@ -1442,12 +1455,16 @@ static func pose_destroyer(root: Node3D, kind: String, progress: float,
     var firing: bool = kind in ["attack","fire"]
     var aiming: bool = firing or kind == "aim"
     var pulse: float = sin(t*TAU)
-    var impact: float = sin(t*PI) if kind == "hit" else 0.0
+    var impact: float = sin(t*PI) if kind in ["hit","hit_bullet","hit_blast"] else 0.0
     var recoil: float = sin(clampf(t/0.38,0.0,1.0)*PI) if firing else 0.0
     turret.rotation.y = atan2(-float(target_heading.x),-float(target_heading.y)) if aiming and target_heading != Vector2i.ZERO else 0.0
     pivot.rotation_degrees.x = -4.0*recoil
     barrel.position.z = -0.30+0.065*recoil
     flash.visible = firing and t > 0.01 and t < 0.18
+    var small_hit: Node3D = root.get_node("DanoNavalVisual/ImpactoBreve") as Node3D
+    var big_hit: Node3D = root.get_node("DanoNavalVisual/ImpactoAmplio") as Node3D
+    small_hit.visible = kind in ["hit","hit_bullet"] and t > 0.0 and t < 0.27
+    big_hit.visible = kind == "hit_blast" and t > 0.0 and t < 0.42
     pose_destroyer_radar(root,t)
     pose_destroyer_aft(root,t*2.0 if moving else t*0.25,0.4*pulse if moving else 0.0)
     # Preserve the map heading, scale and position owned by the caller.

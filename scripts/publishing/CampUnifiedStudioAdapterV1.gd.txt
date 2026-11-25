@@ -613,6 +613,8 @@ func _naval_create_controls() -> void:
         "DISPARO",func(): _naval_play("attack"))
     _add_paired(naval_controls,"RADAR",func(): _naval_play("idle"),
         "HUNDIMIENTO",func(): _naval_play("sink"))
+    _add_paired(naval_controls,"IMPACTO LEVE",func(): _naval_play("hit_bullet"),
+        "IMPACTO EXPLOSIVO",func(): _naval_play("hit_blast"))
     _add_paired(naval_controls,"DETENER",_naval_stop,
         "REPARAR",func(): _naval_damage_changed(0))
     naval_status = _title(naval_controls,"",11)
@@ -692,7 +694,8 @@ func _naval_play(kind: String) -> void:
         naval_damage_picker.select(4)
         _naval_frame(kind,0.0)
     elif int(model_root.get_meta("destroyer_damage_stage",0)) >= 3:
-        _naval_damage_changed(0)
+        naval_status.text = "Reparar el modelo antes de iniciar otra animación."
+        return
     _naval_tween = create_tween()
     _naval_tween.tween_method(func(v: float): _naval_frame(kind,v),0.0,1.0,
         2.7 if kind == "sink" else 1.5)
