@@ -585,11 +585,11 @@ func _naval_create_controls() -> void:
     var idx: int = NavalArt.ROLES.find("destroyer")
     if idx < 0 or idx >= role_picker.item_count:
         return
-    role_picker.set_item_text(idx,"Destructor naval · V1.7")
+    role_picker.set_item_text(idx,"Destructor naval · V1.8")
     naval_controls = VBoxContainer.new()
     naval_controls.name = "DestructorControlesNativos"
     role_picker.get_parent().add_child(naval_controls)
-    _title(naval_controls,"DESTRUCTOR NAVAL · V1.7",14)
+    _title(naval_controls,"DESTRUCTOR NAVAL · V1.8",14)
     naval_faction_picker = OptionButton.new()
     naval_faction_picker.add_item("Neutral")
     for faction in CampStyle.FACTIONS:
@@ -668,7 +668,7 @@ func _naval_damage_changed(stage: int) -> void:
     naval_damage_picker.select(clampi(stage,0,4))
     NavalArt.set_destroyer_damage(model_root,stage,0.45 if stage == 4 else 0.0)
     if naval_status != null:
-        naval_status.text = "Modelo nativo V1.7 · D%d" % stage
+        naval_status.text = "Modelo nativo V1.8 · D%d" % stage
 
 func _naval_stop() -> void:
     if _naval_tween != null and _naval_tween.is_running():

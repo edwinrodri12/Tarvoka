@@ -421,8 +421,8 @@ func _run() -> void:
     await _frames(6)
     var naval: Node3D = studio.get("model_root") as Node3D
     var naval_controls: Control = studio.get("naval_controls") as Control
-    _check(naval != null and naval.get_meta("destroyer_art_revision","") == "1.7",
-        "Destroyer V1.7 uses the shared factory")
+    _check(naval != null and naval.get_meta("destroyer_art_revision","") == "1.8",
+        "Destroyer V1.8 uses the shared factory")
     _check(naval_controls != null and naval_controls.visible,
         "Destroyer controls visible")
     if naval != null:
@@ -443,7 +443,7 @@ func _run() -> void:
         var naval_image: Image = original_viewport.get_texture().get_image()
         _check(naval_image != null and not naval_image.is_empty(),"Destroyer real viewport image")
         if naval_image != null and not naval_image.is_empty():
-            _check(naval_image.save_png(naval_dir+"/destroyer_v17_shared.png") == OK,"Destroyer shared capture")
+            _check(naval_image.save_png(naval_dir+"/destroyer_v18_shared.png") == OK,"Destroyer shared capture")
     studio.call("_display_role","tank")
     await _frames(4)
     _check(naval_controls == null or not naval_controls.visible,"Destroyer controls hidden for tank")

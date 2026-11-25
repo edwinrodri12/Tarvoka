@@ -2743,7 +2743,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: tarvoka-destroyer-v17-shared-studio
+          name: tarvoka-destroyer-v18-shared-studio
           path: build/qa/destroyer-shared-studio/*.png
           if-no-files-found: warn
 
