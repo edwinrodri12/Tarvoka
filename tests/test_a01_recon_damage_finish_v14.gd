@@ -127,6 +127,31 @@ func _run()->void:
             var broken:=craft.find_child(Finish.FRACTURE,true,false) as MeshInstance3D
             verify(real_wing!=null and left_wing!=null and broken!=null,
                 "real two wings and sealed D4 replacement exist")
+            verify(bool(craft.get_meta("tarvoka_a01_v24_wing_composite",false)),
+                "V24 composite wing finish present")
+            for wing_node in [real_wing,left_wing,broken]:
+                var foil:=wing_node as MeshInstance3D
+                if foil==null or not (foil.mesh is ArrayMesh):
+                    continue
+                var finish_mat:=foil.material_override as StandardMaterial3D
+                verify(finish_mat!=null and finish_mat.vertex_color_use_as_albedo and
+                    finish_mat.roughness>=0.60,"V24 matte composite on intact and broken wings")
+                verify(_closed(foil.mesh) and _exterior(foil.mesh),
+                    "V24 preserves closed clockwise wing geometry")
+                var data:Array=foil.mesh.surface_get_arrays(0)
+                var wing_vertices:PackedVector3Array=data[Mesh.ARRAY_VERTEX]
+                var wing_colors:PackedColorArray=data[Mesh.ARRAY_COLOR]
+                verify(wing_colors.size()==wing_vertices.size() and not wing_colors.is_empty(),
+                    "V24 all wing vertices carry opaque composite pigment")
+                var wing_tones:Dictionary={}
+                for idx in range(wing_colors.size()):
+                    var shade:Color=wing_colors[idx]
+                    var expected:Color=Aero._wing_pigment(wing_vertices[idx],lod==13)
+                    wing_tones[shade.to_html()]=true
+                    verify(shade.a>=0.999 and absf(shade.r-expected.r)<0.009 and
+                        absf(shade.g-expected.g)<0.009 and absf(shade.b-expected.b)<0.009,
+                        "V24 correct opaque pigment at each wing vertex")
+                verify(wing_tones.size()>=3,"V24 differentiated upper, edge and underside tones")
             var tagged:Array=[
                 Finish.D1_WING,Finish.D1_NOSE,
                 Finish.D2_BURN,Finish.D2_PLATE,
@@ -168,6 +193,11 @@ func _run()->void:
             var left_light:=body.find_child("A01_V2_NavLightPort",false,false) as MeshInstance3D
             verify(right_light!=null and left_light!=null and right_light.visible and left_light.visible,
                 "V21 intact aircraft retains both navigation lights")
+            for light_node in [right_light,left_light]:
+                var lamp:=light_node as MeshInstance3D
+                verify(lamp!=null and lamp.mesh is SphereMesh and
+                    lamp.scale.is_equal_approx(Vector3(0.060,0.050,0.091)),
+                    "V24 rounded compact navigation lens replaces block")
             verify(Atmosphere.has_model(craft),"V15 six closed effect meshes")
             var effects:Array=craft.get_meta(Atmosphere.CACHE,[])
             verify(effects.size()==6,"exact six legacy effects replaced")
