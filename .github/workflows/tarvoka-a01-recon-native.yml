@@ -107,6 +107,7 @@ jobs:
             exit 1
           fi
           grep -F 'PASS A01 V7 MOBILE BUDGET:' /tmp/a01-v7-mobile-budget.log
+          test -s build/qa/a01-v7/a01-v30-workload.json
           test "$(find build/qa/a01-v7 -maxdepth 1 -name 'a01-v7-12-*.png' | wc -l)" -eq 2
 
       - name: Verify closed tapered V8 wingtips and 5 real Godot angle captures
@@ -273,6 +274,7 @@ jobs:
             build/qa/a01-v1/*.png
             build/qa/a01-v6/*.png
             build/qa/a01-v7/*.png
+            build/qa/a01-v7/a01-v30-workload.json
             build/qa/a01-v8/*.png
             build/qa/a01-v9/*.png
             build/qa/a01-v10/*.png
