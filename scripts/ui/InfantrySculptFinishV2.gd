@@ -62,35 +62,127 @@ static func _ring_pt(radius: Vector3, segment: int, total: int) -> Vector3:
 
 # Every segment is physically capped at each end: no floating cylinders,
 # open-sided planes, cut-off legs, backpack shells or faceless proxy surfaces.
-static func _organic(parent: Node3D, label: String, pos: Vector3,
-        rings: Array[Vector3], material: StandardMaterial3D,
-        sides: int = 12) -> MeshInstance3D:
+static func _organic_mesh(rings: Array[Vector3], sides: int=12,
+        offsets: PackedFloat32Array=PackedFloat32Array(), shape: float=1.0) -> ArrayMesh:
     var tool := SurfaceTool.new()
     tool.begin(Mesh.PRIMITIVE_TRIANGLES)
     var count: int = maxi(8,sides)
+    var points: Array[PackedVector3Array] = []
+    for row in range(rings.size()):
+        var ring := PackedVector3Array()
+        var shift: float = offsets[row] if offsets.size()==rings.size() else 0.0
+        for i in range(count):
+            var pt: Vector3 = _ring_pt(rings[row],i,count)
+            if shape!=1.0:
+                var angle: float = TAU*float(i)/float(count)
+                pt.x = signf(cos(angle))*pow(absf(cos(angle)),shape)*rings[row].x
+                pt.z = signf(sin(angle))*pow(absf(sin(angle)),shape)*rings[row].z
+            pt.z += shift
+            ring.append(pt)
+        points.append(ring)
     for row in range(rings.size()-1):
         for i in range(count):
-            var a: Vector3 = _ring_pt(rings[row],i,count)
-            var b: Vector3 = _ring_pt(rings[row],(i+1)%count,count)
-            var c: Vector3 = _ring_pt(rings[row+1],i,count)
-            var d: Vector3 = _ring_pt(rings[row+1],(i+1)%count,count)
+            var a: Vector3 = points[row][i]
+            var b: Vector3 = points[row][(i+1)%count]
+            var c: Vector3 = points[row+1][i]
+            var d: Vector3 = points[row+1][(i+1)%count]
             # Godot front faces use clockwise winding viewed from outside.
             for v in [a,b,c,b,d,c]:
                 tool.add_vertex(v)
-    var low: Vector3 = Vector3(0,rings[0].y,0)
-    var top: Vector3 = Vector3(0,rings[-1].y,0)
+    var low: Vector3 = Vector3(0,rings[0].y,offsets[0] if offsets.size()==rings.size() else 0.0)
+    var top: Vector3 = Vector3(0,rings[-1].y,offsets[-1] if offsets.size()==rings.size() else 0.0)
     for i in range(count):
-        var lower: Vector3 = _ring_pt(rings[0],i,count)
-        var lower_next: Vector3 = _ring_pt(rings[0],(i+1)%count,count)
+        var lower: Vector3 = points[0][i]
+        var lower_next: Vector3 = points[0][(i+1)%count]
         for v in [low,lower_next,lower]:
             tool.add_vertex(v)
-        var upper: Vector3 = _ring_pt(rings[-1],i,count)
-        var upper_next: Vector3 = _ring_pt(rings[-1],(i+1)%count,count)
+        var upper: Vector3 = points[-1][i]
+        var upper_next: Vector3 = points[-1][(i+1)%count]
         for v in [top,upper,upper_next]:
             tool.add_vertex(v)
     tool.generate_normals()
-    var sculpt: ArrayMesh = tool.commit()
-    return _mesh(parent,label,sculpt,material,pos)
+    return tool.commit()
+
+static func _organic(parent: Node3D, label: String, pos: Vector3,
+        rings: Array[Vector3], material: StandardMaterial3D,
+        sides: int = 12) -> MeshInstance3D:
+    return _mesh(parent,label,_organic_mesh(rings,sides),material,pos)
+
+# Refine only the five remaining official infantry identities. Keep G05
+# and the legacy studies untouched; keep all rig pivots and node names.
+const FAMILY_ANATOMY_V5 := "tarvoka_infantry_family_anatomy_v5"
+const FAMILY_ANATOMY_ROLES := ["line","infantry_commando","infantry_sniper","infantry_logistic","infantry_medic"]
+
+static func _resculpt(model: Node3D, label: String, profile: Array[Vector3],
+        pos: Vector3, sides: int, offsets: PackedFloat32Array=PackedFloat32Array(),
+        shape: float=1.0) -> bool:
+    var part: MeshInstance3D = _find(model,label) as MeshInstance3D
+    if part==null:
+        return false
+    part.mesh = _organic_mesh(profile,sides,offsets,shape)
+    part.position = pos
+    part.scale = Vector3.ONE
+    part.set_meta(FAMILY_ANATOMY_V5,true)
+    return true
+
+static func _refine_core(model: Node3D, hero: bool) -> bool:
+    var sides: int = 16 if hero else 10
+    if not _resculpt(model,"PetoBase",[
+            Vector3(0.20,-0.46,0.15),Vector3(0.27,-0.37,0.20),
+            Vector3(0.32,-0.18,0.235),Vector3(0.365,0.075,0.27),
+            Vector3(0.345,0.26,0.235),Vector3(0.19,0.41,0.15)],
+            Vector3.ZERO,sides):
+        return false
+    if not _resculpt(model,"CinturaEquipo",[
+            Vector3(0.19,-0.17,0.115),Vector3(0.27,-0.115,0.175),
+            Vector3(0.30,0.015,0.195),Vector3(0.26,0.12,0.17),
+            Vector3(0.18,0.16,0.11)],Vector3.ZERO,sides):
+        return false
+    for side in [-1,1]:
+        var suffix: String = "_%d"%side
+        if not _resculpt(model,"Hombrera"+suffix,[
+                Vector3(0.113,-0.145,0.118),Vector3(0.156,-0.10,0.147),
+                Vector3(0.164,-0.025,0.158),Vector3(0.138,0.065,0.137),
+                Vector3(0.075,0.101,0.08)],Vector3(0,0,-0.04),sides):
+            return false
+        if not _resculpt(model,"V2_MangaCerrada"+suffix,[
+                Vector3(0.102,-0.52,0.112),Vector3(0.123,-0.37,0.132),
+                Vector3(0.142,-0.16,0.145),Vector3(0.142,-0.03,0.139),
+                Vector3(0.117,0.06,0.119)],Vector3(0,0,0.005),sides):
+            return false
+        if not _resculpt(model,"V2_AntebrazoCerrado"+suffix,[
+                Vector3(0.087,-0.755,0.096),Vector3(0.106,-0.66,0.119),
+                Vector3(0.123,-0.55,0.131),Vector3(0.116,-0.46,0.122),
+                Vector3(0.103,-0.42,0.111)],Vector3(0,0,-0.060),sides):
+            return false
+        if not _resculpt(model,"Rodillera"+suffix,[
+                Vector3(0.077,-0.085,0.034),Vector3(0.109,-0.052,0.056),
+                Vector3(0.111,0.042,0.058),Vector3(0.078,0.082,0.036)],
+                Vector3(0,-0.48,-0.15),sides,PackedFloat32Array(),0.72):
+            return false
+        if not _resculpt(model,"V2_BotaMoldeada"+suffix,[
+                Vector3(0.112,-0.925,0.196),Vector3(0.126,-0.875,0.204),
+                Vector3(0.121,-0.815,0.181),Vector3(0.114,-0.74,0.15),
+                Vector3(0.103,-0.655,0.126)],Vector3(0,0,-0.14),sides,
+                PackedFloat32Array([0.0,0.0,0.025,0.065,0.10]),0.78):
+            return false
+        if not _resculpt(model,"V2_Suela"+suffix,[
+                Vector3(0.108,-0.9675,0.206),Vector3(0.127,-0.954,0.225),
+                Vector3(0.127,-0.91,0.225),Vector3(0.114,-0.8925,0.21)],
+                Vector3(0,0,-0.128),sides,PackedFloat32Array(),0.62):
+            return false
+        _hide(model,"V2_PunteraProtegida"+suffix)
+        var badge: MeshInstance3D = _find(model,"FaccionHombro"+suffix) as MeshInstance3D
+        if badge!=null:
+            badge.position.x=float(side)*0.151
+            badge.scale=Vector3(1,0.68,0.76)
+        var patch: MeshInstance3D = _find(model,"V2_FaccionParcheManga"+suffix) as MeshInstance3D
+        if patch!=null:
+            patch.position.x=float(side)*0.132
+        for row in range(3):
+            _hide(model,"V2_PliseManga_%d_%d"%[side,row])
+    model.set_meta(FAMILY_ANATOMY_V5,true)
+    return true
 
 # Eight-point rounded ballistic plate, a closed bevelled ArrayMesh, instead
 # of a flat square attached to the soldier's torso.
@@ -415,6 +507,8 @@ static func apply(model: Node3D, faction_paint: Color, hero: bool) -> bool:
             Vector3(0.13,0.24,0.04),rubber)
         _plate(upper,"V2_FaccionHerramientas",Vector3(-0.34,-0.13,0.51),
             0.20,0.095,0.026,faction)
+    if role in FAMILY_ANATOMY_ROLES and not _refine_core(model,hero):
+        return false
     model.set_meta(FLAG,true)
     model.set_meta("tarvoka_infantry_v2_hero",hero)
     model.set_meta("tarvoka_infantry_v2_opaque",true)

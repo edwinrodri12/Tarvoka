@@ -107,6 +107,7 @@ on:
       - "scripts/ui/InfantryEngineerOuterArmorV17.gd"
       - "tests/test_infantry_family_v2.gd"
       - "scripts/ui/InfantrySculptFinishV2.gd"
+      - "scripts/ui/InfantryVariantsV4.gd"
       - "tests/test_bastion_v16_joint_finish.gd"
       - "tests/test_bastion_v17_contours.gd"
       - "tests/test_bastion_v17_360_capture.gd"
@@ -244,6 +245,9 @@ on:
       - "scripts/ui/CampDefenseFinishV2.gd"
       - "scripts/ui/CampMedicalFinishV2.gd"
       - "scripts/ui/CampMedicalSculptV3.gd"
+      - "scripts/ui/InfantrySculptFinishV2.gd"
+      - "scripts/ui/InfantryVariantsV4.gd"
+      - "tests/test_infantry_family_v2.gd"
       # Independently validate the Engineer's original shared Godot Studio.
       - "scripts/ui/BastionStudioAdapter.gd"
       - "scripts/ui/InfantryEngineerFinishV6.gd"

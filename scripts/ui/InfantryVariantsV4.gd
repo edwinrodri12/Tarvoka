@@ -10,6 +10,10 @@ const ROLES := [
     "infantry_medic","infantry_commando"
 ]
 const FLAG := "tarvoka_infantry_variant_v4"
+const KIT_V5 := "tarvoka_infantry_specialist_kit_v5"
+const Sculpt = preload("res://scripts/ui/InfantrySculptFinishV2.gd")
+const ROUNDED_KIT := ["V4_CapaCamuflajePrecision","V4_BolsaSuministros","V4_KitMedicoVerde",
+    "V4_BotiquinCintura","V4_FundaInstrumentos"]
 const MARKER := {
     "infantry_sniper":"V4_CanonPrecision",
     "infantry_logistic":"V4_BolsaSuministros",
@@ -37,6 +41,14 @@ static func _box(parent: Node3D, part: String, pos: Vector3,
     var piece:=MeshInstance3D.new()
     piece.name=part
     piece.mesh=mesh
+    if part in ROUNDED_KIT or part.begins_with("V4_ModuloSuministro_") or part.begins_with("V4_HombreraEspecial_"):
+        var profile: Array[Vector3] = [
+            Vector3(dims.x*0.38,-dims.y*0.50,dims.z*0.38),
+            Vector3(dims.x*0.50,-dims.y*0.37,dims.z*0.50),
+            Vector3(dims.x*0.50,dims.y*0.37,dims.z*0.50),
+            Vector3(dims.x*0.38,dims.y*0.50,dims.z*0.38)]
+        piece.mesh=Sculpt._organic_mesh(profile,12,PackedFloat32Array(),0.42)
+        piece.set_meta(KIT_V5,true)
     piece.material_override=mat
     piece.position=pos
     piece.rotation_degrees=degrees
@@ -179,6 +191,17 @@ static func apply(model: Node3D, role: String, faction_color: Color,
                         Vector3(0.19,0.13,0.27),dark)
         _:
             return false
+    if role=="infantry_logistic":
+        var pack_badge: Node3D=model.find_child("V4_EtiquetaLogistica",true,false) as Node3D
+        if pack_badge!=null:
+            pack_badge.position.z=0.756
+    if role=="infantry_medic":
+        var cross_v: Node3D=model.find_child("V4_MarcaMedicaVertical",true,false) as Node3D
+        var cross_h: Node3D=model.find_child("V4_MarcaMedicaHorizontal",true,false) as Node3D
+        if cross_v!=null and cross_h!=null:
+            cross_v.position.z=0.692
+            cross_h.position.z=0.705
+    model.set_meta(KIT_V5,true)
     model.set_meta(FLAG,role)
     model.set_meta("tarvoka_infantry_variant_visual_only",true)
     model.set_meta("tarvoka_infantry_variant_hero",hero)

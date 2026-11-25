@@ -207,6 +207,35 @@ func _run() -> void:
                             "nondegenerate dimensional geometry "+name)
                         check(closed_solid(part.mesh),
                             "watertight non-open full 360 degree "+name)
+                var refined: bool=role in Finish.FAMILY_ANATOMY_ROLES
+                check(bool(model.get_meta(Finish.FAMILY_ANATOMY_V5,false))==refined,
+                    "V5 anatomy limited to five intended core roles "+role)
+                if refined:
+                    for side in [-1,1]:
+                        var suffix: String="_%d"%side
+                        for prefix in ["Hombrera","V2_MangaCerrada","V2_AntebrazoCerrado",
+                                "Rodillera","V2_BotaMoldeada","V2_Suela"]:
+                            var sculpt: MeshInstance3D=model.find_child(prefix+suffix,true,false) as MeshInstance3D
+                            check(sculpt!=null and sculpt.visible and sculpt.mesh is ArrayMesh and
+                                closed_solid(sculpt.mesh) and bool(sculpt.get_meta(Finish.FAMILY_ANATOMY_V5,false)),
+                                "V5 closed actual anatomical part "+prefix+suffix)
+                        var boot: MeshInstance3D=model.find_child("V2_BotaMoldeada"+suffix,true,false) as MeshInstance3D
+                        var sole: MeshInstance3D=model.find_child("V2_Suela"+suffix,true,false) as MeshInstance3D
+                        var toe: Node3D=model.find_child("V2_PunteraProtegida"+suffix,true,false) as Node3D
+                        if boot!=null and sole!=null:
+                            check(boot.get_parent()==sole.get_parent() and
+                                boot.mesh.get_aabb().position.y < sole.mesh.get_aabb().end.y and
+                                is_equal_approx(sole.mesh.get_aabb().position.y,-0.9675),
+                                "boot and outsole overlap; original floor contact retained")
+                        check(toe!=null and not toe.visible,"old detached toe hidden")
+                    if Specialist.supports(role):
+                        check(bool(model.get_meta(Specialist.KIT_V5,false)),
+                            "specialist kit revision present")
+                        for part in model.find_children("V4_*","MeshInstance3D",true,false):
+                            if part.has_meta(Specialist.KIT_V5):
+                                var gear_mesh: MeshInstance3D=part as MeshInstance3D
+                                check(gear_mesh.mesh is ArrayMesh and closed_solid(gear_mesh.mesh),
+                                    "rounded specialist cargo is a closed physical volume")
                 # Real LOD8 tactical paint must be MUCH broader than tiny
                 # hero emblems, and must match one of the eight official
                 # palettes exactly (not a guessed or invented highlight).
@@ -308,6 +337,12 @@ func _run() -> void:
                 if faction==0:
                     hero.rotation_degrees.y=0
                     await save_frame(view,"v2_%s_f%d_back"%[role,faction])
+                    if role in Finish.FAMILY_ANATOMY_ROLES:
+                        camera.size=2.75
+                        for angle in [90,180,270]:
+                            hero.rotation_degrees.y=angle
+                            await save_frame(view,"v5_%s_detail_%d"%[role,angle])
+                        camera.size=3.6
                 hero.get_parent().remove_child(hero)
             # Tactical camera uses the SAME real renderer with reduced
             # visible model size, NOT a second artist-only 3D fake.
@@ -320,7 +355,7 @@ func _run() -> void:
                 camera.size=3.6
             hero.free()
             mobile.free()
-    check(rendered==38,"38 real 3D comparison / tactical frames")
+    check(rendered==53,"53 real 3D comparison / tactical frames")
     # Art-only variants must never enter the tactical roster.
     for role in ["infantry_urban","infantry_defense",
             "infantry_antitank","infantry_engineer",
@@ -331,5 +366,5 @@ func _run() -> void:
         push_error("FAIL INFANTRY V2 NATIVE 3D: %d failures"%failed)
         quit(1)
     else:
-        print("PASS INFANTRY V2 NATIVE 3D: 160 models (6 core + 4 legacy), 8 factions, 2 LOD, 38 true PNG")
+        print("PASS INFANTRY V2 NATIVE 3D: 160 models (6 core + 4 legacy), 8 factions, 2 LOD, 53 true PNG")
         quit(0)
