@@ -1,0 +1,240 @@
+extends SceneTree
+const Camp = preload("res://scripts/ui/CampModels3DV1.gd")
+const V43 = preload("res://scripts/ui/CampSupplySculptV4.gd")
+const Style = preload("res://scripts/ui/VisualStyle.gd")
+const OUT := "res://build/qa/camps-supply-v4"
+const ANGLES := [Vector3(9.8, 8.1, -10), Vector3(-9.8, 8.1, -10),
+    Vector3(9.8, 8.1, 10), Vector3(-9.8, 8.1, 10)]
+var failures: int = 0
+var audits: int = 0
+var captures: int = 0
+func check(ok: bool, description: String) -> void:
+    if not ok:
+        failures += 1
+        push_error("CAMP V4: " + description)
+func _initialize() -> void:
+    call_deferred("_run")
+func _collect(node: Node, meshes: Array[MeshInstance3D]) -> void:
+    if node is MeshInstance3D:
+        meshes.append(node as MeshInstance3D)
+    for child in node.get_children():
+        _collect(child, meshes)
+func _key(p: Vector3) -> String:
+    return "%d,%d,%d" % [roundi(p.x * 100000.0), roundi(p.y * 100000.0), roundi(p.z * 100000.0)]
+func _closed(mesh: Mesh) -> bool:
+    var tris: PackedVector3Array = mesh.get_faces()
+    if tris.size() < 12 or tris.size() % 3 != 0:
+        return false
+    var edges: Dictionary = {}
+    for i in range(0, tris.size(), 3):
+        if (tris[i + 1] - tris[i]).cross(tris[i + 2] - tris[i]).length_squared() < 0.000000000001:
+            return false
+        for side in range(3):
+            var a: String = _key(tris[i + side])
+            var b: String = _key(tris[i + (side + 1) % 3])
+            var key: String = a + "|" + b if a < b else b + "|" + a
+            edges[key] = int(edges.get(key, 0)) + 1
+    for key in edges:
+        if edges[key] != 2:
+            return false
+    return true
+func _audit(faction: int, lod: int, damage: int) -> Node3D:
+    var model: Node3D = Camp.build("suministros", faction, lod, damage)
+    check(model != null, "V4 builds")
+    if model == null:
+        return null
+    audits += 1
+    check(int(model.get_meta("suministros_art_v4", 0)) == 4, "V4 metadata")
+    check(model.get_meta("suministros_art_revision", "") == "4.5", "Latest V4.5 revision")
+    check(model.get_meta("no_gameplay_effects", false) and model.get_meta("temporary_structure", false), "Art-only temporary structure")
+    var meshes: Array[MeshInstance3D] = []
+    _collect(model, meshes)
+    var sculpted: int = 0
+    var faction_count: int = 0
+    var finishes: Dictionary = {}
+    # Neutral uses the actual native palette of the factory. Never require
+    # a numbered faction color for neutral -1.
+    var expected_accent: Color = Camp.STEEL if faction == -1 else Style.faction_color(faction)
+    for p in meshes:
+        var mat: StandardMaterial3D = p.material_override as StandardMaterial3D
+        check(mat != null and mat.transparency == BaseMaterial3D.TRANSPARENCY_DISABLED and mat.cull_mode == BaseMaterial3D.CULL_BACK, "Opaque material " + str(p.name))
+        if mat != null and mat.has_meta("supply_v42_finish"):
+            check(mat.albedo_texture is ImageTexture and mat.uv1_triplanar, "Native opaque mapped surface")
+            check(mat.albedo_texture.get_width() == 64 and mat.albedo_texture.get_height() == 64, "Shared bounded material map")
+            finishes[str(mat.get_meta("supply_v42_finish"))] = true
+        if mat != null and mat.albedo_color == expected_accent:
+            faction_count += 1
+        if p.get_meta("supply_v4_closed", false) and p.mesh is ArrayMesh:
+            sculpted += 1
+            check(_closed(p.mesh), "Watertight triangle edge topology " + str(p.name))
+    check(sculpted >= 1 if damage == 3 else sculpted >= 25, "Substantial custom sculpture")
+    check(finishes.has("rubber") and (damage == 3 or (finishes.has("metal") and finishes.has("fabric"))), "Distinct surface finishes")
+    check(faction_count >= (3 if damage == 3 else 15), "Faction/neutral paint %d LOD%d D%d" % [faction, lod, damage])
+    var core: Node3D = model.get_node_or_null("EquipamientoDesplegable/SupplyV2_PremiumRig/SupplyV4_IndustrialSculpt") as Node3D
+    if damage == 3:
+        check(core == null, "Destroyed camp cannot resurrect")
+        check(model.has_node("V43_DestroyedRemains"), "Detailed collapsed wreck")
+        check(model.has_node("V43_DestroyedRemains/V45_CrushedEquipmentShell"), "Closed crushed equipment remains")
+        check(not V43.service_pose(model, 0.5), "Destroyed equipment cannot animate")
+    else:
+        check(core != null, "V4 built within V2 original hierarchy")
+        if core != null:
+            var rear: Node3D = core.get_node("V4_RearGablePivot") as Node3D
+            check(rear.has_node("V4_GableClosedPanel"), "Actual rear closure")
+            check(core.has_node("V43_InteriorService/V45_LampSupportBeam"), "Interior light physically supported")
+            check(core.has_node("V43_InteriorService/V43_ServiceDesk/V43_ConsoleScreen") and core.has_node("V43_InteriorService/V43_StorageRack"), "Real interior furniture and equipment")
+            var interior_light: OmniLight3D = core.get_node("V43_InteriorService/V43_InteriorLamp/V43_InteriorLight") as OmniLight3D
+            check(interior_light.visible == (damage < 2 and lod == 13), "LOD-aware light and damaged blackout")
+            check(core.has_node("V4_WallRib_1_42") and core.has_node("V4_TankFrameTop_0"), "Physical wall reinforcement and tank frame")
+            check(core.has_node("V4_CrateRackLowerRail_1") and core.has_node("V4_WalkwayModule_0"), "Accessible racks and walkway")
+            var v2: Node3D = core.get_parent() as Node3D
+            check(v2.has_node("V2_DepositoCombustibleSellado_0/V42_InspectionFlange"), "Fittings attached to tank rig")
+            check(v2.has_node("V2_EstacionBombeo/V42_InstrumentFace") and core.has_node("V42_RearHinge_-1"), "Detailed station and door hardware")
+            check(core.has_node("V42_DamageOnly") == (damage > 0), "Damage only in appropriate states")
+            var damaged_leaf: MeshInstance3D = v2.get_node("V2_ArticulacionCubierta_-1/CubiertaAceroContinua_-1") as MeshInstance3D
+            check(damaged_leaf.get_meta("supply_v42_buckled", false) == (damage == 2), "Actual bent roof mesh only in D2")
+            var old_guard: Node3D = v2.get_node("SupplyV3_ReadabilityRig/V3_ProteccionExternaTanque_0") as Node3D
+            check(not old_guard.visible, "Opaque slab replaced by genuine frame")
+            if damage < 2:
+                check(v2.has_node("V2_ArticulacionCubierta_-1/V4_ContinuousRidgeCap"), "Roof ridge cover folds with leaf")
+            if damage < 2:
+                check(V43.inspect_interior(model, true), "Interior inspection uses hinges")
+                var open_leaf: Node3D = v2.get_node("V2_ArticulacionCubierta_-1") as Node3D
+                check(open_leaf.rotation_degrees.z > 90.0 and open_leaf.rotation_degrees.z < 95.0, "Left roof swings upward instead of through side equipment")
+                check(V43.inspect_interior(model, false), "Roof inspection reversible")
+                check(V43.service_pose(model, 0.5), "Service midpoint")
+                var lever: Node3D = v2.get_node("V2_EstacionBombeo/V43_ServiceLever") as Node3D
+                check(absf(lever.rotation_degrees.x) > 30.0, "Real lever movement")
+                check(V43.service_pose(model, 1.0) and absf(lever.rotation_degrees.x) < 0.01, "Service returns to rest")
+            else:
+                check(not V43.inspect_interior(model, true) and not V43.service_pose(model, 0.5), "Disabled damage operation")
+            check(Camp.pose_deploy(model, 0.0) and absf(rear.rotation_degrees.x) > 80.0, "Gable folds")
+            check(Camp.pose_deploy(model, 1.0) and absf(rear.rotation_degrees.x) < 0.01, "Gable reopens")
+        check(model.has_node("EquipamientoDesplegable/SupplyV2_PremiumRig/V2_MangueraArticulada/V4_ContinuousHose"), "Continuous hose in moving rig")
+        check(model.has_node("EquipamientoDesplegable/SupplyV2_PremiumRig/V2_DepositoCombustibleSellado_0/V4_TankPressureShell"), "Curved tank shell")
+    check(V43.damage_fx_pose(model, "idle", 0.25), "Idle FX")
+    var effects: Node3D = model.get_node("V44_VisualDamageFX") as Node3D
+    check(effects.get_meta("presentation_only", false), "FX presentation only")
+    var particles: Array[MeshInstance3D] = []
+    _collect(effects, particles)
+    check(particles.size() <= (28 if lod == 13 else 14), "Bounded FX geometry")
+    if damage == 3:
+        check(not V43.damage_fx_pose(model, "blast", 0.2), "Wreck not impacted again")
+    else:
+        check(V43.damage_fx_pose(model, "bullet", 0.07), "Light impact")
+        var flash: Node3D = effects.get_node("Flash") as Node3D
+        check(flash.visible and flash.position.z < -0.20 and flash.position.x > 1.5, "Light flash outside front wall")
+        check(V43.damage_fx_pose(model, "blast", 0.25), "Blast effect")
+        check((effects.get_node("Fire/Flame_0") as Node3D).visible and (effects.get_node("Fragments/Chip_0") as Node3D).visible, "Blast flame and fragments")
+        check((effects.get_node("Fire/Flame_0") as Node3D).position.z < -0.45, "Blast visible outside roof shadow")
+        check(V43.damage_fx_pose(model, "blast", 1.0), "Returns to idle")
+    check(int(model.get_meta("visual_damage", -1)) == damage, "FX does not alter damage state")
+    V43.damage_fx_pose(model, "idle", 0.34)
+    return model
+func _shot(viewport: SubViewport, name: String) -> void:
+    for i in range(5):
+        await process_frame
+    var image: Image = viewport.get_texture().get_image()
+    check(image != null and not image.is_empty(), "Native image")
+    if image == null or image.is_empty():
+        return
+    var lit: int = 0
+    for y in range(75, image.get_height() - 55, 20):
+        for x in range(90, image.get_width() - 90, 20):
+            if image.get_pixel(x, y).get_luminance() > 0.29:
+                lit += 1
+    check(lit > 14, "Visible sculpture " + name)
+    check(image.save_png(ProjectSettings.globalize_path(OUT + "/" + name + ".png")) == OK, "Saved " + name)
+    captures += 1
+func _run() -> void:
+    check(DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(OUT)) == OK, "Output")
+    var viewport := SubViewport.new()
+    viewport.size = Vector2i(960, 720)
+    viewport.own_world_3d = true
+    viewport.render_target_update_mode = SubViewport.UPDATE_ALWAYS
+    root.add_child(viewport)
+    var stage := Node3D.new()
+    viewport.add_child(stage)
+    var env := WorldEnvironment.new()
+    env.environment = Environment.new()
+    env.environment.background_mode = Environment.BG_COLOR
+    env.environment.background_color = Color("#1C2C37")
+    env.environment.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
+    env.environment.ambient_light_color = Color("#E6F0EA")
+    env.environment.ambient_light_energy = 0.74
+    stage.add_child(env)
+    var lamp := DirectionalLight3D.new()
+    lamp.rotation_degrees = Vector3(-51, -35, 0)
+    lamp.light_energy = 1.67
+    stage.add_child(lamp)
+    var camera := Camera3D.new()
+    camera.projection = Camera3D.PROJECTION_ORTHOGONAL
+    camera.size = 10.4
+    stage.add_child(camera)
+    camera.current = true
+    for faction in range(-1, 8):
+        for lod in [8, 13]:
+            for damage in range(4):
+                var model: Node3D = _audit(faction, lod, damage)
+                if model == null:
+                    continue
+                if faction == 0 and damage == 0:
+                    stage.add_child(model)
+                    for i in range(4):
+                        camera.size = 10.4
+                        camera.position = ANGLES[i]
+                        camera.look_at(Vector3(0, 1.15, 0), Vector3.UP)
+                        await _shot(viewport, "v4_lod%d_angle%d" % [lod, i])
+                    if lod == 13:
+                        camera.size = 5.7
+                        camera.position = Vector3(9, 5.3, -9)
+                        camera.look_at(Vector3(-2.0, 0.8, -1.5), Vector3.UP)
+                        await _shot(viewport, "v4_close_service")
+                        camera.position = Vector3(8, 4.3, 10)
+                        camera.look_at(Vector3(1.0, 1.65, 2.35), Vector3.UP)
+                        V43.inspect_interior(model, true)
+                        camera.position = Vector3(6.0, 5.0, -7.0)
+                        camera.look_at(Vector3(0, 0.9, 1.45), Vector3.UP)
+                        await _shot(viewport, "v43_interior_open")
+                        V43.inspect_interior(model, false)
+                        camera.size = 10.4
+                        camera.position = ANGLES[0]
+                        camera.look_at(Vector3(0, 1.15, 0), Vector3.UP)
+                        Camp.pose_deploy(model, 0.0)
+                        await _shot(viewport, "v4_folded")
+                        Camp.pose_deploy(model, 1.0)
+                        V43.damage_fx_pose(model, "bullet", 0.07)
+                        await _shot(viewport, "v44_light_impact")
+                        V43.damage_fx_pose(model, "blast", 0.25)
+                        await _shot(viewport, "v44_explosion")
+                        V43.damage_fx_pose(model, "idle", 0.34)
+                    stage.remove_child(model)
+                elif faction == 0 and lod == 13 and damage in [1, 2, 3]:
+                    stage.add_child(model)
+                    camera.size = 10.4
+                    camera.position = ANGLES[0]
+                    camera.look_at(Vector3(0, 1.15, 0), Vector3.UP)
+                    await _shot(viewport, "v4_damage%d" % damage)
+                    stage.remove_child(model)
+                model.free()
+    var baseline: Node3D = Camp.build("suministros", 0, 13, 0, false)
+    check(baseline != null and not baseline.has_meta("suministros_art_v4"), "V3 preserved for direct comparison")
+    if baseline != null:
+        stage.add_child(baseline)
+        camera.size = 10.4
+        for i in [0, 2]:
+            camera.position = ANGLES[i]
+            camera.look_at(Vector3(0, 1.15, 0), Vector3.UP)
+            await _shot(viewport, "v3_reference_angle%d" % i)
+        stage.remove_child(baseline)
+        baseline.free()
+    check(audits == 72, "8 factions plus neutral x LOD x damage")
+    check(captures == 18, "18 actual Godot images")
+    viewport.queue_free()
+    await process_frame
+    if failures > 0:
+        printerr("FAIL SUPPLY CAMP V4 NATIVE: %d" % failures)
+        quit(1)
+        return
+    print("PASS SUPPLY CAMP V4 NATIVE: 72 variants, closed sculpt meshes, 18 images")
+    quit(0)

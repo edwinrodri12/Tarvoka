@@ -16,7 +16,7 @@ func _meshes(node: Node, found: Array[MeshInstance3D]) -> void:
         _meshes(child, found)
 
 func _audit(kind: String, faction: int, lod: int, damage: int) -> Node3D:
-    var model: Node3D = Art.build(kind, faction, lod, damage)
+    var model: Node3D = Art.build(kind, faction, lod, damage, false)
     assert(model != null, "Camp failed to build")
     assert(str(model.get_meta("camp_kind")) == kind)
     assert(str(model.get_meta("builder_role")) == str(Art.BUILDERS[kind]))
