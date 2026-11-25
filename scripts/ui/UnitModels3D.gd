@@ -1311,12 +1311,13 @@ static func _destroyer(root: Node3D, art_level: int = 10) -> void:
         deck_stations.append([station[0],station[1]*0.86,0.738,0.802])
     _destroyer_shell(root,"Cubierta",deck_stations,ARMOR)
     _destroyer_enamel(root,stations)
-    root.set_meta("destroyer_art_revision","1.6")
+    root.set_meta("destroyer_art_revision","1.7")
     _destroyer_bridge(root)
     _destroyer_navigation(root,art_level)
     _destroyer_deck_equipment(root,art_level)
     _destroyer_aft(root,art_level)
     _destroyer_motion_setup(root,art_level)
+    _destroyer_damage_setup(root,art_level)
 
 # Purely cosmetic game animation, independent of tactical simulation.
 static func _destroyer_motion_setup(root: Node3D, art_level: int) -> void:
@@ -1332,6 +1333,60 @@ static func _destroyer_motion_setup(root: Node3D, art_level: int) -> void:
             Vector3(0.50+float(i)*0.12,0.025,0.12),Color("#C6E1DF"))
         patch.hide()
     root.set_meta("destroyer_motion_v16",true)
+
+# Reversible stylized game damage. All effects are preallocated, opaque,
+# and independent of the simulation. Root transforms remain caller-owned.
+static func _destroyer_damage_setup(root: Node3D, art_level: int) -> void:
+    var fx := Node3D.new()
+    fx.name = "DanoNavalVisual"
+    root.add_child(fx)
+    for i in range(5):
+        _box(fx,"Marca_%d" % i,Vector3(-0.34+float(i)*0.17,0.817,-0.83+float(i%2)*0.15),
+            Vector3(0.10,0.025,0.13),BLACK,Vector3(0,float(i)*17,0)).hide()
+    for i in range(3 if art_level >= 13 else 2):
+        _sphere(fx,"Humo_%d" % i,Vector3(0.19,1.62+float(i)*0.16,0.39),
+            Vector3(0.28,0.25,0.26),Color("#50555A")).hide()
+    for i in range(2):
+        _sphere(fx,"Fuego_%d" % i,Vector3(-0.19+float(i)*0.27,1.17,0.60),
+            Vector3(0.18,0.27,0.18),Color("#EE8846")).hide()
+    _box(fx,"FragmentoCubierta",Vector3(0.35,0.87,0.84),
+        Vector3(0.22,0.06,0.25),STEEL,Vector3(15,20,18)).hide()
+    for child in root.get_children():
+        if child is Node3D:
+            child.set_meta("naval_rest_transform",child.transform)
+    root.set_meta("destroyer_damage_stage",0)
+
+static func set_destroyer_damage(root: Node3D, stage: int, progress: float = 0.0) -> bool:
+    if root == null or not root.has_node("DanoNavalVisual"):
+        return false
+    var d: int = clampi(stage,0,4)
+    var t: float = clampf(progress,0.0,1.0)
+    # Reset from stored transforms rather than accumulating offsets.
+    restore_destroyer_pose(root)
+    var fx: Node3D = root.get_node("DanoNavalVisual") as Node3D
+    for child in root.get_children():
+        if child is Node3D and child.has_meta("naval_rest_transform"):
+            child.transform = child.get_meta("naval_rest_transform")
+    for child in fx.get_children():
+        var label: String = str(child.name)
+        child.visible = (label.begins_with("Marca") and d>=1) or (label.begins_with("Humo") and d>=2) or (label.begins_with("Fuego") and d>=3) or (label=="FragmentoCubierta" and d>=3)
+    var mast: Node3D = root.get_node("TorreMastil") as Node3D
+    var bridge: Node3D = root.get_node("Superestructura") as Node3D
+    if d >= 2:
+        mast.rotation_degrees.z = 12.0
+    if d >= 3:
+        mast.rotation_degrees.z = 28.0
+        bridge.rotation_degrees.z = -5.0
+        bridge.position.x = -0.04
+    if d == 4:
+        var tilt := Basis(Vector3.BACK,deg_to_rad(22.0*t))
+        for child in root.get_children():
+            if child is Node3D:
+                var initial: Transform3D = child.transform
+                child.transform = Transform3D(tilt*initial.basis,tilt*initial.origin+Vector3(0,-2.1*t,0))
+    root.get_node("EstelaEspuma").visible = d < 3
+    root.set_meta("destroyer_damage_stage",d)
+    return true
 
 static func pose_destroyer(root: Node3D, kind: String, progress: float,
         target_heading: Vector2i = Vector2i(0,-1)) -> bool:
@@ -1975,6 +2030,10 @@ static func pose_model(role: String, model: Node3D, kind: String,
         "attack_heli":
             return AttackHelicopterV1.pose(model,kind,progress,target_heading)
         "destroyer":
+            if kind == "damage":
+                return set_destroyer_damage(model,clampi(int(ceilf(progress*4.0)),0,4),progress)
+            if kind == "sink" or kind == "destroy":
+                return set_destroyer_damage(model,4,progress)
             return pose_destroyer(model,kind,progress,target_heading)
         "uav_recon":
             return A01Recon.pose(model,kind,progress)
