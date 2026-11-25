@@ -146,12 +146,20 @@ func _run()->void:
                 var wing_tones:Dictionary={}
                 for idx in range(wing_colors.size()):
                     var shade:Color=wing_colors[idx]
-                    var expected:Color=Aero._wing_pigment(wing_vertices[idx],lod==13)
+                    var expected:Color=Finish._fracture_pigment(wing_vertices[idx],lod==13) if foil==broken else Aero._wing_pigment(wing_vertices[idx],lod==13)
                     wing_tones[shade.to_html()]=true
                     verify(shade.a>=0.999 and absf(shade.r-expected.r)<0.009 and
                         absf(shade.g-expected.g)<0.009 and absf(shade.b-expected.b)<0.009,
                         "V24 correct opaque pigment at each wing vertex")
                 verify(wing_tones.size()>=3,"V24 differentiated upper, edge and underside tones")
+            verify(bool(craft.get_meta("tarvoka_a01_v29_substrate_damage",false)),
+                "V29 weathering follows substrate and charred fracture")
+            var near:Vector3=Vector3(0.28,1.03,-0.364)
+            var tip:Vector3=Vector3(1.155,1.056,0.132)
+            verify(Finish._fracture_pigment(near,lod==13).is_equal_approx(
+                Aero._wing_pigment(near,lod==13)) and
+                Finish._fracture_pigment(tip,lod==13).v<Aero._wing_pigment(tip,lod==13).v,
+                "V29 fracture darkens only broken extremity; original root pigment preserved")
             var tagged:Array=[
                 Finish.D1_WING,Finish.D1_NOSE,
                 Finish.D2_BURN,Finish.D2_PLATE,
@@ -180,8 +188,9 @@ func _run()->void:
                 verify(scar.mesh.get_faces().size()/3==32,
                     "V21 eight-sided irregular scar has exactly 32 triangles")
                 var mat:=scar.material_override as StandardMaterial3D
-                verify(mat!=null and mat.vertex_color_use_as_albedo,
-                    "V21 gradient damage is vertex pigment, not alpha or a floating box")
+                verify(mat!=null and mat.vertex_color_use_as_albedo and
+                    mat.vertex_color_is_srgb and mat.albedo_color.is_equal_approx(Color.WHITE),
+                    "V29 opaque color-managed scar pigment uses substrate at perimeter")
                 var arrays:Array=scar.mesh.surface_get_arrays(0)
                 var pigment:PackedColorArray=arrays[Mesh.ARRAY_COLOR]
                 var tones:Dictionary={}
