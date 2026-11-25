@@ -346,6 +346,31 @@ func _ready() -> void:
         role_picker.select(launch_index)
     _display_role(launch_role)
     _refresh_unified_studio_navigation()
+    if OS.has_feature("web") and launch_role=="infantry_engineer":
+        _engineer_web_entry_report.call_deferred()
+
+# Read-only evidence from the actual loaded Godot Web model. No external
+# input, remote callbacks, alternate geometry or scene manipulation.
+func _engineer_web_entry_report() -> void:
+    await get_tree().process_frame
+    if _role!="infantry_engineer" or model_root==null:
+        return
+    var visible_meshes: int=0
+    var transparent_meshes: Array[String]=[]
+    for item in model_root.find_children("*","MeshInstance3D",true,false):
+        var part: MeshInstance3D=item as MeshInstance3D
+        if not part.is_visible_in_tree() or part.mesh==null:
+            continue
+        visible_meshes+=1
+        for surface in range(part.mesh.get_surface_count()):
+            var mat: Material=part.get_active_material(surface)
+            if mat is StandardMaterial3D:
+                var pbr: StandardMaterial3D=mat as StandardMaterial3D
+                if pbr.transparency!=BaseMaterial3D.TRANSPARENCY_DISABLED or pbr.albedo_color.a<0.999:
+                    transparent_meshes.append(str(part.name))
+    var evidence: Dictionary={"role":_role,"edition":_infantry_review_edition(),
+        "visible_meshes":visible_meshes,"transparent_meshes":transparent_meshes}
+    JavaScriptBridge.eval("window.__tarvokaEngineerEntry="+JSON.stringify(evidence),true)
 
 func _studio_role_from_link_key(value:String) -> String:
     # Fixed allowlist: URL text never controls a scene or resource path.
