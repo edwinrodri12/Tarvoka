@@ -253,7 +253,9 @@ static func apply(root:Node3D,hero:bool)->bool:
     _wing_patch(layers[1],D2_PLATE,1.0,1.04,1.23,0.78,0.96,hero,carbon)
     _tail_patch(layers[2],hero,burn)
     _body_patch(layers[2],D3_PANEL,0.52,0.71,48,70,hero,metal)
-    _fractured_wing(layers[3],hero,gray)
+    var fracture:=_fractured_wing(layers[3],hero,gray)
+    if not V4.apply_composite_finish(fracture,hero):
+        return false
     _debris(layers[3],D4_RIB,[
         Vector3(1.12,1.067,-0.215),Vector3(1.24,1.07,-0.135),
         Vector3(1.17,1.07,-0.025),Vector3(1.18,1.07,0.134),
