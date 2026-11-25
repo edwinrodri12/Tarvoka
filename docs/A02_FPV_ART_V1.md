@@ -45,3 +45,7 @@ V10 verificada en 80 estados (45672543112, artefacto 15049803591); APK 456725430
 ## V12 — acabado estilizado del humo para revisión
 
 V11 nativa 45679598133 y APK 45679598443 correctas. La construcción WebGL V11 seguía ejecutándose al comenzar. V12 refina exclusivamente el efecto de presentación D2–D4 con tres volúmenes opacos superpuestos, tonalidad moderada y una malla compartida; LOD8 conserva segmentos y anillos previos, LOD13 mejora suavidad. D0 y geometría del cuerpo intactos. QA verifica solapamiento, reutilización, LOD y presupuesto. El informe de recursos se identifica V12. Prueba WebGL y publicación pendientes; no se afirma aprobación artística ni se cambian reglas.
+
+## V13 — reparación de la integración editorial
+
+V12 nativa 45680700033, APK 45680699952 y reglas 45680699891 correctas. Publicación 45680699971 falló al preparar los campamentos: el candidato estaba desfasado respecto de main y faltaba CampMedicalSculptV3.gd. Se integra main 71387f6b con sus archivos de campamento médico V3 y se conservan las siete rutas del A02; no se omite ninguna comprobación. Se añade un mensaje de error explícito con el archivo faltante y se fija la fuente de main a la revisión del evento. Sin cambios a arte V12 ni lógica. Pendiente nueva ejecución WebGL y publicación efectiva.
