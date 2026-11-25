@@ -48,8 +48,8 @@ func _run()->void:
         "recon drone added to the SAME unit selector")
     if picker!=null and index>=0 and index<picker.item_count:
         check(picker.get_item_text(index).contains("A01") and
-            picker.get_item_text(index).contains("V30 EN DESARROLLO"),
-            "A01 V30 is identifiable and remains pending artistic approval")
+            picker.get_item_text(index).contains("V30 FINAL"),
+            "A01 V30 is identifiable as owner-approved final art")
         picker.select(index)
     studio.call("_display_role","uav_recon")
     await process_frame
