@@ -219,9 +219,15 @@ func _run()->void:
                     for i in range(4):
                         var pivot:=visual_body.find_child("A02_VisualRotor_"+str(i),false,false) as Node3D
                         check(pivot!=null and pivot.rotation.is_zero_approx(),"V7 reset visual pivot")
+            check(bool(model.get_meta("tarvoka_a02_v9_damage_finish",false)),"V9 damage presentation")
             check(bool(model.get_meta("tarvoka_a02_v8_damage_art",false)),"V8 damage art")
             if paint!=null and visual_body!=null:
                 var pristine:Material=paint.material_override
+                var original_materials:Dictionary={}
+                for node in visual_body.find_children("*","MeshInstance3D",true,false):
+                    var piece:=node as MeshInstance3D
+                    if piece.has_meta(Art.BASE_MATERIAL):
+                        original_materials[piece]=piece.material_override
                 var effects:=visual_body.find_child(Art.EFFECT,false,false) as Node3D
                 check(effects!=null,"V8 presentation effects")
                 for damage in range(5):
@@ -242,7 +248,19 @@ func _run()->void:
                     Models.restore_model_pose("fpv",model)
                     check(Art.stage(model)==damage,"V8 stop preserves damage")
                     check(Models.pose_model("fpv",model,"move",0.31)==(damage<4),"V8 wreck pose lock")
+                check(Art.pose_wreck(model,0.0) and visual_body.position.is_zero_approx(),"V9 wreck start")
+                check(Art.pose_wreck(model,0.5) and visual_body.position.y<0.0 and visual_body.position.y> -0.40,"V9 wreck midpoint")
+                check(Art.pose_wreck(model,1.0) and is_equal_approx(visual_body.position.y,-0.40),"V9 wreck endpoint")
                 check(Art.set_stage(model,0),"V8 repair")
+                check(not Art.pose_wreck(model,0.5),"V9 intact model rejects wreck preview")
+                for piece in original_materials:
+                    check(piece.material_override==original_materials[piece],"V9 exact restore of every original material")
+                if effects!=null:
+                    for child in effects.get_children():
+                        var puff:=child as Node3D
+                        check(puff.scale.is_equal_approx(puff.get_meta("tarvoka_a02_v9_rest_scale")) and
+                            puff.position.is_equal_approx(puff.get_meta("tarvoka_a02_v9_rest_position")),
+                            "V9 effect returns to authored transform")
                 check(paint.material_override==pristine and visual_body.position.is_zero_approx() and visual_body.rotation.is_zero_approx(),"V8 exact original material and pose")
                 for i in range(4):
                     var pivot:=visual_body.find_child("A02_VisualRotor_"+str(i),false,false) as Node3D

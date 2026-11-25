@@ -315,7 +315,7 @@ func _ready() -> void:
     if fpv_index>=0 and role_picker!=null:
         while role_picker.item_count<=fpv_index:
             role_picker.add_item(P06Models.ROLES[role_picker.item_count])
-        role_picker.set_item_text(fpv_index,"A02 · Dron FPV · V8 EN DESARROLLO")
+        role_picker.set_item_text(fpv_index,"A02 · Dron FPV · V9 EN DESARROLLO")
     # Preserve existing roles/indices; these are additional native 3D variants.
     for entry in [
         ["line","★ INFANTERÍA BÁSICA · Guardia"],
@@ -730,7 +730,7 @@ func _studio_animation_specs(role: String) -> Array[Dictionary]:
     match role:
         "fpv":
             return [
-                {"group":"A02 V8 · ANIMACIONES VISUALES"},
+                {"group":"A02 V9 · ANIMACIONES VISUALES"},
                 {"title":"Movimiento", "action":"a02_move"},
                 {"title":"Suspensión visual", "action":"a02_hover"},
                 {"title":"Reacción a impacto", "action":"a02_hit"},
@@ -993,7 +993,14 @@ func _studio_run_animation(action: String) -> void:
             if _role=="fpv":
                 _a02_preview_stop()
                 if A02PreviewArt.set_stage(model_root,int(action.right(1))):
-                    status_label.text="A02 V8 · daño visual D%d" % A02PreviewArt.stage(model_root)
+                    status_label.text="A02 V9 · daño visual D%d" % A02PreviewArt.stage(model_root)
+                    if A02PreviewArt.stage(model_root)==4:
+                        var wreck:Node3D=model_root
+                        A02PreviewArt.pose_wreck(wreck,0.0)
+                        _a02_preview_tween=create_tween()
+                        _a02_preview_tween.tween_method(Callable(self,"_a02_wreck_tick").bind(wreck),
+                            0.0,1.0,1.45)
+                        _a02_preview_tween.tween_callback(Callable(self,"_a02_preview_done").bind(wreck))
         "a02_move","a02_hover","a02_hit":
             if _role=="fpv":
                 _a02_preview_play(action.trim_prefix("a02_"))
@@ -1677,18 +1684,22 @@ func _a02_preview_play(kind:String)->void:
         return
     _a02_preview_stop()
     if A02PreviewArt.stage(model_root)==4:
-        status_label.text="A02 V8 · restaurar D0 antes de reproducir."
+        status_label.text="A02 V9 · restaurar D0 antes de reproducir."
         return
     var art:Node3D=model_root
     _a02_preview_tween=create_tween()
     _a02_preview_tween.tween_method(Callable(self,"_a02_preview_tick").bind(art,kind),
         0.0,1.0,2.4 if kind=="hover" else 1.5)
     _a02_preview_tween.tween_callback(Callable(self,"_a02_preview_done").bind(art))
-    status_label.text="A02 V8 · demostración visual: "+kind
+    status_label.text="A02 V9 · demostración visual: "+kind
 
 func _a02_preview_tick(progress:float,art:Node3D,kind:String)->void:
     if is_instance_valid(art) and art==model_root and _role=="fpv":
         P06Models.pose_model("fpv",art,kind,progress)
+
+func _a02_wreck_tick(progress:float,art:Node3D)->void:
+    if is_instance_valid(art) and art==model_root and _role=="fpv":
+        A02PreviewArt.pose_wreck(art,progress)
 
 func _a02_preview_done(art:Node3D)->void:
     if is_instance_valid(art) and art==model_root and _role=="fpv":
@@ -1850,7 +1861,7 @@ func _studio_quick_action(kind: String) -> void:
             if kind in ["move","hover","hit"]:
                 _a02_preview_play(kind)
             else:
-                status_label.text="A02 V8 · demostración visual disponible en Animaciones."
+                status_label.text="A02 V9 · demostración visual disponible en Animaciones."
         "uav_recon":
             if kind in ["attack","attack_air","attack_ground"]:
                 status_label.text="A01 es un dron de reconocimiento SIN armamento."
@@ -1950,7 +1961,7 @@ func _refresh_unified_studio_navigation() -> void:
             "mlrs": label="G11 · Lanzador · V33"
             "attack_heli": label="A01 · Helicóptero HAT-29 · V14"
             "uav_recon": label="A01 · Dron de reconocimiento · V30 FINAL"
-            "fpv": label="A02 · Dron FPV · V8 EN DESARROLLO"
+            "fpv": label="A02 · Dron FPV · V9 EN DESARROLLO"
             "logistics_mobile": label="G16 · Logística blindada 6×6 · V6 PBR y suministros articulados"
             "ew_mobile": label="G15 · Guerra electrónica · V11 (neumáticos, óptica y electrónica 3D)"
             "aa_mobile": label="G13 · Antiaéreo · V54 caucho y rodadura 3D"

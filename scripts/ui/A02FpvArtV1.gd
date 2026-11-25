@@ -204,17 +204,22 @@ static func build(root:Node3D,faction:Color,hero:bool)->bool:
     var effects:=Node3D.new()
     effects.name=EFFECT
     body.add_child(effects)
-    var smoke:=_mat(Color("#48525a"),0.0,1.0)
+    # V9: deliberately stylized opaque smoke, with a tonal progression.
     for i in range(3):
+        var shade:Color=Color("#364047").lerp(Color("#78838a"),float(i)/2.0)
+        var smoke:=_mat(shade,0.0,1.0)
         var puff:=_oval(effects,"A02_V8_Smoke_"+str(i),
             Vector3(0.08+0.035*i,1.31+0.12*i,0.12),
-            Vector3.ONE*(0.13+0.035*i),smoke,false)
+            Vector3(0.13+0.035*i,0.19+0.035*i,0.13+0.035*i),smoke,false)
+        puff.set_meta("tarvoka_a02_v9_rest_scale",puff.scale)
+        puff.set_meta("tarvoka_a02_v9_rest_position",puff.position)
         puff.visible=false
     for node in body.find_children("*","MeshInstance3D",true,false):
         var part:=node as MeshInstance3D
         if part.get_parent()!=effects:
             part.set_meta(BASE_MATERIAL,part.material_override)
     root.set_meta(DAMAGE,0)
+    root.set_meta("tarvoka_a02_v9_damage_finish",true)
     root.set_meta("tarvoka_a02_v8_damage_art",true)
     root.set_meta("tarvoka_a02_v7_visual_pose",true)
     root.set_meta("tarvoka_a02_v6_material_coherence",true)
@@ -249,11 +254,16 @@ static func set_stage(root:Node3D,value:int)->bool:
         if value==0:
             part.material_override=original
         else:
-            var key:int=original.get_instance_id()
+            # Different ornamental color families weather at different rates,
+            # while the official faction crown remains readable at D1-D3.
+            var decorative:bool=str(part.name).begins_with("A02_V5_") or part.name==PAINT
+            var amount:float=[0.0,0.13,0.30,0.55,0.85][value]
+            if decorative and value<4:
+                amount*=0.70
+            var key:String=str(original.get_instance_id())+":"+str(decorative)
             if not cache.has(key):
                 var tint:=original.duplicate() as StandardMaterial3D
-                tint.albedo_color=original.albedo_color.lerp(Color("#242a2d"),
-                    [0.0,0.13,0.30,0.55,0.85][value])
+                tint.albedo_color=original.albedo_color.lerp(Color("#242a2d"),amount)
                 tint.roughness=lerpf(original.roughness,0.95,float(value)/4.0)
                 cache[key]=tint
             part.material_override=cache[key]
@@ -266,6 +276,32 @@ static func set_stage(root:Node3D,value:int)->bool:
     restore(root)
     return true
 
+static func _effect_pose(body:Node3D,progress:float)->void:
+    var effect:=body.find_child(EFFECT,false,false) as Node3D
+    if effect==null:
+        return
+    var p:float=clampf(progress,0.0,1.0)
+    var envelope:float=pow(sin(p*PI),2.0)
+    for i in range(effect.get_child_count()):
+        var puff:=effect.get_child(i) as Node3D
+        var original_scale:Vector3=puff.get_meta("tarvoka_a02_v9_rest_scale",Vector3.ONE)
+        var original_position:Vector3=puff.get_meta("tarvoka_a02_v9_rest_position",puff.position)
+        puff.scale=original_scale*(1.0+0.12*envelope*sin(p*TAU+float(i)))
+        puff.position=original_position+Vector3(0.018*envelope*sin(p*TAU+float(i)),0.025*envelope,0.0)
+
+static func pose_wreck(root:Node3D,progress:float)->bool:
+    if not is_instance_valid(root) or stage(root)!=4:
+        return false
+    var body:=root.find_child(BODY,false,false) as Node3D
+    if body==null:
+        return false
+    var p:float=clampf(progress,0.0,1.0)
+    var ease:float=smoothstep(0.0,1.0,p)
+    body.position=Vector3(0.0,-0.40*ease,0.0)
+    body.rotation_degrees=Vector3(0.0,0.0,14.0*ease+3.0*sin(p*TAU)*sin(p*PI))
+    _effect_pose(body,p)
+    return true
+
 static func restore(root:Node3D)->void:
     if root==null or not bool(root.get_meta(FLAG,false)):
         return
@@ -275,8 +311,8 @@ static func restore(root:Node3D)->void:
     body.rotation=Vector3.ZERO
     body.position=Vector3.ZERO
     if stage(root)==4:
-        body.position.y=-0.40
-        body.rotation_degrees.z=14.0
+        pose_wreck(root,1.0)
+    _effect_pose(body,0.0)
     for i in range(4):
         var rotor:=body.find_child("A02_VisualRotor_"+str(i),false,false) as Node3D
         if rotor!=null:
@@ -297,6 +333,7 @@ static func pose(root:Node3D,kind:String,progress:float)->bool:
         restore(root)
         return true
     var envelope:float=pow(sin(p*PI),2.0)
+    _effect_pose(body,p)
     body.position=Vector3.ZERO
     body.rotation_degrees=Vector3.ZERO
     match kind:

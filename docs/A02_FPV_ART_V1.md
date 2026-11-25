@@ -29,3 +29,7 @@ V6 QA nativa 45665256338, APK 45665256201 y reglas 45665256190 aprobadas. V7 añ
 ## V8 — cinco estados de daño puramente visual
 
 D0 restaura los materiales originales; D1–D4 aplican tonos de desgaste progresivos, D2–D4 muestran volúmenes de humo estilizados y D4 una pose de ruina. Controles en el mismo Studio, daño conservado al cambiar facción y al detener animación. No cambia HP ni reglas, ni representa mecánica física real. QA verifica 80 estados, materiales opacos, restauración, bloqueo de pose de presentación D4 y cinco capturas reales. V7 aún no tenía ejecuciones registradas al comenzar; V8 requiere CI y publicación.
+
+## V9 — acabado del daño de presentación
+
+Variación tonal de desgaste entre superficies ornamentales, preservación del color de facción en D1–D3, humo opaco estilizado con transición tonal y oscilación de presentación, caída D4 interpolada en el mismo Studio. Detener o cambiar de facción conserva el estado; D0 restaura todos los recursos originales. QA amplía verificación de la caída y restauración de cada material. V7/V8 todavía no mostraban ejecuciones al iniciar esta revisión; no se afirma validación ni publicación. Sin cambios a reglas o mecánicas reales.
