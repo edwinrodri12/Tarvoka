@@ -6,6 +6,8 @@ on:
     paths:
       - "scripts/ui/A01Recon*.gd"
       - "tests/test_a01_recon_*.gd"
+      - "scripts/ui/A02FpvArtV1.gd"
+      - "tests/test_a02_fpv_art_v1.gd"
       - "scripts/publishing/CampUnifiedStudioAdapterV1.gd.txt"
       - "scripts/ui/CampSupplySculptV4.gd"
       - "scripts/ui/CampReconSculptV3.gd"
@@ -231,6 +233,8 @@ on:
     paths:
       - "scripts/ui/A01Recon*.gd"
       - "tests/test_a01_recon_*.gd"
+      - "scripts/ui/A02FpvArtV1.gd"
+      - "tests/test_a02_fpv_art_v1.gd"
       - ".github/workflows/tarvoka-3d-pages.yml"
       - "scripts/publishing/CampUnifiedStudioAdapterV1.gd.txt"
       - "scripts/ui/CampSupplySculptV4.gd"
@@ -2790,6 +2794,7 @@ jobs:
               'padding:4px 7px;background:#14202acc;color:#ffe3a5;'
               'font:600 11px system-ui,Arial,sans-serif">'
               'Estudio · G05 V17 incluido · ' + html.escape(commit[:12])
+              + ' · <a style="color:inherit" href="?unidad=a02" aria-label="Revisar A02 FPV en el mismo visor">A02 FPV</a>'
               + ' · <a style="color:inherit" href="studio-version.json">versión</a></div>'
           )
           viewer.write_text(page.replace('</body>', badge + '\n</body>'), encoding='utf-8')
@@ -2871,6 +2876,9 @@ jobs:
                 page.on('console',m=>{if(/SCRIPT ERROR:|Parse Error:|Could not create render/.test(m.text())) errors.push(m.text());});
                 await page.goto('http://127.0.0.1:8124/?unidad='+alias,{waitUntil:'domcontentloaded',timeout:60000});
                 await page.waitForFunction(()=>window.__tarvokaA02Entry!==undefined,null,{timeout:180000});
+                const entryLink=page.locator('#tarvoka-engineer-build a[href="?unidad=a02"]');
+                if(await entryLink.count()!==1||!(await entryLink.isVisible()))
+                  throw Error('Missing visible A02 review link in shared Studio');
                 const info=await page.evaluate(()=>window.__tarvokaA02Entry);
                 if(info.role!=='fpv'||info.edition!=='V12'||!info.native_model||info.lod!==13||info.stage!==0)
                   throw Error('Incorrect A02 shared studio entry: '+JSON.stringify(info));
@@ -2948,6 +2956,7 @@ jobs:
                   with fetch('index.html', attempt) as response:
                       page = response.read().decode('utf-8')
                   assert source[:12] in page and 'tarvoka-engineer-build' in page
+                  assert 'href="?unidad=a02"' in page, 'Missing public A02 entry link'
                   with fetch('index.pck', attempt) as response:
                       actual = hashlib.sha256()
                       for chunk in iter(lambda: response.read(1024 * 1024), b''):
