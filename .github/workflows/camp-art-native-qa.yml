@@ -250,7 +250,7 @@ jobs:
           fi
           grep -F 'PASS DEFENSE CAMP V3 NATIVE: 72 audits, 33 PNGs' /tmp/camp-defense-v3-native.log
           test "$(find build/qa/defense-camp-v3 -name '*.png' | wc -l)" -eq 33
-      - name: Native Medical V3 - validate 72 models, 28 true screenshots and physical folding
+      - name: Native Medical V3 - validate 72 models, 31 true screenshots and physical folding
         run: |
           set -euo pipefail
           mkdir -p build/qa/medical-camp-v3
@@ -264,8 +264,8 @@ jobs:
           if grep -E 'SCRIPT ERROR:|ERROR:|Parse Error:|Assertion failed' /tmp/camp-medical-v3-native.log; then
             exit 1
           fi
-          grep -F 'PASS MEDICAL CAMP V3 NATIVE: 72 audits, 28 PNGs' /tmp/camp-medical-v3-native.log
-          test "$(find build/qa/medical-camp-v3 -name '*.png' | wc -l)" -eq 28
+          grep -F 'PASS MEDICAL CAMP V3 NATIVE: 72 audits, 31 PNGs' /tmp/camp-medical-v3-native.log
+          test "$(find build/qa/medical-camp-v3 -name '*.png' | wc -l)" -eq 31
       - name: Upload actual Godot screenshots for visual review
         if: always()
         uses: actions/upload-artifact@v4
