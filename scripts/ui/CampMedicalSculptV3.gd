@@ -170,6 +170,70 @@ static func _floor(core: Node3D, accent: Color, lod: int) -> void:
             _box(deck, "V3_FloorJoint_%d" % int(z * 100), Vector3(0, 0.116, z),
                 Vector3(3.45, 0.019, 0.05), RUBBER, 0.004, 0.0)
 
+# Clinical trolley: closed padded segments on a rigid, wheeled chassis.
+static func _wheel(parent: Node3D, label: String, at: Vector3, radius: float, width: float, tint: Color, lod: int) -> MeshInstance3D:
+    var mesh := CylinderMesh.new()
+    mesh.top_radius = radius
+    mesh.bottom_radius = radius
+    mesh.height = width
+    mesh.radial_segments = 20 if lod == 13 else 12
+    var item: MeshInstance3D = _part(parent, label, mesh, at, tint, 0.38 if tint == ALLOY else 0.02)
+    item.rotation_degrees.z = 90.0
+    return item
+
+static func _bed(core: Node3D, accent: Color, lod: int, damage: int) -> void:
+    var bed: Node3D = core.get_node("V2_CamillaClinica") as Node3D
+    for old in bed.get_children():
+        bed.remove_child(old)
+        old.free()
+    _box(bed, "V31_DeckFrame", Vector3(0, 0.68, 0), Vector3(1.11, 0.14, 2.04), FRAME, 0.05, 0.46)
+    _box(bed, "V31_LowerChassis", Vector3(0, 0.36, 0), Vector3(0.85, 0.13, 1.63), FRAME, 0.04, 0.5)
+    _box(bed, "V31_FixedMattress", Vector3(0, 0.84, -0.43), Vector3(1.01, 0.21, 1.10), WHITE, 0.075, 0.0)
+    _box(bed, "V31_MattressSeam", Vector3(0, 0.918, -0.93), Vector3(0.89, 0.035, 0.044), SEAM, 0.01, 0.0)
+    _box(bed, "V31_FactionFootboard", Vector3(0, 0.81, -1.045), Vector3(0.91, 0.29, 0.09), accent, 0.034, 0.24)
+    _box(bed, "V31_FootboardGrip", Vector3(0, 0.966, -1.045), Vector3(0.68, 0.055, 0.08), RUBBER, 0.016, 0.0)
+    for side in [-1, 1]:
+        var x: float = float(side) * 0.42
+        for end in [-1, 1]:
+            var z: float = float(end) * 0.78
+            var id: String = "%d_%d" % [side, end]
+            _bar(bed, "V31_ChassisBrace_" + id, Vector3(x, 0.38, z), Vector3(x, 0.64, z * 0.62), 0.085, ALLOY)
+            _box(bed, "V31_CasterFork_" + id, Vector3(x, 0.29, z), Vector3(0.18, 0.19, 0.17), FRAME, 0.027, 0.5)
+            _wheel(bed, "V31_CasterTire_" + id, Vector3(x, 0.235, z), 0.125, 0.13, RUBBER, lod)
+            _wheel(bed, "V31_CasterHub_" + id, Vector3(x, 0.235, z), 0.071, 0.144, ALLOY, lod)
+            if lod == 13:
+                _box(bed, "V31_BrakePedal_" + id, Vector3(x, 0.31, z + 0.105), Vector3(0.11, 0.045, 0.11), accent, 0.012, 0.2)
+        var rail: Node3D = _group(bed, "V31_RailPivot_%d" % side, Vector3(float(side) * 0.55, 0.86, -0.30))
+        for z in [-0.52, 0.52]:
+            _box(rail, "V31_RailPost_%d" % int(z * 100), Vector3(0, 0.095, z), Vector3(0.055, 0.23, 0.055), ALLOY, 0.013, 0.52)
+            _box(bed, "V31_RailHinge_%d_%d" % [side, int(z * 100)], rail.position + Vector3(0, -0.018, z), Vector3(0.10, 0.10, 0.10), FRAME, 0.023, 0.48)
+        _box(rail, "V31_RailTop", Vector3(0, 0.205, 0), Vector3(0.065, 0.065, 1.12), ALLOY, 0.02, 0.48)
+        if lod == 13:
+            _box(rail, "V31_RailGrip", Vector3(0, 0.205, 0), Vector3(0.078, 0.078, 0.39), RUBBER, 0.021, 0.0)
+    var back: Node3D = _group(bed, "V31_BackrestPivot", Vector3(0, 0.79, 0.14))
+    _box(back, "V31_BackrestShell", Vector3(0, 0.01, 0.43), Vector3(1.05, 0.13, 0.86), FRAME, 0.047, 0.33)
+    _box(back, "V31_BackrestCushion", Vector3(0, 0.14, 0.43), Vector3(1.01, 0.19, 0.86), WHITE, 0.072, 0.0)
+    _box(back, "V31_HeadPillow", Vector3(0, 0.27, 0.64), Vector3(0.70, 0.12, 0.30), CANVAS, 0.045, 0.0)
+    _box(back, "V31_HeadboardGrip", Vector3(0, 0.02, 0.89), Vector3(0.75, 0.07, 0.08), RUBBER, 0.02, 0.0)
+    for side in [-1, 1]:
+        var x: float = float(side) * 0.41
+        _wheel(bed, "V31_BackrestHinge_%d" % side, Vector3(x, 0.79, 0.14), 0.087, 0.16, ALLOY, lod)
+    bed.set_meta("clinical_damage", damage)
+    _pose_bed(bed, 1.0)
+
+# Visual-only rigid joints; folded/raised positions follow deployment.
+static func _pose_bed(bed: Node3D, progress: float) -> void:
+    var t: float = clampf(progress, 0.0, 1.0)
+    var damage: int = int(bed.get_meta("clinical_damage", 0))
+    if damage >= 2:
+        t = minf(t, 0.35)
+    var back: Node3D = bed.get_node("V31_BackrestPivot") as Node3D
+    back.rotation_degrees.x = lerpf(0.0, -28.0, t)
+    for side in [-1, 1]:
+        var rail: Node3D = bed.get_node("V31_RailPivot_%d" % side) as Node3D
+        rail.rotation_degrees.z = float(-side) * lerpf(65.0, 0.0, t)
+    bed.set_meta("clinical_deploy_progress", t)
+
 static func _wreck(root: Node3D, accent: Color, lod: int) -> void:
     var wreck: Node3D = _group(root, "V3_MedicalWreck")
     for side in [-1, 1]:
@@ -191,7 +255,7 @@ static func apply(root: Node3D, accent: Color, lod: int, damage: int) -> bool:
     if root == null or root.get_meta("camp_kind", "") != "medico":
         return false
     root.set_meta("medical_art_v3", 3)
-    root.set_meta("medical_art_revision", "3.0")
+    root.set_meta("medical_art_revision", "3.1")
     _replace(root, "PlataformaDesmontable", 0.045, FLOOR, 0.06)
     if damage == 3:
         _wreck(root, accent, lod)
@@ -200,6 +264,7 @@ static func apply(root: Node3D, accent: Color, lod: int, damage: int) -> bool:
     var tent: Node3D = core.get_node("V2_CarpaDesmontable") as Node3D
     _tent(tent, accent, lod, damage)
     _floor(core, accent, lod)
+    _bed(core, accent, lod, damage)
     return pose(root, 1.0)
 
 static func pose(root: Node3D, progress: float) -> bool:
@@ -208,7 +273,10 @@ static func pose(root: Node3D, progress: float) -> bool:
     var t: float = clampf(progress, 0.0, 1.0)
     root.set_meta("medical_v3_inspection", false)
     if int(root.get_meta("visual_damage", 0)) < 3:
-        var tent: Node3D = root.get_node("EquipamientoDesplegable/" + Base.CORE + "/V2_CarpaDesmontable") as Node3D
+        var core: Node3D = root.get_node("EquipamientoDesplegable/" + Base.CORE) as Node3D
+        var bed: Node3D = core.get_node("V2_CamillaClinica") as Node3D
+        _pose_bed(bed, t)
+        var tent: Node3D = core.get_node("V2_CarpaDesmontable") as Node3D
         for side in [-1, 1]:
             var pivot: Node3D = tent.get_node_or_null("V2_CubiertaArticulada_%d" % side) as Node3D
             if pivot != null:
