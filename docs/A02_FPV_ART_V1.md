@@ -53,3 +53,7 @@ V12 nativa 45680700033, APK 45680699952 y reglas 45680699891 correctas. Publicac
 ## V13.1 — compatibilidad con la revisión del ingeniero
 
 QA nativa 45684237774, Android 45684238037 y cuatro campamentos 45684237874 correctas. Preparación de fuentes del Studio 45684237658 superada; exportación pendiente al sincronizar. Main 398650a5 incorpora tres commits adicionales del ingeniero; se aplican únicamente los cambios del A02 sobre esa revisión sin modificar su arte ni sus pruebas. El conflicto editorial se resuelve manteniendo ambos conjuntos de cambios. No se considera publicada ni aprobada esta unidad hasta verificar el navegador y el despliegue.
+
+## V16 — refinamiento visual del deterioro (candidato)
+
+Rama independiente desde e2532da3 para no cancelar las pruebas de V15. Los tres volúmenes decorativos de humo conservan una sola malla opaca y los presupuestos de detalle. Se ajustan la asimetría, anchura, inclinación y movimiento visual; D4 conserva visibles y estáticas las piezas de presentación, sin desapariciones abruptas. D0 conserva el modelo intacto. QA amplía la verificación de inclinaciones, estados inválidos, piezas visibles y restauración exacta. Los identificadores del visor y del manifiesto se actualizan a V16. Pendientes compilación Godot, comparación real de los renders, navegador, Android y publicación. Sin cambios a estadísticas, reglas, navegación ni otras unidades.
