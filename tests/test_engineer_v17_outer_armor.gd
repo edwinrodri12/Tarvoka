@@ -8,6 +8,7 @@ const V12=preload("res://scripts/ui/InfantryEngineerDorsalV12.gd")
 const V9=preload("res://scripts/ui/InfantryEngineerFinishV9.gd")
 const V16=preload("res://scripts/ui/InfantryEngineerSilhouetteV16.gd")
 const V17=preload("res://scripts/ui/InfantryEngineerOuterArmorV17.gd")
+const DamageFamily=preload("res://scripts/ui/InfantryFamilyV1.gd")
 const OUT: String="res://build/qa/engineer-v17"
 var failed: int=0
 var photos: int=0
@@ -730,6 +731,62 @@ func _run() -> void:
                 "real updated armor returns with ZERO extra mesh nodes")
             check(V6.pose(model,"inspect",1.0) and V6.reset(model),
                 "shield and shoulder animation remain operational")
+            # Check every persistent damage level in both LODs and all
+            # factions, including repeat animation, comparison and reset.
+            var intact: StandardMaterial3D=chest.material_override as StandardMaterial3D
+            var faction_badge: MeshInstance3D=model.find_child(V17.INSIGNIA,true,false) as MeshInstance3D
+            var badge_paint: Material=faction_badge.material_override
+            var prior_tone: float=intact.albedo_color.r+intact.albedo_color.g+intact.albedo_color.b
+            for stage in range(5):
+                check(DamageFamily.set_damage(model,stage) and
+                    Models.pose_model("infantry_engineer",model,"idle",0.0),
+                    "native damage state refresh "+str(stage))
+                var current: StandardMaterial3D=chest.material_override as StandardMaterial3D
+                var tone: float=current.albedo_color.r+current.albedo_color.g+current.albedo_color.b
+                check((is_equal_approx(tone,prior_tone) if stage==0 else tone<prior_tone) and
+                    current.transparency==BaseMaterial3D.TRANSPARENCY_DISABLED and
+                    faction_badge.material_override==badge_paint,
+                    "progressive opaque armor deterioration preserves faction identity")
+                prior_tone=tone
+                for i in range(V17.DAMAGE_MARKS.size()):
+                    var mark: MeshInstance3D=model.find_child(
+                        V17.DAMAGE_MARKS[i],true,false) as MeshInstance3D
+                    check(mark!=null and closed_outward(mark.mesh) and
+                        mark.visible==(stage>=i+1),
+                        "damage marks obey exact persistent stage")
+                check(Models.pose_model("infantry_engineer",model,"move",0.5) and
+                    DamageFamily.damage_stage(model)==stage and
+                    chest.material_override==current,
+                    "movement does not heal damage or allocate new materials")
+            var fallen: Node3D=model.find_child("Infanteria_3D",true,false) as Node3D
+            var gun_rig: Node3D=model.find_child("ArmamentoRig",true,false) as Node3D
+            var tool_rig: Node3D=model.find_child("V6_HerramientaArticuladaRig",true,false) as Node3D
+            var firing_fx: Node3D=model.find_child("V2_DestelloDisparo3D",true,false) as Node3D
+            var body_pose: Transform3D=fallen.transform
+            var gun_pose: Transform3D=gun_rig.transform
+            var tool_pose: Transform3D=tool_rig.transform
+            check(Models.pose_model("infantry_engineer",model,"attack",0.3) and
+                Models.pose_model("infantry_engineer",model,"repair",0.25) and
+                fallen.transform.is_equal_approx(body_pose) and
+                gun_rig.transform.is_equal_approx(gun_pose) and
+                tool_rig.transform.is_equal_approx(tool_pose) and
+                not firing_fx.visible and DamageFamily.damage_stage(model)==4,
+                "destroyed model stays down and cannot animate equipment")
+            Models.restore_model_pose("infantry_engineer",model)
+            check(DamageFamily.damage_stage(model)==0 and chest.material_override==intact,
+                "explicit reset restores undamaged material")
+            for kind in ["hit_bullet","hit_explosive"]:
+                var flash_index: int=0 if kind=="hit_bullet" else 1
+                var mark: MeshInstance3D=model.find_child(V17.DAMAGE_MARKS[flash_index],
+                    true,false) as MeshInstance3D
+                check(Models.pose_model("infantry_engineer",model,kind,0.18) and
+                    mark.visible and (mark.material_override as StandardMaterial3D).emission_enabled,
+                    "short distinct impact flash "+kind)
+                check(Models.pose_model("infantry_engineer",model,"idle",0.0) and
+                    not mark.visible and DamageFamily.damage_stage(model)==0,
+                    "transient impact clears without modifying damage")
+            Models.restore_model_pose("infantry_engineer",model)
+            check(mesh_count(model)==count_before,"damage uses existing mesh nodes only")
             model.free()
     for name in ["line","infantry_sniper","infantry_logistic",
             "infantry_medic","infantry_commando"]:
@@ -852,12 +909,24 @@ func _run() -> void:
                 camera.look_at(center,Vector3.UP)
                 await snapshot(viewport,"v17_equipment_"+str(spec[0]))
         Models.restore_model_pose("infantry_engineer",hero)
+        camera.size=3.15
+        camera.position=positions["left"]
+        camera.look_at(Vector3(0,1.2,0),Vector3.UP)
+        for stage in range(5):
+            DamageFamily.set_damage(hero,stage)
+            Models.pose_model("infantry_engineer",hero,"idle",0.0)
+            await snapshot(viewport,"v17_damage_"+str(stage))
+        Models.restore_model_pose("infantry_engineer",hero)
+        for kind in ["hit_bullet","hit_explosive"]:
+            Models.pose_model("infantry_engineer",hero,kind,0.18)
+            await snapshot(viewport,"v17_impact_"+kind)
+        Models.restore_model_pose("infantry_engineer",hero)
         hero.queue_free()
         await process_frame
-    check(photos==24,"ten comparison PNGs, six poses, three helmet macros, three shield phases and two equipment macros")
+    check(photos==31,"24 art captures plus five damage levels and two impact previews")
     if failed>0:
         push_error("FAIL ENGINEER V17: %d violations"%failed)
         quit(1)
     else:
-        print("PASS ENGINEER V17: 8 factions x 2 LOD, closed hard-surface chest, shoulder, knees, boots; 24 native comparison, pose, helmet, shield and equipment renders")
+        print("PASS ENGINEER V17: 8 factions x 2 LOD, closed hard-surface chest, shoulder, knees, boots; 31 native comparison, pose, helmet, shield, equipment and damage renders")
         quit(0)

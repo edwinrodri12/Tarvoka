@@ -660,6 +660,7 @@ static func show_finish(model: Node3D, enabled: bool) -> bool:
         part.scale=data["scale"]
         part.position=data["position"]
     model.set_meta("tarvoka_engineer_v17_visible",enabled)
+    sync_damage_visuals(model,"idle",0.0,true)
     return true
 
 # Rebalance the real body underneath the armor. Keep the original rig
@@ -803,6 +804,13 @@ static func polish_pose(model: Node3D, kind: String, progress: float) -> bool:
     if stage>=4:
         soldier.rotation_degrees.z=-74.0
         soldier.position.y=-0.22
+        torso.rotation_degrees=Vector3.ZERO
+        head.rotation_degrees=Vector3.ZERO
+        gun.position=Vector3(0.23,-0.09,-0.48)
+        for side in [-1,1]:
+            var leg: Node3D=model.find_child("PiernaRig_%d"%side,true,false) as Node3D
+            if leg!=null:
+                leg.rotation_degrees=Vector3.ZERO
         return true
     soldier.rotation_degrees.z=0.0
     var envelope: float=smoothstep(0.0,0.18,t)*(1.0-smoothstep(0.82,1.0,t))
@@ -859,6 +867,12 @@ static func polish_pose(model: Node3D, kind: String, progress: float) -> bool:
             soldier.rotation_degrees.z=13.0*impulse*strength
             torso.rotation_degrees.x=-17.0*impulse*strength
             head.rotation_degrees.x=-5.0*impulse*strength
+            # The existing progressive preview begins the fall before
+            # the D4 threshold. A completed D4 never stands up again.
+            if kind=="damage" and stage==3:
+                var fall: float=smoothstep(0.56,0.75,t)
+                soldier.rotation_degrees.z=lerpf(soldier.rotation_degrees.z,-74.0,fall)
+                soldier.position.y=-0.22*fall
     return true
 
 # Refine the remaining helmet accessories without changing the sealed
@@ -1052,6 +1066,104 @@ static func _sculpt_equipment(model: Node3D,hero: bool) -> bool:
         if not _change(model,label,mesh,part.scale,part.position):
             return false
     return true
+
+# Cosmetic, non-graphic damage pass. The existing D0-D4 state remains
+# owned by InfantryFamily; this layer never changes damage or tactical HP.
+const DAMAGE_MARKS: Array[String]=["Impacto_1","Impacto_2","Impacto_3","Impacto_4"]
+const DAMAGE_MATERIALS: String="tarvoka_v17_damage_materials"
+const DAMAGE_LAST: String="tarvoka_v17_damage_last"
+const DAMAGE_FLASH: String="tarvoka_v17_damage_flash"
+const DAMAGE_MARK_ORIGINAL: String="tarvoka_v17_damage_mark_material"
+const DAMAGE_TARGETS: Array[String]=[FRONT,INDUSTRIAL_LOWER,
+    "V9_CascoContinuoBiselado","V12_EscudoCentralBiseladoCerrado",
+    "V8_HombreraAnatomica_-1","V8_HombreraAnatomica_1"]
+
+static func _sculpt_damage_marks(model: Node3D,hero: bool) -> bool:
+    var marks: Node3D=model.find_child("DaniosFisicos",true,false) as Node3D
+    if marks==null:
+        return false
+    # The old marks were behind the thicker V17 cuirass. Fit the same
+    # four small non-graphic surface scars to the current armor envelope.
+    var specs: Array=[
+        [Vector3(-0.145,0.025,-0.474),0.084,0.025],
+        [Vector3(0.162,0.055,-0.474),0.108,0.030],
+        [Vector3(-0.090,-0.108,-0.457),0.123,0.039],
+        [Vector3(0.127,-0.171,-0.480),0.133,0.044]]
+    for i in range(DAMAGE_MARKS.size()):
+        var part: MeshInstance3D=_find(model,DAMAGE_MARKS[i])
+        if part==null or part.get_parent()!=marks:
+            return false
+        var spec: Array=specs[i]
+        if not _change(model,DAMAGE_MARKS[i],V13._rounded_press(
+                float(spec[1]),float(spec[2]),0.015,0.009,0.002,hero),
+                Vector3.ONE,spec[0]):
+            return false
+        part.set_meta(DAMAGE_MARK_ORIGINAL,part.material_override)
+    var flash_materials: Array[StandardMaterial3D]=[]
+    for tint in [Color("#ffd39b"),Color("#ff923e")]:
+        var flash:=StandardMaterial3D.new()
+        flash.albedo_color=tint
+        flash.transparency=BaseMaterial3D.TRANSPARENCY_DISABLED
+        flash.cull_mode=BaseMaterial3D.CULL_BACK
+        flash.emission_enabled=true
+        flash.emission=tint
+        flash.emission_energy_multiplier=1.3
+        flash_materials.append(flash)
+    model.set_meta(DAMAGE_FLASH,flash_materials)
+    return true
+
+static func _damage_surface(part: MeshInstance3D,stage: int) -> void:
+    if not part.has_meta(FINISH_NEW):
+        return
+    var base: StandardMaterial3D=part.get_meta(FINISH_NEW) as StandardMaterial3D
+    if base==null:
+        return
+    if stage==0:
+        part.material_override=base
+        return
+    var variants: Dictionary=part.get_meta(DAMAGE_MATERIALS,{})
+    if not variants.has(stage):
+        var variant: StandardMaterial3D=base.duplicate() as StandardMaterial3D
+        var amount: float=[0.0,0.07,0.16,0.28,0.42][stage]
+        var pigment: Color=base.albedo_color
+        variant.albedo_color=Color(pigment.r*(1.0-amount),
+            pigment.g*(1.0-amount),pigment.b*(1.0-amount),pigment.a)
+        variant.roughness=minf(1.0,base.roughness+amount*0.65)
+        variants[stage]=variant
+        part.set_meta(DAMAGE_MATERIALS,variants)
+    part.material_override=variants[stage] as StandardMaterial3D
+
+static func sync_damage_visuals(model: Node3D,kind: String="idle",
+        progress: float=0.0,force: bool=false) -> void:
+    if not has_model(model):
+        return
+    var enabled: bool=bool(model.get_meta("tarvoka_engineer_v17_visible",true))
+    var stage: int=clampi(int(model.get_meta("tarvoka_infantry_damage",0)),0,4)
+    if enabled and (force or int(model.get_meta(DAMAGE_LAST,-1))!=stage):
+        for label in DAMAGE_TARGETS:
+            var part: MeshInstance3D=_find(model,label)
+            if part==null:
+                continue
+            # Keep faction emblems and optics untouched. Scorch/roughness
+            # gradually affects a bounded selection of armor surfaces.
+            var effective: int=stage if label==FRONT else maxi(0,stage-1)
+            _damage_surface(part,effective)
+        model.set_meta(DAMAGE_LAST,stage)
+    var t: float=clampf(progress,0.0,1.0)
+    var flash_index: int=-1
+    if enabled and stage<4 and t>=0.08 and t<=0.27:
+        if kind=="hit_bullet":
+            flash_index=0
+        elif kind=="hit_explosive":
+            flash_index=1
+    var flash_materials: Array=model.get_meta(DAMAGE_FLASH,[])
+    for i in range(DAMAGE_MARKS.size()):
+        var mark: MeshInstance3D=_find(model,DAMAGE_MARKS[i])
+        if mark==null or not mark.has_meta(DAMAGE_MARK_ORIGINAL):
+            continue
+        mark.visible=stage>=i+1 or i==flash_index
+        mark.material_override=(flash_materials[flash_index] if i==flash_index
+            and flash_materials.size()==2 else mark.get_meta(DAMAGE_MARK_ORIGINAL))
 
 static func apply(model: Node3D, hero: bool) -> bool:
     if model==null or has_model(model) or not V16.has_model(model):
@@ -1282,6 +1394,8 @@ static func apply(model: Node3D, hero: bool) -> bool:
     if not _sculpt_industrial(model,hero) or not _sculpt_equipment(model,hero):
         return false
     if not _local_wear(model,hero) or not _surface_finish(model,hero):
+        return false
+    if not _sculpt_damage_marks(model,hero):
         return false
 
     # No new MeshInstance3D; all faction materials and collision bodies stay.

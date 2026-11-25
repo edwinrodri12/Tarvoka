@@ -1579,12 +1579,19 @@ static func pose_model(role: String, model: Node3D, kind: String,
         if posed and InfantryFinishV2.has_model(model):
             InfantryFinishV2.pose(model,kind,progress)
         if posed and role=="infantry_engineer" and InfantryEngineerV6.has_model(model):
-            InfantryEngineerV6.pose(model,kind,progress)
+            var engineer_v17: bool=InfantryEngineerV17.has_model(model) and bool(
+                model.get_meta("tarvoka_engineer_v17_visible",true))
+            var destroyed: bool=engineer_v17 and InfantryFamily.damage_stage(model)>=4
+            var visual_kind: String="idle" if destroyed else kind
+            if destroyed and InfantryFinishV2.has_model(model):
+                InfantryFinishV2.pose(model,"idle",0.0)
+            InfantryEngineerV6.pose(model,visual_kind,0.0 if destroyed else progress)
             # Finish the visual pose before solving physical hand contacts.
-            if InfantryEngineerV17.has_model(model):
+            if engineer_v17:
                 InfantryEngineerV17.polish_pose(model,kind,progress)
+                InfantryEngineerV17.sync_damage_visuals(model,visual_kind,progress)
             if InfantryEngineerV9.has_model(model):
-                InfantryEngineerV9.sync(model,kind)
+                InfantryEngineerV9.sync(model,visual_kind)
         return posed
     match role:
         "tank":
@@ -1636,6 +1643,8 @@ static func restore_model_pose(role: String, model: Node3D) -> void:
             InfantryFinishV2.restore(model)
         if role=="infantry_engineer" and InfantryEngineerV6.has_model(model):
             InfantryEngineerV6.reset(model)
+            if InfantryEngineerV17.has_model(model):
+                InfantryEngineerV17.sync_damage_visuals(model,"idle",0.0,true)
             if InfantryEngineerV9.has_model(model):
                 InfantryEngineerV9.sync(model,"idle")
         return
