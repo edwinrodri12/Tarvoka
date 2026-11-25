@@ -363,7 +363,7 @@ func _run() -> void:
             await _frames(4)
             camp = studio.get("model_root") as Node3D
             _check(camp.get_meta("medical_art_v3", 0) == 3, "Medical V3 restored")
-            _check(camp.get_meta("medical_art_revision", "") == "3.4", "Medical V3.4 deployed")
+            _check(camp.get_meta("medical_art_revision", "") == "3.5", "Medical V3.5 deployed")
             studio.call("_camp_medical_animate", 0.0)
             await _frames(4)
             studio.call("_camp_stop_medical")
