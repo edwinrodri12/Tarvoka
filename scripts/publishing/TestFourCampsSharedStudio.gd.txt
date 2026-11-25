@@ -347,6 +347,22 @@ func _run() -> void:
             damage.item_selected.emit(0)
             await _frames(4)
         if i == 3:
+            _check(camp.get_meta("medical_art_v3", 0) == 3, "Medical V3 in original viewport")
+            var medical_finish: OptionButton = studio.get("camp_medical_finish") as OptionButton
+            _check(medical_finish.visible, "Medical comparison visible")
+            studio.call("_camp_medical_interior", true)
+            _check(camp.get_meta("medical_v3_inspection", false), "Open medical interior")
+            studio.call("_camp_medical_interior", false)
+            medical_finish.select(1)
+            medical_finish.item_selected.emit(1)
+            await _frames(4)
+            camp = studio.get("model_root") as Node3D
+            _check(not camp.has_meta("medical_art_v3"), "Medical V2 baseline retained")
+            medical_finish.select(0)
+            medical_finish.item_selected.emit(0)
+            await _frames(4)
+            camp = studio.get("model_root") as Node3D
+            _check(camp.get_meta("medical_art_v3", 0) == 3, "Medical V3 restored")
             studio.call("_camp_pose", 0.0)
             await _shot(studio, "medico_plegado_en_visor_unificado.png")
             studio.call("_camp_pose", 1.0)

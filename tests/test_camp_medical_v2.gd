@@ -32,7 +32,7 @@ func _meshes(node: Node, parts: Array[MeshInstance3D]) -> void:
         _meshes(child, parts)
 
 func _audit(faction: int, lod: int, damage: int) -> Node3D:
-    var camp: Node3D = Art.build("medico", faction, lod, damage)
+    var camp: Node3D = Art.build("medico", faction, lod, damage, true, true, true, false)
     check(camp != null, "Medical model builds")
     if camp == null:
         return null

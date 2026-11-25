@@ -15,6 +15,8 @@ on:
       - "scripts/ui/CampDefenseSculptV3.gd"
       - "tests/test_camp_defense_v3.gd"
       - "scripts/ui/CampMedicalFinishV2.gd"
+      - "scripts/ui/CampMedicalSculptV3.gd"
+      - "tests/test_camp_medical_v3.gd"
       - "tests/test_camp_models_v1.gd"
       - "tests/test_camp_supply_v2.gd"
       - "tests/test_camp_supply_v3.gd"
@@ -26,7 +28,7 @@ on:
       - "scripts/publishing/TestFourCampsSharedStudio.gd.txt"
       - ".github/workflows/tarvoka-3d-pages.yml"
   push:
-    branches: [main, feat/campamentos-visor-integrado-20261123, art/camp-supply-v4-20261124, art/camp-recon-v3-20261124, art/camp-defense-v3-20261125]
+    branches: [main, feat/campamentos-visor-integrado-20261123, art/camp-supply-v4-20261124, art/camp-recon-v3-20261124, art/camp-defense-v3-20261125, art/camp-medical-v3-20261125]
     paths:
       - "scripts/ui/CampModels3DV1.gd"
       - "scripts/ui/CampSupplyFinishV2.gd"
@@ -40,6 +42,8 @@ on:
       - "scripts/ui/CampDefenseSculptV3.gd"
       - "tests/test_camp_defense_v3.gd"
       - "scripts/ui/CampMedicalFinishV2.gd"
+      - "scripts/ui/CampMedicalSculptV3.gd"
+      - "tests/test_camp_medical_v3.gd"
       - "tests/test_camp_models_v1.gd"
       - "tests/test_camp_supply_v2.gd"
       - "tests/test_camp_supply_v3.gd"
@@ -246,6 +250,22 @@ jobs:
           fi
           grep -F 'PASS DEFENSE CAMP V3 NATIVE: 72 audits, 33 PNGs' /tmp/camp-defense-v3-native.log
           test "$(find build/qa/defense-camp-v3 -name '*.png' | wc -l)" -eq 33
+      - name: Native Medical V3 - validate 72 models, 26 true screenshots and physical folding
+        run: |
+          set -euo pipefail
+          mkdir -p build/qa/medical-camp-v3
+          timeout --signal=TERM --kill-after=5s 300s \
+            xvfb-run -a -s '-screen 0 1280x720x24' \
+            env LIBGL_ALWAYS_SOFTWARE=1 \
+            /tmp/Godot_v4.3-stable_linux.x86_64 \
+            --rendering-method gl_compatibility --audio-driver Dummy --path . \
+            --script res://tests/test_camp_medical_v3.gd \
+            2>&1 | tee /tmp/camp-medical-v3-native.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Parse Error:|Assertion failed' /tmp/camp-medical-v3-native.log; then
+            exit 1
+          fi
+          grep -F 'PASS MEDICAL CAMP V3 NATIVE: 72 audits, 26 PNGs' /tmp/camp-medical-v3-native.log
+          test "$(find build/qa/medical-camp-v3 -name '*.png' | wc -l)" -eq 26
       - name: Upload actual Godot screenshots for visual review
         if: always()
         uses: actions/upload-artifact@v4
@@ -261,5 +281,6 @@ jobs:
             build/qa/defense-camp-v2/*.png
             build/qa/defense-camp-v3/*.png
             build/qa/medical-camp-v2/*.png
+            build/qa/medical-camp-v3/*.png
           if-no-files-found: warn
           retention-days: 14
