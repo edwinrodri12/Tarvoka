@@ -145,6 +145,24 @@ func _run()->void:
                 check(colors.size()==vertices.size(),"V3 pigment per vertex")
                 for shade in colors:
                     check(shade.a>=0.999,"V3 opaque shell")
+            check(bool(model.get_meta("tarvoka_a02_v5_decorative_identity",false)),
+                "V5 ornamental identity")
+            var insignia:=model.find_child("A02_V5_CrownInsignia",true,false) as MeshInstance3D
+            var badge:=model.find_child("A02_V5_RearBadge",true,false) as MeshInstance3D
+            check(insignia!=null and badge!=null,"V5 decorations in both LODs")
+            if insignia!=null and badge!=null and paint!=null and casing!=null:
+                check(_closed(insignia.mesh) and _closed(badge.mesh),"V5 closed decorative relief")
+                check((insignia.transform*insignia.mesh.get_aabb()).intersects(
+                    paint.transform*paint.mesh.get_aabb()),"V5 crown relief embedded")
+                check((badge.transform*badge.mesh.get_aabb()).intersects(
+                    casing.transform*casing.mesh.get_aabb()),"V5 rear relief embedded")
+            var belly:=model.find_child("A02_V5_BellyInsignia",true,false) as MeshInstance3D
+            check((belly!=null)==(lod==13),"V5 fine underside decoration hero only")
+            if belly!=null:
+                var underside:=model.find_child("A02_SealedUndershell",true,false) as MeshInstance3D
+                check(underside!=null and _closed(belly.mesh) and
+                    (belly.transform*belly.mesh.get_aabb()).intersects(
+                        underside.transform*underside.mesh.get_aabb()),"V5 underside relief embedded")
             var tris:int=0
             for child in model.find_children("*","MeshInstance3D",true,false):
                 var part:=child as MeshInstance3D

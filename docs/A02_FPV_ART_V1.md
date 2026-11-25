@@ -13,3 +13,7 @@ V2 validada en Godot (45662099742) y APK (45662099726). Inspección del artefact
 ## V4 — normales y lectura de superficies
 
 V3 aprobada en QA nativa 45662716883; 21 renders del artefacto 15046441455. V4 conserva exactamente las posiciones y triángulos de la escultura V3. Asigna normales exteriores por cara para separar ópticamente tapas, biseles y paredes; conserva winding horario y verifica el cierre por posiciones. Corona y distintivos comparten pigmento opaco por vértice, con el color oficial completo en la parte superior y transición sombreada en el borde; se aclara ligeramente el tono neutral inferior. QA comprueba normales unitarias y planas, pigmentos, siete vistas y 16 combinaciones. Solo arte ficticio, sin cambios de catálogo ni de mecánicas. CI y publicación pendientes.
+
+## V5 — identidad gráfica de la escultura
+
+V4 pasó QA nativa 45663568352 y compilación Android 45663568410. Se revisaron 23 capturas reales del artefacto 15046861780. V5 añade relieves ornamentales cerrados de la corona y parte posterior en los dos LOD, más dos acentos y una insignia inferior solo en LOD13. Se conservan la silueta, colores principales, lógica y animaciones previas. QA verifica presencia, cierre, solapamiento AABB y separación de LOD. Pendientes nuevas capturas, CI y publicación. Sin cambios a otros modelos ni mecánicas.

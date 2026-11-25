@@ -169,6 +169,22 @@ static func build(root:Node3D,faction:Color,hero:bool)->bool:
         if hero:
             _part(body,"A02_ShoulderBadge_"+str(i),crown_mesh,
                 Vector3(side*0.34,1.065,depth*0.28),Vector3(0.22,0.07,0.20),enamel)
+    # V5: decorative sculpted graphics, not functional equipment.
+    # Retain the faction crown as the dominant surface, with restrained
+    # neutral reliefs embedded into the same fictional game silhouette.
+    var emblem:=_mat(Color("#a8b8c0"),0.14,0.78)
+    var dark_mark:=_mat(Color("#41535e"),0.08,0.80)
+    _part(body,"A02_V5_CrownInsignia",sculpt,Vector3(0,1.205,-0.09),
+        Vector3(0.16,0.018,0.23),dark_mark)
+    _part(body,"A02_V5_RearBadge",sculpt,Vector3(0,0.965,0.510),
+        Vector3(0.30,0.15,0.055),dark_mark)
+    if hero:
+        for side in [-1.0,1.0]:
+            _part(body,"A02_V5_CrownAccent_"+str(side),sculpt,
+                Vector3(side*0.145,1.205,0.14),Vector3(0.045,0.016,0.12),emblem)
+        _part(body,"A02_V5_BellyInsignia",sculpt,Vector3(0,0.680,0.07),
+            Vector3(0.18,0.018,0.23),dark_mark)
+    root.set_meta("tarvoka_a02_v5_decorative_identity",true)
     root.set_meta("tarvoka_a02_v4_surface_normals",true)
     root.set_meta("tarvoka_a02_v3_surface_finish",true)
     root.set_meta("tarvoka_a02_v2_beveled_visual_shell",true)
