@@ -51,7 +51,7 @@ func _run() -> void:
             check(model != null, "Destroyer builds")
             if model == null:
                 continue
-            check(model.get_meta("destroyer_art_revision", "") == "1.5", "V1.5 finish active")
+            check(model.get_meta("destroyer_art_revision", "") == "1.6", "V1.6 motion active")
             for key in ["CascoNaval", "Cubierta", "FaccionFranjaNaval", "Superestructura/ZocaloNaval", "Superestructura/CarcasaInferior", "Superestructura/Puente", "Superestructura/TechoPuente", "TorretaNavalPivot/CarcasaTorreta", "TorreMastil/CarcasaMastil", "TorreMastil/RadarPivot/Radar", "ConjuntoPopa/Helipuerto", "ConjuntoPopa/Propulsion_-1/TimonPivot/TimonVisual", "ConjuntoPopa/Propulsion_1/TimonPivot/TimonVisual"]:
                 var part: MeshInstance3D = model.get_node_or_null(key) as MeshInstance3D
                 check(part != null, "Native " + key)
@@ -140,12 +140,32 @@ func _run() -> void:
                         check(group.transform == fixed and blade.transform == local and rotor.scale.is_equal_approx(Vector3.ONE), "Rigid aft assemblies")
                     check(aft.has_node("PasamanosPopa_%d" % side) == (lod >= 13), "Aft LOD")
                 Art.pose_destroyer_aft(model,0.0,0.0)
+            var motion_turret: Node3D = model.get_node("TorretaNavalPivot") as Node3D
+            var motion_barrel: Node3D = motion_turret.get_node("CanonNavalPivot/CanonNaval") as Node3D
+            var flash: Node3D = motion_turret.get_node("CanonNavalPivot/DestelloVisual") as Node3D
+            var wake: Node3D = model.get_node("EstelaEspuma") as Node3D
+            var base_position: Vector3 = model.position
+            var base_scale: Vector3 = model.scale
+            model.rotation_degrees.y = 30.0
+            check(Art.pose_model("destroyer",model,"attack",0.10,Vector2i(1,0)), "Action pose dispatch")
+            check(flash.visible and motion_barrel.position.z > -0.30, "Temporary visual action")
+            check(Art.pose_model("destroyer",model,"move",0.25), "Navigation pose dispatch")
+            check(not flash.visible and is_equal_approx(motion_barrel.position.z,-0.30), "Action cleared during navigation")
+            check(wake.get_child_count() == (5 if lod >= 13 else 2), "Wake detail tier")
+            for patch in wake.get_children():
+                check(patch.visible, "Dynamic wake visible")
+            check(model.position == base_position and model.scale.is_equal_approx(base_scale) and absf(model.rotation_degrees.y-30.0)<0.01, "World position, scale and heading preserved")
+            Art.restore_model_pose("destroyer",model)
+            check(not flash.visible and motion_turret.rotation.is_zero_approx(), "Restored turret and effect")
+            check(absf(model.rotation_degrees.x)<0.01 and absf(model.rotation_degrees.z)<0.01, "Restored hull attitude")
+            for patch in wake.get_children():
+                check(not patch.visible, "Restored wake")
             model.free()
     await _render()
     if failures != 0:
         quit(1)
         return
-    print("PASS DESTROYER HULL V1.5: 18 variants, 12 PNGs")
+    print("PASS DESTROYER HULL V1.6: 18 variants, 14 PNGs")
     quit(0)
 
 func _render() -> void:
@@ -180,12 +200,17 @@ func _render() -> void:
         view.queue_free()
         return
     stage.add_child(model)
-    var angles: Array[Vector3] = [Vector3(5,4,-6),Vector3(-5,4,6),Vector3(3,2,-3),Vector3(-3,2,3),Vector3(2.6,2.8,-3.8),Vector3(-2.4,3.0,-2.0),Vector3(2.4,2.6,-1.7),Vector3(-2.4,2.5,2.1),Vector3(2.8,2.7,3.8),Vector3(-2.2,-1.4,3.2),Vector3(3.0,0.45,-0.8),Vector3(-3.0,0.55,0.9)]
-    for i in range(12):
+    var angles: Array[Vector3] = [Vector3(5,4,-6),Vector3(-5,4,6),Vector3(3,2,-3),Vector3(-3,2,3),Vector3(2.6,2.8,-3.8),Vector3(-2.4,3.0,-2.0),Vector3(2.4,2.6,-1.7),Vector3(-2.4,2.5,2.1),Vector3(2.8,2.7,3.8),Vector3(-2.2,-1.4,3.2),Vector3(3.0,0.45,-0.8),Vector3(-3.0,0.55,0.9),Vector3(5.0,3.6,6.0),Vector3(2.4,2.2,-3.5)]
+    for i in range(14):
         camera.size = 5.1 if i < 2 else (2.0 if i < 4 else (1.85 if i < 6 else 1.4))
         camera.position = angles[i]
         camera.look_at(Vector3(0,0.7,0.15) if i < 2 else (Vector3(0,0.96,0.3) if i < 4 else (Vector3(0,0.82,-0.78) if i < 6 else Vector3(0,1.45,0.22))),Vector3.UP)
-        if i >= 10:
+        if i >= 12:
+            model.get_node("EstelaEspuma").show()
+            camera.size = 5.1 if i == 12 else 2.0
+            camera.look_at(Vector3(0,0.65,0.2) if i == 12 else Vector3(0,0.85,-1.0),Vector3.UP)
+            Art.pose_model("destroyer",model,"move" if i == 12 else "attack",0.25 if i == 12 else 0.10)
+        elif i >= 10:
             camera.size = 2.1
             camera.look_at(Vector3(0,0.44,0.02),Vector3.UP)
         elif i >= 8:
@@ -200,5 +225,5 @@ func _render() -> void:
         var img: Image = view.get_texture().get_image()
         check(img != null and not img.is_empty(), "Real Godot image")
         if img != null and not img.is_empty():
-            check(img.save_png(output + "/destroyer_v15_%d.png" % i) == OK, "Capture saved")
+            check(img.save_png(output + "/destroyer_v16_%d.png" % i) == OK, "Capture saved")
     view.queue_free()
