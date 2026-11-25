@@ -33,8 +33,8 @@ func _run() -> void:
             check(model != null, "Destroyer builds")
             if model == null:
                 continue
-            check(model.get_meta("destroyer_art_revision", "") == "1.1", "V1.1 bridge active")
-            for key in ["CascoNaval", "Cubierta", "Superestructura/ZocaloNaval", "Superestructura/CarcasaInferior", "Superestructura/Puente", "Superestructura/TechoPuente"]:
+            check(model.get_meta("destroyer_art_revision", "") == "1.2", "V1.2 deck equipment active")
+            for key in ["CascoNaval", "Cubierta", "Superestructura/ZocaloNaval", "Superestructura/CarcasaInferior", "Superestructura/Puente", "Superestructura/TechoPuente", "TorretaNavalPivot/CarcasaTorreta"]:
                 var part: MeshInstance3D = model.get_node_or_null(key) as MeshInstance3D
                 check(part != null, "Native " + key)
                 if part != null:
@@ -57,12 +57,38 @@ func _run() -> void:
                 for side in [-1, 1]:
                     check(bridge.has_node("CristalLateral_%d_0" % side) and bridge.has_node("CristalLateral_%d_1" % side), "Both lateral panes")
                     check(bridge.has_node("FaccionPuente_%d" % side), "Bridge faction panel")
+            var turret: Node3D = model.get_node_or_null("TorretaNavalPivot") as Node3D
+            var base: MeshInstance3D = model.get_node_or_null("BaseTorreProa") as MeshInstance3D
+            var collar: MeshInstance3D = model.get_node_or_null("AnilloTorreProa") as MeshInstance3D
+            check(turret != null and base != null and collar != null, "Turret seated on deck mount")
+            if base != null and collar != null and turret != null:
+                check(base.position.y - (base.mesh as CylinderMesh).height * 0.5 <= 0.802, "Base meets deck")
+                check(collar.position.y - (collar.mesh as CylinderMesh).height * 0.5 <= base.position.y + (base.mesh as CylinderMesh).height * 0.5, "Collar meets base")
+                var pivot: Node3D = turret.get_node_or_null("CanonNavalPivot") as Node3D
+                check(pivot != null, "Dedicated visual articulation")
+                if pivot != null:
+                    var shape: MeshInstance3D = pivot.get_node_or_null("CanonNaval") as MeshInstance3D
+                    check(shape != null, "Visual attachment")
+                    if shape != null:
+                        var local: Transform3D = shape.transform
+                        turret.rotation_degrees.y = 45.0
+                        pivot.rotation_degrees.x = 10.0
+                        check(shape.transform == local and turret.scale == Vector3.ONE and pivot.scale == Vector3.ONE, "Rigid transforms preserve local shape")
+                        pivot.rotation_degrees.x = 0.0
+                        turret.rotation_degrees.y = 0.0
+            var module: Node3D = model.get_node_or_null("ModuloCubierta") as Node3D
+            check(module != null, "Deck module")
+            if module != null:
+                for x in range(4):
+                    for z in range(3):
+                        check(module.has_node("TapaModulo_%d_%d" % [x,z]), "Closed module lid")
+                        check(module.has_node("BisagraTapa_%d_%d" % [x,z]) == (lod >= 13), "Hinge LOD")
             model.free()
     await _render()
     if failures != 0:
         quit(1)
         return
-    print("PASS DESTROYER HULL V1.1: 18 variants, 4 PNGs")
+    print("PASS DESTROYER HULL V1.2: 18 variants, 6 PNGs")
     quit(0)
 
 func _render() -> void:
@@ -97,16 +123,16 @@ func _render() -> void:
         view.queue_free()
         return
     stage.add_child(model)
-    var angles: Array[Vector3] = [Vector3(5,4,-6),Vector3(-5,4,6),Vector3(3,2,-3),Vector3(-3,2,3)]
-    for i in range(4):
-        camera.size = 5.1 if i < 2 else 2.0
+    var angles: Array[Vector3] = [Vector3(5,4,-6),Vector3(-5,4,6),Vector3(3,2,-3),Vector3(-3,2,3),Vector3(2.6,2.8,-3.8),Vector3(-2.4,3.0,-2.0)]
+    for i in range(6):
+        camera.size = 5.1 if i < 2 else (2.0 if i < 4 else 1.85)
         camera.position = angles[i]
-        camera.look_at(Vector3(0,0.7,0.15) if i < 2 else Vector3(0,0.96,0.3),Vector3.UP)
+        camera.look_at(Vector3(0,0.7,0.15) if i < 2 else (Vector3(0,0.96,0.3) if i < 4 else Vector3(0,0.82,-0.78)),Vector3.UP)
         await process_frame
         await process_frame
         await process_frame
         var img: Image = view.get_texture().get_image()
         check(img != null and not img.is_empty(), "Real Godot image")
         if img != null and not img.is_empty():
-            check(img.save_png(output + "/destroyer_v11_%d.png" % i) == OK, "Capture saved")
+            check(img.save_png(output + "/destroyer_v12_%d.png" % i) == OK, "Capture saved")
     view.queue_free()
