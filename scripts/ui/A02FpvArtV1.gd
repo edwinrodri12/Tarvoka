@@ -35,6 +35,60 @@ static func _oval(parent:Node3D,tag:String,at:Vector3,size:Vector3,
     mesh.rings=6 if hero else 4
     return _part(parent,tag,mesh,at,size,paint)
 
+# Bevelled abstract game sculpture. All surfaces are closed and clockwise.
+static func _face(t:SurfaceTool,a:Vector3,b:Vector3,c:Vector3,outward:Vector3)->void:
+    t.add_vertex(a)
+    if (b-a).cross(c-a).dot(outward)>0.0:
+        t.add_vertex(c)
+        t.add_vertex(b)
+    else:
+        t.add_vertex(b)
+        t.add_vertex(c)
+
+static func _sculpt()->ArrayMesh:
+    var outline:Array[Vector2]=[
+        Vector2(-0.30,-0.5),Vector2(0.30,-0.5),
+        Vector2(0.5,-0.28),Vector2(0.5,0.28),
+        Vector2(0.30,0.5),Vector2(-0.30,0.5),
+        Vector2(-0.5,0.28),Vector2(-0.5,-0.28)]
+    var rings:Array=[]
+    for layer in [Vector2(-0.5,0.72),Vector2(-0.27,1.0),
+            Vector2(0.22,1.0),Vector2(0.5,0.72)]:
+        var ring:Array[Vector3]=[]
+        for point in outline:
+            ring.append(Vector3(point.x*layer.y,layer.x,point.y*layer.y))
+        rings.append(ring)
+    var t:=SurfaceTool.new()
+    t.begin(Mesh.PRIMITIVE_TRIANGLES)
+    for j in range(rings.size()-1):
+        var low:Array=rings[j]
+        var high:Array=rings[j+1]
+        for i in range(outline.size()):
+            var k:int=(i+1)%outline.size()
+            var mid:Vector2=(outline[i]+outline[k])*0.5
+            var outward:=Vector3(mid.x,0,mid.y)
+            _face(t,low[i],low[k],high[k],outward)
+            _face(t,low[i],high[k],high[i],outward)
+    for i in range(1,outline.size()-1):
+        _face(t,rings[0][0],rings[0][i],rings[0][i+1],Vector3.DOWN)
+        _face(t,rings[3][0],rings[3][i],rings[3][i+1],Vector3.UP)
+    t.index()
+    t.generate_normals()
+    return t.commit()
+
+static func _guard_finish(primitive:TorusMesh,faction:Color)->ArrayMesh:
+    # Color is baked into existing visual geometry; no decal or alpha.
+    var arrays:Array=primitive.get_mesh_arrays()
+    var vertices:PackedVector3Array=arrays[Mesh.ARRAY_VERTEX]
+    var pigments:=PackedColorArray()
+    for vertex in vertices:
+        pigments.append(Color("#43535d").lerp(faction,
+            0.18+0.82*smoothstep(-0.015,0.06,vertex.y)))
+    arrays[Mesh.ARRAY_COLOR]=pigments
+    var mesh:=ArrayMesh.new()
+    mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES,arrays)
+    return mesh
+
 static func build(root:Node3D,faction:Color,hero:bool)->bool:
     if root==null or root.has_meta(FLAG):
         return false
@@ -42,26 +96,34 @@ static func build(root:Node3D,faction:Color,hero:bool)->bool:
     body.name=BODY
     root.add_child(body)
     var graphite:=_mat(Color("#33414a"),0.12,0.74)
-    var shell:=_mat(Color("#84949e"),0.17,0.66)
+    var shell:=_mat(Color("#697b86"),0.14,0.73)
+    var coated_guard:=_mat(Color.WHITE,0.12,0.74)
+    coated_guard.vertex_color_use_as_albedo=true
+    coated_guard.vertex_color_is_srgb=true
+    var sculpt:=_sculpt()
     var enamel:=_mat(faction,0.13,0.65)
     var glass:=_mat(Color("#377c91"),0.17,0.25)
-    _oval(body,"A02_ClosedCentralShell",Vector3(0,0.96,0),Vector3(0.72,0.48,1.05),graphite,hero)
-    _oval(body,PAINT,Vector3(0,1.105,-0.045),Vector3(0.61,0.29,0.83),enamel,hero)
+    _part(body,"A02_ClosedCentralShell",sculpt,Vector3(0,0.96,0),
+        Vector3(0.72,0.44,1.05),graphite)
+    _part(body,PAINT,sculpt,Vector3(0,1.105,-0.045),
+        Vector3(0.61,0.20,0.83),enamel)
     _oval(body,"A02_FrontVisor",Vector3(0,0.99,-0.465),Vector3(0.35,0.25,0.20),glass,hero)
-    _oval(body,"A02_SealedUndershell",Vector3(0,0.805,0.07),Vector3(0.57,0.30,0.77),shell,hero)
+    _part(body,"A02_SealedUndershell",sculpt,Vector3(0,0.805,0.07),
+        Vector3(0.57,0.25,0.77),shell)
     for i in range(4):
         var side:float=-1.0 if i%2==0 else 1.0
         var depth:float=-1.0 if i<2 else 1.0
         var at:=Vector3(side*0.61,0.98,depth*0.52)
-        var shoulder:=_oval(body,"A02_SculptedShoulder_"+str(i),
-            Vector3(side*0.34,0.96,depth*0.28),Vector3(0.75,0.24,0.32),shell,hero)
+        var shoulder:=_part(body,"A02_SculptedShoulder_"+str(i),sculpt,
+            Vector3(side*0.34,0.96,depth*0.28),Vector3(0.75,0.24,0.32),shell)
         shoulder.rotation_degrees.y=-side*depth*34.0
         var ring:=TorusMesh.new()
         ring.inner_radius=0.28
         ring.outer_radius=0.42
         ring.rings=24 if hero else 12
         ring.ring_segments=10 if hero else 6
-        _part(body,"A02_ClosedRotorGuard_"+str(i),ring,at,Vector3.ONE,enamel)
+        _part(body,"A02_ClosedRotorGuard_"+str(i),_guard_finish(ring,faction),
+            at,Vector3.ONE,coated_guard)
         var rotor:=Node3D.new()
         rotor.name="A02_VisualRotor_"+str(i)
         rotor.position=at
@@ -72,8 +134,9 @@ static func build(root:Node3D,faction:Color,hero:bool)->bool:
                 Vector3(0.48,0.042,0.085),graphite,hero)
             graphic.rotation_degrees.y=float(j)*90.0
         if hero:
-            _oval(body,"A02_ShoulderBadge_"+str(i),Vector3(side*0.34,1.065,depth*0.28),
-                Vector3(0.22,0.07,0.20),enamel,true)
+            _part(body,"A02_ShoulderBadge_"+str(i),sculpt,
+                Vector3(side*0.34,1.065,depth*0.28),Vector3(0.22,0.07,0.20),enamel)
+    root.set_meta("tarvoka_a02_v2_beveled_visual_shell",true)
     root.set_meta(FLAG,true)
     root.set_meta("tarvoka_a02_visual_only",true)
     root.set_meta("tarvoka_a02_lod",13 if hero else 8)
