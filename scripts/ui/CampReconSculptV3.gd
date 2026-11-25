@@ -201,6 +201,137 @@ static func _tower(tower: Node3D, accent: Color, lod: int, damage: int) -> bool:
                 Vector3(1.08, 0.075, 0.07), GREY, 0.012)
     return true
 
+# V3.2 station: closed solid electronic equipment, front-facing screen
+# instrumentation, anchored radio bays and a reinforced portable canopy.
+static func _lit(part: MeshInstance3D, tint: Color, energy: float) -> void:
+    var mat: StandardMaterial3D = part.material_override as StandardMaterial3D
+    mat.emission_enabled = energy > 0.0
+    mat.emission = tint
+    mat.emission_energy_multiplier = energy
+
+static func _station_v32(station: Node3D, accent: Color, lod: int, damage: int) -> void:
+    var live: bool = damage < 2
+    var ui_tint: Color = OPTIC_LIGHT if live else FRAME
+    var instrument: Node3D = _group(station, "V32_InstrumentDeck")
+    # Replace the older decorative bars and loose identical buttons.
+    for child in station.get_children():
+        if str(child.name).begins_with("V3_DisplayTrace_") or str(child.name).begins_with("BotonRadio_"):
+            child.visible = false
+    # Main monitor is a solid screen with a real surrounding bezel and
+    # animated thin raised traces, not a transparent plane.
+    for side in [-1, 1]:
+        _box(instrument, "V32_ScreenSideBezel_%d" % side, Vector3(float(side) * 0.77, 1.22, -0.263),
+            Vector3(0.10, 0.58, 0.09), FRAME, 0.018)
+        _box(instrument, "V32_ScreenHorizontalBezel_%d" % side, Vector3(0, 1.22 + float(side) * 0.28, -0.263),
+            Vector3(1.48, 0.075, 0.09), FRAME, 0.012)
+    var display: Node3D = _group(instrument, "V32_Display")
+    for i in range(4 if lod == 13 else 2):
+        var row_y: float = 1.08 + float(i) * (0.085 if lod == 13 else 0.18)
+        _box(display, "V32_TraceBackground_%d" % i, Vector3(-0.29, row_y, -0.267),
+            Vector3(0.66, 0.028, 0.014), Color("#31474B"), 0.003, 0.0)
+        var trace: MeshInstance3D = _box(display, "V32_Trace_%d" % i, Vector3(-0.37, row_y, -0.279),
+            Vector3(0.48, 0.025, 0.012), ui_tint, 0.003, 0.0)
+        _lit(trace, ui_tint, 0.24 if live else 0.0)
+    var scope: MeshInstance3D = _cyl(display, "V32_ScopeFace", Vector3(0.40, 1.22, -0.275),
+        0.195, 0.022, Vector3.FORWARD, Color("#29454A") if live else FRAME, lod, 0.32)
+    _lit(scope, OPTIC, 0.08 if live else 0.0)
+    var needle: Node3D = _group(display, "V32_ScopePivot", Vector3(0.40, 1.22, -0.292))
+    var sweep: MeshInstance3D = _box(needle, "V32_ScopeSweep", Vector3(0, 0.081, 0),
+        Vector3(0.023, 0.162, 0.012), ui_tint, 0.003, 0.0)
+    _lit(sweep, ui_tint, 0.28 if live else 0.0)
+    # Twin communication modules mounted on the monitor housing.
+    for side in [-1, 1]:
+        var x: float = float(side) * 0.91
+        _box(instrument, "V32_RadioHousing_%d" % side, Vector3(x, 1.19, -0.21),
+            Vector3(0.22, 0.52, 0.18), GREY, 0.025)
+        _box(instrument, "V32_RadioFace_%d" % side, Vector3(x, 1.19, -0.315),
+            Vector3(0.16, 0.43, 0.04), FRAME, 0.012)
+        _cyl(instrument, "V32_RadioDial_%d" % side, Vector3(x, 1.10, -0.348),
+            0.055, 0.045, Vector3.FORWARD, ALLOY, lod)
+        var led: MeshInstance3D = _box(instrument, "V32_RadioLED_%d" % side,
+            Vector3(x, 1.31, -0.344), Vector3(0.080, 0.044, 0.018),
+            Color("#D5AE62") if live else FRAME, 0.004, 0.0)
+        _lit(led, Color("#E1B765"), 0.35 if live else 0.0)
+        if lod == 13:
+            for i in range(2):
+                _box(instrument, "V32_RadioSlot_%d_%d" % [side, i],
+                    Vector3(x, 1.22 + float(i) * 0.045, -0.342),
+                    Vector3(0.11, 0.016, 0.015), GREY, 0.003)
+    # Solid button banks sit on top of the existing desk.
+    for side in [-1, 1]:
+        var x: float = float(side) * 0.43
+        _box(instrument, "V32_ControlBank_%d" % side, Vector3(x, 1.025, -0.96),
+            Vector3(0.40, 0.06, 0.32), GREY, 0.018)
+        for i in range(3 if lod == 13 else 2):
+            _box(instrument, "V32_Key_%d_%d" % [side, i],
+                Vector3(x - 0.12 + float(i) * 0.12, 1.067, -1.00),
+                Vector3(0.085, 0.045, 0.11), accent if i == 0 else FRAME, 0.008)
+    _cyl(instrument, "V32_SelectorKnob", Vector3(0, 1.07, -0.97),
+        0.075, 0.11, Vector3.UP, ALLOY, lod)
+    _box(station, "V32_OperatorTread", Vector3(0, 0.07, -1.45),
+        Vector3(1.72, 0.14, 0.46), GASKET, 0.025, 0.10)
+    for side in [-1, 1]:
+        _box(station, "V32_TreadEdge_%d" % side, Vector3(float(side) * 0.79, 0.135, -1.45),
+            Vector3(0.11, 0.035, 0.38), accent, 0.008)
+    if live:
+        # Existing canopy becomes a raised, frame-supported enclosure.
+        var roof: MeshInstance3D = station.get_node("CubiertaControlMaciza") as MeshInstance3D
+        roof.position.y = 2.06
+        var visor: MeshInstance3D = station.get_node("ParasolFaccion") as MeshInstance3D
+        visor.position.y = 2.16
+        for side in [-1, 1]:
+            var support: MeshInstance3D = station.get_node("V3_CanopySupport_%d" % side) as MeshInstance3D
+            support.mesh = Solid.beveled(Vector3(0.12, 1.00, 0.13), 0.025)
+            support.position.y = 1.51
+            _box(station, "V32_RearCanopyPost_%d" % side, Vector3(float(side) * 1.04, 1.80, 0.67),
+                Vector3(0.13, 0.49, 0.13), FRAME, 0.025)
+            _box(station, "V32_CanopySideRail_%d" % side, Vector3(float(side) * 1.12, 2.10, 0.15),
+                Vector3(0.14, 0.16, 1.63), accent, 0.025)
+        for z in [-0.39, 0.30, 0.76]:
+            _box(station, "V32_CanopyRib_%d" % int(z * 100), Vector3(0, 2.15, z),
+                Vector3(2.18, 0.095, 0.13), GREY, 0.022)
+        _box(station, "V32_CanopyTopIdentity", Vector3(0, 2.155, 0.04),
+            Vector3(1.25, 0.035, 0.38), accent, 0.008)
+        _box(station, "V32_LampMount", Vector3(0, 1.96, -0.22),
+            Vector3(0.94, 0.12, 0.22), FRAME, 0.022)
+        var diffuser: MeshInstance3D = _box(station, "V32_LampDiffuser", Vector3(0, 1.887, -0.22),
+            Vector3(0.83, 0.045, 0.14), Color("#C4D9CE"), 0.008, 0.0)
+        _lit(diffuser, Color("#C4D9CE"), 0.48)
+        var light := OmniLight3D.new()
+        light.name = "V32_StationLight"
+        light.position = Vector3(0, 1.83, -0.29)
+        light.light_color = Color("#CCDED1")
+        light.light_energy = 0.38
+        light.omni_range = 1.65
+        light.shadow_enabled = false
+        light.visible = lod == 13
+        station.add_child(light)
+    else:
+        # Broken canopy remains on the deck, no functioning light.
+        _box(station, "V32_FallenCanopy", Vector3(-0.72, 0.18, -1.38),
+            Vector3(0.92, 0.16, 0.55), GREY, 0.045).rotation_degrees = Vector3(12.0, -22.0, 15.0)
+
+static func station_pose(root: Node3D, progress: float) -> bool:
+    if root == null or root.get_meta("recon_art_v3", 0) != 3 or int(root.get_meta("visual_damage", 0)) >= 2:
+        return false
+    var display: Node3D = root.get_node_or_null("EquipamientoDesplegable/" + BASE.CORE + "/V2_CentroControl/V32_InstrumentDeck/V32_Display") as Node3D
+    if display == null:
+        return false
+    var t: float = clampf(progress, 0.0, 1.0)
+    var scope: Node3D = display.get_node("V32_ScopePivot") as Node3D
+    scope.rotation_degrees.z = -360.0 * t
+    for child in display.get_children():
+        if str(child.name).begins_with("V32_Trace_"):
+            var index: int = int(str(child.name).get_slice("_", 2))
+            child.scale.x = 0.75 + 0.24 * sin(t * TAU + float(index) * 1.7)
+    var instrument: Node3D = display.get_parent() as Node3D
+    for side in [-1, 1]:
+        var led: MeshInstance3D = instrument.get_node("V32_RadioLED_%d" % side) as MeshInstance3D
+        var mat: StandardMaterial3D = led.material_override as StandardMaterial3D
+        mat.emission_energy_multiplier = 0.18 + 0.42 * (0.5 + 0.5 * sin(t * TAU * 2.0 + float(side)))
+    root.set_meta("recon_v32_station_phase", t)
+    return true
+
 static func _station(station: Node3D, accent: Color, lod: int, damage: int) -> void:
     _replace(station, "BancadaCerrada", 0.12, GREY, 0.43)
     _replace(station, "CarcasaBlindada", 0.13, FRAME, 0.52)
@@ -236,7 +367,7 @@ static func apply(root: Node3D, accent: Color, lod: int, damage: int) -> bool:
     if root == null or root.get_meta("camp_kind", "") != "reconocimiento":
         return false
     root.set_meta("recon_art_v3", 3)
-    root.set_meta("recon_art_revision", "3.1")
+    root.set_meta("recon_art_revision", "3.2")
     root.set_meta("recon_v3_art_only", true)
     _replace(root, "PlataformaDesmontable", 0.045, PANEL, 0.12)
     if damage == 3:
@@ -251,6 +382,7 @@ static func apply(root: Node3D, accent: Color, lod: int, damage: int) -> bool:
     var station: Node3D = core.get_node("V2_CentroControl") as Node3D
     var tower: Node3D = core.get_node("V2_TorreTripode") as Node3D
     _station(station, accent, lod, damage)
+    _station_v32(station, accent, lod, damage)
     if not _tower(tower, accent, lod, damage):
         return false
     # Low conduit from control housing to the rear leg; fixed wiring stays

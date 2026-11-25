@@ -1,9 +1,10 @@
 extends SceneTree
 
 # Offline Godot 4.3 regression for the genuine 3D reconnaissance camp.
-# Eight factions plus neutral x 2 LOD x 4 damage = 72 builds, 25 native images.
+# Eight factions plus neutral x 2 LOD x 4 damage = 72 builds, 27 native images.
 const Art = preload("res://scripts/ui/CampModels3DV1.gd")
 const Recon = preload("res://scripts/ui/CampReconFinishV2.gd")
+const ReconV3 = preload("res://scripts/ui/CampReconSculptV3.gd")
 const Style = preload("res://scripts/ui/VisualStyle.gd")
 const Roster = preload("res://scripts/ui/InfantryCampRosterV1.gd")
 const OUT := "res://build/qa/recon-camp-v3"
@@ -57,14 +58,30 @@ func _audit(faction: int, lod: int, damage: int) -> Node3D:
     if camp == null:
         return null
     audits += 1
-    check(camp.get_meta("recon_art_v3", 0) == 3 and camp.get_meta("recon_art_revision", "") == "3.1" and camp.get_meta("no_gameplay_effects", false), "V3.1 art only")
+    check(camp.get_meta("recon_art_v3", 0) == 3 and camp.get_meta("recon_art_revision", "") == "3.2" and camp.get_meta("no_gameplay_effects", false), "V3.2 art only")
     var core: Node3D = camp.get_node_or_null("EquipamientoDesplegable/" + Recon.CORE) as Node3D
     if damage == 3:
         check(core == null and camp.has_node("V3_ReconWreck"), "Closed wreck, no intact tower")
+        check(not ReconV3.station_pose(camp, 0.25), "D3 electronics cannot animate")
     else:
         check(core != null, "Actual tower and station")
         if core != null:
             check(core.has_node("V2_CentroControl/V3_RearHatch_1") and core.has_node("V31_StationTowerConduit"), "Detailed station and connected cable")
+            var station: Node3D = core.get_node("V2_CentroControl") as Node3D
+            var instrument: Node3D = station.get_node("V32_InstrumentDeck") as Node3D
+            check(instrument.has_node("V32_RadioHousing_1") and instrument.has_node("V32_Display/V32_ScopePivot"), "Physical comms and monitor")
+            var led: MeshInstance3D = instrument.get_node("V32_RadioLED_1") as MeshInstance3D
+            check((led.material_override as StandardMaterial3D).emission_enabled == (damage < 2), "D2 radio unpowered")
+            if damage < 2:
+                var fixture: OmniLight3D = station.get_node("V32_StationLight") as OmniLight3D
+                check(fixture.visible == (lod == 13) and station.has_node("V32_CanopyRib_30"), "Supported canopy and bounded mobile light")
+                check(ReconV3.station_pose(camp, 0.25), "Animated station")
+                var scope: Node3D = instrument.get_node("V32_Display/V32_ScopePivot") as Node3D
+                check(absf(scope.rotation_degrees.z + 90.0) < 0.01, "Physical animated scope")
+                check(ReconV3.station_pose(camp, 0.0), "Reset station")
+            else:
+                check(not station.has_node("V32_StationLight") and station.has_node("V32_FallenCanopy"), "Broken roof and no live light")
+                check(not ReconV3.station_pose(camp, 0.25), "D2 electronics cannot animate")
             var tower: Node3D = core.get_node("V2_TorreTripode") as Node3D
             check(tower.has_node("V3_FootSocket_-1_-1"), "Anchored supports")
             if damage < 2:
@@ -180,6 +197,16 @@ func _run() -> void:
                         await _shot(viewport, "recon_sensor_scan_left.png")
                         check(Recon.pose_scan(camp, 85.0), "Scan right")
                         await _shot(viewport, "recon_sensor_scan_right.png")
+                        camera.size = 4.7
+                        camera.position = Vector3(0.5, 3.2, -5.5)
+                        camera.look_at(Vector3(-1.55, 1.15, 1.0), Vector3.UP)
+                        ReconV3.station_pose(camp, 0.25)
+                        await _shot(viewport, "recon_v32_console_close.png")
+                        camera.position = Vector3(-7.0, 4.2, 6.4)
+                        camera.look_at(Vector3(-1.55, 1.1, 1.38), Vector3.UP)
+                        await _shot(viewport, "recon_v32_canopy_rear.png")
+                        ReconV3.station_pose(camp, 0.0)
+                        camera.size = 12.8
                     stage.remove_child(camp)
                 elif faction == 0 and lod == 13 and damage in [2, 3]:
                     stage.add_child(camp)
@@ -195,13 +222,13 @@ func _run() -> void:
                     stage.remove_child(camp)
                 camp.free()
     check(audits == 72, "72 model audits including neutral")
-    check(screenshots == 25,
-        "16 angles + 4 packed + 2 scans + 2 damage + 1 overhead")
+    check(screenshots == 27,
+        "25 existing views plus 2 station closeups")
     viewport.queue_free()
     await process_frame
     if failures > 0:
         printerr("FAIL RECON CAMP V3 NATIVE: %d issues" % failures)
         quit(1)
         return
-    print("PASS RECON CAMP V3 NATIVE: 72 audits, 25 PNGs")
+    print("PASS RECON CAMP V3 NATIVE: 72 audits, 27 PNGs")
     quit(0)

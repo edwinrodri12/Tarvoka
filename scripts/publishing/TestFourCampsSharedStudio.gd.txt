@@ -242,6 +242,10 @@ func _run() -> void:
             _check(camp.get_meta("recon_art_v3", 0) == 3, "Recon V3 default in same studio")
             var recon_finish: OptionButton = studio.get("camp_recon_finish") as OptionButton
             _check(recon_finish != null and recon_finish.visible, "Recon comparison picker")
+            studio.call("_camp_recon_frame", 0.25)
+            _check(absf(float(camp.get_meta("recon_v32_station_phase", 0.0)) - 0.25) < 0.01, "Console operates in the same viewport")
+            _check(absf(float(camp.get_meta("recon_v2_visual_scan_degrees", 0.0)) - 85.0) < 0.01, "Optics and console synchronized")
+            studio.call("_camp_stop_recon")
             studio.call("_camp_scan", 85.0)
             _check(absf(float(camp.get_meta("recon_v2_visual_scan_degrees", 0.0)) - 85.0) < 0.01, "Optics rotates in original viewport")
             studio.call("_camp_pose", 0.0)
