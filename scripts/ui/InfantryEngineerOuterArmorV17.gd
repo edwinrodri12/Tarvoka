@@ -480,11 +480,13 @@ static func _local_wear(model: Node3D,hero: bool) -> bool:
 static func surface_kind(label: String) -> String:
     if label in ["V9_VisorContinuoOpaco","V8_LenteProtegida"]:
         return "optic"
-    if label in [FRONT,"V9_CascoContinuoBiselado",
-            "V12_EscudoCentralBiseladoCerrado"]:
+    if label in [FRONT,INDUSTRIAL_LOWER,"V9_CascoContinuoBiselado",
+            "V12_EscudoCentralBiseladoCerrado"] or label.begins_with(INDUSTRIAL_SIDE[0]+"_"):
         return "ceramic"
-    if label.begins_with("V9_CierreNucaBajoCasco_"):
+    if label.begins_with("V9_CierreNucaBajoCasco_") or label.begins_with(INDUSTRIAL_SIDE[2]+"_"):
         return "metal"
+    if label.begins_with(INDUSTRIAL_SIDE[1]+"_"):
+        return "rubber"
     if label.begins_with("V7_SelloLateral_"):
         return "ceramic"
     if label=="V8_ViseraSuperiorSellada" or label.begins_with(
@@ -942,6 +944,58 @@ static func _sculpt_helmet_accessories(model: Node3D,hero: bool) -> bool:
                 return false
     return true
 
+# Refine the existing manufacturing seams, lower segmented plate and
+# fasteners. All pieces retain their original rig and faction materials.
+const INDUSTRIAL_LOWER: String="V11_CorazaAbdominalCurvaCerrada"
+const INDUSTRIAL_STRIP: String="V11_CintaColorEnPetoCurvo"
+const INDUSTRIAL_SIDE: Array[String]=["V11_CostillaFrontalCurva",
+    "V8_SelloLateralCoraza","V11_BrocheCinturonFijado"]
+
+static func industrial_labels(hero: bool) -> Array[String]:
+    var labels: Array[String]=[INDUSTRIAL_LOWER,INDUSTRIAL_STRIP]
+    for side in [-1,1]:
+        var suffix: String="_%d"%side
+        labels.append(INDUSTRIAL_SIDE[0]+suffix)
+        if hero:
+            labels.append(INDUSTRIAL_SIDE[1]+suffix)
+            labels.append(INDUSTRIAL_SIDE[2]+suffix)
+    return labels
+
+static func _sculpt_industrial(model: Node3D,hero: bool) -> bool:
+    var torso: Node3D=model.find_child("TorsoRig",true,false) as Node3D
+    if torso==null:
+        return false
+    for label in industrial_labels(hero):
+        var part: MeshInstance3D=_find(model,label)
+        if part==null or part.get_parent()!=torso:
+            return false
+        var mesh: ArrayMesh
+        var pos: Vector3=part.position
+        if label==INDUSTRIAL_LOWER:
+            # Narrower, tapered abdomen plate nests under the chest
+            # rather than forming an independent wide rounded slab.
+            mesh=_conformal_press(0.450,0.196,0.042,0.033,
+                0.013,0.046,hero)
+            pos=Vector3(0,-0.195,-0.456)
+        elif label==INDUSTRIAL_STRIP:
+            mesh=_conformal_press(0.236,0.038,0.018,0.010,
+                0.003,0.017,hero)
+            pos=Vector3(0,-0.239,-0.484)
+        elif label.begins_with(INDUSTRIAL_SIDE[0]+"_"):
+            # Slim ceramic edge rails trace the side of the main breastplate.
+            mesh=_strap_press(0.092,0.277,0.032,0.035,hero)
+            pos.x*=0.94
+            pos.z=-0.389
+        elif label.begins_with(INDUSTRIAL_SIDE[1]+"_"):
+            mesh=_strap_press(0.066,0.250,0.023,0.020,hero)
+            pos.x*=0.96
+        else:
+            # Cast belt fastener: solid back, defined bevel and face.
+            mesh=V13._rounded_press(0.060,0.075,0.042,0.012,0.005,hero)
+        if not _change(model,label,mesh,Vector3.ONE,pos):
+            return false
+    return true
+
 static func apply(model: Node3D, hero: bool) -> bool:
     if model==null or has_model(model) or not V16.has_model(model):
         return false
@@ -1167,6 +1221,8 @@ static func apply(model: Node3D, hero: bool) -> bool:
     if not _sculpt_contact_links(model,hero):
         return false
     if not _sculpt_harness(model,hero) or not _sculpt_dorsal(model,hero):
+        return false
+    if not _sculpt_industrial(model,hero):
         return false
     if not _local_wear(model,hero) or not _surface_finish(model,hero):
         return false

@@ -336,6 +336,32 @@ func _run() -> void:
                         V17.surface_kind(str(sole.name))=="rubber" and
                         (toe.transform*toe.mesh.get_aabb()).intersects(sole.transform*sole.mesh.get_aabb()),
                         "manufactured toe protection overlaps distinct rubber outsole")
+            # Audit physically closed industrial pieces on the original
+            # torso, retaining faction paint and old/new comparison data.
+            for label in V17.industrial_labels(lod==13):
+                var part: MeshInstance3D=model.find_child(label,true,false) as MeshInstance3D
+                check(part!=null and part.get_parent()==torso and
+                    part.has_meta(V17.OLD) and closed_outward(part.mesh) and
+                    part.material_override is StandardMaterial3D and
+                    (part.material_override as StandardMaterial3D).transparency==
+                        BaseMaterial3D.TRANSPARENCY_DISABLED,
+                    "closed fitted industrial armor detail "+label)
+                if part==null or not part.has_meta(V17.OLD):
+                    continue
+                var old: Dictionary=part.get_meta(V17.OLD)
+                check(part.mesh!=old["mesh"] and
+                    part.position.distance_to(old["position"])<0.06,
+                    "industrial component retained original attachment "+label)
+                if label==V17.INDUSTRIAL_STRIP:
+                    check(V17.surface_kind(label).is_empty() and
+                        not part.has_meta(V17.FINISH_NEW),
+                        "abdominal faction strip preserves its original paint")
+                    var abdominal: MeshInstance3D=model.find_child(
+                        V17.INDUSTRIAL_LOWER,true,false) as MeshInstance3D
+                    if abdominal!=null:
+                        check((part.transform*part.mesh.get_aabb()).intersects(
+                            abdominal.transform*abdominal.mesh.get_aabb()),
+                            "abdominal badge physically overlaps plate envelope")
             for label in V17.cloth_labels():
                 var cloth: MeshInstance3D=model.find_child(label,true,false) as MeshInstance3D
                 check(cloth!=null and cloth.has_meta(V17.OLD) and
@@ -750,8 +776,23 @@ func _run() -> void:
         var head_rig: Node3D=hero.find_child("CabezaRig",true,false) as Node3D
         check(head_rig!=null,"macro camera uses actual scaled head rig")
         if head_rig!=null:
-            var center: Vector3=head_rig.to_global(Vector3(0,0.31,0))
-            camera.size=0.85
+            # Fit to the union of all visible head and neck geometry.
+            # Including the low V12 neck seal fixes the six clipped corners
+            # found by the real previous native QA, without dropping checks.
+            var head_bounds: AABB=AABB()
+            var found_head: bool=false
+            for item in head_rig.find_children("*","MeshInstance3D",true,false):
+                var part: MeshInstance3D=item as MeshInstance3D
+                if not part.is_visible_in_tree() or part.mesh==null:
+                    continue
+                var world_box: AABB=part.global_transform*part.mesh.get_aabb()
+                head_bounds=head_bounds.merge(world_box) if found_head else world_box
+                found_head=true
+            check(found_head,"visible helmet and neck bounds found")
+            var center: Vector3=head_bounds.get_center()
+            # Bounding sphere conservatively encloses all corners for
+            # every macro view, with a margin for image edges.
+            camera.size=maxf(0.85,head_bounds.size.length()*1.15)
             for spec in [["front",Vector3(0,0.12,-3.0)],
                     ["side",Vector3(3.0,0.12,0)],
                     ["rear",Vector3(0,0.12,3.0)]]:
