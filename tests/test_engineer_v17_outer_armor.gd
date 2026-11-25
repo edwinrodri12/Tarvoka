@@ -287,6 +287,25 @@ func _run() -> void:
                     var outer_x: float=bounds.size.x*0.5*shoulder.scale.x
                     check(absf(absf(stripe.position.x)-outer_x)<0.035,
                         "shoulder stripe remains close to real exterior")
+                    # Both painted outward faces and buried attachment
+                    # backs must follow the actual faceted shell, not its AABB.
+                    var stripe_verts: PackedVector3Array=stripe.mesh.surface_get_arrays(0)[Mesh.ARRAY_VERTEX]
+                    var original: Dictionary=stripe.get_meta(V17.OLD)
+                    var old_mesh: Mesh=original["mesh"]
+                    var old_verts: PackedVector3Array=old_mesh.surface_get_arrays(0)[Mesh.ARRAY_VERTEX]
+                    check(stripe_verts.size()==old_verts.size() and closed_outward(stripe.mesh),
+                        "fitted faction shoulder strip retains solid original topology")
+                    var exterior_points: int=0
+                    for k in range(stripe_verts.size()):
+                        if float(side)*old_verts[k].x<0.016:
+                            continue
+                        var p: Vector3=stripe.transform*stripe_verts[k]
+                        var surface_x: float=V17.shoulder_surface_x(shoulder,p.y,p.z,side)
+                        var clearance: float=float(side)*(p.x-surface_x)
+                        check(is_finite(clearance) and clearance>0.010 and clearance<0.020,
+                            "painted shoulder strip stays outside armor at every exterior vertex")
+                        exterior_points+=1
+                    check(exterior_points>0,"actual outward shoulder strip vertices audited")
                     # The cap centers are mirrored, sloping toward the
                     # neck above and toward the biceps below.
                     var verts: PackedVector3Array=shoulder.mesh.surface_get_arrays(0)[Mesh.ARRAY_VERTEX]

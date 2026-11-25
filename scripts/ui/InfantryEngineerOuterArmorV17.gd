@@ -90,6 +90,63 @@ static func _place(model: Node3D, name: String,
         return false
     return _change(model,name,part.mesh,part.scale,new_position)
 
+# Sample the actual triangulated exterior in parent-arm coordinates.
+# This is not an AABB approximation: each painted strip follows the
+# asymmetric shoulder at its own height and depth.
+static func shoulder_surface_x(shell: MeshInstance3D,y: float,z: float,side: int) -> float:
+    var arrays: Array=shell.mesh.surface_get_arrays(0)
+    var verts: PackedVector3Array=arrays[Mesh.ARRAY_VERTEX]
+    var raw: Variant=arrays[Mesh.ARRAY_INDEX]
+    var indices: PackedInt32Array=raw if raw is PackedInt32Array else PackedInt32Array()
+    var count: int=indices.size() if not indices.is_empty() else verts.size()
+    var best: float=-INF
+    for i in range(0,count,3):
+        var a: Vector3=shell.transform*verts[indices[i] if not indices.is_empty() else i]
+        var b: Vector3=shell.transform*verts[indices[i+1] if not indices.is_empty() else i+1]
+        var c: Vector3=shell.transform*verts[indices[i+2] if not indices.is_empty() else i+2]
+        var by: float=b.y-a.y
+        var bz: float=b.z-a.z
+        var cy: float=c.y-a.y
+        var cz: float=c.z-a.z
+        var det: float=by*cz-bz*cy
+        if absf(det)<0.00000001:
+            continue
+        var u: float=((y-a.y)*cz-(z-a.z)*cy)/det
+        var v: float=(by*(z-a.z)-bz*(y-a.y))/det
+        if u>=-0.00001 and v>=-0.00001 and u+v<=1.00001:
+            best=maxf(best,float(side)*(a.x+u*(b.x-a.x)+v*(c.x-a.x)))
+    return float(side)*best
+
+static func _fitted_shoulder_stripe(stripe: MeshInstance3D,shell: MeshInstance3D,
+        side: int,center: Vector3) -> ArrayMesh:
+    var arrays: Array=stripe.mesh.surface_get_arrays(0)
+    var points: PackedVector3Array=arrays[Mesh.ARRAY_VERTEX]
+    var normals: PackedVector3Array=arrays[Mesh.ARRAY_NORMAL]
+    var samples: Dictionary={}
+    for i in range(points.size()):
+        var p: Vector3=points[i]
+        var n: Vector3=normals[i]
+        var yz:=Vector2(p.y+center.y,p.z+center.z)
+        if not samples.has(yz):
+            var x: float=shoulder_surface_x(shell,yz.x,yz.y,side)
+            var dy: float=(shoulder_surface_x(shell,yz.x+0.002,yz.y,side)-
+                shoulder_surface_x(shell,yz.x-0.002,yz.y,side))/0.004
+            var dz: float=(shoulder_surface_x(shell,yz.x,yz.y+0.002,side)-
+                shoulder_surface_x(shell,yz.x,yz.y-0.002,side))/0.004
+            if not is_finite(x) or not is_finite(dy) or not is_finite(dz):
+                return null
+            samples[yz]=Vector3(x,dy,dz)
+        var sample: Vector3=samples[yz]
+        p.x=p.x*0.45+sample.x-center.x+float(side)*0.006
+        points[i]=p
+        normals[i]=Vector3(n.x/0.45,n.y-sample.y*n.x/0.45,
+            n.z-sample.z*n.x/0.45).normalized()
+    arrays[Mesh.ARRAY_VERTEX]=points
+    arrays[Mesh.ARRAY_NORMAL]=normals
+    var result:=ArrayMesh.new()
+    result.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES,arrays)
+    return result
+
 # Bend an actual closed press around the face, keeping clockwise triangles
 # and transforming normals by the inverse transpose of the local shear.
 # The outer edges sweep toward +Z (back) rather than hovering over the face.
@@ -1438,8 +1495,10 @@ static func apply(model: Node3D, hero: bool) -> bool:
             "V8_FaccionHombrera"+suffix)
         if stripe==null or stripe.get_parent()!=arm:
             return false
-        if not _place(model,stripe.name,
-                Vector3(float(side)*0.249,-0.074,-0.091)):
+        var stripe_center:=Vector3(float(side)*0.249,-0.074,-0.091)
+        if not _change(model,stripe.name,
+                _fitted_shoulder_stripe(stripe,shoulder,side,stripe_center),
+                Vector3.ONE,stripe_center):
             return false
 
         # Existing elbow protector becomes a shaped hard-shell cap, fitted
