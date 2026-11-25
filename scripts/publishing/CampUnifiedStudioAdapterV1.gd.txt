@@ -19,7 +19,7 @@ const CAMP_LABELS := [
     "Campamento de Suministros · V4.5",
     "Campamento de Reconocimiento · V3.5",
     "Campamento Defensivo · V3.5",
-    "Campamento Médico · V3.3"
+    "Campamento Médico · V3.4"
 ]
 var camp_controls: VBoxContainer
 var camp_faction_picker: OptionButton
@@ -131,7 +131,7 @@ func _camp_create_controls() -> void:
     camp_controls.add_child(camp_defense_finish)
     camp_medical_finish = OptionButton.new()
     camp_medical_finish.name = "MedicoComparacionV2V3"
-    camp_medical_finish.add_item("Médico V3.3 · despliegue articulado")
+    camp_medical_finish.add_item("Médico V3.4 · daños y destrucción")
     camp_medical_finish.add_item("Médico V2 · comparación anterior")
     camp_medical_finish.select(0)
     camp_medical_finish.item_selected.connect(_camp_option_changed)
@@ -287,7 +287,7 @@ func _camp_display() -> void:
     camp_defense_actions.visible = camp_kind == "defensivo" and camp_defense_finish.selected == 0 and damage < 2
     camp_recon_actions.visible = camp_kind == "reconocimiento" and damage < 2
     camp_recon_operation.visible = camp_recon_finish.selected == 0
-    camp_damage_actions.visible = (camp_kind == "suministros" and camp_finish_picker.selected == 0) or (camp_kind == "reconocimiento" and camp_recon_finish.selected == 0) or (camp_kind == "defensivo" and camp_defense_finish.selected == 0)
+    camp_damage_actions.visible = (camp_kind == "suministros" and camp_finish_picker.selected == 0) or (camp_kind == "reconocimiento" and camp_recon_finish.selected == 0) or (camp_kind == "defensivo" and camp_defense_finish.selected == 0) or (camp_kind == "medico" and camp_medical_finish.selected == 0)
     camp_supply_actions.visible = camp_kind == "suministros" and camp_finish_picker.selected == 0 and damage < 2
     model_root = CampArt.build(camp_kind, faction, lod, damage, camp_finish_picker.selected == 0, camp_recon_finish.selected == 0, camp_defense_finish.selected == 0, camp_medical_finish.selected == 0)
     if model_root == null:
@@ -376,7 +376,7 @@ func _camp_medical_frame(value: float) -> void:
             _update_details()
 
 func _camp_medical_animate(target: float) -> void:
-    if not is_instance_valid(model_root) or _role != "camp_medico" or model_root.get_meta("medical_art_revision", "") != "3.3" or int(model_root.get_meta("visual_damage", 0)) >= 2:
+    if not is_instance_valid(model_root) or _role != "camp_medico" or model_root.get_meta("medical_art_revision", "") != "3.4" or int(model_root.get_meta("visual_damage", 0)) >= 2:
         return
     _camp_stop_medical()
     MedicalSculpt.inspect_interior(model_root, false)
@@ -451,7 +451,7 @@ func _camp_animate_service() -> void:
 func _camp_has_damage_fx() -> bool:
     if not is_instance_valid(model_root):
         return false
-    return (_role == "camp_suministros" and model_root.get_meta("suministros_art_v4", 0) == 4) or (_role == "camp_reconocimiento" and model_root.get_meta("recon_art_v3", 0) == 3) or (_role == "camp_defensivo" and model_root.get_meta("defense_art_v3", 0) == 3)
+    return (_role == "camp_suministros" and model_root.get_meta("suministros_art_v4", 0) == 4) or (_role == "camp_reconocimiento" and model_root.get_meta("recon_art_v3", 0) == 3) or (_role == "camp_defensivo" and model_root.get_meta("defense_art_v3", 0) == 3) or (_role == "camp_medico" and model_root.get_meta("medical_art_v3", 0) == 3)
 
 func _camp_stop_fx() -> void:
     _camp_fx_generation += 1
@@ -468,6 +468,8 @@ func _camp_fx_frame(kind: String, progress: float) -> void:
         ReconStation.damage_fx_pose(model_root, kind, progress)
     elif model_root != null and _role == "camp_defensivo":
         DefenseMotion.damage_fx_pose(model_root, kind, progress)
+    elif model_root != null and _role == "camp_medico":
+        MedicalSculpt.damage_fx_pose(model_root, kind, progress)
 
 func _camp_play_fx(kind: String) -> void:
     if not _camp_has_damage_fx():
