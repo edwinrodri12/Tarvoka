@@ -12,6 +12,7 @@ const SupplySculptV4 = preload("res://scripts/ui/CampSupplySculptV4.gd")
 const ReconFinishV2 = preload("res://scripts/ui/CampReconFinishV2.gd")
 const ReconSculptV3 = preload("res://scripts/ui/CampReconSculptV3.gd")
 const DefenseFinishV2 = preload("res://scripts/ui/CampDefenseFinishV2.gd")
+const DefenseSculptV3 = preload("res://scripts/ui/CampDefenseSculptV3.gd")
 const MedicalFinishV2 = preload("res://scripts/ui/CampMedicalFinishV2.gd")
 const CAMPS := ["suministros", "reconocimiento", "defensivo", "medico"]
 const BUILDERS := {
@@ -259,7 +260,7 @@ static func _weather_damage(parent: Node3D, stage: int, lod: int) -> void:
                 Vector3(0, float(i * 19), 8 if i % 2 == 0 else -8))
 
 static func build(kind: String, faction: int, lod: int = 13,
-        damage: int = 0, supply_v4: bool = true, recon_v3: bool = true) -> Node3D:
+        damage: int = 0, supply_v4: bool = true, recon_v3: bool = true, defense_v3: bool = true) -> Node3D:
     if not kind in CAMPS or faction < -1 or faction >= Style.FACTIONS.size():
         return null
     if lod not in [8, 13] or damage < 0 or damage > 3:
@@ -310,6 +311,9 @@ static func build(kind: String, faction: int, lod: int = 13,
         if not DefenseFinishV2.apply(root, accent, lod, damage):
             root.free()
             return null
+        if defense_v3 and not DefenseSculptV3.apply(root, accent, lod, damage):
+            root.free()
+            return null
     elif kind == "medico":
         if not MedicalFinishV2.apply(root, accent, lod, damage):
             root.free()
@@ -339,7 +343,7 @@ static func pose_deploy(root: Node3D, progress: float) -> bool:
     elif str(root.get_meta("camp_kind", "")) == "defensivo":
         deployable.visible = true
         deployable.scale = Vector3.ONE
-        if not DefenseFinishV2.pose(root, t):
+        if not DefenseFinishV2.pose(root, t) or not DefenseSculptV3.pose(root, t):
             return false
     elif str(root.get_meta("camp_kind", "")) == "medico":
         deployable.visible = true
