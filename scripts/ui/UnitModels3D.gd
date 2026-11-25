@@ -1044,7 +1044,62 @@ static func _destroyer_bridge(root: Node3D) -> void:
     _box(bridge,"ApoyoMastil",Vector3(0,1.55,0.28),
         Vector3(0.29,0.08,0.29),DARK)
 
-static func _destroyer(root: Node3D) -> void:
+# Fictional game-art deck modules; no weapon specifications or game rules.
+static func _destroyer_deck_equipment(root: Node3D, art_level: int) -> void:
+    var detail: bool = art_level >= 13
+    var sides: int = 20 if detail else 12
+    _cylinder(root,"BaseTorreProa",Vector3(0,0.845,-1.14),
+        0.30,0.10,DARK,Vector3.ZERO,sides)
+    _cylinder(root,"AnilloTorreProa",Vector3(0,0.916,-1.14),
+        0.27,0.065,STEEL,Vector3.ZERO,sides)
+    var turret := Node3D.new()
+    turret.name = "TorretaNavalPivot"
+    turret.position = Vector3(0,0.936,-1.14)
+    root.add_child(turret)
+    var shell: Array = [
+        [-0.24,0.16,-0.008,0.24],[-0.14,0.255,-0.008,0.34],
+        [0.15,0.255,-0.008,0.34],[0.23,0.16,-0.008,0.24]]
+    _destroyer_shell(turret,"CarcasaTorreta",shell,STEEL)
+    _box(turret,"FaccionTorreta",Vector3(0,0.342,0.055),
+        Vector3(0.28,0.038,0.19),ARMOR)
+    var pivot := Node3D.new()
+    pivot.name = "CanonNavalPivot"
+    pivot.position = Vector3(0,0.155,-0.21)
+    turret.add_child(pivot)
+    _box(pivot,"UnionVisual",Vector3(0,0,-0.025),
+        Vector3(0.19,0.17,0.16),DARK)
+    _cylinder(pivot,"CanonNaval",Vector3(0,0,-0.30),
+        0.068,0.52,METAL,Vector3(90,0,0),sides)
+    if detail:
+        for side in [-1,1]:
+            _box(turret,"PanelServicio_%d" % side,
+                Vector3(float(side)*0.219,0.16,0.055),
+                Vector3(0.038,0.13,0.18),ARMOR)
+    var deck := Node3D.new()
+    deck.name = "ModuloCubierta"
+    root.add_child(deck)
+    _box(deck,"ZocaloModulo",Vector3(0,0.825,-0.34),
+        Vector3(0.73,0.09,0.70),DARK)
+    _box(deck,"MarcoModulo",Vector3(0,0.887,-0.34),
+        Vector3(0.69,0.08,0.65),STEEL)
+    for x in range(4):
+        for z in range(3):
+            var pos := Vector3(-0.255+float(x)*0.17,0.937,-0.55+float(z)*0.20)
+            _box(deck,"TapaModulo_%d_%d" % [x,z],pos,
+                Vector3(0.145,0.035,0.175),DARK)
+            if detail:
+                _box(deck,"BisagraTapa_%d_%d" % [x,z],pos+Vector3(0,0.024,0.061),
+                    Vector3(0.10,0.027,0.035),ARMOR)
+    for side in [-1,1]:
+        var sign: float = float(side)
+        _box(root,"CajaServicioCubierta_%d" % side,
+            Vector3(sign*0.45,0.879,-0.48),
+            Vector3(0.15,0.16,0.31),STEEL)
+        _box(root,"TapaServicioCubierta_%d" % side,
+            Vector3(sign*0.45,0.97,-0.48),
+            Vector3(0.17,0.04,0.32),ARMOR)
+
+static func _destroyer(root: Node3D, art_level: int = 10) -> void:
     var stations: Array = [
         [-2.26,0.045,0.36,0.76],[-2.04,0.28,0.18,0.76],
         [-1.56,0.62,0.15,0.76],[-0.92,0.82,0.14,0.76],
@@ -1064,21 +1119,13 @@ static func _destroyer(root: Node3D) -> void:
         _box(root,"FaccionIdentidadNaval_%d" % side,
             Vector3(float(side)*0.775,0.76,0.02),
             Vector3(0.07,0.10,0.48),ARMOR)
-    root.set_meta("destroyer_art_revision","1.1")
+    root.set_meta("destroyer_art_revision","1.2")
     _destroyer_bridge(root)
     _box(root,"TorreMastil",Vector3(0,1.74,0.28),
         Vector3(0.17,0.81,0.18),DARK)
     _box(root,"Radar",Vector3(0,2.16,0.28),
         Vector3(0.82,0.20,0.13),ARMOR)
-    _cylinder(root,"BaseTorreProa",Vector3(0,0.91,-1.14),
-        0.25,0.20,DARK,Vector3.ZERO,10)
-    _cylinder(root,"CanonNaval",Vector3(0,0.96,-1.48),
-        0.07,0.95,METAL,Vector3(90,0,0),10)
-    for x in [-0.25,-0.08,0.08,0.25]:
-        for n in range(3):
-            _box(root,"VLS%.2f_%d" % [x,n],
-                Vector3(x,0.83,-0.27+float(n)*0.17),
-                Vector3(0.13,0.06,0.12),BLACK)
+    _destroyer_deck_equipment(root,art_level)
     for side in [-1,1]:
         _antenna(root,"RadarRadio%s" % side,
             Vector3(float(side)*0.29,1.45,0.50),0.47)
@@ -1212,7 +1259,7 @@ static func build(role: String, faction: int = -1, finish_enabled: bool = true, 
         "fighter":
             _fighter(model)
         "destroyer":
-            _destroyer(model)
+            _destroyer(model,art_level)
             apply_faction_palette(model,faction)
         "logistics_mobile":
             # G16 remains Studio visual-only. Tactical role logistics is
