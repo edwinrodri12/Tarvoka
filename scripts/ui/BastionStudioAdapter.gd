@@ -14,6 +14,7 @@ const EngineerSmoothV13 = preload("res://scripts/ui/InfantryEngineerSmoothV13.gd
 const EngineerContourV14 = preload("res://scripts/ui/InfantryEngineerContourV14.gd")
 const EngineerGearV15 = preload("res://scripts/ui/InfantryEngineerGearV15.gd")
 const EngineerSilhouetteV16 = preload("res://scripts/ui/InfantryEngineerSilhouetteV16.gd")
+const EngineerOuterV17 = preload("res://scripts/ui/InfantryEngineerOuterArmorV17.gd")
 const InfantryRoster = preload("res://scripts/ui/InfantryCampRosterV1.gd")
 const P06Visual = preload("res://scripts/ui/APCVisualRigV1.gd")
 const P06Finish = preload("res://scripts/ui/APCFinishV3.gd")
@@ -352,6 +353,31 @@ func _ready() -> void:
         role_picker.select(launch_index)
     _display_role(launch_role)
     _refresh_unified_studio_navigation()
+    if OS.has_feature("web") and launch_role=="infantry_engineer":
+        _engineer_web_entry_report.call_deferred()
+
+# Read-only evidence from the actual loaded Godot Web model. No external
+# input, remote callbacks, alternate geometry or scene manipulation.
+func _engineer_web_entry_report() -> void:
+    await get_tree().process_frame
+    if _role!="infantry_engineer" or model_root==null:
+        return
+    var visible_meshes: int=0
+    var transparent_meshes: Array[String]=[]
+    for item in model_root.find_children("*","MeshInstance3D",true,false):
+        var part: MeshInstance3D=item as MeshInstance3D
+        if not part.is_visible_in_tree() or part.mesh==null:
+            continue
+        visible_meshes+=1
+        for surface in range(part.mesh.get_surface_count()):
+            var mat: Material=part.get_active_material(surface)
+            if mat is StandardMaterial3D:
+                var pbr: StandardMaterial3D=mat as StandardMaterial3D
+                if pbr.transparency!=BaseMaterial3D.TRANSPARENCY_DISABLED or pbr.albedo_color.a<0.999:
+                    transparent_meshes.append(str(part.name))
+    var evidence: Dictionary={"role":_role,"edition":_infantry_review_edition(),
+        "visible_meshes":visible_meshes,"transparent_meshes":transparent_meshes}
+    JavaScriptBridge.eval("window.__tarvokaEngineerEntry="+JSON.stringify(evidence),true)
 
 func _studio_role_from_link_key(value:String) -> String:
     # Fixed allowlist: URL text never controls a scene or resource path.
@@ -362,6 +388,8 @@ func _studio_role_from_link_key(value:String) -> String:
             return "uav_recon"
         "a02", "fpv":
             return "fpv"
+        "g05", "ingeniero", "infantry_engineer":
+            return "infantry_engineer"
         _:
             return "apc"
 
@@ -530,6 +558,9 @@ func _install_unified_studio_navigation() -> void:
     _add_paired(infantry_360_panel,"V15 · silueta previa",
         func(): _engineer_v16_compare(false),
         "V16 · anatomía integral",func(): _engineer_v16_compare(true))
+    _add_paired(infantry_360_panel,"V16 · coraza anterior",
+        func(): _engineer_v17_compare(false),
+        "V17 · blindaje anatómico",func(): _engineer_v17_compare(true))
     _add_paired(infantry_360_panel,"LOD13 · detalle",func(): _infantry_review_lod(13),
         "LOD8 · vista táctica",func(): _infantry_review_lod(8))
     _add_paired(infantry_360_panel,"Cuerpo completo",func(): _infantry_review_focus(false),
@@ -1525,6 +1556,9 @@ func _infantry_review_edition() -> String:
         return "V1"
     if _role=="infantry_engineer" and model_root!=null:
         if EngineerDorsalV12.is_visible(model_root):
+            if EngineerOuterV17.has_model(model_root) and bool(
+                    model_root.get_meta("tarvoka_engineer_v17_visible",false)):
+                return "V17"
             if EngineerSilhouetteV16.has_model(model_root) and bool(
                     model_root.get_meta("tarvoka_engineer_v16_visible",false)):
                 return "V16"
@@ -1575,6 +1609,7 @@ func _engineer_v13_compare(smooth: bool) -> void:
         return
     if not EngineerDorsalV12.is_visible(model_root):
         EngineerDorsalV12.show_finish(model_root,true)
+    EngineerOuterV17.show_finish(model_root,false)
     EngineerSilhouetteV16.show_contours(model_root,false)
     # V14 snapshots are V13 meshes, so toggles must happen IN ORDER:
     # V14->V13->V12.3 when hiding; V12.3->V13 when showing.
@@ -1600,7 +1635,8 @@ func _engineer_v14_compare(refined: bool) -> void:
     if not EngineerDorsalV12.is_visible(model_root):
         EngineerDorsalV12.show_finish(model_root,true)
     EngineerSmoothV13.show_smoothing(model_root,true)
-    # Body V16 must be rolled back BEFORE comparing earlier versions.
+    # Roll back V17 exterior first, then V16 body before older comparisons.
+    EngineerOuterV17.show_finish(model_root,false)
     EngineerSilhouetteV16.show_contours(model_root,false)
     # Prevent the gear revision from leaking into a pure V13/V14 comparison.
     EngineerGearV15.show_finish(model_root,false)
@@ -1616,6 +1652,7 @@ func _engineer_v15_compare(refined: bool) -> void:
         return
     if not EngineerDorsalV12.is_visible(model_root):
         EngineerDorsalV12.show_finish(model_root,true)
+    EngineerOuterV17.show_finish(model_root,false)
     EngineerSilhouetteV16.show_contours(model_root,false)
     EngineerSmoothV13.show_smoothing(model_root,true)
     EngineerContourV14.show_contours(model_root,true)
@@ -1633,6 +1670,7 @@ func _engineer_v16_compare(refined: bool) -> void:
         return
     if not EngineerDorsalV12.is_visible(model_root):
         EngineerDorsalV12.show_finish(model_root,true)
+    EngineerOuterV17.show_finish(model_root,false)
     EngineerSmoothV13.show_smoothing(model_root,true)
     EngineerContourV14.show_contours(model_root,true)
     EngineerGearV15.show_finish(model_root,true)
@@ -1641,6 +1679,22 @@ func _engineer_v16_compare(refined: bool) -> void:
             "Ingeniero V16 · tronco, cintura y piernas con silueta anatómica"
             if refined else
             "Ingeniero V15 · proporciones originales de cuerpo")
+
+
+func _engineer_v17_compare(refined: bool) -> void:
+    if _role!="infantry_engineer" or model_root==null:
+        return
+    if not EngineerDorsalV12.is_visible(model_root):
+        EngineerDorsalV12.show_finish(model_root,true)
+    EngineerSmoothV13.show_smoothing(model_root,true)
+    EngineerContourV14.show_contours(model_root,true)
+    EngineerGearV15.show_finish(model_root,true)
+    EngineerSilhouetteV16.show_contours(model_root,true)
+    if EngineerOuterV17.show_finish(model_root,refined):
+        status_label.text=(
+            "Ingeniero V17 · coraza exterior y hombreras anatómicas cerradas"
+            if refined else
+            "Ingeniero V16 · coraza exterior anterior, mismo visor")
 
 
 func _infantry_review_look(yaw: float, perspective: String) -> void:

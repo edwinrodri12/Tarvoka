@@ -76,7 +76,7 @@ static func _crown(parent: Node3D, paint: Material, hero: bool) -> MeshInstance3
             var b0 := Vector3(cos(b)*lo.x,lo.y,sin(b)*lo.z+0.006)
             var a1 := Vector3(cos(a)*hi.x,hi.y,sin(a)*hi.z+0.006)
             var b1 := Vector3(cos(b)*hi.x,hi.y,sin(b)*hi.z+0.006)
-            for point in [a0,a1,b0,b0,a1,b1]:
+            for point in [a0,b0,a1,b0,b1,a1]:
                 build.add_vertex(point)
     var first: Vector3=rings[0]
     var last: Vector3=rings[-1]
@@ -87,8 +87,8 @@ static func _crown(parent: Node3D, paint: Material, hero: bool) -> MeshInstance3
         var low_b := Vector3(cos(b)*first.x,first.y,sin(b)*first.z+0.006)
         var high_a := Vector3(cos(a)*last.x,last.y,sin(a)*last.z+0.006)
         var high_b := Vector3(cos(b)*last.x,last.y,sin(b)*last.z+0.006)
-        for point in [Vector3(0,first.y,0.006),low_a,low_b,
-                Vector3(0,last.y,0.006),high_b,high_a]:
+        for point in [Vector3(0,first.y,0.006),low_b,low_a,
+                Vector3(0,last.y,0.006),high_a,high_b]:
             build.add_vertex(point)
     build.generate_normals()
     return _mesh(parent,HELMET,build.commit(),Vector3.ZERO,paint)

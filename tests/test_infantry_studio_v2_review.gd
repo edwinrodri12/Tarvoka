@@ -16,6 +16,7 @@ const SmoothV13=preload("res://scripts/ui/InfantryEngineerSmoothV13.gd")
 const ContourV14=preload("res://scripts/ui/InfantryEngineerContourV14.gd")
 const GearV15=preload("res://scripts/ui/InfantryEngineerGearV15.gd")
 const SilhouetteV16=preload("res://scripts/ui/InfantryEngineerSilhouetteV16.gd")
+const OuterV17=preload("res://scripts/ui/InfantryEngineerOuterArmorV17.gd")
 const UNITS := ["line","infantry_commando","infantry_sniper",
     "infantry_engineer","infantry_logistic","infantry_medic"]
 var errors: int=0
@@ -50,6 +51,22 @@ func _run() -> void:
     must(original_preview!=null,"same preview root exists")
     must(role_picker!=null and faction_picker!=null,
         "same role and faction selectors remain available")
+    # Regression: the public review URL previously fell back to Bastion,
+    # even though the same manual Engineer selector was working.
+    for key in ["ingeniero","g05","infantry_engineer"," INGENIERO "]:
+        must(str(studio.call("_studio_role_from_link_key",key))=="infantry_engineer",
+            "public Engineer review URL selects G05: "+key)
+    must(str(studio.call("_studio_role_from_link_key","g16"))=="logistics_mobile" and
+        str(studio.call("_studio_role_from_link_key","a01"))=="uav_recon" and
+        str(studio.call("_studio_role_from_link_key","unknown"))=="apc",
+        "existing safe public review routes and fallback preserved")
+    var entry_role: String=str(studio.call("_studio_role_from_link_key","ingeniero"))
+    studio.call("_display_role",entry_role)
+    await process_frame
+    var entry_model: Node3D=studio.get("model_root") as Node3D
+    must(entry_model!=null and OuterV17.has_model(entry_model) and
+        str(studio.call("_infantry_review_edition"))=="V17",
+        "public Engineer entry resolves to actual current V17 geometry")
     for role in UNITS:
         studio.call("_display_role",role)
         await process_frame
@@ -161,10 +178,26 @@ func _run() -> void:
             must(SmoothV13.has_model(final_soldier) and
                 ContourV14.has_model(final_soldier) and
                 GearV15.has_model(final_soldier) and
-                SilhouetteV16.has_model(final_soldier),
-                "V16 anatomical profile retains V15 equipment and sealed armor")
+                SilhouetteV16.has_model(final_soldier) and
+                OuterV17.has_model(final_soldier),
+                "V17 shell retains V16 closed core, V15 gear and factions")
+            must(str(studio.call("_infantry_review_edition"))=="V17",
+                "unified Studio identifies real current engineer V17")
+            var exterior: MeshInstance3D=final_soldier.find_child(
+                OuterV17.FRONT,true,false) as MeshInstance3D
+            var sculpted_shell: Mesh=(
+                exterior.mesh if exterior!=null else null)
+            studio.call("_engineer_v17_compare",false)
+            must(exterior!=null and exterior.mesh!=sculpted_shell
+                and str(studio.call("_infantry_review_edition"))=="V16",
+                "V16 original closed exterior restored on the SAME rig")
+            studio.call("_engineer_v17_compare",true)
+            must(exterior.mesh==sculpted_shell and
+                str(studio.call("_infantry_review_edition"))=="V17",
+                "real new V17 armor comes back on identical viewport")
+            studio.call("_engineer_v17_compare",false)
             must(str(studio.call("_infantry_review_edition"))=="V16",
-                "unified Studio identifies the real current engineer V16")
+                "previous revision comparison starts from real V16")
             var native_torso: MeshInstance3D=final_soldier.find_child(
                 SilhouetteV16.CORE,true,false) as MeshInstance3D
             var sculpted_torso: Mesh=(
@@ -247,6 +280,10 @@ func _run() -> void:
             must(str(studio.call("_infantry_review_edition"))=="V16"
                 and SilhouetteV16.has_model(final_soldier),
                 "restore complete V16 after all previous comparisons")
+            studio.call("_engineer_v17_compare",true)
+            must(str(studio.call("_infantry_review_edition"))=="V17"
+                and OuterV17.has_model(final_soldier),
+                "reapply actual V17 exterior after all legacy previews")
             var v11_belly: MeshInstance3D=final_soldier.find_child(
                 MechanicsV11.LOWER,true,false) as MeshInstance3D
             var v11_hinge_axle: Node3D=final_soldier.find_child(

@@ -74,19 +74,19 @@ static func _organic(parent: Node3D, label: String, pos: Vector3,
             var b: Vector3 = _ring_pt(rings[row],(i+1)%count,count)
             var c: Vector3 = _ring_pt(rings[row+1],i,count)
             var d: Vector3 = _ring_pt(rings[row+1],(i+1)%count,count)
-            # Ring vertices progress from bottom -> top and outward-facing.
-            for v in [a,c,b,b,c,d]:
+            # Godot front faces use clockwise winding viewed from outside.
+            for v in [a,b,c,b,d,c]:
                 tool.add_vertex(v)
     var low: Vector3 = Vector3(0,rings[0].y,0)
     var top: Vector3 = Vector3(0,rings[-1].y,0)
     for i in range(count):
         var lower: Vector3 = _ring_pt(rings[0],i,count)
         var lower_next: Vector3 = _ring_pt(rings[0],(i+1)%count,count)
-        for v in [low,lower,lower_next]:
+        for v in [low,lower_next,lower]:
             tool.add_vertex(v)
         var upper: Vector3 = _ring_pt(rings[-1],i,count)
         var upper_next: Vector3 = _ring_pt(rings[-1],(i+1)%count,count)
-        for v in [top,upper_next,upper]:
+        for v in [top,upper,upper_next]:
             tool.add_vertex(v)
     tool.generate_normals()
     var sculpt: ArrayMesh = tool.commit()
@@ -106,7 +106,7 @@ static func _plate(parent: Node3D, name: String, center: Vector3,
     st.begin(Mesh.PRIMITIVE_TRIANGLES)
     var layers: Array[Vector2] = [
         Vector2(1.0,depth*0.5),
-        Vector2(1.0,-depth*0.5+0.025),
+        Vector2(1.0,-depth*0.5+minf(0.025,depth*0.38)),
         Vector2(0.89,-depth*0.5)
     ]
     for k in range(layers.size()-1):
@@ -120,7 +120,7 @@ static func _plate(parent: Node3D, name: String, center: Vector3,
                 shape[i].y*h*layers[k+1].x,layers[k+1].y)
             var v3 := Vector3(shape[j].x*w*layers[k+1].x,
                 shape[j].y*h*layers[k+1].x,layers[k+1].y)
-            for vertex in [v0,v1,v2,v1,v3,v2]:
+            for vertex in [v0,v2,v1,v1,v2,v3]:
                 st.add_vertex(vertex)
     # Both caps cover the full silhouette and seal every side wall.
     for i in range(shape.size()):
@@ -129,11 +129,11 @@ static func _plate(parent: Node3D, name: String, center: Vector3,
         var b: Vector2=shape[j]
         for v in [
             Vector3(0,0,depth*0.5),
-            Vector3(b.x*w,b.y*h,depth*0.5),
             Vector3(a.x*w,a.y*h,depth*0.5),
+            Vector3(b.x*w,b.y*h,depth*0.5),
             Vector3(0,0,-depth*0.5),
-            Vector3(a.x*w*0.89,a.y*h*0.89,-depth*0.5),
-            Vector3(b.x*w*0.89,b.y*h*0.89,-depth*0.5)
+            Vector3(b.x*w*0.89,b.y*h*0.89,-depth*0.5),
+            Vector3(a.x*w*0.89,a.y*h*0.89,-depth*0.5)
         ]:
             st.add_vertex(v)
     st.generate_normals()

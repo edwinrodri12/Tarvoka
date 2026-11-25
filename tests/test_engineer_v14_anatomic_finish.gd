@@ -8,6 +8,7 @@ const V9=preload("res://scripts/ui/InfantryEngineerFinishV9.gd")
 const V12=preload("res://scripts/ui/InfantryEngineerDorsalV12.gd")
 const V13=preload("res://scripts/ui/InfantryEngineerSmoothV13.gd")
 const V14=preload("res://scripts/ui/InfantryEngineerContourV14.gd")
+const V17=preload("res://scripts/ui/InfantryEngineerOuterArmorV17.gd")
 const OUT: String="res://build/qa/engineer-v14"
 var errors: int=0
 var images: int=0
@@ -43,7 +44,8 @@ func closed_outward(mesh: Mesh) -> bool:
             var a: Vector3=verts[index[i] if index.size()>0 else i]
             var b: Vector3=verts[index[i+1] if index.size()>0 else i+1]
             var c: Vector3=verts[index[i+2] if index.size()>0 else i+2]
-            volume+=a.dot(b.cross(c))/6.0
+            # Godot clockwise front faces: negate conventional signed volume.
+            volume-=a.dot(b.cross(c))/6.0
             var t: Array[String]=[_key(a),_key(b),_key(c)]
             if t[0]==t[1] or t[1]==t[2] or t[2]==t[0]:
                 return false
@@ -147,6 +149,13 @@ func _run() -> void:
                     and neck_seal.scale.y>0.29,
                     "neck/helmet physically intersect: no floating gap")
                 arms.append(arm)
+            # V17 sculpts this same physical shoulder mesh after V14.
+            # Compare actual V13/V14 baseline first, then restore the
+            # V17 exterior. The V14 regression must not test V17's mesh
+            # against an obsolete V14 resource pointer.
+            check(V17.has_model(engineer) and
+                V17.show_finish(engineer,false),
+                "V17 reversible physical armor disabled for V14 A/B QA")
             var smoothed_shoulder: MeshInstance3D=engineer.find_child(
                 V14.SHOULDER+"_1",true,false) as MeshInstance3D
             var v14_mesh: Mesh=smoothed_shoulder.mesh
@@ -157,6 +166,9 @@ func _run() -> void:
                 smoothed_shoulder.mesh==v14_mesh and
                 count_meshes(engineer)==before_count,
                 "anatomical contour restored without extra draw calls")
+            check(V17.show_finish(engineer,true) and
+                bool(engineer.get_meta("tarvoka_engineer_v17_visible",false)),
+                "restore latest V17 after old V14 real model QA")
             var pivot: Node3D=engineer.find_child(
                 V6.RIG,true,false) as Node3D
             check(V6.pose(engineer,"inspect",1.0) and
@@ -198,6 +210,8 @@ func _run() -> void:
     check(art!=null and V14.has_model(art),"hero 3D QA view")
     if art!=null:
         view.add_child(art)
+        check(V17.show_finish(art,false),
+            "V14 photography isolates its real V14 armor from later V17")
         var views: Dictionary={
             "front":Vector3(0,2.2,-4.7),
             "left":Vector3(-4.1,2.25,-2.6),

@@ -10,13 +10,14 @@ const CampStyle = preload("res://scripts/ui/VisualStyle.gd")
 const ReconOptics = preload("res://scripts/ui/CampReconFinishV2.gd")
 const ReconStation = preload("res://scripts/ui/CampReconSculptV3.gd")
 const SupplyV43 = preload("res://scripts/ui/CampSupplySculptV4.gd")
+const DefenseMotion = preload("res://scripts/ui/CampDefenseSculptV3.gd")
 const CampRoster = preload("res://scripts/ui/InfantryCampRosterV1.gd")
 const FIRST_CAMP_INDEX: int = 7
 const CAMP_KEYS := ["suministros", "reconocimiento", "defensivo", "medico"]
 const CAMP_LABELS := [
     "Campamento de Suministros · V4.5",
     "Campamento de Reconocimiento · V3.5",
-    "Campamento Defensivo · V2",
+    "Campamento Defensivo · V3.5",
     "Campamento Médico · V2"
 ]
 var camp_controls: VBoxContainer
@@ -25,6 +26,9 @@ var camp_lod_picker: OptionButton
 var camp_damage_picker: OptionButton
 var camp_finish_picker: OptionButton
 var camp_recon_finish: OptionButton
+var camp_defense_finish: OptionButton
+var camp_defense_actions: VBoxContainer
+var _camp_defense_tween: Tween
 var camp_recon_actions: VBoxContainer
 var camp_recon_operation: Button
 var _camp_recon_tween: Tween
@@ -114,6 +118,18 @@ func _camp_create_controls() -> void:
     camp_recon_finish.select(0)
     camp_recon_finish.item_selected.connect(_camp_option_changed)
     camp_controls.add_child(camp_recon_finish)
+    camp_defense_finish = OptionButton.new()
+    camp_defense_finish.name = "DefensivoComparacionV2V3"
+    camp_defense_finish.add_item("Defensivo V3.5 · acabado integral")
+    camp_defense_finish.add_item("Defensivo V2 · comparación anterior")
+    camp_defense_finish.select(0)
+    camp_defense_finish.item_selected.connect(_camp_option_changed)
+    camp_controls.add_child(camp_defense_finish)
+    camp_defense_actions = VBoxContainer.new()
+    camp_defense_actions.name = "DefensivoDespliegueAnimado"
+    camp_controls.add_child(camp_defense_actions)
+    _add_paired(camp_defense_actions, "ANIMAR DESPLIEGUE", func(): _camp_defense_animate(1.0), "ANIMAR RECOGIDA", func(): _camp_defense_animate(0.0))
+    _button(camp_defense_actions, "DETENER DESPLIEGUE", _camp_stop_defense)
     camp_recon_actions = VBoxContainer.new()
     camp_controls.add_child(camp_recon_actions)
     _add_paired(camp_recon_actions, "ÓPTICA −85°", func(): _camp_scan(-85.0), "ÓPTICA +85°", func(): _camp_scan(85.0))
@@ -175,6 +191,7 @@ func _camp_hide_prior_controls() -> void:
         faction_picker.visible = false
 
 func _camp_restore_prior_controls() -> void:
+    _camp_stop_defense()
     _camp_stop_recon()
     _camp_stop_fx()
     _camp_stop_service()
@@ -226,6 +243,8 @@ func _camp_display() -> void:
     var previous_zoom: float = _zoom
     var previous_deploy: float = float(model_root.get_meta(
         "visual_deploy_progress", 1.0)) if same_camp else 1.0
+    var previous_defense_timeline: float = float(model_root.get_meta("defense_v33_timeline", -1.0)) if same_camp and camp_kind == "defensivo" else -1.0
+    _camp_stop_defense()
     _camp_stop_recon()
     _camp_stop_fx()
     _camp_stop_service()
@@ -241,11 +260,13 @@ func _camp_display() -> void:
     var damage: int = camp_damage_picker.selected
     camp_finish_picker.visible = camp_kind == "suministros"
     camp_recon_finish.visible = camp_kind == "reconocimiento"
+    camp_defense_finish.visible = camp_kind == "defensivo"
+    camp_defense_actions.visible = camp_kind == "defensivo" and camp_defense_finish.selected == 0 and damage < 2
     camp_recon_actions.visible = camp_kind == "reconocimiento" and damage < 2
     camp_recon_operation.visible = camp_recon_finish.selected == 0
-    camp_damage_actions.visible = (camp_kind == "suministros" and camp_finish_picker.selected == 0) or (camp_kind == "reconocimiento" and camp_recon_finish.selected == 0)
+    camp_damage_actions.visible = (camp_kind == "suministros" and camp_finish_picker.selected == 0) or (camp_kind == "reconocimiento" and camp_recon_finish.selected == 0) or (camp_kind == "defensivo" and camp_defense_finish.selected == 0)
     camp_supply_actions.visible = camp_kind == "suministros" and camp_finish_picker.selected == 0 and damage < 2
-    model_root = CampArt.build(camp_kind, faction, lod, damage, camp_finish_picker.selected == 0, camp_recon_finish.selected == 0)
+    model_root = CampArt.build(camp_kind, faction, lod, damage, camp_finish_picker.selected == 0, camp_recon_finish.selected == 0, camp_defense_finish.selected == 0)
     if model_root == null:
         push_error("CAMP STUDIO: cannot assemble actual camp " + camp_kind)
         camp_status.text = "ERROR: modelo nativo no disponible"
@@ -258,6 +279,8 @@ func _camp_display() -> void:
     model_root.rotation_degrees.y = _yaw
     if same_camp and not CampArt.pose_deploy(model_root, previous_deploy):
         push_error("CAMP STUDIO: cannot restore current deployment state")
+    if same_camp and camp_kind == "defensivo" and damage < 2 and camp_defense_finish.selected == 0 and previous_defense_timeline >= 0.0:
+        DefenseMotion.deployment_frame(model_root, previous_defense_timeline)
     if previous_interior and damage < 2 and camp_kind == "suministros" and camp_finish_picker.selected == 0:
         SupplyV43.inspect_interior(model_root, true)
     if same_camp and damage < 2 and camp_kind == "reconocimiento":
@@ -296,9 +319,31 @@ func _camp_recon_operate() -> void:
     _camp_recon_tween = create_tween()
     _camp_recon_tween.tween_method(_camp_recon_frame, 0.0, 1.0, 3.2)
 
+func _camp_stop_defense() -> void:
+    if _camp_defense_tween != null and _camp_defense_tween.is_valid():
+        _camp_defense_tween.kill()
+    _camp_defense_tween = null
+
+func _camp_defense_frame(value: float) -> void:
+    if is_instance_valid(model_root) and _role == "camp_defensivo":
+        if DefenseMotion.deployment_frame(model_root, value):
+            _update_details()
+
+func _camp_defense_animate(target: float) -> void:
+    if not is_instance_valid(model_root) or _role != "camp_defensivo" or model_root.get_meta("defense_art_v3", 0) != 3 or int(model_root.get_meta("visual_damage", 0)) >= 2:
+        return
+    _camp_stop_fx()
+    _camp_stop_defense()
+    var start: float = float(model_root.get_meta("defense_v33_timeline", 1.0))
+    if absf(target - start) < 0.001:
+        return
+    _camp_defense_tween = create_tween()
+    _camp_defense_tween.tween_method(_camp_defense_frame, start, target, maxf(0.12, absf(target - start) * 3.2))
+
 func _camp_pose(progress: float) -> void:
     if model_root == null or not _role.begins_with("camp_"):
         return
+    _camp_stop_defense()
     _camp_stop_recon()
     _camp_stop_fx()
     _camp_stop_service()
@@ -342,7 +387,7 @@ func _camp_animate_service() -> void:
 func _camp_has_damage_fx() -> bool:
     if not is_instance_valid(model_root):
         return false
-    return (_role == "camp_suministros" and model_root.get_meta("suministros_art_v4", 0) == 4) or (_role == "camp_reconocimiento" and model_root.get_meta("recon_art_v3", 0) == 3)
+    return (_role == "camp_suministros" and model_root.get_meta("suministros_art_v4", 0) == 4) or (_role == "camp_reconocimiento" and model_root.get_meta("recon_art_v3", 0) == 3) or (_role == "camp_defensivo" and model_root.get_meta("defense_art_v3", 0) == 3)
 
 func _camp_stop_fx() -> void:
     _camp_fx_generation += 1
@@ -357,12 +402,15 @@ func _camp_fx_frame(kind: String, progress: float) -> void:
         SupplyV43.damage_fx_pose(model_root, kind, progress)
     elif model_root != null and _role == "camp_reconocimiento":
         ReconStation.damage_fx_pose(model_root, kind, progress)
+    elif model_root != null and _role == "camp_defensivo":
+        DefenseMotion.damage_fx_pose(model_root, kind, progress)
 
 func _camp_play_fx(kind: String) -> void:
     if not _camp_has_damage_fx():
         return
     if kind in ["bullet", "blast"] and int(model_root.get_meta("visual_damage", 0)) == 3:
         return
+    _camp_stop_defense()
     _camp_stop_recon()
     _camp_stop_service()
     _camp_stop_fx()
@@ -377,6 +425,7 @@ func _camp_destroy_sequence() -> void:
         return
     if int(model_root.get_meta("visual_damage", 0)) >= 3:
         return
+    _camp_stop_defense()
     _camp_stop_recon()
     _camp_stop_service()
     _camp_stop_fx()
@@ -435,7 +484,7 @@ func _update_details() -> void:
         if camp_status != null:
             camp_status.text = ("MODELO 3D REAL · %s · %s · LOD%d · D%d · %s"
                 % [camp_kind.capitalize(), faction_name, lod, damage,
-                    "Desplegado" if progress >= 0.99 else "Recogido"])
+                    "Desplegado" if progress >= 0.99 else ("Recogido" if progress <= 0.01 else "En transición")])
         if detail_label != null:
             detail_label.text = "Campamento temporal · constructor " + builder
         if status_label != null:

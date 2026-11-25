@@ -91,9 +91,9 @@ static func _pressed_plate(parent: Node3D, name: String, at: Vector3,
         var br := Vector3(b.x,b.y,rear_z)
         # Closed front, back and all perimeter sides.
         for point in [
-            Vector3(0,0,front_z-bulge),bf,af,
-            Vector3(0,0,rear_z),ar,br,
-            af,bf,br,af,br,ar
+            Vector3(0,0,front_z-bulge),af,bf,
+            Vector3(0,0,rear_z),br,ar,
+            af,br,bf,af,ar,br
         ]:
             tool.add_vertex(point)
     tool.generate_normals()
