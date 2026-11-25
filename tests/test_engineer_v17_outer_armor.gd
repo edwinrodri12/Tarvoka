@@ -237,8 +237,22 @@ func _run() -> void:
                     "closed conformal helmet identity remains faction painted "+badge_name)
                 if badge!=null:
                     if badge_name=="V7_IdentidadCascoPosterior":
-                        check(badge.position.z<0.35 and badge.position.y<0.41,
-                            "rear badge no longer projects past helmet shell")
+                        var data: Array=badge.mesh.surface_get_arrays(0)
+                        var verts: PackedVector3Array=data[Mesh.ARRAY_VERTEX]
+                        var norms: PackedVector3Array=data[Mesh.ARRAY_NORMAL]
+                        var exterior: int=0
+                        var embedded: int=0
+                        var valid_fit: bool=true
+                        for i in range(verts.size()):
+                            var p: Vector3=badge.transform*verts[i]
+                            var offset: float=p.z-V17.rear_shell_z(p.x,p.y)
+                            if offset<0.0:
+                                embedded+=1
+                            if norms[i].z>0.65:
+                                exterior+=1
+                                valid_fit=valid_fit and offset>0.003 and offset<0.030
+                        check(exterior>0 and embedded>0 and valid_fit,
+                            "rear badge exterior follows helmet curvature while underside stays anchored")
                     else:
                         check(badge.mesh.get_aabb().size.x<0.25,
                             "crown badge follows narrowed helmet crown")
@@ -704,19 +718,40 @@ func _run() -> void:
         Models.restore_model_pose("infantry_engineer",hero)
         # Dedicated helmet camera framing makes side fittings inspectable,
         # instead of relying on the low pixel count in full-body previews.
-        camera.size=0.95
-        for spec in [["front",Vector3(0,2.40,-3.0)],
-                ["side",Vector3(3.0,2.40,0)],
-                ["rear",Vector3(0,2.40,3.0)]]:
-            camera.position=spec[1]
-            camera.look_at(Vector3(0,2.28,0),Vector3.UP)
-            await snapshot(viewport,"v17_helmet_"+str(spec[0]))
+        var head_rig: Node3D=hero.find_child("CabezaRig",true,false) as Node3D
+        check(head_rig!=null,"macro camera uses actual scaled head rig")
+        if head_rig!=null:
+            var center: Vector3=head_rig.to_global(Vector3(0,0.31,0))
+            camera.size=0.85
+            for spec in [["front",Vector3(0,0.12,-3.0)],
+                    ["side",Vector3(3.0,0.12,0)],
+                    ["rear",Vector3(0,0.12,3.0)]]:
+                camera.position=center+Vector3(spec[1])
+                camera.look_at(center,Vector3.UP)
+                for item in head_rig.find_children("*","MeshInstance3D",true,false):
+                    var part: MeshInstance3D=item as MeshInstance3D
+                    if not part.is_visible_in_tree() or part.mesh==null:
+                        continue
+                    var bounds: AABB=part.mesh.get_aabb()
+                    for corner in range(8):
+                        var pixel: Vector2=camera.unproject_position(part.to_global(bounds.get_endpoint(corner)))
+                        check(pixel.x>=5 and pixel.x<=float(viewport.size.x)-5 and
+                            pixel.y>=5 and pixel.y<=float(viewport.size.y)-5,
+                            "macro frame includes visible helmet geometry "+str(part.name))
+                await snapshot(viewport,"v17_helmet_"+str(spec[0]))
+        camera.size=2.75
+        camera.position=Vector3(3.1,2.0,3.6)
+        camera.look_at(Vector3(0,1.12,0.2),Vector3.UP)
+        for phase in [0.0,0.5,1.0]:
+            check(V6.pose(hero,"inspect",phase),"actual shield inspection phase")
+            await snapshot(viewport,"v17_shield_"+str(roundi(phase*100)))
+        V6.reset(hero)
         hero.queue_free()
         await process_frame
-    check(photos==19,"ten comparison PNGs, six poses and three helmet macro views")
+    check(photos==22,"ten comparison PNGs, six poses, three helmet macros and three shield phases")
     if failed>0:
         push_error("FAIL ENGINEER V17: %d violations"%failed)
         quit(1)
     else:
-        print("PASS ENGINEER V17: 8 factions x 2 LOD, closed hard-surface chest, shoulder, knees, boots; 10 real 3D comparison images and 6 native animated poses")
+        print("PASS ENGINEER V17: 8 factions x 2 LOD, closed hard-surface chest, shoulder, knees, boots; 22 native comparison, pose, helmet and shield renders")
         quit(0)

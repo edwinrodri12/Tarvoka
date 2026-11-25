@@ -116,6 +116,37 @@ static func _conformal_press(w: float,h: float,d: float,r: float,
         out.add_vertex(p)
     return out.commit()
 
+# Fit the rear faction badge to the actual V7 ellipsoidal helmet
+# surface in both axes. The previous x-only curvature left its lower
+# edge buried in the shell and produced a visibly broken cyan stripe.
+static func rear_shell_z(x: float,y: float) -> float:
+    return 0.177+0.195*sqrt(maxf(0.0001,
+        1.0-pow(x/0.24,2.0)-pow((y-0.26)/0.25,2.0)))
+
+static func _rear_badge_mesh(hero: bool) -> ArrayMesh:
+    var base: ArrayMesh=V13._rounded_press(0.270,0.065,0.020,0.018,0.004,hero)
+    var arrays: Array=base.surface_get_arrays(0)
+    var points: PackedVector3Array=arrays[Mesh.ARRAY_VERTEX]
+    var normals: PackedVector3Array=arrays[Mesh.ARRAY_NORMAL]
+    var raw: Variant=arrays[Mesh.ARRAY_INDEX]
+    var indices: PackedInt32Array=raw if raw is PackedInt32Array else PackedInt32Array()
+    var count: int=indices.size() if not indices.is_empty() else points.size()
+    var out:=SurfaceTool.new()
+    out.begin(Mesh.PRIMITIVE_TRIANGLES)
+    for i in range(count):
+        var ix: int=indices[i] if not indices.is_empty() else i
+        var p: Vector3=points[ix]
+        var n: Vector3=normals[ix]
+        var y: float=p.y+0.390
+        var radicand: float=maxf(0.0001,1.0-pow(p.x/0.24,2.0)-pow((y-0.26)/0.25,2.0))
+        var root: float=sqrt(radicand)
+        var dx: float=-0.195*p.x/(0.24*0.24*root)
+        var dy: float=-0.195*(y-0.26)/(0.25*0.25*root)
+        p.z+=rear_shell_z(p.x,y)-rear_shell_z(0,0.390)
+        out.set_normal(Vector3(n.x-dx*n.z,n.y-dy*n.z,n.z).normalized())
+        out.add_vertex(p)
+    return out.commit()
+
 # Existing gloves use their weapon/tool rig as parent. Preserve the
 # contact centres and all V9 visibility switching, changing meshes only.
 static func _sculpt_hands(model: Node3D, hero: bool) -> bool:
@@ -952,9 +983,8 @@ static func apply(model: Node3D, hero: bool) -> bool:
     var rear_badge: MeshInstance3D=_find(model,"V7_IdentidadCascoPosterior")
     if rear_badge==null or rear_badge.get_parent()!=head:
         return false
-    if not _change(model,rear_badge.name,_conformal_press(
-            0.270,0.065,0.020,0.018,0.004,-0.038,hero),
-            Vector3.ONE,Vector3(0,0.390,0.341)):
+    if not _change(model,rear_badge.name,_rear_badge_mesh(hero),
+            Vector3.ONE,Vector3(0,0.390,rear_shell_z(0,0.390)+0.006)):
         return false
     # The V2 crown marker also remains a separate slab; follow the
     # curved helmet cap, keeping the same faction material.
