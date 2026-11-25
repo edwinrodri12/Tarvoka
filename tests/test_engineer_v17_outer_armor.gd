@@ -257,6 +257,23 @@ func _run() -> void:
                     else:
                         check(badge.mesh.get_aabb().size.x<0.25,
                             "crown badge follows narrowed helmet crown")
+                        var crown: MeshInstance3D=model.find_child(
+                            "V9_CascoContinuoBiselado",true,false) as MeshInstance3D
+                        check(crown!=null and closed_outward(badge.mesh),
+                            "crown marker is a closed plate on real helmet")
+                        if crown!=null:
+                            var points: PackedVector3Array=badge.mesh.surface_get_arrays(0)[Mesh.ARRAY_VERTEX]
+                            var normal: PackedVector3Array=badge.mesh.surface_get_arrays(0)[Mesh.ARRAY_NORMAL]
+                            var sampled: int=0
+                            for k in range(points.size()):
+                                if normal[k].z> -0.50:
+                                    continue
+                                var p: Vector3=badge.transform*points[k]
+                                var gap: float=V17.knee_surface_z(crown,p.x,p.y)-p.z
+                                check(is_finite(gap) and gap>0.004 and gap<0.025,
+                                    "crown paint remains proud of exact helmet triangles")
+                                sampled+=1
+                            check(sampled>0,"crown front samples actually inspected")
             for side in [-1,1]:
                 var suffix: String="_%d"%side
                 var arm: Node3D=model.find_child(

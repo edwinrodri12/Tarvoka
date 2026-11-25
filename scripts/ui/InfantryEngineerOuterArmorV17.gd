@@ -160,8 +160,9 @@ static func knee_surface_z(shell: MeshInstance3D,x: float,y: float) -> float:
 # Tactical knee marker used to be a flat box floating across a curved
 # pad. Use a small closed, contoured plate with actual sampled front
 # depth, keeping the original leg anchor and faction material.
-static func _fitted_knee_marker(shell: MeshInstance3D,center: Vector3) -> ArrayMesh:
-    var base: ArrayMesh=V13._rounded_press(0.190,0.076,0.018,0.012,0.002,false)
+static func _fitted_knee_marker(shell: MeshInstance3D,center: Vector3,
+        width: float=0.190,height: float=0.076,hero: bool=false) -> ArrayMesh:
+    var base: ArrayMesh=V13._rounded_press(width,height,0.018,0.012,0.002,hero)
     var arrays: Array=base.surface_get_arrays(0)
     var points: PackedVector3Array=arrays[Mesh.ARRAY_VERTEX]
     var normals: PackedVector3Array=arrays[Mesh.ARRAY_NORMAL]
@@ -1493,9 +1494,15 @@ static func apply(model: Node3D, hero: bool) -> bool:
     var crown_badge: MeshInstance3D=_find(model,"V2_FaccionCasco")
     if crown_badge==null or crown_badge.get_parent()!=head:
         return false
-    if not _change(model,crown_badge.name,_conformal_press(
-            0.240,0.064,0.022,0.017,0.004,0.032,hero),
-            Vector3.ONE,Vector3(0,0.548,-0.222)):
+    var helmet_shell: MeshInstance3D=_find(model,"V9_CascoContinuoBiselado")
+    if helmet_shell==null or helmet_shell.get_parent()!=head:
+        return false
+    var crown_center:=Vector3(0,0.558,-0.222)
+    # Conform to the actual V9 crown triangles, including both slopes.
+    # The visible face stays proud of the shell and the underside overlaps.
+    if not _change(model,crown_badge.name,
+            _fitted_knee_marker(helmet_shell,crown_center,0.218,0.058,hero),
+            Vector3.ONE,crown_center):
         return false
 
     if not _sculpt_helmet_accessories(model,hero):
