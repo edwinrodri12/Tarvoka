@@ -68,13 +68,16 @@ func _audit(faction: int, lod: int, damage: int) -> Node3D:
     if camp == null:
         return null
     audits += 1
-    check(camp.get_meta("defense_art_v3", 0) == 3 and camp.get_meta("defense_art_revision", "") == "3.4" and camp.get_meta("no_gameplay_effects", false), "V3.4 visual only")
+    check(camp.get_meta("defense_art_v3", 0) == 3 and camp.get_meta("defense_art_revision", "") == "3.5" and camp.get_meta("no_gameplay_effects", false), "V3.5 visual only")
     check(camp.get_meta("builder_role", "") == "infantry_engineer", "Engineer identity")
     var core: Node3D = camp.get_node_or_null("EquipamientoDesplegable/" + Defense.CORE) as Node3D
     if damage == 3:
         check(core == null and camp.has_node("V3_DefenseWreck"), "No intact fort in D3")
         check(not Motion.deployment_frame(camp, 0.5), "D3 cannot animate deployment")
         check(camp.has_node("V3_DefenseWreck/V34_CollapsedRearWall") and camp.has_node("V3_DefenseWreck/V34_CrumpledArmor_1"), "Recognizable collapsed structure")
+        for side in [-1, 1]:
+            var skin: MeshInstance3D = camp.get_node("V3_DefenseWreck/V34_CrumpledArmor_%d/V35_ConformalFactionSkin" % side) as MeshInstance3D
+            check(skin.get_meta("conformal_panel", false) and _closed(skin.mesh) and skin.position == Vector3.ZERO, "Closed paint skin attached to wreck")
     else:
         check(core != null, "Fort present")
         if core != null:
@@ -99,6 +102,9 @@ func _audit(faction: int, lod: int, damage: int) -> Node3D:
             check(left.has_node("V34_ArmorScars") == (damage >= 1), "Persistent panel-local scuffs")
             if damage == 2:
                 check(core.get_node("V2_SeccionBarreraCaida").get_meta("defense_v34_buckled", false) and core.has_node("V34_BrokenSupport") and core.has_node("V34_DisplacedSandbag_0"), "Physical D2 damage")
+                var skin: MeshInstance3D = core.get_node("V2_SeccionBarreraCaida/V35_ConformalFactionSkin") as MeshInstance3D
+                check(skin != null and _closed(skin.mesh) and skin.position == Vector3.ZERO, "Conformal damaged armor color")
+                check(not (core.get_node("V2_FragmentoFaccionCaido") as Node3D).visible, "Old floating paint removed")
             var brace: Node3D = core.get_node("V31_Brace_-1_91") as Node3D
             check(brace.has_node("Middle") and brace.has_node("Shaft"), "Three-stage physical support")
             var original: Vector3 = left.position
@@ -147,6 +153,12 @@ func _audit(faction: int, lod: int, damage: int) -> Node3D:
     else:
         check(not Motion.damage_fx_pose(camp, "blast", 0.25), "Destroyed camp cannot be struck again")
     check(int(camp.get_meta("visual_damage", -1)) == damage, "Visual effects do not change damage")
+    if damage == 1:
+        Motion.damage_fx_pose(camp, "idle", 0.34)
+        var puff: Node3D = fx.get_node("Smoke/Puff_0") as Node3D
+        var deployed: Vector3 = puff.position
+        check(CampPose(camp, 0.0) and puff.position.distance_to(deployed) > 0.15, "Persistent smoke follows physical wall")
+        check(CampPose(camp, 1.0) and puff.position.distance_to(deployed) < 0.001, "Smoke restores with wall")
     Motion.damage_fx_pose(camp, "idle", 0.34)
     var parts: Array[MeshInstance3D] = []
     _meshes(camp, parts)

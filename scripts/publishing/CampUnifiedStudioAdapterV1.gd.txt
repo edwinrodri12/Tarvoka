@@ -17,7 +17,7 @@ const CAMP_KEYS := ["suministros", "reconocimiento", "defensivo", "medico"]
 const CAMP_LABELS := [
     "Campamento de Suministros · V4.5",
     "Campamento de Reconocimiento · V3.5",
-    "Campamento Defensivo · V3.4",
+    "Campamento Defensivo · V3.5",
     "Campamento Médico · V2"
 ]
 var camp_controls: VBoxContainer
@@ -120,7 +120,7 @@ func _camp_create_controls() -> void:
     camp_controls.add_child(camp_recon_finish)
     camp_defense_finish = OptionButton.new()
     camp_defense_finish.name = "DefensivoComparacionV2V3"
-    camp_defense_finish.add_item("Defensivo V3.4 · impactos y destrucción")
+    camp_defense_finish.add_item("Defensivo V3.5 · acabado integral")
     camp_defense_finish.add_item("Defensivo V2 · comparación anterior")
     camp_defense_finish.select(0)
     camp_defense_finish.item_selected.connect(_camp_option_changed)
@@ -243,6 +243,7 @@ func _camp_display() -> void:
     var previous_zoom: float = _zoom
     var previous_deploy: float = float(model_root.get_meta(
         "visual_deploy_progress", 1.0)) if same_camp else 1.0
+    var previous_defense_timeline: float = float(model_root.get_meta("defense_v33_timeline", -1.0)) if same_camp and camp_kind == "defensivo" else -1.0
     _camp_stop_defense()
     _camp_stop_recon()
     _camp_stop_fx()
@@ -278,6 +279,8 @@ func _camp_display() -> void:
     model_root.rotation_degrees.y = _yaw
     if same_camp and not CampArt.pose_deploy(model_root, previous_deploy):
         push_error("CAMP STUDIO: cannot restore current deployment state")
+    if same_camp and camp_kind == "defensivo" and damage < 2 and camp_defense_finish.selected == 0 and previous_defense_timeline >= 0.0:
+        DefenseMotion.deployment_frame(model_root, previous_defense_timeline)
     if previous_interior and damage < 2 and camp_kind == "suministros" and camp_finish_picker.selected == 0:
         SupplyV43.inspect_interior(model_root, true)
     if same_camp and damage < 2 and camp_kind == "reconocimiento":

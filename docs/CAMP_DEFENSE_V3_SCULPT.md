@@ -17,3 +17,7 @@ V3.2 todavía en CI al preparar esta iteración. V3.3 añade seguros cautivos, d
 ## V3.4 — daños físicos y destrucción
 
 V3.3 superó las nueve ejecuciones de CI (72 variantes, 30 capturas). Inspección visual: D2 y D3 tenían pocos restos reconocibles. V3.4 añade marcas de desgaste opacas solidarias a las barreras, blindaje caído con malla cerrada deformada, riostra rota, sacos desplazados y bastidor posterior colapsado con restos de cofres e identidad de facción. FX reutilizables por LOD, origen de impacto sigue el transform de la barrera y efectos de humo/fuego/chispas/fragmentos. Comparte los controles de daño del visor, cancela despliegue antes del efecto y no altera combate. 72 variantes y 33 renders previstos; pendiente CI y revisión visual.
+
+## V3.5 — cierre de acabado e inspección
+
+V3.4 todavía en CI, galería aprobada; sin afirmar una revisión visual de sus 33 capturas antes de estar disponibles. Auditoría de código: la placa de color anterior era una caja separada sobre blindaje deformado; se reemplaza por una piel cerrada siguiendo exactamente los cortes del perfil, con solapamiento controlado y transform del panel padre. Se mantiene la fase exacta de los seguros al cambiar facción/LOD en el estudio y se ancla el humo D1 a la barrera cuando se pliega. Nuevas verificaciones de geometría, anclaje y preservación de fase, 72 variantes y 33 capturas. Pendiente CI y revisión de renders antes de integrar.

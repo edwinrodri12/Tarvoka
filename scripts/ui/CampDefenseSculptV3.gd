@@ -462,6 +462,35 @@ static func _buckled_panel(size: Vector3, bend: float) -> ArrayMesh:
         rings.append(ring)
     return Solid._loft(rings)
 
+# The paint strip follows the SAME piecewise-linear surface as the
+# buckled panel. Closed shallow skin penetrates its host by .012, so
+# it neither floats nor z-fights even across the kink at each sample.
+static func _panel_surface(size: Vector3, bend: float, x: float, t: float) -> float:
+    var step: float = clampf(t, 0.0, 1.0) * 4.0
+    var low: float = floorf(step)
+    var high: float = minf(4.0, low + 1.0)
+    var u: float = step - low
+    var a: float = bend * sin(low * PI / 4.0)
+    var b: float = bend * sin(high * PI / 4.0)
+    var xa: float = size.x * 0.5 * (1.0 - 0.10 * sin(low * PI / 4.0))
+    var xb: float = size.x * 0.5 * (1.0 - 0.10 * sin(high * PI / 4.0))
+    return size.y * 0.5 + lerpf(a * (0.85 + 0.15 * x / xa), b * (0.85 + 0.15 * x / xb), u)
+
+static func _paint_skin(panel: MeshInstance3D, size: Vector3, bend: float, accent: Color) -> void:
+    var rings: Array = []
+    var x: float = size.x * 0.235
+    for t in [0.25, 0.50, 0.75]:
+        var z: float = (t - 0.5) * size.z
+        var right: float = _panel_surface(size, bend, x, t)
+        var left: float = _panel_surface(size, bend, -x, t)
+        var ring: Array[Vector3] = [
+            Vector3(x, right + 0.025, z), Vector3(-x, left + 0.025, z),
+            Vector3(-x, left - 0.012, z), Vector3(x, right - 0.012, z)]
+        rings.append(ring)
+    var skin: MeshInstance3D = _part(panel, "V35_ConformalFactionSkin", Solid._loft(rings),
+        Vector3.ZERO, accent, 0.30, 0.72)
+    skin.set_meta("conformal_panel", true)
+
 static func _damage_v34(core: Node3D, rear: Node3D, accent: Color, lod: int, damage: int) -> void:
     if damage == 0:
         return
@@ -486,8 +515,8 @@ static func _damage_v34(core: Node3D, rear: Node3D, accent: Color, lod: int, dam
     fallen.material_override = _mat(STEEL, 0.45, 0.88)
     fallen.set_meta("defense_v34_buckled", true)
     var paint: Node3D = core.get_node("V2_FragmentoFaccionCaido") as Node3D
-    paint.position.y += 0.15
-    paint.rotation_degrees.x = 8.0
+    paint.visible = false
+    _paint_skin(fallen, Vector3(1.40, 0.24, 2.33), 0.25, accent)
     _box(core, "V34_DetachedArmorRib", Vector3(2.69, 0.22, -1.60),
         Vector3(0.19, 0.20, 1.13), DARK, 0.035).rotation_degrees = Vector3(6.0, 42.0, 12.0)
     var debris: Node3D = _group(core, "V34_BrokenSupport", Vector3(2.10, 0.14, 0.72))
@@ -527,8 +556,7 @@ static func _wreck_v34(wreck: Node3D, accent: Color, lod: int) -> void:
             _buckled_panel(Vector3(1.14, 0.18, 1.83), 0.19), Vector3(float(side) * 2.20, 0.18, -0.65),
             STEEL, 0.46, 0.88)
         panel.rotation_degrees = Vector3(7.0, float(side) * 23.0, -8.0)
-        _box(wreck, "V34_TornIdentity_%d" % side, Vector3(float(side) * 2.20, 0.40, -0.65),
-            Vector3(0.57, 0.08, 1.03), accent, 0.018).rotation_degrees.y = float(side) * 23.0
+        _paint_skin(panel, Vector3(1.14, 0.18, 1.83), 0.19, accent)
     _box(wreck, "V34_CrushedToolChest", Vector3(-1.79, 0.19, 1.31),
         Vector3(0.80, 0.28, 0.62), DARK, 0.055).rotation_degrees = Vector3(7.0, -24.0, 11.0)
     _box(wreck, "V34_DetachedChestLid", Vector3(-2.46, 0.12, 1.65),
@@ -625,7 +653,7 @@ static func apply(root: Node3D, accent: Color, lod: int, damage: int) -> bool:
     if root == null or root.get_meta("camp_kind", "") != "defensivo":
         return false
     root.set_meta("defense_art_v3", 3)
-    root.set_meta("defense_art_revision", "3.4")
+    root.set_meta("defense_art_revision", "3.5")
     _replace(root, "PlataformaDesmontable", 0.045, CANVAS_DARK, 0.06)
     if damage == 3:
         var wreck: Node3D = _group(root, "V3_DefenseWreck")
@@ -674,6 +702,11 @@ static func pose(root: Node3D, progress: float) -> bool:
         var release: float = 1.0 if t > 0.001 and t < 0.999 else 0.0
         _lock_pose(core, release)
         root.set_meta("defense_v33_lock_release", release)
+        # Keep persistent damage anchored to a moving wall even in static
+        # inspection. Do not create an FX rig during intact deployment.
+        if int(root.get_meta("visual_damage", 0)) == 1 and root.has_node(FX_ROOT):
+            if root.get_meta("defense_v34_fx_kind", "") == "idle":
+                damage_fx_pose(root, "idle", float(root.get_meta("defense_v34_fx_phase", 0.34)))
     root.set_meta("defense_v33_timeline", t)
     root.set_meta("defense_v3_deploy_progress", t)
     return true
