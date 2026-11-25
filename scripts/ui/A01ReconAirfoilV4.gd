@@ -17,6 +17,52 @@ static func _material(color:Color,metal:float,rough:float)->StandardMaterial3D:
     m.cull_mode=BaseMaterial3D.CULL_BACK
     return m
 
+# V24: composite wing finish uses the existing closed triangle surface.
+# No raised decal, additional geometry, or transparent materials.
+static func _wing_pigment(p:Vector3,hero:bool)->Color:
+    var x:float=clampf(absf(p.x),0.28,1.72)
+    var stations:Array=[[0.28,1.030,-0.364,0.264,0.100]]
+    if hero:
+        stations.append([0.99,1.047,-0.322,0.220,0.086])
+    stations.append([1.72,1.080,-0.255,0.142,0.054])
+    var a:Array=stations[0]
+    var b:Array=stations[1]
+    if hero and x>0.99:
+        a=stations[1]
+        b=stations[2]
+    var t:float=clampf((x-float(a[0]))/(float(b[0])-float(a[0])),0.0,1.0)
+    var center_y:float=lerpf(float(a[1]),float(b[1]),t)
+    var leading:float=lerpf(float(a[2]),float(b[2]),t)
+    var trailing:float=lerpf(float(a[3]),float(b[3]),t)
+    var thickness:float=lerpf(float(a[4]),float(b[4]),t)
+    var chord:float=clampf((p.z-leading)/(trailing-leading),0.0,1.0)
+    var elevation:float=(p.y-center_y)/thickness
+    var base:Color=Color("#64727d").lerp(Color("#a9b7bf"),
+        smoothstep(-0.45,0.52,elevation))
+    var lip:float=1.0-smoothstep(0.0,0.19,chord)
+    var trailing_lip:float=smoothstep(0.82,1.0,chord)
+    return base.lerp(Color("#778994"),0.35*maxf(lip,trailing_lip))
+
+static func apply_composite_finish(wing:MeshInstance3D,hero:bool)->bool:
+    if wing==null or not (wing.mesh is ArrayMesh):
+        return false
+    var source:=wing.mesh as ArrayMesh
+    if source.get_surface_count()!=1:
+        return false
+    var arrays:Array=source.surface_get_arrays(0)
+    var vertices:PackedVector3Array=arrays[Mesh.ARRAY_VERTEX]
+    var pigment:=PackedColorArray()
+    for vertex in vertices:
+        pigment.append(_wing_pigment(vertex,hero))
+    arrays[Mesh.ARRAY_COLOR]=pigment
+    var finished:=ArrayMesh.new()
+    finished.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES,arrays)
+    var surface:=_material(Color.WHITE,0.15,0.63)
+    surface.vertex_color_use_as_albedo=true
+    wing.mesh=finished
+    wing.material_override=surface
+    return true
+
 static func _profile(x:float,y:float,leading:float,trailing:float,
         thickness:float)->Array[Vector3]:
     # Six vertices around a convex aerodynamic closed cross-section.
@@ -145,8 +191,8 @@ static func apply(root:Node3D,hero:bool)->bool:
     var body:=root.find_child(V1.BODY,true,false) as Node3D
     if body==null:
         return false
-    var metal:=_material(Color("#bdc9ce"),0.34,0.46)
-    var seam:=_material(Color("#91a1a8"),0.30,0.49)
+    var metal:=_material(Color("#a9b7bf"),0.15,0.63)
+    var seam:=_material(Color("#87959e"),0.18,0.62)
     # Fixed shared silhouette across both LODs; hero adds an extra section
     # for more convincing taper and surface curvature without giant meshes.
     var right_stations:Array=[
@@ -160,7 +206,7 @@ static func apply(root:Node3D,hero:bool)->bool:
         var suffix:String="_L" if side<0 else "_R"
         var name:String=WING_L if side<0 else WING_R
         var wing:=_airfoil(body,name,right_stations,s,metal)
-        if wing.mesh==null:
+        if wing.mesh==null or not apply_composite_finish(wing,hero):
             return false
         _fairing(body,"A01_V4_SmoothCompositeWingRoot"+suffix,
             Vector3(s*0.36,1.037,-0.075),
@@ -186,6 +232,7 @@ static func apply(root:Node3D,hero:bool)->bool:
             "A01_V2_ClosedFlaperon_Starboard",false,false) as MeshInstance3D
         if old_flap!=null:
             old_flap.visible=false
+    root.set_meta("tarvoka_a01_v24_wing_composite",true)
     root.set_meta("tarvoka_a01_v18_conformal_flaperons",true)
     root.set_meta(FLAG,true)
     root.set_meta("tarvoka_a01_v4_lod",13 if hero else 8)
