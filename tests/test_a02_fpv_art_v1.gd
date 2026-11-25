@@ -97,6 +97,30 @@ func _run()->void:
                         tones[color.to_html()]=true
                         check(color.a>=0.999,"opaque pigment")
                     check(tones.size()>=3,"graduated faction and neutral tones")
+            check(bool(model.get_meta("tarvoka_a02_v4_surface_normals",false)),"V4 deliberate face shading")
+            if paint!=null and paint.mesh is ArrayMesh:
+                var paint_data:Array=paint.mesh.surface_get_arrays(0)
+                var paint_vertices:PackedVector3Array=paint_data[Mesh.ARRAY_VERTEX]
+                var paint_normals:PackedVector3Array=paint_data[Mesh.ARRAY_NORMAL]
+                var paint_colors:PackedColorArray=paint_data[Mesh.ARRAY_COLOR]
+                check(paint_vertices.size()==paint_normals.size() and paint_vertices.size()==paint_colors.size(),
+                    "V4 normals and opaque pigment per crown vertex")
+                var flat_top:int=0
+                var flat_bottom:int=0
+                var wall:int=0
+                for j in range(paint_normals.size()):
+                    var normal:Vector3=paint_normals[j]
+                    check(absf(normal.length()-1.0)<0.001,"V4 unit-length normals")
+                    if normal.y>0.999:
+                        flat_top+=1
+                        check(absf(paint_vertices[j].y-0.5)<0.001 and paint_colors[j].is_equal_approx(Color.WHITE),
+                            "V4 flat crown keeps authentic faction pigment")
+                    elif normal.y< -0.999:
+                        flat_bottom+=1
+                    elif absf(normal.y)<0.001:
+                        wall+=1
+                    check(paint_colors[j].a>=0.999,"V4 opaque crown")
+                check(flat_top>=8 and flat_bottom>=8 and wall>=8,"V4 distinct planar crown, base and side normals")
             check(bool(model.get_meta("tarvoka_a02_v3_surface_finish",false)),"V3 finish active")
             var casing:=model.find_child("A02_ClosedCentralShell",true,false) as MeshInstance3D
             var frame:=model.find_child("A02_VisorFrame",true,false) as MeshInstance3D
@@ -152,10 +176,13 @@ func _run()->void:
             ["rear",Vector3(0,1.7,4.0),Vector3.UP],
             ["top",Vector3(0,5.0,0),Vector3.FORWARD],
             ["bottom",Vector3(2.2,-3.0,2.8),Vector3.UP],
-            ["front-detail",Vector3(1.1,1.45,-3.0),Vector3.UP]]
+            ["front-detail",Vector3(1.1,1.45,-3.0),Vector3.UP],
+            ["rear-iso",Vector3(-3.0,3.0,4.0),Vector3.UP],
+            ["side",Vector3(4.0,1.75,0),Vector3.UP]]
         var captures:int=0
         for view in views:
             camera.position=view[1]
+            camera.size=1.55 if str(view[0])=="front-detail" else 2.35
             camera.look_at(Vector3(0,0.95,0),view[2])
             await process_frame
             await process_frame
@@ -163,7 +190,7 @@ func _run()->void:
             var image:Image=vp.get_texture().get_image()
             if image!=null and not image.is_empty() and image.save_png(out+"/a02-v2-"+str(view[0])+".png")==OK:
                 captures+=1
-        check(captures==5,"V3 five real Godot inspection angles")
+        check(captures==7,"V4 seven real Godot inspection angles")
         vp.remove_child(inspection)
         inspection.free()
     check(Arsenal.profile("fpv")==profile,"no catalogue changes")

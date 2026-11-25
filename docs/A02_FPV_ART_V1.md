@@ -9,3 +9,7 @@ V1 pasó la prueba nativa 45659746138 y APK; las capturas 15044940979 muestran u
 ## V3 — acabado de la escultura exterior
 
 V2 validada en Godot (45662099742) y APK (45662099726). Inspección del artefacto 15045202607: nueva silueta correcta, frontal aún redondeado y protector de color excesivamente uniforme. V3 cambia la cara decorativa por dos volúmenes biselados opacos, incorpora pigmento tonal en la carcasa existente y modera la pintura de los protectores. Conserva ocho colores oficiales, animaciones y LOD. Añade verificación de cierre, solapamiento visual y quinto ángulo de inspección. No se cambia la lógica de juego. Pendiente QA V3 y publicación.
+
+## V4 — normales y lectura de superficies
+
+V3 aprobada en QA nativa 45662716883; 21 renders del artefacto 15046441455. V4 conserva exactamente las posiciones y triángulos de la escultura V3. Asigna normales exteriores por cara para separar ópticamente tapas, biseles y paredes; conserva winding horario y verifica el cierre por posiciones. Corona y distintivos comparten pigmento opaco por vértice, con el color oficial completo en la parte superior y transición sombreada en el borde; se aclara ligeramente el tono neutral inferior. QA comprueba normales unitarias y planas, pigmentos, siete vistas y 16 combinaciones. Solo arte ficticio, sin cambios de catálogo ni de mecánicas. CI y publicación pendientes.

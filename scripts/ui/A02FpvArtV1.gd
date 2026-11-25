@@ -37,8 +37,13 @@ static func _oval(parent:Node3D,tag:String,at:Vector3,size:Vector3,
 
 # Bevelled abstract game sculpture. All surfaces are closed and clockwise.
 static func _face(t:SurfaceTool,a:Vector3,b:Vector3,c:Vector3,outward:Vector3)->void:
+    # V4: explicit outward face normals preserve planar surfaces rather
+    # than averaging the crown, bevel and walls into a pillow shape.
+    var cross:Vector3=(b-a).cross(c-a)
+    var positive:bool=cross.dot(outward)>0.0
+    t.set_normal(cross.normalized() if positive else -cross.normalized())
     t.add_vertex(a)
-    if (b-a).cross(c-a).dot(outward)>0.0:
+    if positive:
         t.add_vertex(c)
         t.add_vertex(b)
     else:
@@ -72,8 +77,9 @@ static func _sculpt()->ArrayMesh:
     for i in range(1,outline.size()-1):
         _face(t,rings[0][0],rings[0][i],rings[0][i+1],Vector3.DOWN)
         _face(t,rings[3][0],rings[3][i],rings[3][i+1],Vector3.UP)
+    # Index only after assigning normals; distinct lighting normals at
+    # a crease do not break the coincident, sealed geometric edges.
     t.index()
-    t.generate_normals()
     return t.commit()
 
 static func _shell_finish(source:ArrayMesh,upper:Color,lower:Color)->ArrayMesh:
@@ -117,13 +123,16 @@ static func build(root:Node3D,faction:Color,hero:bool)->bool:
     coated_guard.vertex_color_use_as_albedo=true
     coated_guard.vertex_color_is_srgb=true
     var sculpt:=_sculpt()
-    var enamel:=_mat(faction,0.13,0.72)
+    var enamel:=_mat(faction,0.10,0.78)
+    enamel.vertex_color_use_as_albedo=true
+    enamel.vertex_color_is_srgb=true
+    var crown_mesh:=_shell_finish(sculpt,Color.WHITE,Color("#a0adb5"))
     var glass:=_mat(Color("#286477"),0.15,0.34)
     var dark_trim:=_mat(Color("#263740"),0.10,0.70)
-    var shell_mesh:=_shell_finish(sculpt,Color("#697b86"),Color("#34434c"))
+    var shell_mesh:=_shell_finish(sculpt,Color("#72838d"),Color("#46545d"))
     _part(body,"A02_ClosedCentralShell",shell_mesh,Vector3(0,0.96,0),
         Vector3(0.72,0.44,1.05),coated_shell)
-    _part(body,PAINT,sculpt,Vector3(0,1.105,-0.045),
+    _part(body,PAINT,crown_mesh,Vector3(0,1.105,-0.045),
         Vector3(0.61,0.20,0.83),enamel)
     # V3: a stylized opaque faceplate, not a real imaging assembly.
     # The bevelled dark frame overlaps the existing sculpture; the inset
@@ -158,8 +167,9 @@ static func build(root:Node3D,faction:Color,hero:bool)->bool:
                 Vector3(0.48,0.042,0.085),graphite,hero)
             graphic.rotation_degrees.y=float(j)*90.0
         if hero:
-            _part(body,"A02_ShoulderBadge_"+str(i),sculpt,
+            _part(body,"A02_ShoulderBadge_"+str(i),crown_mesh,
                 Vector3(side*0.34,1.065,depth*0.28),Vector3(0.22,0.07,0.20),enamel)
+    root.set_meta("tarvoka_a02_v4_surface_normals",true)
     root.set_meta("tarvoka_a02_v3_surface_finish",true)
     root.set_meta("tarvoka_a02_v2_beveled_visual_shell",true)
     root.set_meta(FLAG,true)
