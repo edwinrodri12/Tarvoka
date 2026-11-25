@@ -2797,7 +2797,38 @@ jobs:
               + ' · <a style="color:inherit" href="?unidad=a02" aria-label="Revisar A02 FPV en el mismo visor">A02 FPV</a>'
               + ' · <a style="color:inherit" href="studio-version.json">versión</a></div>'
           )
-          viewer.write_text(page.replace('</body>', badge + '\n</body>'), encoding='utf-8')
+          # On A02 inspection URLs the original floating navigation obscures
+          # the native model, especially on landscape phones. Preserve every
+          # destination in a collapsed native HTML details menu, only here.
+          a02_menu = """<script>
+          (() => {
+            const alias = (new URLSearchParams(location.search).get('unidad') || '').trim().toLowerCase();
+            if (!['a02','fpv'].includes(alias)) return;
+            const navs = [...document.querySelectorAll('nav[aria-label="Navegacion TARVOKA Estudio 3D"]')];
+            const badge = document.getElementById('tarvoka-engineer-build');
+            if (!badge || !navs.length) return;
+            const menu = document.createElement('details');
+            menu.id = 'tarvoka-a02-compact-nav';
+            menu.style.cssText = 'position:fixed;left:8px;top:8px;z-index:1001;max-width:min(330px,calc(100vw - 16px));font:600 12px system-ui,Arial,sans-serif;color:#ffe5a0;background:#14202a;border:1px solid #e1c275;border-radius:6px;box-shadow:0 2px 8px #0006';
+            const summary = document.createElement('summary');
+            summary.textContent = 'Estudio · menú';
+            summary.style.cssText = 'padding:7px 10px;cursor:pointer';
+            menu.append(summary);
+            const panel = document.createElement('div');
+            panel.style.cssText = 'display:grid;gap:5px;padding:0 7px 7px;max-height:65vh;overflow:auto';
+            for (const nav of navs) {
+              nav.style.cssText = 'position:static;margin:0';
+              const link = nav.querySelector('a');
+              if (link) link.style.cssText = 'display:block;padding:6px 8px;color:#ffe5a0;background:#111d2e;border:1px solid #e1c275;border-radius:4px;text-decoration:none;font-size:12px;overflow-wrap:anywhere';
+              panel.append(nav);
+            }
+            badge.style.cssText = 'position:static;padding:5px 3px;font:600 11px system-ui,Arial,sans-serif;color:#ffe3a5;overflow-wrap:anywhere';
+            panel.append(badge);
+            menu.append(panel);
+            document.body.append(menu);
+          })();
+          </script>"""
+          viewer.write_text(page.replace('</body>', badge + a02_menu + '\\n</body>'), encoding='utf-8')
           assert commit[:12] in viewer.read_text(encoding='utf-8')
           with open(os.environ['GITHUB_OUTPUT'], 'a', encoding='utf-8') as output:
               output.write('source_commit=' + commit + '\n')
@@ -2876,9 +2907,25 @@ jobs:
                 page.on('console',m=>{if(/SCRIPT ERROR:|Parse Error:|Could not create render/.test(m.text())) errors.push(m.text());});
                 await page.goto('http://127.0.0.1:8124/?unidad='+alias,{waitUntil:'domcontentloaded',timeout:60000});
                 await page.waitForFunction(()=>window.__tarvokaA02Entry!==undefined,null,{timeout:180000});
-                const entryLink=page.locator('#tarvoka-engineer-build a[href="?unidad=a02"]');
+                const menu=page.locator('#tarvoka-a02-compact-nav');
+                const summary=menu.locator('summary');
+                const entryLink=menu.locator('#tarvoka-engineer-build a[href="?unidad=a02"]');
+                if(await menu.count()!==1||!(await summary.isVisible())||await menu.getAttribute('open')!==null)
+                  throw Error('A02 inspection menu must start collapsed');
+                const originalNavs=page.locator('nav[aria-label="Navegacion TARVOKA Estudio 3D"]');
+                if(await originalNavs.count()<5||await menu.locator('nav').count()!==await originalNavs.count())
+                  throw Error('A02 compact menu must preserve every navigation item');
+                const bounds=await summary.boundingBox();
+                if(!bounds||bounds.width>200||bounds.height>45||bounds.x>16||bounds.y>16)
+                  throw Error('A02 collapsed menu obstructs inspection viewport');
+                await summary.click();
                 if(await entryLink.count()!==1||!(await entryLink.isVisible()))
-                  throw Error('Missing visible A02 review link in shared Studio');
+                  throw Error('Missing accessible A02 review link in compact menu');
+                for(const link of await originalNavs.all())
+                  if(!(await link.locator('a').isVisible()))throw Error('Hidden navigation destination in expanded menu');
+                await summary.click();
+                if(await menu.getAttribute('open')!==null||await entryLink.isVisible())
+                  throw Error('A02 compact menu did not close');
                 const info=await page.evaluate(()=>window.__tarvokaA02Entry);
                 if(info.role!=='fpv'||info.edition!=='V12'||!info.native_model||info.lod!==13||info.stage!==0)
                   throw Error('Incorrect A02 shared studio entry: '+JSON.stringify(info));
@@ -2889,7 +2936,7 @@ jobs:
                 await page.waitForTimeout(1200);
                 const png=PNG.sync.read(await page.screenshot({path:'build/qa/a02-browser/a02-'+alias+'.png'}));
                 if(png.width!==width||png.height!==height)throw Error('Unexpected A02 capture dimensions');
-                reports.push({alias,width,height,info,errors});
+                reports.push({alias,width,height,info,errors,compact_navigation:true,menu_bounds:bounds});
                 if(errors.length)throw Error(errors.join('\n'));
                 await page.close();
               }
@@ -2957,6 +3004,7 @@ jobs:
                       page = response.read().decode('utf-8')
                   assert source[:12] in page and 'tarvoka-engineer-build' in page
                   assert 'href="?unidad=a02"' in page, 'Missing public A02 entry link'
+                  assert 'tarvoka-a02-compact-nav' in page, 'Missing compact A02 inspection menu'
                   with fetch('index.pck', attempt) as response:
                       actual = hashlib.sha256()
                       for chunk in iter(lambda: response.read(1024 * 1024), b''):
