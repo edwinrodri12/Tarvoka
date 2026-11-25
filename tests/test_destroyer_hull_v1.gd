@@ -33,8 +33,8 @@ func _run() -> void:
             check(model != null, "Destroyer builds")
             if model == null:
                 continue
-            check(model.get_meta("destroyer_art_revision", "") == "1.3", "V1.3 navigation active")
-            for key in ["CascoNaval", "Cubierta", "Superestructura/ZocaloNaval", "Superestructura/CarcasaInferior", "Superestructura/Puente", "Superestructura/TechoPuente", "TorretaNavalPivot/CarcasaTorreta", "TorreMastil/CarcasaMastil", "TorreMastil/RadarPivot/Radar"]:
+            check(model.get_meta("destroyer_art_revision", "") == "1.4", "V1.4 aft active")
+            for key in ["CascoNaval", "Cubierta", "Superestructura/ZocaloNaval", "Superestructura/CarcasaInferior", "Superestructura/Puente", "Superestructura/TechoPuente", "TorretaNavalPivot/CarcasaTorreta", "TorreMastil/CarcasaMastil", "TorreMastil/RadarPivot/Radar", "ConjuntoPopa/Helipuerto", "ConjuntoPopa/Propulsion_-1/TimonPivot/TimonVisual", "ConjuntoPopa/Propulsion_1/TimonPivot/TimonVisual"]:
                 var part: MeshInstance3D = model.get_node_or_null(key) as MeshInstance3D
                 check(part != null, "Native " + key)
                 if part != null:
@@ -97,12 +97,32 @@ func _run() -> void:
                 check(radar.has_node("DetalleSensor_0") == (lod >= 13), "Sensor LOD")
                 for side in [-1,1]:
                     check(model.has_node("LenteNavegacion_%d" % side) and model.has_node("BaseAntena_%d" % side), "Both navigation sides")
+            var aft: Node3D = model.get_node_or_null("ConjuntoPopa") as Node3D
+            check(aft != null, "Aft assembly")
+            if aft != null:
+                for side in [-1,1]:
+                    var group: Node3D = aft.get_node_or_null("Propulsion_%d" % side) as Node3D
+                    check(group != null, "Mirrored visual propulsion")
+                    if group == null:
+                        continue
+                    var rotor: Node3D = group.get_node("HelicePivot") as Node3D
+                    var rudder: Node3D = group.get_node("TimonPivot") as Node3D
+                    var fixed: Transform3D = group.transform
+                    var blade: Node3D = rotor.get_node("Lobulo_0") as Node3D
+                    var local: Transform3D = blade.transform
+                    for phase in [0.0,0.25,0.5,0.75,1.0]:
+                        check(Art.pose_destroyer_aft(model,phase,phase*2.0-1.0), "Aft visual pose")
+                        check(rotor.basis.is_equal_approx(Basis(Vector3.BACK,float(side)*fposmod(phase,1.0)*TAU)), "Independent rotor phase")
+                        check(rudder.basis.is_equal_approx(Basis(Vector3.UP,deg_to_rad((phase*2.0-1.0)*25.0))), "Visual rudder pose")
+                        check(group.transform == fixed and blade.transform == local and rotor.scale.is_equal_approx(Vector3.ONE), "Rigid aft assemblies")
+                    check(aft.has_node("PasamanosPopa_%d" % side) == (lod >= 13), "Aft LOD")
+                Art.pose_destroyer_aft(model,0.0,0.0)
             model.free()
     await _render()
     if failures != 0:
         quit(1)
         return
-    print("PASS DESTROYER HULL V1.3: 18 variants, 8 PNGs")
+    print("PASS DESTROYER HULL V1.4: 18 variants, 10 PNGs")
     quit(0)
 
 func _render() -> void:
@@ -137,12 +157,16 @@ func _render() -> void:
         view.queue_free()
         return
     stage.add_child(model)
-    var angles: Array[Vector3] = [Vector3(5,4,-6),Vector3(-5,4,6),Vector3(3,2,-3),Vector3(-3,2,3),Vector3(2.6,2.8,-3.8),Vector3(-2.4,3.0,-2.0),Vector3(2.4,2.6,-1.7),Vector3(-2.4,2.5,2.1)]
-    for i in range(8):
+    var angles: Array[Vector3] = [Vector3(5,4,-6),Vector3(-5,4,6),Vector3(3,2,-3),Vector3(-3,2,3),Vector3(2.6,2.8,-3.8),Vector3(-2.4,3.0,-2.0),Vector3(2.4,2.6,-1.7),Vector3(-2.4,2.5,2.1),Vector3(2.8,2.7,3.8),Vector3(-2.2,-1.4,3.2)]
+    for i in range(10):
         camera.size = 5.1 if i < 2 else (2.0 if i < 4 else (1.85 if i < 6 else 1.4))
         camera.position = angles[i]
         camera.look_at(Vector3(0,0.7,0.15) if i < 2 else (Vector3(0,0.96,0.3) if i < 4 else (Vector3(0,0.82,-0.78) if i < 6 else Vector3(0,1.45,0.22))),Vector3.UP)
-        if i >= 6:
+        if i >= 8:
+            camera.look_at(Vector3(0,0.55 if i == 8 else 0.04,1.03),Vector3.UP)
+            model.get_node("EstelaEspuma").hide()
+            Art.pose_destroyer_aft(model,0.25*float(i-8),0.5)
+        elif i >= 6:
             Art.pose_destroyer_radar(model, 0.25 * float(i - 6))
         await process_frame
         await process_frame
@@ -150,5 +174,5 @@ func _render() -> void:
         var img: Image = view.get_texture().get_image()
         check(img != null and not img.is_empty(), "Real Godot image")
         if img != null and not img.is_empty():
-            check(img.save_png(output + "/destroyer_v13_%d.png" % i) == OK, "Capture saved")
+            check(img.save_png(output + "/destroyer_v14_%d.png" % i) == OK, "Capture saved")
     view.queue_free()
