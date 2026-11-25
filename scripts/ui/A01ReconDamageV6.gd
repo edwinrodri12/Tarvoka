@@ -11,6 +11,7 @@ const SMOKE_CACHE:String="tarvoka_a01_v6_smoke_nodes"
 const V1=preload("res://scripts/ui/A01ReconDroneV1.gd")
 const V3=preload("res://scripts/ui/A01ReconFinishV3.gd")
 const V5=preload("res://scripts/ui/A01ReconTailV5.gd")
+const AtmosphereV15=preload("res://scripts/ui/A01ReconAtmosphereV15.gd")
 const STAGES=["D0 · intacto","D1 · impactos leves","D2 · carcasa dañada y humo",
     "D3 · avería crítica y fuego","D4 · destruido"]
 
@@ -152,6 +153,8 @@ static func prepare(root:Node3D,hero:bool)->bool:
     _plume(d4,"A01_V6_D4_FinalEmber",Vector3(0.0,0.95,1.01),
         0.090,0.004,0.19,hot,hero,-8.0)
 
+    if not AtmosphereV15.prepare(root,rig,hero):
+        return false
     root.set_meta(FLAG,true)
     root.set_meta(STAGE_KEY,0)
     root.set_meta("tarvoka_a01_v6_visual_only",true)
@@ -170,6 +173,7 @@ static func set_stage(root:Node3D,new_stage:int)->bool:
     var prop:=root.find_child(V1.PROPELLER,true,false) as Node3D
     if body==null or prop==null:
         return false
+    body.rotation_degrees.x=0.0
     body.rotation_degrees.z=(-14.0 if new_stage==4 else
         -3.5 if new_stage==3 else 0.0)
     body.position.y=-0.18 if new_stage==4 else 0.0
@@ -181,6 +185,8 @@ static func set_stage(root:Node3D,new_stage:int)->bool:
         if rotor!=null:
             rotor.visible=new_stage<4
     root.set_meta(STAGE_KEY,new_stage)
+    if bool(root.get_meta(AtmosphereV15.FLAG,false)):
+        AtmosphereV15.reset(root)
     # V14 only swaps the right intact wing/tip for a genuinely broken
     # sealed wing at D4. Layer 4 visibility drives the wreck replacement.
     # Reversible for D4->D0 and for the original Studio LOD rebuild.
@@ -188,6 +194,26 @@ static func set_stage(root:Node3D,new_stage:int)->bool:
         for intact in root.get_meta("tarvoka_a01_v14_intact_wing_nodes",[]):
             if is_instance_valid(intact):
                 (intact as MeshInstance3D).visible=new_stage<4
+    return true
+
+# V22: optional normalized Studio-only crash preview. The damage state
+# is already selected; this never changes HP, location, turn or rules.
+static func pose_crash(root:Node3D,progress:float)->bool:
+    if stage(root)!=4:
+        return false
+    var body:=root.find_child(V1.BODY,true,false) as Node3D
+    if body==null:
+        return false
+    var p:float=clampf(progress,0.0,1.0)
+    var fall:float=smoothstep(0.0,0.78,p)
+    var settle:float=sin(clampf((p-0.58)/0.42,0.0,1.0)*PI)*0.035
+    body.position.y=lerpf(0.23,-0.18,fall)+settle
+    body.rotation_degrees.x=18.0*sin(p*PI)*(1.0-p)
+    body.rotation_degrees.z=-14.0*fall-8.0*sin(p*PI)*(1.0-p)
+    if p>=1.0:
+        body.position.y=-0.18
+        body.rotation_degrees.x=0.0
+        body.rotation_degrees.z=-14.0
     return true
 
 static func repair(root:Node3D)->bool:
@@ -203,6 +229,8 @@ static func animate(root:Node3D,clock:float)->bool:
         return false
     if not bool(root.get_meta(FLAG,false)) or int(root.get_meta(STAGE_KEY,0))<2:
         return false
+    if bool(root.get_meta(AtmosphereV15.FLAG,false)):
+        return AtmosphereV15.animate(root,int(root.get_meta(STAGE_KEY,0)),clock)
     var vapors:Array=root.get_meta(SMOKE_CACHE,[])
     if vapors.size()!=2:
         return false

@@ -422,6 +422,7 @@ jobs:
           test -s hq-android-v15/scripts/ui/A01ReconAirfoilV4.gd
           test -s hq-android-v15/scripts/ui/A01ReconTailV5.gd
           test -s hq-android-v15/scripts/ui/A01ReconDamageV6.gd
+          test -s hq-android-v15/scripts/ui/A01ReconAtmosphereV15.gd
           test -s hq-android-v15/scripts/ui/A01ReconWingletV8.gd
           test -s hq-android-v15/scripts/ui/A01ReconWingletV9.gd
           test -s hq-android-v15/scripts/ui/A01ReconNoseOpticsV10.gd
@@ -435,6 +436,7 @@ jobs:
           cp hq-android-v15/scripts/ui/A01ReconAirfoilV4.gd scripts/ui/
           cp hq-android-v15/scripts/ui/A01ReconTailV5.gd scripts/ui/
           cp hq-android-v15/scripts/ui/A01ReconDamageV6.gd scripts/ui/
+          cp hq-android-v15/scripts/ui/A01ReconAtmosphereV15.gd scripts/ui/
           cp hq-android-v15/scripts/ui/A01ReconWingletV8.gd scripts/ui/
           cp hq-android-v15/scripts/ui/A01ReconWingletV9.gd scripts/ui/
           cp hq-android-v15/scripts/ui/A01ReconNoseOpticsV10.gd scripts/ui/
@@ -478,7 +480,7 @@ jobs:
           grep -Fq 'A01TailOpticsV13.apply' scripts/ui/UnitModels3D.gd
           grep -Fq 'A01DamageFinishV14.apply' scripts/ui/UnitModels3D.gd
           grep -Fq 'func _a01_review_look' scripts/ui/BastionStudioAdapter.gd
-          grep -Fq 'A01 · Dron de reconocimiento · V14 EN DESARROLLO' scripts/ui/BastionStudioAdapter.gd
+          grep -Fq 'A01 · Dron de reconocimiento · V25 EN DESARROLLO' scripts/ui/BastionStudioAdapter.gd
           test -s scripts/ui/G16ArmoredLogisticsV1.gd
           test -s scripts/ui/G16LogisticsExteriorV2.gd
           test -s scripts/ui/G16LogisticsMechanicsDamageV3.gd
@@ -1744,6 +1746,8 @@ jobs:
             echo '::error::A01 V14 sealed physical damage, D4 wing swap or exact repair failed' >&2; exit 1
           fi
           grep -F 'PASS A01 V14 REAL DAMAGE:' /tmp/a01-v14-damage.log
+          grep -F 'PASS A01 V15 ORGANIC EFFECTS:' /tmp/a01-v14-damage.log
+          grep -F 'PASS A01 V16 SOLID EXTERIOR:' /tmp/a01-v14-damage.log
           test "$(find build/qa/a01-v14 -maxdepth 1 -name 'a01-v14-*.png' | wc -l)" -eq 8
           timeout 180s xvfb-run -a -s '-screen 0 1280x720x24' env LIBGL_ALWAYS_SOFTWARE=1 \
             /tmp/Godot_v4.3-stable_linux.x86_64 \
@@ -1756,6 +1760,7 @@ jobs:
           grep -F 'PASS A01 V10 SHARED STUDIO:' /tmp/a01-unified-v1.log
           grep -F 'PASS A01 V13 SHARED STUDIO:' /tmp/a01-unified-v1.log
           grep -F 'PASS A01 V14 SHARED STUDIO:' /tmp/a01-unified-v1.log
+          grep -F 'PASS A01 V15 SHARED STUDIO:' /tmp/a01-unified-v1.log
           test -s build/qa/a01-v1/a01-unified-studio.png
           # Actually instantiate the published homepage under GL compatibility.
           # A successful static export alone cannot detect broken model pickers
@@ -2614,7 +2619,7 @@ jobs:
                    '?unidad=g16', 'G16 V6 · REVISAR LOGÍSTICA 3D',
                    'Ver manguera, rueda, facción y animaciones de G16 V6', 256)
           add_link(Path('build/web/index.html'),
-                   '?unidad=a01', 'A01 V13 · DRON DE RECONOCIMIENTO',
+                   '?unidad=a01', 'A01 V25 · DRON DE RECONOCIMIENTO',
                    'Revisar nuevo dron sin armas, sensores y ocho facciones', 316)
           add_link(Path('build/web/tanque/index.html'),
                    '../apc/', 'BASTIÓN P06 V25 · ACTUAL',
@@ -2648,7 +2653,7 @@ jobs:
           grep -q 'BASTIÓN P06 V25 · MODELO ACTUAL' build/web/index.html
           grep -Fq 'href="?unidad=g16"' build/web/index.html
           grep -Fq 'href="?unidad=a01"' build/web/index.html
-          grep -Fq 'A01 V13 · DRON DE RECONOCIMIENTO' build/web/index.html
+          grep -Fq 'A01 V25 · DRON DE RECONOCIMIENTO' build/web/index.html
           grep -Fq 'G16 V6 · REVISAR LOGÍSTICA 3D' build/web/index.html
           grep -Fq "URLSearchParams(window.location.search)" scripts/ui/BastionStudioAdapter.gd
           grep -Fq 'G16ServiceV6.has_model(model_root)' scripts/ui/BastionStudioAdapter.gd
@@ -2685,6 +2690,8 @@ jobs:
             build/qa/a01-v11/*.png
             build/qa/a01-v12/*.png
             build/qa/a01-v13/*.png
+            build/qa/a01-v14/*.png
+            build/qa/a01-v16/*.png
           if-no-files-found: warn
           retention-days: 14
 
