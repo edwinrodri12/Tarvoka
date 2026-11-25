@@ -223,7 +223,7 @@ jobs:
           if grep -E 'SCRIPT ERROR:|ERROR:|Parse Error:|Assertion failed' /tmp/engineer-v16-silhouette.log; then exit 1; fi
           grep -Fq 'PASS ENGINEER V16:' /tmp/engineer-v16-silhouette.log
           test "$(find build/qa/engineer-v16 -name '*.png' | wc -l)" -eq 10
-      - name: Verify V17 closed anatomy, thirty-one native views, animated contacts and damage
+      - name: Verify V17 closed anatomy, thirty-five native views, animated contacts, damage and instanced effects
         if: ${{ !cancelled() }}
         shell: bash
         run: |
@@ -234,7 +234,7 @@ jobs:
             --script res://tests/test_engineer_v17_outer_armor.gd 2>&1 | tee /tmp/engineer-v17-armor.log
           if grep -E 'SCRIPT ERROR:|ERROR:|Parse Error:|Assertion failed' /tmp/engineer-v17-armor.log; then exit 1; fi
           grep -Fq 'PASS ENGINEER V17:' /tmp/engineer-v17-armor.log
-          test "$(find build/qa/engineer-v17 -name '*.png' | wc -l)" -eq 31
+          test "$(find build/qa/engineer-v17 -name '*.png' | wc -l)" -eq 35
       - uses: actions/upload-artifact@v4
         if: always()
         with:

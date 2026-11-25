@@ -1133,6 +1133,107 @@ static func _damage_surface(part: MeshInstance3D,stage: int) -> void:
         part.set_meta(DAMAGE_MATERIALS,variants)
     part.material_override=variants[stage] as StandardMaterial3D
 
+# Bounded, stylized opaque dust/smoke/impact particles. One instanced
+# batch per soldier, created only on first visible effect. No GPU particle
+# simulation, transparent sorting, shadow passes or per-frame allocations.
+const EFFECT_BATCH: String="V17_EfectosCombateInstanciados"
+static var _fx_shape: SphereMesh
+static var _fx_material: StandardMaterial3D
+
+static func _fx_batch(model: Node3D) -> MultiMeshInstance3D:
+    var batch: MultiMeshInstance3D=model.get_node_or_null(EFFECT_BATCH) as MultiMeshInstance3D
+    if batch!=null:
+        return batch
+    if _fx_shape==null:
+        _fx_shape=SphereMesh.new()
+        _fx_shape.radius=0.5
+        _fx_shape.height=1.0
+        _fx_shape.radial_segments=8
+        _fx_shape.rings=4
+        _fx_material=StandardMaterial3D.new()
+        _fx_material.vertex_color_use_as_albedo=true
+        _fx_material.roughness=1.0
+        _fx_material.transparency=BaseMaterial3D.TRANSPARENCY_DISABLED
+        _fx_material.cull_mode=BaseMaterial3D.CULL_BACK
+    batch=MultiMeshInstance3D.new()
+    batch.name=EFFECT_BATCH
+    batch.cast_shadow=GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+    batch.material_override=_fx_material
+    var instances:=MultiMesh.new()
+    instances.transform_format=MultiMesh.TRANSFORM_3D
+    instances.use_colors=true
+    instances.mesh=_fx_shape
+    instances.instance_count=8 if bool(model.get_meta("tarvoka_engineer_v17_hero",false)) else 4
+    instances.visible_instance_count=0
+    batch.multimesh=instances
+    batch.visible=false
+    model.add_child(batch)
+    return batch
+
+# Obtain a model-space anchor even when native QA builds a detached node.
+# The root-space batch stays upright after the soldier's collapse.
+static func _fx_anchor(model: Node3D,rig_name: String,point: Vector3) -> Vector3:
+    var rig: Node3D=model.find_child(rig_name,true,false) as Node3D
+    while rig!=null and rig!=model:
+        point=rig.transform*point
+        rig=rig.get_parent() as Node3D
+    return point
+
+static func sync_combat_fx(model: Node3D,kind: String,progress: float) -> void:
+    if not has_model(model):
+        return
+    var stage: int=clampi(int(model.get_meta("tarvoka_infantry_damage",0)),0,4)
+    var enabled: bool=bool(model.get_meta("tarvoka_engineer_v17_visible",true))
+    var t: float=clampf(progress,0.0,1.0)
+    var impact: bool=stage<4 and kind in ["hit_bullet","hit_explosive"] and t>=0.08 and t<0.85
+    var dust: bool=stage<4 and kind=="move" and t>0.08 and t<0.92
+    var smoke: bool=stage>=3
+    var batch: MultiMeshInstance3D=model.get_node_or_null(EFFECT_BATCH) as MultiMeshInstance3D
+    if not enabled or not (impact or dust or smoke):
+        if batch!=null:
+            batch.visible=false
+            batch.multimesh.visible_instance_count=0
+        return
+    if batch==null:
+        batch=_fx_batch(model)
+    var pool: MultiMesh=batch.multimesh
+    var hero: bool=pool.instance_count==8
+    var used: int=0
+    # Reserve part of the same batch for persistent smoke in D3/D4.
+    if smoke:
+        var count: int=4 if hero else 2
+        var origin: Vector3=_fx_anchor(model,"TorsoRig",Vector3(0.12,0.05,0.10))
+        for i in range(count):
+            var p: float=fposmod(t+float(i)/float(count),1.0)
+            var at: Vector3=origin+Vector3(0.10*sin(float(i)*2.4+p*3.0),
+                0.19+0.55*p,0.10*cos(float(i)*2.4+p*3.0))
+            var size: float=0.11+0.17*p
+            var shade: Color=Color("#62666a").lerp(Color("#939599"),p)
+            pool.set_instance_transform(used,Transform3D(Basis.from_scale(Vector3(size,size*1.15,size)),at))
+            pool.set_instance_color(used,shade)
+            used+=1
+    if impact or dust:
+        var count: int=pool.instance_count-used
+        var blast: bool=kind=="hit_explosive"
+        if not blast:
+            count=mini(count,4 if hero else 2)
+        var p: float=clampf((t-0.08)/0.77,0.0,1.0)
+        var origin: Vector3=Vector3.ZERO if dust else _fx_anchor(model,"TorsoRig",Vector3(0,0,-0.49))
+        for i in range(count):
+            var angle: float=float(i)*2.399963
+            var spread: float=(0.37 if blast else 0.19)*p
+            var at: Vector3=origin+Vector3(cos(angle)*spread,
+                (0.10+0.20*p if dust else sin(angle)*spread),
+                sin(angle)*spread if dust else -0.08-0.18*p)
+            var size: float=(0.14 if blast else 0.075)*(1.0-0.65*p)
+            var shade: Color=Color("#a69478") if dust else (
+                Color("#e0a15f").lerp(Color("#777879"),p) if blast else Color("#e4c69a"))
+            pool.set_instance_transform(used,Transform3D(Basis.from_scale(Vector3.ONE*size),at))
+            pool.set_instance_color(used,shade)
+            used+=1
+    pool.visible_instance_count=used
+    batch.visible=used>0
+
 static func sync_damage_visuals(model: Node3D,kind: String="idle",
         progress: float=0.0,force: bool=false) -> void:
     if not has_model(model):
@@ -1164,6 +1265,7 @@ static func sync_damage_visuals(model: Node3D,kind: String="idle",
         mark.visible=stage>=i+1 or i==flash_index
         mark.material_override=(flash_materials[flash_index] if i==flash_index
             and flash_materials.size()==2 else mark.get_meta(DAMAGE_MARK_ORIGINAL))
+    sync_combat_fx(model,kind,progress)
 
 static func apply(model: Node3D, hero: bool) -> bool:
     if model==null or has_model(model) or not V16.has_model(model):

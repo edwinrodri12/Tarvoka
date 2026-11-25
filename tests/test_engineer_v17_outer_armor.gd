@@ -787,6 +787,40 @@ func _run() -> void:
                     "transient impact clears without modifying damage")
             Models.restore_model_pose("infantry_engineer",model)
             check(mesh_count(model)==count_before,"damage uses existing mesh nodes only")
+            # The effects have a separately audited one-batch budget,
+            # rather than pretending MultiMesh is a free mesh-node count.
+            var effects: MultiMeshInstance3D=model.get_node_or_null(V17.EFFECT_BATCH) as MultiMeshInstance3D
+            check(effects!=null and not effects.visible and effects.multimesh.visible_instance_count==0,
+                "effect batch clears on explicit reset")
+            if effects!=null:
+                var pool: MultiMesh=effects.multimesh
+                check(pool.instance_count==(8 if lod==13 else 4) and
+                    effects.cast_shadow==GeometryInstance3D.SHADOW_CASTING_SETTING_OFF,
+                    "bounded shared effects without extra shadow pass")
+                for action in ["move","hit_bullet","hit_explosive"]:
+                    Models.pose_model("infantry_engineer",model,action,0.24)
+                    check(effects.visible and pool.visible_instance_count>0 and
+                        pool.visible_instance_count<=pool.instance_count and effects.multimesh==pool,
+                        "native effects reuse bounded batch "+action)
+                    Models.pose_model("infantry_engineer",model,"idle",0.0)
+                    check(not effects.visible and pool.visible_instance_count==0,
+                        "transient effects stop when animation ends")
+                DamageFamily.set_damage(model,3)
+                Models.pose_model("infantry_engineer",model,"idle",0.3)
+                check(effects.visible and pool.visible_instance_count==(4 if lod==13 else 2),
+                    "critical damage has bounded persistent smoke")
+                V17.show_finish(model,false)
+                check(not effects.visible,"historical comparison hides V17 effects")
+                V17.show_finish(model,true)
+                check(effects.visible,"current damaged comparison restores smoke")
+                DamageFamily.set_damage(model,4)
+                Models.pose_model("infantry_engineer",model,"move",0.5)
+                check(effects.visible and pool.visible_instance_count==(4 if lod==13 else 2),
+                    "destroyed model smokes without walking dust")
+                Models.restore_model_pose("infantry_engineer",model)
+                check(not effects.visible and pool.visible_instance_count==0 and
+                    model.get_node_or_null(V17.EFFECT_BATCH)==effects,
+                    "reset clears FX without rebuilding batch")
             model.free()
     for name in ["line","infantry_sniper","infantry_logistic",
             "infantry_medic","infantry_commando"]:
@@ -921,12 +955,20 @@ func _run() -> void:
             Models.pose_model("infantry_engineer",hero,kind,0.18)
             await snapshot(viewport,"v17_impact_"+kind)
         Models.restore_model_pose("infantry_engineer",hero)
+        for spec in [["move",0.40],["hit_explosive",0.55]]:
+            Models.pose_model("infantry_engineer",hero,str(spec[0]),float(spec[1]))
+            await snapshot(viewport,"v17_fx_"+str(spec[0]))
+        for stage in [3,4]:
+            DamageFamily.set_damage(hero,stage)
+            Models.pose_model("infantry_engineer",hero,"idle",0.55)
+            await snapshot(viewport,"v17_smoke_D"+str(stage))
+        Models.restore_model_pose("infantry_engineer",hero)
         hero.queue_free()
         await process_frame
-    check(photos==31,"24 art captures plus five damage levels and two impact previews")
+    check(photos==35,"31 previous views plus four dust, impact and smoke views")
     if failed>0:
         push_error("FAIL ENGINEER V17: %d violations"%failed)
         quit(1)
     else:
-        print("PASS ENGINEER V17: 8 factions x 2 LOD, closed hard-surface chest, shoulder, knees, boots; 31 native comparison, pose, helmet, shield, equipment and damage renders")
+        print("PASS ENGINEER V17: 8 factions x 2 LOD, closed hard-surface chest, shoulder, knees, boots; 35 native comparison, pose, helmet, shield, equipment, damage and effects renders")
         quit(0)
