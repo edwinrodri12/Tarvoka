@@ -67,7 +67,7 @@ func _audit(faction: int, lod: int, damage: int) -> Node3D:
     if camp == null:
         return null
     audits += 1
-    check(camp.get_meta("defense_art_v3", 0) == 3 and camp.get_meta("defense_art_revision", "") == "3.1" and camp.get_meta("no_gameplay_effects", false), "V3.1 visual only")
+    check(camp.get_meta("defense_art_v3", 0) == 3 and camp.get_meta("defense_art_revision", "") == "3.2" and camp.get_meta("no_gameplay_effects", false), "V3.2 visual only")
     check(camp.get_meta("builder_role", "") == "infantry_engineer", "Engineer identity")
     var core: Node3D = camp.get_node_or_null("EquipamientoDesplegable/" + Defense.CORE) as Node3D
     if damage == 3:
@@ -78,6 +78,18 @@ func _audit(faction: int, lod: int, damage: int) -> Node3D:
             var bag: MeshInstance3D = core.get_node("V2_MurallaTrasera/V2_SacoPosterior_0_0/LonaArenaSellada") as MeshInstance3D
             check(bag.mesh is ArrayMesh and _closed(bag.mesh), "Rounded closed bag")
             check(core.has_node("V2_MurallaTrasera/V3_FasciaBeam") and core.has_node("V3_DeckPanel_1"), "Supported fascia and deck")
+            check(core.has_node("V2_MurallaTrasera/V32_RetentionFrame/V32_Stanchion_-1_76"), "Retained rear wall")
+            var gear: Node3D = core.get_node("V32_EngineeringGear") as Node3D
+            check(gear.has_node("V32_EngineeringBay_-1/V32_BenchTop"), "Engineer workbench")
+            check(gear.has_node("V32_EngineeringBay_1/V32_ProfileRackShelf") == (damage < 2), "Rack only when intact")
+            check(gear.has_node("V32_EngineeringBay_1/V32_FallenEquipment") == (damage >= 2), "Damaged equipment replaces rack")
+            check(core.has_node("V32_ToolChestHardware_-1/V32_ChestLatch_1"), "Detailed chest hardware")
+            var gear_parts: Array[MeshInstance3D] = []
+            _meshes(gear, gear_parts)
+            for item in gear_parts:
+                var bounds: AABB = item.mesh.get_aabb()
+                var pos: Vector3 = _part_position_in_core(item, core)
+                check(pos.z - bounds.size.z * 0.5 > 1.0 or absf(pos.x) - bounds.size.x * 0.5 > 1.0, "Equipment outside central standing area")
             var left: Node3D = core.get_node("V2_BarreraArticulada_-1") as Node3D
             check(core.has_node("V3_FixedHingeAxle_-1_-105"), "Fixed physical axle")
             check(left.has_node("V31_InnerArmorPad_93") and left.has_node("V31_OuterInset_64") and left.has_node("V31_UpperLock_123"), "Detailed armor on both sides")
@@ -193,6 +205,14 @@ func _run() -> void:
                         camera.position = Vector3(-6.8, 3.1, -4.2)
                         camera.look_at(Vector3(-2.32, 0.85, -0.42), Vector3.UP)
                         await _capture(viewport, "defense_v31_outer_armor.png")
+                        camera.position = Vector3(-5.0, 3.6, -3.3)
+                        camera.look_at(Vector3(-1.75, 0.55, 1.73), Vector3.UP)
+                        camera.size = 4.6
+                        await _capture(viewport, "defense_v32_engineering_bay.png")
+                        camera.position = Vector3(5.3, 3.5, 6.4)
+                        camera.look_at(Vector3(0, 0.60, 2.58), Vector3.UP)
+                        camera.size = 7.0
+                        await _capture(viewport, "defense_v32_rear_retention.png")
                         camera.size = 10.9
                     check(CampPose(camp, 0.0), "Fold barriers in place")
                     camera.position = VIEWS[0]
@@ -214,13 +234,13 @@ func _run() -> void:
                     stage.remove_child(camp)
                 camp.free()
     check(audits == 72, "9 factions x 2 LOD x 4 damages = 72")
-    check(screenshots == 26,
-        "24 base captures plus 2 armor closeups")
+    check(screenshots == 28,
+        "26 base captures plus 2 engineering closeups")
     viewport.queue_free()
     await process_frame
     if errors > 0:
         printerr("FAIL DEFENSE CAMP V3 NATIVE: %d issues" % errors)
         quit(1)
         return
-    print("PASS DEFENSE CAMP V3 NATIVE: 72 audits, 26 PNGs")
+    print("PASS DEFENSE CAMP V3 NATIVE: 72 audits, 28 PNGs")
     quit(0)

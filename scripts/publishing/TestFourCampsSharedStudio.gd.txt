@@ -285,7 +285,8 @@ func _run() -> void:
             damage.item_selected.emit(0)
             await _frames(4)
         if i == 2:
-            _check(camp.get_meta("defense_art_v3", 0) == 3, "Defense V3 in original studio")
+            _check(camp.get_meta("defense_art_v3", 0) == 3 and camp.get_meta("defense_art_revision", "") == "3.2", "Defense V3.2 in original studio")
+            _check(camp.has_node("EquipamientoDesplegable/DefenseV2_EngineerOutpost/V32_EngineeringGear/V32_EngineeringBay_-1/V32_BenchTop"), "Engineer equipment in original viewport")
             var defense_finish: OptionButton = studio.get("camp_defense_finish") as OptionButton
             _check(defense_finish != null and defense_finish.visible, "Defense comparison visible")
             studio.call("_camp_pose", 0.0)

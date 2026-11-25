@@ -108,7 +108,19 @@ static func _rear(rear: Node3D, accent: Color, lod: int, damage: int) -> void:
     var seed: int = 0
     for child in rear.get_children():
         if str(child.name).begins_with("V2_SacoPosterior_"):
-            _bag(child as Node3D, 0.86 if lod == 8 else 0.69, lod, seed)
+            var bag: Node3D = child as Node3D
+            var course: int = int(str(bag.name).get_slice("_", 2))
+            var index: int = int(str(bag.name).get_slice("_", 3))
+            var last: int = 6 if lod == 8 else 8
+            var width: float = 0.86 if lod == 8 else 0.69
+            # Offset alternate courses, with smaller end bags rather than
+            # protruding past the retaining posts. Deterministic slight variation.
+            if course % 2 == 1:
+                bag.position.x += 0.17 if index < last else 0.08
+                if index == last:
+                    width -= 0.12
+            bag.rotation_degrees.y += float(seed % 3 - 1) * 2.0
+            _bag(bag, width, lod, seed)
             seed += 1
     for side in [-1, 1]:
         _replace(rear, "V2_ColumnaFinal_%d" % side, 0.055, DARK, 0.55)
@@ -281,11 +293,118 @@ static func _deck(core: Node3D, accent: Color, lod: int) -> void:
         _replace(core, "V2_CubiertaCajaMaterial_%d" % side, 0.07, STEEL)
         _replace(core, "V2_CintaMaterialFaccion_%d" % side, 0.018, accent)
 
+# V3.2 rear retention frame and engineering equipment. These are sealed
+# decorative objects, not production sites, weapons, or interactive inventory.
+static func _rear_v32(rear: Node3D, accent: Color, lod: int, damage: int) -> void:
+    var frame: Node3D = _group(rear, "V32_RetentionFrame")
+    for side in [-1, 1]:
+        for x in [0.76, 2.32]:
+            if damage >= 2 and side == 1 and x > 2.0:
+                continue
+            var xpos: float = float(side) * x
+            _box(frame, "V32_Stanchion_%d_%d" % [side, int(x * 100)], Vector3(xpos, 0.55, 2.94),
+                Vector3(0.12, 1.00, 0.15), DARK, 0.027)
+            _box(frame, "V32_StanchionFoot_%d_%d" % [side, int(x * 100)], Vector3(xpos, 0.10, 2.99),
+                Vector3(0.30, 0.16, 0.39), STEEL, 0.033)
+            if lod == 13:
+                _cyl(frame, "V32_StanchionPin_%d_%d" % [side, int(x * 100)], Vector3(xpos, 0.20, 3.06),
+                    0.044, 0.065, Vector3.UP, ALLOY, lod)
+        var rail_x: float = float(side) * 1.52
+        _box(frame, "V32_UpperRetainer_%d" % side, Vector3(rail_x, 0.79 if lod == 13 else 0.66, 2.99),
+            Vector3(2.95, 0.105, 0.13), STEEL, 0.024).rotation_degrees.z = -9.0 if damage >= 2 and side == 1 else 0.0
+        _box(frame, "V32_LowerRetainer_%d" % side, Vector3(rail_x, 0.37, 2.99),
+            Vector3(2.95, 0.095, 0.13), DARK, 0.018)
+    # Tie the former central fascia to the outer frame with end caps.
+    for side in [-1, 1]:
+        _box(frame, "V32_FasciaEndCap_%d" % side, Vector3(float(side) * 1.44, 1.10, 2.91),
+            Vector3(0.16, 0.22, 0.25), DARK, 0.026)
+        _box(frame, "V32_IdentityTab_%d" % side, Vector3(float(side) * 2.32, 0.52, 3.08),
+            Vector3(0.21, 0.21, 0.05), accent, 0.011)
+
+static func _case_v32(parent: Node3D, side: int, accent: Color, lod: int, damage: int) -> void:
+    var x: float = float(side) * 3.07
+    # Existing flank cases are retained and converted to fabricated tool chests.
+    var base: Node3D = _group(parent, "V32_ToolChestHardware_%d" % side, Vector3(x, 0, 1.45))
+    _box(base, "V32_ChestSkid", Vector3(0, 0.065, 0), Vector3(0.80, 0.12, 0.76), DARK, 0.026)
+    _box(base, "V32_ChestLidRim", Vector3(0, 0.61, 0), Vector3(0.81, 0.095, 0.77), DARK, 0.024)
+    _box(base, "V32_ChestLid", Vector3(0, 0.68, 0), Vector3(0.76, 0.10, 0.72), accent, 0.026)
+    for j in [-1, 1]:
+        _box(base, "V32_ChestCorner_%d" % j, Vector3(float(j) * 0.31, 0.35, -0.35),
+            Vector3(0.105, 0.49, 0.11), DARK, 0.022)
+        _box(base, "V32_ChestLatch_%d" % j, Vector3(float(j) * 0.24, 0.54, -0.40),
+            Vector3(0.11, 0.17, 0.065), ALLOY, 0.013)
+        _cyl(base, "V32_ChestHinge_%d" % j, Vector3(float(j) * 0.23, 0.60, 0.38),
+            0.055, 0.22, Vector3.RIGHT, STEEL, lod)
+    _box(base, "V32_ChestHandle", Vector3(0, 0.35, -0.40), Vector3(0.23, 0.085, 0.095), DARK, 0.018)
+    if lod == 13:
+        for i in range(3):
+            _box(base, "V32_ChestPressRib_%d" % i, Vector3(float(side) * 0.38, 0.21 + float(i) * 0.11, 0),
+                Vector3(0.05, 0.055, 0.47), STEEL, 0.009)
+    if damage >= 2 and side == 1:
+        base.rotation_degrees.y = -9.0
+        (base.get_node("V32_ChestLid") as Node3D).rotation_degrees.z = -11.0
+
+static func _engineering_v32(core: Node3D, accent: Color, lod: int, damage: int) -> void:
+    var gear: Node3D = _group(core, "V32_EngineeringGear")
+    for side in [-1, 1]:
+        _case_v32(core, side, accent, lod, damage)
+        # Work area is a rear alcove entirely beyond the standing center;
+        # low equipment is mounted against the sandbag wall, not the hinge.
+        var x: float = float(side) * 1.64
+        var z: float = 1.73
+        var station: Node3D = _group(gear, "V32_EngineeringBay_%d" % side, Vector3(x, 0, z))
+        _box(station, "V32_Skid", Vector3(0, 0.073, 0),
+            Vector3(1.06, 0.13, 0.65), DARK, 0.033)
+        if damage >= 2 and side == 1:
+            _box(station, "V32_FallenEquipment", Vector3(0.12, 0.19, 0),
+                Vector3(0.70, 0.30, 0.46), STEEL, 0.065).rotation_degrees = Vector3(9, 27, 13)
+            continue
+        if side == -1:
+            # Compact workbench with vice-like clamp and stowed tool case.
+            for leg in [-1, 1]:
+                _box(station, "V32_BenchLeg_%d" % leg, Vector3(float(leg) * 0.41, 0.36, 0),
+                    Vector3(0.13, 0.55, 0.45), STEEL, 0.027)
+            _box(station, "V32_BenchTop", Vector3(0, 0.66, 0), Vector3(1.05, 0.15, 0.61), ALLOY, 0.028)
+            _box(station, "V32_BenchApron", Vector3(0, 0.55, -0.28),
+                Vector3(0.95, 0.16, 0.10), accent, 0.019)
+            _box(station, "V32_ClampBase", Vector3(-0.31, 0.78, -0.06),
+                Vector3(0.31, 0.13, 0.29), DARK, 0.024)
+            for jaw in [-1, 1]:
+                _box(station, "V32_ClampJaw_%d" % jaw, Vector3(-0.31 + float(jaw) * 0.095, 0.89, -0.06),
+                    Vector3(0.10, 0.18, 0.23), STEEL, 0.022)
+            _cyl(station, "V32_ClampScrew", Vector3(-0.31, 0.82, -0.23), 0.038, 0.23, Vector3.RIGHT, ALLOY, lod)
+            _box(station, "V32_StowedToolCase", Vector3(0.23, 0.80, 0.04),
+                Vector3(0.38, 0.16, 0.33), DARK, 0.033)
+        else:
+            # Transport rack carrying spare structural profiles, no weapon.
+            for leg in [-1, 1]:
+                _box(station, "V32_ProfileRackUpright_%d" % leg, Vector3(float(leg) * 0.43, 0.39, 0.02),
+                    Vector3(0.12, 0.64, 0.46), DARK, 0.023)
+            _box(station, "V32_ProfileRackShelf", Vector3(0, 0.26, 0),
+                Vector3(0.96, 0.10, 0.52), STEEL, 0.018)
+            for i in range(3 if lod == 13 else 2):
+                _box(station, "V32_SpareProfile_%d" % i, Vector3(0, 0.37 + float(i) * 0.115, 0.02),
+                    Vector3(0.84, 0.095, 0.31), STEEL, 0.018)
+            _box(station, "V32_RackTie", Vector3(0, 0.58, -0.19),
+                Vector3(0.91, 0.10, 0.10), accent, 0.018)
+    # Edge rails and entry tread carry visual detail without reducing access.
+    for side in [-1, 1]:
+        for z in [-2.17, -0.55, 1.10]:
+            _box(core, "V32_EdgeAnchor_%d_%d" % [side, int(z * 100)],
+                Vector3(float(side) * 3.39, 0.095, z), Vector3(0.20, 0.17, 0.27), DARK, 0.035)
+        _box(core, "V32_EntryGrip_%d" % side, Vector3(float(side) * 0.85, 0.045, -2.08),
+            Vector3(0.48, 0.075, 0.70), RUBBER, 0.012)
+        _box(core, "V32_EntryGripEdge_%d" % side, Vector3(float(side) * 1.08, 0.087, -2.08),
+            Vector3(0.065, 0.028, 0.63), accent, 0.005)
+    for z in [-1.55, 1.32]:
+        _box(core, "V32_DeckJoint_%d" % int(z * 100), Vector3(0, 0.035, z),
+            Vector3(2.12, 0.052, 0.095), STEEL, 0.011)
+
 static func apply(root: Node3D, accent: Color, lod: int, damage: int) -> bool:
     if root == null or root.get_meta("camp_kind", "") != "defensivo":
         return false
     root.set_meta("defense_art_v3", 3)
-    root.set_meta("defense_art_revision", "3.1")
+    root.set_meta("defense_art_revision", "3.2")
     _replace(root, "PlataformaDesmontable", 0.045, CANVAS_DARK, 0.06)
     if damage == 3:
         var wreck: Node3D = _group(root, "V3_DefenseWreck")
@@ -301,12 +420,14 @@ static func apply(root: Node3D, accent: Color, lod: int, damage: int) -> bool:
     var core: Node3D = root.get_node("EquipamientoDesplegable/" + Base.CORE) as Node3D
     var rear: Node3D = core.get_node("V2_MurallaTrasera") as Node3D
     _rear(rear, accent, lod, damage)
+    _rear_v32(rear, accent, lod, damage)
     for child in core.get_children():
         if str(child.name).begins_with("V2_SacosFlanco_"):
             _bag(child as Node3D, 0.82, lod, int(str(child.name).get_slice("_", 3)) + 2)
     for side in [-1, 1]:
         _wall(core, side, accent, lod)
     _deck(core, accent, lod)
+    _engineering_v32(core, accent, lod, damage)
     if damage >= 2:
         _replace(core, "V2_SeccionBarreraCaida", 0.08, STEEL, 0.50)
         _replace(core, "V2_FragmentoFaccionCaido", 0.018, accent)
