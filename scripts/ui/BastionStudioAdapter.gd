@@ -222,6 +222,7 @@ var _g13_v4_tween: Tween
 var _g15_tween: Tween
 var _g16_tween: Tween
 var _a01_tween: Tween = null
+var _a02_preview_tween: Tween = null
 var a01_360_panel:VBoxContainer
 var a01_lod_readout:Label=null
 var _a01_review_tween:Tween = null
@@ -313,7 +314,7 @@ func _ready() -> void:
     if fpv_index>=0 and role_picker!=null:
         while role_picker.item_count<=fpv_index:
             role_picker.add_item(P06Models.ROLES[role_picker.item_count])
-        role_picker.set_item_text(fpv_index,"A02 · Dron FPV · V6 EN DESARROLLO")
+        role_picker.set_item_text(fpv_index,"A02 · Dron FPV · V7 EN DESARROLLO")
     # Preserve existing roles/indices; these are additional native 3D variants.
     for entry in [
         ["line","★ INFANTERÍA BÁSICA · Guardia"],
@@ -726,6 +727,14 @@ func _studio_animation_specs(role: String) -> Array[Dictionary]:
         ])
         return actions
     match role:
+        "fpv":
+            return [
+                {"group":"A02 V7 · ANIMACIONES VISUALES"},
+                {"title":"Movimiento", "action":"a02_move"},
+                {"title":"Suspensión visual", "action":"a02_hover"},
+                {"title":"Reacción a impacto", "action":"a02_hit"},
+                {"title":"Detener y restaurar pose", "action":"stop"}
+            ]
         "uav_recon":
             return [
                 {"group":"A01 V30 · DRON DE RECONOCIMIENTO SIN ARMAMENTO"},
@@ -973,6 +982,9 @@ func _studio_run_animation(action: String) -> void:
     match action:
         "stop":
             _studio_quick_stop()
+        "a02_move","a02_hover","a02_hit":
+            if _role=="fpv":
+                _a02_preview_play(action.trim_prefix("a02_"))
         "a01_move","a01_scan","a01_hit":
             if _role=="uav_recon":
                 _a01_play(action.trim_prefix("a01_"))
@@ -1642,6 +1654,31 @@ func _infantry_review_spin() -> void:
 
 # A01 reconnaissance V1 preview uses the same actual Godot SubViewport.
 # No synthetic fog reveal and no attack capability are created by this rig.
+func _a02_preview_stop()->void:
+    if _a02_preview_tween!=null and _a02_preview_tween.is_running():
+        _a02_preview_tween.kill()
+    if _role=="fpv" and is_instance_valid(model_root):
+        P06Models.restore_model_pose("fpv",model_root)
+
+func _a02_preview_play(kind:String)->void:
+    if _role!="fpv" or not is_instance_valid(model_root) or kind not in ["move","hover","hit"]:
+        return
+    _a02_preview_stop()
+    var art:Node3D=model_root
+    _a02_preview_tween=create_tween()
+    _a02_preview_tween.tween_method(Callable(self,"_a02_preview_tick").bind(art,kind),
+        0.0,1.0,2.4 if kind=="hover" else 1.5)
+    _a02_preview_tween.tween_callback(Callable(self,"_a02_preview_done").bind(art))
+    status_label.text="A02 V7 · demostración visual: "+kind
+
+func _a02_preview_tick(progress:float,art:Node3D,kind:String)->void:
+    if is_instance_valid(art) and art==model_root and _role=="fpv":
+        P06Models.pose_model("fpv",art,kind,progress)
+
+func _a02_preview_done(art:Node3D)->void:
+    if is_instance_valid(art) and art==model_root and _role=="fpv":
+        P06Models.restore_model_pose("fpv",art)
+
 func _a01_play(kind:String)->void:
     if _role!="uav_recon" or model_root==null or not A01Recon.has_model(model_root):
         return
@@ -1794,6 +1831,11 @@ func _studio_quick_action(kind: String) -> void:
     match _role:
         "line","scout","infantry_urban","infantry_defense","infantry_antitank","infantry_engineer","infantry_sniper","infantry_logistic","infantry_medic","infantry_commando":
             _infantry_play("hit_bullet" if kind=="hit" else kind)
+        "fpv":
+            if kind in ["move","hover","hit"]:
+                _a02_preview_play(kind)
+            else:
+                status_label.text="A02 V7 · demostración visual disponible en Animaciones."
         "uav_recon":
             if kind in ["attack","attack_air","attack_ground"]:
                 status_label.text="A01 es un dron de reconocimiento SIN armamento."
@@ -1829,7 +1871,9 @@ func _studio_quick_action(kind: String) -> void:
             status_label.text="Este modelo no tiene animación propia implementada."
 
 func _studio_quick_stop() -> void:
-    if _role=="uav_recon":
+    if _role=="fpv":
+        _a02_preview_stop()
+    elif _role=="uav_recon":
         if _a01_tween!=null and _a01_tween.is_running():
             _a01_tween.kill()
         if model_root!=null:
@@ -1891,7 +1935,7 @@ func _refresh_unified_studio_navigation() -> void:
             "mlrs": label="G11 · Lanzador · V33"
             "attack_heli": label="A01 · Helicóptero HAT-29 · V14"
             "uav_recon": label="A01 · Dron de reconocimiento · V30 FINAL"
-            "fpv": label="A02 · Dron FPV · V6 EN DESARROLLO"
+            "fpv": label="A02 · Dron FPV · V7 EN DESARROLLO"
             "logistics_mobile": label="G16 · Logística blindada 6×6 · V6 PBR y suministros articulados"
             "ew_mobile": label="G15 · Guerra electrónica · V11 (neumáticos, óptica y electrónica 3D)"
             "aa_mobile": label="G13 · Antiaéreo · V54 caucho y rodadura 3D"
@@ -4521,6 +4565,7 @@ func _stage_p06() -> int:
         "tarvoka_apc_v3_damage_stage",0)),0,4)
 
 func _display_role(role: String) -> void:
+    _a02_preview_stop()
     _infantry_helmet_focus=false
     if _a01_tween!=null and _a01_tween.is_running():
         _a01_tween.kill()

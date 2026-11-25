@@ -202,7 +202,23 @@ func _run()->void:
             check(tris<=(12000 if lod==8 else 24000),"initial triangle budget")
             for i in range(4):
                 check(model.find_child("A02_ClosedRotorGuard_"+str(i),true,false)!=null and model.find_child("A02_VisualRotor_"+str(i),true,false)!=null,"four rotor assemblies")
-            check(Models.pose_model("fpv",model,"move",0.25),"motion")
+            check(bool(model.get_meta("tarvoka_a02_v7_visual_pose",false)),"V7 visual pose")
+            var visual_body:=model.find_child(Art.BODY,false,false) as Node3D
+            check(visual_body!=null,"V7 visual body")
+            if visual_body!=null:
+                for kind in ["move","hover","hit"]:
+                    for progress in [0.0,0.31,0.57,1.0]:
+                        check(Models.pose_model("fpv",model,kind,progress),"V7 pose "+kind)
+                        if progress==0.0 or progress==1.0:
+                            check(visual_body.position.is_zero_approx() and visual_body.rotation.is_zero_approx(),"V7 exact rest endpoints")
+                        else:
+                            check(not visual_body.position.is_zero_approx(),"V7 visible intermediate pose")
+                    check(Models.pose_model("fpv",model,kind,0.31),"V7 restart")
+                    Models.restore_model_pose("fpv",model)
+                    check(visual_body.position.is_zero_approx() and visual_body.rotation.is_zero_approx(),"V7 reset after interruption")
+                    for i in range(4):
+                        var pivot:=visual_body.find_child("A02_VisualRotor_"+str(i),false,false) as Node3D
+                        check(pivot!=null and pivot.rotation.is_zero_approx(),"V7 reset visual pivot")
             Art.restore(model)
             await process_frame
             await process_frame

@@ -21,3 +21,7 @@ V4 pasó QA nativa 45663568352 y compilación Android 45663568410. Se revisaron 
 ## V6 — coherencia de materiales y recursos visuales
 
 Acabado tonal opaco en el frontal decorativo y su marco, carcasa gris ligeramente más clara y contraste neutro automático para la insignia superior según luminancia de la pintura oficial. Los cuatro protectores comparten una sola malla y material por instancia; se mantienen posiciones, topología y cantidad de triángulos. QA añade comprobación de recursos compartidos, contraste, pigmentos y opacidad. V5 aún estaba en CI al iniciar V6; ambas revisiones requieren validación. Sin cambios de armamento, mecanismos reales, animaciones, estadísticas ni otras unidades.
+
+## V7 — animaciones de presentación
+
+V6 QA nativa 45665256338, APK 45665256201 y reglas 45665256190 aprobadas. V7 añade una pose de suspensión puramente visual, suaviza los movimientos de presentación y la reacción a impacto, restablece exactamente la pose al inicio y final, incorpora controles en el catálogo del Studio compartido y cancela el tween al cambiar de unidad o facción. Pruebas de poses intermedias y restauración en 16 combinaciones. Sin cambios a geometría, mecánicas, armamento, navegación ni estadísticas. Pendiente CI y publicación V7.

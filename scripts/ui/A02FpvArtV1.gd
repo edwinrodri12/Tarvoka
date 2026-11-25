@@ -197,6 +197,7 @@ static func build(root:Node3D,faction:Color,hero:bool)->bool:
                 Vector3(side*0.145,1.205,0.14),Vector3(0.045,0.016,0.12),emblem)
         _part(body,"A02_V5_BellyInsignia",sculpt,Vector3(0,0.680,0.07),
             Vector3(0.18,0.018,0.23),dark_mark)
+    root.set_meta("tarvoka_a02_v7_visual_pose",true)
     root.set_meta("tarvoka_a02_v6_material_coherence",true)
     root.set_meta("tarvoka_a02_v5_decorative_identity",true)
     root.set_meta("tarvoka_a02_v4_surface_normals",true)
@@ -221,17 +222,30 @@ static func restore(root:Node3D)->void:
             rotor.rotation=Vector3.ZERO
 
 static func pose(root:Node3D,kind:String,progress:float)->bool:
-    if root==null or not bool(root.get_meta(FLAG,false)) or not kind in ["idle","move","hit"]:
+    if root==null or not bool(root.get_meta(FLAG,false)) or not kind in ["idle","move","hover","hit"]:
         return false
     var body:=root.find_child(BODY,false,false) as Node3D
     if body==null:
         return false
     var p:float=clampf(progress,0.0,1.0)
+    # Stylized preview poses only; no simulation, navigation or attack logic.
+    if kind=="idle" or p<=0.0 or p>=1.0:
+        restore(root)
+        return true
     var envelope:float=pow(sin(p*PI),2.0)
-    body.position.y=0.06*envelope if kind=="move" else 0.0
-    body.rotation_degrees.z=4.0*sin(p*TAU)*envelope if kind=="move" else (7.0*sin(p*TAU)*envelope if kind=="hit" else 0.0)
+    body.position=Vector3.ZERO
+    body.rotation_degrees=Vector3.ZERO
+    match kind:
+        "move":
+            body.position.y=0.06*envelope
+            body.rotation_degrees.z=4.0*sin(p*TAU)*envelope
+        "hover":
+            body.position.y=0.025*envelope*(1.0+0.30*sin(p*TAU*2.0))
+        "hit":
+            body.position.y=-0.025*sin(p*PI)*exp(-2.5*p)
+            body.rotation_degrees.z=8.0*sin(p*TAU*2.0)*exp(-3.0*p)*envelope
     for i in range(4):
         var rotor:=body.find_child("A02_VisualRotor_"+str(i),false,false) as Node3D
         if rotor!=null:
-            rotor.rotation_degrees.y=(1.0 if i%2==0 else -1.0)*720.0*p if kind=="move" else 0.0
+            rotor.rotation_degrees.y=(1.0 if i%2==0 else -1.0)*720.0*smoothstep(0.0,1.0,p) if kind in ["move","hover"] else 0.0
     return true
