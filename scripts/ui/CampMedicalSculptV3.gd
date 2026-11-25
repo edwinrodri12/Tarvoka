@@ -340,7 +340,7 @@ static func _equipment_pose(core: Node3D, progress: float, damage: int) -> void:
 
 # Decorative screen cycle, independent of game data. No damaged/packed operation.
 static func monitor_frame(root: Node3D, progress: float) -> bool:
-    if root == null or root.get_meta("medical_art_revision", "") != "3.4" or int(root.get_meta("visual_damage", 0)) >= 2:
+    if root == null or root.get_meta("medical_art_revision", "") != "3.5" or int(root.get_meta("visual_damage", 0)) >= 2:
         return false
     if float(root.get_meta("medical_v3_deploy_progress", 0.0)) < 0.99:
         return false
@@ -506,15 +506,88 @@ static func damage_fx_pose(root: Node3D, kind: String, progress: float) -> bool:
         chip.rotation_degrees = Vector3(t * 280.0, float(i) * 37.0 + t * 190.0, t * 210.0)
     return true
 
+# Two rigid roof sections per side, with a raised hinge axis to avoid
+# overlapping the thickness of the leaves in the stacked transport pose.
+static func _split_roof(tent: Node3D, accent: Color, lod: int) -> void:
+    for side in [-1, 1]:
+        var pivot: Node3D = tent.get_node_or_null("V2_CubiertaArticulada_%d" % side) as Node3D
+        if pivot == null:
+            continue
+        var direction: float = -float(side)
+        var panel: MeshInstance3D = pivot.get_node("PanelLonaRefuerzo") as MeshInstance3D
+        panel.mesh = _roof_mesh(1.075, 3.19)
+        panel.position.x = direction * 0.5375
+        for old in pivot.get_children():
+            if old != panel and old.name != "ArticulacionSellada":
+                pivot.remove_child(old)
+                old.free()
+        var hinge: Node3D = _group(pivot, "V35_SecondaryRoofHinge", Vector3(direction * 1.075, 0.145, 0))
+        var inner: MeshInstance3D = _part(hinge, "V35_InnerRoof", _roof_mesh(1.075, 3.19),
+            Vector3(direction * 0.5375, -0.145, 0), CANVAS, 0.02, 0.90)
+        var pin: MeshInstance3D = _round(pivot, "V35_ContinuousHingePin", hinge.position, 0.09, 3.12, FRAME, lod)
+        pin.rotation_degrees.x = 90.0
+        for z in [-1.40, 1.40]:
+            _box(pivot, "V35_HingeMount_%d" % int(z * 100), Vector3(direction * 1.04, 0.09, z),
+                Vector3(0.15, 0.13, 0.22), ALLOY, 0.022, 0.4)
+            _box(hinge, "V35_InnerHingeMount_%d" % int(z * 100), Vector3(direction * 0.045, -0.055, z),
+                Vector3(0.15, 0.13, 0.22), ALLOY, 0.022, 0.4)
+        for part in [panel, inner]:
+            _box(part, "V35_FactionBand", Vector3(0, 0.105, -1.26), Vector3(1.00, 0.047, 0.27), accent, 0.012, 0.2)
+            for z in [-1.52, 1.52]:
+                _box(part, "V35_SealedEdge_%d" % int(z * 100), Vector3(0, 0.006, z), Vector3(1.075, 0.17, 0.11), FRAME, 0.023, 0.38)
+            if lod == 13:
+                for z in [-0.65, 0.24, 0.92]:
+                    _box(part, "V35_Stitch_%d" % int(z * 100), Vector3(0, 0.125, z), Vector3(1.00, 0.024, 0.045), SEAM, 0.007, 0.0)
+
+static func _contact_finish(core: Node3D, lod: int, damage: int) -> void:
+    var tent: Node3D = core.get_node("V2_CarpaDesmontable") as Node3D
+    for side in [-1, 1]:
+        for z in [-0.32, 1.05, 2.35]:
+            var foot: Node3D = tent.get_node("V3_Foot_%d_%d" % [side, int(z * 100)]) as Node3D
+            foot.position.y = 0.075
+    var bed: Node3D = core.get_node("V2_CamillaClinica") as Node3D
+    for side in [-1, 1]:
+        for z in [-0.52, 0.52]:
+            _box(bed, "V35_RailBracket_%d_%d" % [side, int(z * 100)],
+                Vector3(float(side) * 0.53, 0.762, -0.30 + z), Vector3(0.12, 0.15, 0.10), FRAME, 0.02, 0.4)
+    var monitor: Node3D = core.get_node("V2_MonitorPortatil") as Node3D
+    _box(monitor, "V35_LeadGland", Vector3(0.235, 1.065, 0.18), Vector3(0.105, 0.13, 0.11), FRAME, 0.018, 0.3)
+    var iv: Node3D = core.get_node("V2_SoporteSueros") as Node3D
+    _round(iv, "V35_IVLockSeal", Vector3(0, 1.467, 0), 0.065, 0.048, RUBBER, lod)
+    if damage >= 2:
+        var cabinet: Node3D = core.get_node("V2_ModuloMedicamentos") as Node3D
+        for side in [-1, 1]:
+            _box(cabinet, "V35_DamagedDrawerRunner_%d" % side, Vector3(float(side) * 0.27, 0.69, -0.47),
+                Vector3(0.055, 0.065, 0.22), ALLOY, 0.012, 0.45)
+        var post: Node3D = tent.get_node("V3_Post_1_105") as Node3D
+        # Keep the lower end on the original foot after bending the post.
+        post.position.x = 1.98 + sin(deg_to_rad(12.0)) * 1.01
+
+# Seat wreck pieces on the platform using transformed mesh vertices, not
+# unrotated bounding boxes. Descendant decorations follow the parent.
+static func _ground_wreck_piece(part: MeshInstance3D) -> void:
+    var low: float = INF
+    for vertex in part.mesh.get_faces():
+        low = minf(low, (part.basis * vertex).y)
+    if low < INF:
+        part.position.y = -low + 0.012
+
 static func apply(root: Node3D, accent: Color, lod: int, damage: int) -> bool:
     if root == null or root.get_meta("camp_kind", "") != "medico":
         return false
     root.set_meta("medical_art_v3", 3)
-    root.set_meta("medical_art_revision", "3.4")
+    root.set_meta("medical_art_revision", "3.5")
     _replace(root, "PlataformaDesmontable", 0.045, FLOOR, 0.06)
     if damage == 3:
         _wreck(root, accent, lod)
-        _wreck_detail(root.get_node("V3_MedicalWreck") as Node3D, accent, lod)
+        var wreck: Node3D = root.get_node("V3_MedicalWreck") as Node3D
+        _wreck_detail(wreck, accent, lod)
+        for key in ["V3_FallenRoof_-1", "V3_FallenRoof_1", "V3_FallenClinicalCabinet", "V3_FallenAidPlate", "V34_BrokenMonitor"]:
+            _ground_wreck_piece(wreck.get_node(key) as MeshInstance3D)
+        var aid: Node3D = wreck.get_node("V3_FallenAidTeal") as Node3D
+        var plate: Node3D = wreck.get_node("V3_FallenAidPlate") as Node3D
+        aid.position.y = plate.position.y + 0.10
+        aid.rotation_degrees.y = plate.rotation_degrees.y
         return damage_fx_pose(root, "idle", 0.34)
     var core: Node3D = root.get_node("EquipamientoDesplegable/" + Base.CORE) as Node3D
     var tent: Node3D = core.get_node("V2_CarpaDesmontable") as Node3D
@@ -523,6 +596,8 @@ static func apply(root: Node3D, accent: Color, lod: int, damage: int) -> bool:
     _bed(core, accent, lod, damage)
     _clinical_equipment(core, accent, lod, damage)
     _physical_damage(core, lod, damage)
+    _split_roof(tent, accent, lod)
+    _contact_finish(core, lod, damage)
     return pose(root, 1.0) and damage_fx_pose(root, "idle", 0.34)
 
 static func pose(root: Node3D, progress: float) -> bool:
@@ -542,10 +617,12 @@ static func pose(root: Node3D, progress: float) -> bool:
             var pivot: Node3D = tent.get_node_or_null("V2_CubiertaArticulada_%d" % side) as Node3D
             if pivot != null:
                 # Open upward/outward, preserving clearance above the bed.
-                pivot.rotation_degrees.z = float(side) * lerpf(72.0, 23.0, smoothstep(0.66, 1.0, t))
+                pivot.rotation_degrees.z = float(side) * lerpf(80.0, 23.0, smoothstep(0.66, 1.0, t))
                 # Positive rotation of the left-to-right roof vector raises
                 # its inner edge; signs are mirrored for the opposite leaf.
                 pivot.rotation_degrees.z *= -1.0
+                var hinge: Node3D = pivot.get_node("V35_SecondaryRoofHinge") as Node3D
+                hinge.rotation_degrees.z = float(-side) * lerpf(180.0, 0.0, smoothstep(0.10, 0.60, t))
     root.set_meta("medical_v3_deploy_progress", t)
     return true
 
@@ -559,5 +636,7 @@ static func inspect_interior(root: Node3D, enabled: bool) -> bool:
     for side in [-1, 1]:
         var pivot: Node3D = tent.get_node("V2_CubiertaArticulada_%d" % side) as Node3D
         pivot.rotation_degrees.z = float(-side) * 112.0
+        var hinge: Node3D = pivot.get_node("V35_SecondaryRoofHinge") as Node3D
+        hinge.rotation_degrees.z = 0.0
     root.set_meta("medical_v3_inspection", true)
     return true
