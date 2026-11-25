@@ -204,13 +204,22 @@ static func build(root:Node3D,faction:Color,hero:bool)->bool:
     var effects:=Node3D.new()
     effects.name=EFFECT
     body.add_child(effects)
-    # V9: deliberately stylized opaque smoke, with a tonal progression.
+    # V12: overlapping, soft-shaded decorative volumes rather than
+    # isolated balls. The effect remains opaque and shares one mesh.
+    var puff_mesh:=SphereMesh.new()
+    puff_mesh.radius=0.5
+    puff_mesh.height=1.0
+    puff_mesh.radial_segments=16 if hero else 10
+    puff_mesh.rings=8 if hero else 4
+    var plume_positions:Array[Vector3]=[Vector3(0.08,1.29,0.12),
+        Vector3(0.04,1.39,0.135),Vector3(0.105,1.49,0.105)]
+    var plume_sizes:Array[Vector3]=[Vector3(0.16,0.22,0.16),
+        Vector3(0.23,0.25,0.20),Vector3(0.27,0.27,0.24)]
     for i in range(3):
-        var shade:Color=Color("#364047").lerp(Color("#78838a"),float(i)/2.0)
+        var shade:Color=Color("#424b50").lerp(Color("#737d83"),float(i)/2.0)
         var smoke:=_mat(shade,0.0,1.0)
-        var puff:=_oval(effects,"A02_V8_Smoke_"+str(i),
-            Vector3(0.08+0.035*i,1.31+0.12*i,0.12),
-            Vector3(0.13+0.035*i,0.19+0.035*i,0.13+0.035*i),smoke,false)
+        var puff:=_part(effects,"A02_V8_Smoke_"+str(i),puff_mesh,
+            plume_positions[i],plume_sizes[i],smoke)
         puff.set_meta("tarvoka_a02_v9_rest_scale",puff.scale)
         puff.set_meta("tarvoka_a02_v9_rest_position",puff.position)
         puff.visible=false
@@ -219,6 +228,7 @@ static func build(root:Node3D,faction:Color,hero:bool)->bool:
         if part.get_parent()!=effects:
             part.set_meta(BASE_MATERIAL,part.material_override)
     root.set_meta(DAMAGE,0)
+    root.set_meta("tarvoka_a02_v12_smoke_finish",true)
     root.set_meta("tarvoka_a02_v9_damage_finish",true)
     root.set_meta("tarvoka_a02_v8_damage_art",true)
     root.set_meta("tarvoka_a02_v7_visual_pose",true)

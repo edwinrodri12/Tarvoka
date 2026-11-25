@@ -41,3 +41,7 @@ Se añade informe JSON de las 80 combinaciones de las ocho facciones, dos LOD y 
 ## V11 — candidato de revisión y validación del visor
 
 V10 verificada en 80 estados (45672543112, artefacto 15049803591); APK 45672543084, reglas 45672543209 y construcción Studio 45672542959 correctos. En D0 LOD8: 27 instancias / 2436 triángulos; LOD13: 34 / 5688. Máximo D3: LOD8 29 / 2636, LOD13 36 / 5888. El trabajo no mide FPS o RAM de teléfono. V11 conserva el arte V10 sin cambios: añade evidencia de entrada WebGL de solo lectura y prueba Chromium de las dos rutas A02/fpv, selector, opacidad y catálogo de animaciones. La marca de revisión de Studio identifica el código exacto. El despliegue público está reservado a main, no se declara publicado ni aprobado. Pendiente prueba de navegador V11, decisión artística y regresión independiente G13.
+
+## V12 — acabado estilizado del humo para revisión
+
+V11 nativa 45679598133 y APK 45679598443 correctas. La construcción WebGL V11 seguía ejecutándose al comenzar. V12 refina exclusivamente el efecto de presentación D2–D4 con tres volúmenes opacos superpuestos, tonalidad moderada y una malla compartida; LOD8 conserva segmentos y anillos previos, LOD13 mejora suavidad. D0 y geometría del cuerpo intactos. QA verifica solapamiento, reutilización, LOD y presupuesto. El informe de recursos se identifica V12. Prueba WebGL y publicación pendientes; no se afirma aprobación artística ni se cambian reglas.

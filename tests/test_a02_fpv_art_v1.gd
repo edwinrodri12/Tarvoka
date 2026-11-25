@@ -249,6 +249,18 @@ func _run()->void:
                         original_materials[piece]=piece.material_override
                 var effects:=visual_body.find_child(Art.EFFECT,false,false) as Node3D
                 check(effects!=null,"V8 presentation effects")
+                check(bool(model.get_meta("tarvoka_a02_v12_smoke_finish",false)),"V12 plume finish")
+                if effects!=null and effects.get_child_count()==3:
+                    var first:=effects.get_child(0) as MeshInstance3D
+                    var second:=effects.get_child(1) as MeshInstance3D
+                    var third:=effects.get_child(2) as MeshInstance3D
+                    check(first.mesh==second.mesh and second.mesh==third.mesh,"V12 shared effect resource")
+                    var sphere:=first.mesh as SphereMesh
+                    check(sphere!=null and sphere.radial_segments==(16 if lod==13 else 10)
+                        and sphere.rings==(8 if lod==13 else 4),"V12 effect detail budget")
+                    check((first.transform*first.mesh.get_aabb()).intersects(second.transform*second.mesh.get_aabb())
+                        and (second.transform*second.mesh.get_aabb()).intersects(third.transform*third.mesh.get_aabb()),
+                        "V12 overlapping decorative plume")
                 for damage in range(5):
                     check(Art.set_stage(model,damage) and Art.stage(model)==damage,"V8 stage")
                     var inventory:Dictionary=_inventory(model)
@@ -344,7 +356,7 @@ func _run()->void:
     var report:=FileAccess.open(out+"/a02-v10-workload.json",FileAccess.WRITE)
     check(report!=null,"V10 resource report created")
     if report!=null:
-        report.store_string(JSON.stringify({"revision":"V10","measurement":"visible native Godot mesh resources; not FPS or RAM","states":workload},"  "))
+        report.store_string(JSON.stringify({"revision":"V12","measurement":"visible native Godot mesh resources; not FPS or RAM","states":workload},"  "))
         report.close()
     check(Arsenal.profile("fpv")==profile,"no catalogue changes")
     vp.queue_free()
