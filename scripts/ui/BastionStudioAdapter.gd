@@ -1237,8 +1237,14 @@ func _studio_run_animation(action: String) -> void:
                 A01Recon.restore(model_root)
                 if A01DamageV6.set_stage(model_root,selected_stage):
                     status_label.text=(
-                        "A01 V6 · %s · SOLO ARTE · sin cambios a HP, visión o combate" %
+                        "A01 V22 · %s · SOLO ARTE · sin cambios a HP, visión o combate" %
                         A01DamageV6.STAGES[selected_stage])
+                    if selected_stage==4:
+                        var wreck:Node3D=model_root
+                        A01DamageV6.pose_crash(wreck,0.0)
+                        _a01_tween=create_tween()
+                        _a01_tween.tween_method(Callable(self,"_a01_crash_tick").bind(wreck),
+                            0.0,1.0,1.65).set_trans(Tween.TRANS_LINEAR)
             elif InfantryV1.supports(_role):
                 if InfantryV1.set_damage(model_root,selected_stage):
                     if selected_stage==4:
@@ -1641,6 +1647,8 @@ func _a01_play(kind:String)->void:
         _a01_tween.kill()
     var art:Node3D=model_root
     A01Recon.restore(art)
+    if A01DamageV6.stage(art)==4:
+        A01DamageV6.pose_crash(art,1.0)
     if kind=="idle":
         return
     _a01_tween=create_tween()
@@ -1652,6 +1660,10 @@ func _a01_play(kind:String)->void:
 func _a01_tick(progress:float,art:Node3D,kind:String)->void:
     if is_instance_valid(art):
         A01Recon.pose(art,kind,progress)
+
+func _a01_crash_tick(progress:float,art:Node3D)->void:
+    if is_instance_valid(art) and art==model_root and _role=="uav_recon":
+        A01DamageV6.pose_crash(art,progress)
 
 func _a01_done(art:Node3D)->void:
     if is_instance_valid(art):
@@ -1815,6 +1827,8 @@ func _studio_quick_stop() -> void:
             _a01_tween.kill()
         if model_root!=null:
             A01Recon.restore(model_root)
+            if A01DamageV6.stage(model_root)==4:
+                A01DamageV6.pose_crash(model_root,1.0)
     elif InfantryV1.supports(_role):
         if _engineer_v6_tween!=null and _engineer_v6_tween.is_running():
             _engineer_v6_tween.kill()
