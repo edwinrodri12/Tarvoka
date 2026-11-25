@@ -140,11 +140,27 @@ static func pose(root:Node3D,kind:String,progress:float)->bool:
     var camera:=root.find_child(SENSOR,true,false) as Node3D
     if prop==null or camera==null:
         return false
-    prop.rotation_degrees.z=1080.0*p if kind=="move" else 450.0*p
-    camera.rotation_degrees.y=38.0*sin(p*TAU) if kind=="scan" else 0.0
-    camera.rotation_degrees.x=12.0*sin(p*PI) if kind=="scan" else 0.0
-    root.position.y=0.06*sin(p*TAU) if kind=="move" else 0.0
-    root.rotation_degrees.z=4.0*sin(p*PI) if kind=="hit" else 0.0
+    # V22: continuous motor acceleration, eased sweep and damped recoil.
+    var stage:int=int(root.get_meta("tarvoka_a01_v6_damage_stage",0))
+    if stage==4 and kind in ["move","scan"]:
+        return false
+    var spin:float=p-sin(p*TAU)/TAU*0.72
+    var turns:float=3.0 if kind=="move" else (2.0 if kind=="scan" else 0.0)
+    if stage==3 and turns>0.0:
+        turns=1.0
+    prop.rotation_degrees.z=360.0*turns*spin
+    var sweep:float=TAU*smoothstep(0.0,1.0,p)
+    camera.rotation_degrees.y=38.0*sin(sweep) if kind=="scan" else 0.0
+    camera.rotation_degrees.x=12.0*pow(sin(p*PI),2.0) if kind=="scan" else 0.0
+    var envelope:float=pow(sin(p*PI),2.0)
+    root.position.y=0.08*envelope if kind=="move" else 0.0
+    var roll:float=0.0
+    if kind=="move":
+        roll=2.4*sin(p*TAU)*envelope
+    elif kind=="hit":
+        roll=7.0*sin(p*TAU*2.0)*exp(-3.5*p)*(1.0-p)
+        root.position.y=-0.035*sin(p*PI)*exp(-2.5*p)
+    root.rotation_degrees.z=roll
     return true
 
 static func restore(root:Node3D)->void:

@@ -21,6 +21,53 @@ static func _finish(color:Color,metal:float,rough:float)->StandardMaterial3D:
     material.cull_mode=BaseMaterial3D.CULL_BACK
     return material
 
+# The previous ellipsoid ended below the tail hinge, leaving a gap.
+# These closed composite booms rise from inside the wing spar to inside
+# the tailplane and follow the physical axis of the two support arms.
+static func _boom(body:Node3D,tag:String,side:float,hero:bool,
+        mat:Material)->MeshInstance3D:
+    var stations:Array=[
+        [-0.22,1.043,0.055,0.034],
+        [0.04,1.037,0.078,0.064],
+        [0.37,1.002,0.077,0.070],
+        [0.91,0.997,0.065,0.064],
+        [1.33,1.026,0.052,0.052],
+        [1.47,1.055,0.039,0.033]
+    ]
+    var sides:int=12 if hero else 8
+    var rings:Array=[]
+    for station in stations:
+        var ring:Array[Vector3]=[]
+        for i in range(sides):
+            var angle:float=TAU*float(i)/float(sides)
+            ring.append(Vector3(side*0.46+cos(angle)*float(station[2]),
+                float(station[1])+sin(angle)*float(station[3]),float(station[0])))
+        rings.append(ring)
+    var t:=SurfaceTool.new()
+    t.begin(Mesh.PRIMITIVE_TRIANGLES)
+    for j in range(rings.size()-1):
+        var front:Array=rings[j]
+        var back:Array=rings[j+1]
+        for i in range(sides):
+            var k:int=(i+1)%sides
+            var angle:float=TAU*(float(i)+0.5)/float(sides)
+            var radial:=Vector3(cos(angle),sin(angle),0.0)
+            V4._triangle(t,front[i],front[k],back[k],radial)
+            V4._triangle(t,front[i],back[k],back[i],radial)
+    var start:Array=rings[0]
+    var finish:Array=rings[rings.size()-1]
+    for i in range(1,sides-1):
+        V4._triangle(t,start[0],start[i],start[i+1],Vector3.FORWARD)
+        V4._triangle(t,finish[0],finish[i],finish[i+1],Vector3.BACK)
+    t.index()
+    t.generate_normals()
+    var boom:=MeshInstance3D.new()
+    boom.name=tag
+    boom.mesh=t.commit()
+    boom.material_override=mat
+    body.add_child(boom)
+    return boom
+
 static func _exists(root:Node3D,name:String)->bool:
     return root.find_child(name,true,false) is MeshInstance3D
 
@@ -60,9 +107,15 @@ static func apply(root:Node3D,paint:Color,hero:bool)->bool:
             old_trim.visible=false
         # Elliptical enclosed composite boom, with a long sealed fuselage
         # connection and an aerodynamic fairing to the twin stabilizer.
-        var smooth:=V4._fairing(body,boom_name,
-            Vector3(s*0.46,0.91,0.76),
-            Vector3(0.160,0.165,1.550),alloy,hero)
+        var smooth:=_boom(body,boom_name,s,hero,alloy)
+        # Preserve old nodes for historical tests, but remove floating
+        # cable channels and square servo blocks from the rendered shell.
+        var side_tag:String="Port" if side<0 else "Starboard"
+        for old_name in ["A01_V2_TailServoBridge_"+side_tag,
+                "A01_V2_CableChannel_"+side_tag]:
+            var obsolete:=body.find_child(old_name,false,false) as MeshInstance3D
+            if obsolete!=null:
+                obsolete.visible=false
         if smooth==null:
             return false
         var stations:Array=[

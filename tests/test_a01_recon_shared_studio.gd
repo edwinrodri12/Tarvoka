@@ -8,6 +8,7 @@ const HardwareV3=preload("res://scripts/ui/A01ReconFinishV3.gd")
 const AeroV4=preload("res://scripts/ui/A01ReconAirfoilV4.gd")
 const TailV5=preload("res://scripts/ui/A01ReconTailV5.gd")
 const DamageV6=preload("res://scripts/ui/A01ReconDamageV6.gd")
+const AtmosphereV15=preload("res://scripts/ui/A01ReconAtmosphereV15.gd")
 const WingletV8=preload("res://scripts/ui/A01ReconWingletV8.gd")
 const WingletV9=preload("res://scripts/ui/A01ReconWingletV9.gd")
 const NoseV10=preload("res://scripts/ui/A01ReconNoseOpticsV10.gd")
@@ -47,14 +48,14 @@ func _run()->void:
         "recon drone added to the SAME unit selector")
     if picker!=null and index>=0 and index<picker.item_count:
         check(picker.get_item_text(index).contains("A01") and
-            picker.get_item_text(index).contains("V14 EN DESARROLLO"),
-            "A01 correctly remains an unapproved first art revision")
+            picker.get_item_text(index).contains("V25 EN DESARROLLO"),
+            "A01 V25 is identifiable and remains pending artistic approval")
         picker.select(index)
     studio.call("_display_role","uav_recon")
     await process_frame
     var model:=studio.get("model_root") as Node3D
     check(model!=null and Drone.has_model(model) and Finish.has_model(model) and
-        HardwareV3.has_model(model) and AeroV4.has_model(model) and TailV5.has_model(model) and DamageV6.has_model(model) and NoseV10.has_model(model) and AirframeV11.has_model(model) and WingRootV12.has_model(model) and TailOpticsV13.has_model(model) and DamageFinishV14.has_model(model),
+        HardwareV3.has_model(model) and AeroV4.has_model(model) and TailV5.has_model(model) and DamageV6.has_model(model) and NoseV10.has_model(model) and AirframeV11.has_model(model) and WingRootV12.has_model(model) and TailOpticsV13.has_model(model) and DamageFinishV14.has_model(model) and AtmosphereV15.has_model(model),
         "native A01 V5 airframe, sealed optics and three-blade motor in original SubViewport")
     check(factions!=null and factions.visible,"same eight-faction selector")
     var panel:=studio.get("a01_360_panel") as VBoxContainer
@@ -119,7 +120,7 @@ func _run()->void:
         "visible active-quality label changes to Android LOD8")
     var android:Node3D=studio.get("model_root") as Node3D
     check(android!=null and android!=hero_before and
-        NoseV10.has_model(android) and AirframeV11.has_model(android) and WingRootV12.has_model(android) and TailOpticsV13.has_model(android) and DamageFinishV14.has_model(android) and
+        NoseV10.has_model(android) and AirframeV11.has_model(android) and WingRootV12.has_model(android) and TailOpticsV13.has_model(android) and DamageFinishV14.has_model(android) and AtmosphereV15.has_model(android) and
         int(android.get_meta("tarvoka_a01_v10_lod",0))==8,
         "low-poly A01 V10 geometry is the actual Android LOD8 rig")
     check(DamageV6.stage(android)==3,
@@ -134,7 +135,7 @@ func _run()->void:
     studio.call("_on_faction",6)
     await process_frame
     android=studio.get("model_root") as Node3D
-    check(android!=null and NoseV10.has_model(android) and AirframeV11.has_model(android) and WingRootV12.has_model(android) and TailOpticsV13.has_model(android) and DamageFinishV14.has_model(android) and
+    check(android!=null and NoseV10.has_model(android) and AirframeV11.has_model(android) and WingRootV12.has_model(android) and TailOpticsV13.has_model(android) and DamageFinishV14.has_model(android) and AtmosphereV15.has_model(android) and
         int(android.get_meta("tarvoka_a01_v10_lod",0))==8 and
         DamageV6.stage(android)==3,
         "faction change inside Android LOD8 preserves LOD and damage D3")
@@ -160,7 +161,7 @@ func _run()->void:
     check(lod_label!=null and lod_label.text.contains("LOD13"),
         "visible active-quality label returns to high-detail LOD13")
     var hero_after:Node3D=studio.get("model_root") as Node3D
-    check(hero_after!=null and NoseV10.has_model(hero_after) and AirframeV11.has_model(hero_after) and WingRootV12.has_model(hero_after) and TailOpticsV13.has_model(hero_after) and DamageFinishV14.has_model(hero_after) and
+    check(hero_after!=null and NoseV10.has_model(hero_after) and AirframeV11.has_model(hero_after) and WingRootV12.has_model(hero_after) and TailOpticsV13.has_model(hero_after) and DamageFinishV14.has_model(hero_after) and AtmosphereV15.has_model(hero_after) and
         int(hero_after.get_meta("tarvoka_a01_v10_lod",0))==13 and
         DamageV6.stage(hero_after)==3,
         "LOD13 restores details without losing faction paint or D3")
@@ -246,8 +247,9 @@ func _run()->void:
     check(v10_optics!=null and v10_optics.visible and v10_optics.mesh is ArrayMesh,
         "V10 real sealed annular optic is shown in the SAME 3D viewer")
     var v10_nose:=model.find_child(NoseV10.NOSE,true,false) as MeshInstance3D
-    check(v10_nose!=null and v10_nose.visible and v10_nose.mesh is ArrayMesh,
-        "V10 real sealed sculpted nose is shown in the original 3D viewer")
+    check(v10_nose!=null and not v10_nose.visible and v10_nose.mesh is ArrayMesh and
+        bool(model.get_meta("tarvoka_a01_unified_nose_shell",false)),
+        "V16 unified hull replaces overlapping nose in original 3D viewer")
     # New physical V11 replaces visually floating boxes with watertight paint.
     var hull_v11:=model.find_child(AirframeV11.HULL,true,false) as MeshInstance3D
     var wing_v11:=model.find_child(AirframeV11.WING_R,true,false) as MeshInstance3D
@@ -311,6 +313,18 @@ func _run()->void:
     studio.call("_studio_run_animation","damage_4")
     check(DamageV6.stage(model)==4,
         "D4 displays destroyed composite aircraft")
+    var crash_tween:=studio.get("_a01_tween") as Tween
+    var wreck_body:=model.find_child(Drone.BODY,true,false) as Node3D
+    check(crash_tween!=null and crash_tween.is_running(),
+        "V22 D4 button starts actual crash preview tween")
+    studio.call("_a01_crash_tick",0.45,model)
+    check(wreck_body!=null and absf(wreck_body.rotation_degrees.x)>2.0,
+        "V22 viewer drives native crash trajectory")
+    studio.call("_studio_run_animation","stop")
+    check(DamageV6.stage(model)==4 and wreck_body!=null and
+        is_equal_approx(wreck_body.position.y,-0.18) and
+        is_zero_approx(wreck_body.rotation_degrees.x),
+        "V22 Stop settles wreck without silently repairing")
     var original_right:=model.find_child(AeroV4.WING_R,true,false) as MeshInstance3D
     var fractured:=model.find_child(DamageFinishV14.FRACTURE,true,false) as MeshInstance3D
     check(original_right!=null and fractured!=null and not original_right.visible and
@@ -375,4 +389,5 @@ func _run()->void:
         print("PASS A01 V10 SHARED STUDIO: native A01, V8 swept fins, 8 colors, D0-D4/repair, unarmed gimbal, 360 cameras")
         print("PASS A01 V13 SHARED STUDIO: original Godot viewer renders sealed tail pigments and moving round EOIR underguard")
         print("PASS A01 V14 SHARED STUDIO: physically fractured D4 wing, enclosed damage patches and reversible same-viewer LOD")
+        print("PASS A01 V15 SHARED STUDIO: native organic smoke and fire across same-viewer rebuilds")
         quit(0)

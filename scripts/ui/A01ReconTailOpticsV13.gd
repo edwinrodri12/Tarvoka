@@ -55,9 +55,10 @@ static func _tail_top(side:float,x:float,u:float,hero:bool)->Vector3:
     return profile[1].lerp(profile[2],u)
 
 static func _triangle(t:SurfaceTool,a:Vector3,b:Vector3,c:Vector3)->void:
+    # Godot considers clockwise triangles front-facing.
     t.add_vertex(a)
-    t.add_vertex(b)
     t.add_vertex(c)
+    t.add_vertex(b)
 
 static func _tail_skin(body:Node3D,tag:String,side:float,hero:bool,
         enamel:Material)->MeshInstance3D:

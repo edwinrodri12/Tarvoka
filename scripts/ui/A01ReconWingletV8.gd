@@ -43,7 +43,7 @@ static func _profile(side:float,s:Array)->Array[Vector3]:
 static func _face(tool:SurfaceTool,a:Vector3,b:Vector3,c:Vector3,
         outward:Vector3)->void:
     tool.add_vertex(a)
-    if (b-a).cross(c-a).dot(outward)<0.0:
+    if (b-a).cross(c-a).dot(outward)>0.0:
         tool.add_vertex(c)
         tool.add_vertex(b)
     else:

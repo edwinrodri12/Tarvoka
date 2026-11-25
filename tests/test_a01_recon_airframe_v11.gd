@@ -94,6 +94,26 @@ func _run()->void:
                 var mat:=part.material_override as StandardMaterial3D
                 check(mat!=null and mat.transparency==BaseMaterial3D.TRANSPARENCY_DISABLED,
                     "physical V11 mesh materials are completely opaque")
+                if name==V11.HULL and part.mesh is ArrayMesh and mat!=null:
+                    check(mat.vertex_color_use_as_albedo,
+                        "V19 hull pigment is integrated on the original solid mesh")
+                    var arrays:Array=part.mesh.surface_get_arrays(0)
+                    var pigment:PackedColorArray=arrays[Mesh.ARRAY_COLOR]
+                    var vertices:PackedVector3Array=arrays[Mesh.ARRAY_VERTEX]
+                    check(pigment.size()==vertices.size() and not pigment.is_empty(),
+                        "V19 every hull vertex has opaque composite pigment")
+                    var tones:Dictionary={}
+                    for i in range(pigment.size()):
+                        var shade:Color=pigment[i]
+                        tones[shade.to_html()]=true
+                        var wanted:Color=V11._hull_pigment(vertices[i],expected)
+                        # Godot may quantize vertex colors to 8-bit channels.
+                        check(shade.a>=0.999 and absf(shade.r-wanted.r)<0.009 and
+                            absf(shade.g-wanted.g)<0.009 and absf(shade.b-wanted.b)<0.009,
+                            "V19 pigment matches geometry and official faction")
+                    check(tones.size()>=8,"V19 hull has visible two-tone variation")
+                    check(bool(model.get_meta("tarvoka_a01_v19_integrated_composite_pigment",false)),
+                        "V19 native finish present in both LODs")
                 if name!=V11.ANTENNA:
                     check(_closed(part.mesh),"sealed non-degenerate manifold: "+name)
                 if name in [V11.CREST,V11.WING_L,V11.WING_R]:
@@ -109,6 +129,24 @@ func _run()->void:
                                 correct_side=false
                         check(correct_side,"no mirrored/interior wing-tip paint")
             var body:=model.find_child(V1.BODY,true,false) as Node3D
+            check(bool(model.get_meta("tarvoka_a01_v23_service_finish",false)),
+                "V23 final service finish applied")
+            for panel_name in ["A01_V2_NoseCompositeSeam","A01_V2_ProtectedAirIntake",
+                    "A01_V2_SensorIdentificationPlate"]:
+                var panel:=body.find_child(panel_name,false,false) as MeshInstance3D
+                if lod==13:
+                    check(panel!=null and panel.visible and panel.mesh is ArrayMesh,
+                        "V23 replaces raised box with closed hull skin: "+panel_name)
+                    if panel!=null and panel.mesh is ArrayMesh:
+                        check(_closed(panel.mesh) and panel.position.is_equal_approx(Vector3.ZERO),
+                            "V23 panel uses true hull coordinates and closed geometry")
+                else:
+                    check(panel==null,"V23 no extra hero panel in Android LOD8")
+            var crest:=body.find_child(V11.CREST,false,false) as MeshInstance3D
+            if crest!=null and crest.material_override is StandardMaterial3D:
+                var enamel:=crest.material_override as StandardMaterial3D
+                check(enamel.roughness>=0.60 and enamel.metallic<=0.15,
+                    "V23 matte enamel retains team color without harsh reflections")
             var hidden:Array=[
                 "A01_V1_SealedCompositeFuselage","A01_V1_FactionSpine",
                 "A01_V1_AntennaSpine",
