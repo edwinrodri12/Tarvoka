@@ -4,6 +4,8 @@ on:
   push:
     branches: [main, feat/campamentos-visor-integrado-20261123, art/camp-supply-v4-20261124, art/camp-recon-v3-20261124]
     paths:
+      - "scripts/ui/A01Recon*.gd"
+      - "tests/test_a01_recon_*.gd"
       - "scripts/publishing/CampUnifiedStudioAdapterV1.gd.txt"
       - "scripts/ui/CampSupplySculptV4.gd"
       - "scripts/ui/CampReconSculptV3.gd"
@@ -223,6 +225,8 @@ on:
   # Verify publication inside the same workflow before touching live Pages.
   pull_request:
     paths:
+      - "scripts/ui/A01Recon*.gd"
+      - "tests/test_a01_recon_*.gd"
       - ".github/workflows/tarvoka-3d-pages.yml"
       - "scripts/publishing/CampUnifiedStudioAdapterV1.gd.txt"
       - "scripts/ui/CampSupplySculptV4.gd"
