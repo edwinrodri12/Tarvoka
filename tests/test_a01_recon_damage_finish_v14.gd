@@ -260,9 +260,46 @@ func _run()->void:
                     var damage_layer:=Damage._find_layer(craft,i)
                     verify(damage_layer!=null and damage_layer.visible==(stage>=i),
                         "V14 retains original deterministic cumulative layers")
+            # V22 crash stays visual, can be scrubbed deterministically,
+            # and cannot animate a destroyed aircraft back into flight.
+            var initial_yaw:float=craft.rotation_degrees.y
+            verify(Damage.pose_crash(craft,0.0) and body.position.y>0.20,
+                "V22 crash starts above final wreck position")
+            verify(Damage.pose_crash(craft,0.45) and
+                absf(body.rotation_degrees.x)>2.0 and body.rotation_degrees.z<0.0,
+                "V22 crash has real descent and bank")
+            verify(Damage.pose_crash(craft,1.0) and
+                is_equal_approx(body.position.y,-0.18) and
+                is_equal_approx(body.rotation_degrees.z,-14.0) and
+                is_zero_approx(body.rotation_degrees.x),
+                "V22 crash settles exactly into original D4 pose")
+            verify(not Drone.pose(craft,"move",0.4) and not Drone.pose(craft,"scan",0.4),
+                "V22 wreck cannot fly or scan")
+            verify(is_equal_approx(craft.rotation_degrees.y,initial_yaw),
+                "V22 crash never changes inspection heading")
             verify(Damage.repair(craft) and Damage.stage(craft)==0 and
                 real_wing.visible and not broken.is_visible_in_tree(),
                 "D4->D0 fully restores real unbroken wing and fins")
+            verify(body.position.is_equal_approx(Vector3.ZERO) and
+                body.rotation_degrees.is_equal_approx(Vector3.ZERO),
+                "V22 repair resets complete crash pose")
+            verify(not Damage.pose_crash(craft,0.4),"V22 crash cannot run on intact model")
+            var motor:=craft.find_child(Drone.PROPELLER,true,false) as Node3D
+            var optics:=craft.find_child(Drone.SENSOR,true,false) as Node3D
+            if motor!=null and optics!=null:
+                verify(Drone.pose(craft,"move",0.1),"V22 eased motor start")
+                var early:float=motor.rotation_degrees.z
+                verify(Drone.pose(craft,"move",0.2) and
+                    motor.rotation_degrees.z-early>early,
+                    "V22 rotor accelerates rather than starting at constant speed")
+                verify(Drone.pose(craft,"scan",0.25) and
+                    absf(optics.rotation_degrees.y)>20.0,"V22 optical scan follows eased curve")
+                verify(Drone.pose(craft,"hit",0.125) and
+                    absf(craft.rotation_degrees.z)>2.0,"V22 hit has visible recoil")
+                verify(Drone.pose(craft,"hit",1.0) and
+                    is_zero_approx(craft.rotation_degrees.z) and is_zero_approx(craft.position.y),
+                    "V22 hit finishes without residual offset")
+                Drone.restore(craft)
             if right_light!=null and left_light!=null:
                 verify(right_light.visible and left_light.visible,
                     "V21 repair restores both navigation lights")
