@@ -12,13 +12,14 @@ const ReconStation = preload("res://scripts/ui/CampReconSculptV3.gd")
 const SupplyV43 = preload("res://scripts/ui/CampSupplySculptV4.gd")
 const DefenseMotion = preload("res://scripts/ui/CampDefenseSculptV3.gd")
 const CampRoster = preload("res://scripts/ui/InfantryCampRosterV1.gd")
+const MedicalSculpt = preload("res://scripts/ui/CampMedicalSculptV3.gd")
 const FIRST_CAMP_INDEX: int = 7
 const CAMP_KEYS := ["suministros", "reconocimiento", "defensivo", "medico"]
 const CAMP_LABELS := [
     "Campamento de Suministros · V4.5",
     "Campamento de Reconocimiento · V3.5",
     "Campamento Defensivo · V3.5",
-    "Campamento Médico · V2"
+    "Campamento Médico · V3.5"
 ]
 var camp_controls: VBoxContainer
 var camp_faction_picker: OptionButton
@@ -27,6 +28,9 @@ var camp_damage_picker: OptionButton
 var camp_finish_picker: OptionButton
 var camp_recon_finish: OptionButton
 var camp_defense_finish: OptionButton
+var camp_medical_finish: OptionButton
+var camp_medical_actions: VBoxContainer
+var _camp_medical_tween: Tween
 var camp_defense_actions: VBoxContainer
 var _camp_defense_tween: Tween
 var camp_recon_actions: VBoxContainer
@@ -125,6 +129,20 @@ func _camp_create_controls() -> void:
     camp_defense_finish.select(0)
     camp_defense_finish.item_selected.connect(_camp_option_changed)
     camp_controls.add_child(camp_defense_finish)
+    camp_medical_finish = OptionButton.new()
+    camp_medical_finish.name = "MedicoComparacionV2V3"
+    camp_medical_finish.add_item("Médico V3.5 · acabado y plegado")
+    camp_medical_finish.add_item("Médico V2 · comparación anterior")
+    camp_medical_finish.select(0)
+    camp_medical_finish.item_selected.connect(_camp_option_changed)
+    camp_controls.add_child(camp_medical_finish)
+    camp_medical_actions = VBoxContainer.new()
+    camp_medical_actions.name = "MedicoInspeccionInterior"
+    camp_controls.add_child(camp_medical_actions)
+    _add_paired(camp_medical_actions, "VER INTERIOR", func(): _camp_medical_interior(true), "CERRAR CUBIERTA", func(): _camp_medical_interior(false))
+    _add_paired(camp_medical_actions, "ANIMAR MONTAJE", func(): _camp_medical_animate(1.0), "ANIMAR RECOGIDA", func(): _camp_medical_animate(0.0))
+    _button(camp_medical_actions, "ANIMAR MONITOR", _camp_medical_monitor)
+    _button(camp_medical_actions, "DETENER ANIMACIÓN", _camp_stop_medical)
     camp_defense_actions = VBoxContainer.new()
     camp_defense_actions.name = "DefensivoDespliegueAnimado"
     camp_controls.add_child(camp_defense_actions)
@@ -191,6 +209,7 @@ func _camp_hide_prior_controls() -> void:
         faction_picker.visible = false
 
 func _camp_restore_prior_controls() -> void:
+    _camp_stop_medical()
     _camp_stop_defense()
     _camp_stop_recon()
     _camp_stop_fx()
@@ -239,11 +258,13 @@ func _camp_display() -> void:
     var same_camp: bool = previous_kind == camp_kind
     var previous_interior: bool = same_camp and bool(model_root.get_meta("suministros_v43_interior_open", false))
     var previous_scan: float = float(model_root.get_meta("recon_v2_visual_scan_degrees", 0.0)) if same_camp and camp_kind == "reconocimiento" else 0.0
+    var previous_medical_open: bool = same_camp and bool(model_root.get_meta("medical_v3_inspection", false))
     var previous_yaw: float = _yaw
     var previous_zoom: float = _zoom
     var previous_deploy: float = float(model_root.get_meta(
         "visual_deploy_progress", 1.0)) if same_camp else 1.0
     var previous_defense_timeline: float = float(model_root.get_meta("defense_v33_timeline", -1.0)) if same_camp and camp_kind == "defensivo" else -1.0
+    _camp_stop_medical()
     _camp_stop_defense()
     _camp_stop_recon()
     _camp_stop_fx()
@@ -261,12 +282,14 @@ func _camp_display() -> void:
     camp_finish_picker.visible = camp_kind == "suministros"
     camp_recon_finish.visible = camp_kind == "reconocimiento"
     camp_defense_finish.visible = camp_kind == "defensivo"
+    camp_medical_finish.visible = camp_kind == "medico"
+    camp_medical_actions.visible = camp_kind == "medico" and camp_medical_finish.selected == 0 and damage < 2
     camp_defense_actions.visible = camp_kind == "defensivo" and camp_defense_finish.selected == 0 and damage < 2
     camp_recon_actions.visible = camp_kind == "reconocimiento" and damage < 2
     camp_recon_operation.visible = camp_recon_finish.selected == 0
-    camp_damage_actions.visible = (camp_kind == "suministros" and camp_finish_picker.selected == 0) or (camp_kind == "reconocimiento" and camp_recon_finish.selected == 0) or (camp_kind == "defensivo" and camp_defense_finish.selected == 0)
+    camp_damage_actions.visible = (camp_kind == "suministros" and camp_finish_picker.selected == 0) or (camp_kind == "reconocimiento" and camp_recon_finish.selected == 0) or (camp_kind == "defensivo" and camp_defense_finish.selected == 0) or (camp_kind == "medico" and camp_medical_finish.selected == 0)
     camp_supply_actions.visible = camp_kind == "suministros" and camp_finish_picker.selected == 0 and damage < 2
-    model_root = CampArt.build(camp_kind, faction, lod, damage, camp_finish_picker.selected == 0, camp_recon_finish.selected == 0, camp_defense_finish.selected == 0)
+    model_root = CampArt.build(camp_kind, faction, lod, damage, camp_finish_picker.selected == 0, camp_recon_finish.selected == 0, camp_defense_finish.selected == 0, camp_medical_finish.selected == 0)
     if model_root == null:
         push_error("CAMP STUDIO: cannot assemble actual camp " + camp_kind)
         camp_status.text = "ERROR: modelo nativo no disponible"
@@ -281,6 +304,8 @@ func _camp_display() -> void:
         push_error("CAMP STUDIO: cannot restore current deployment state")
     if same_camp and camp_kind == "defensivo" and damage < 2 and camp_defense_finish.selected == 0 and previous_defense_timeline >= 0.0:
         DefenseMotion.deployment_frame(model_root, previous_defense_timeline)
+    if previous_medical_open and damage < 2 and camp_kind == "medico" and camp_medical_finish.selected == 0:
+        MedicalSculpt.inspect_interior(model_root, true)
     if previous_interior and damage < 2 and camp_kind == "suministros" and camp_finish_picker.selected == 0:
         SupplyV43.inspect_interior(model_root, true)
     if same_camp and damage < 2 and camp_kind == "reconocimiento":
@@ -340,9 +365,48 @@ func _camp_defense_animate(target: float) -> void:
     _camp_defense_tween = create_tween()
     _camp_defense_tween.tween_method(_camp_defense_frame, start, target, maxf(0.12, absf(target - start) * 3.2))
 
+func _camp_stop_medical() -> void:
+    if _camp_medical_tween != null and _camp_medical_tween.is_valid():
+        _camp_medical_tween.kill()
+    _camp_medical_tween = null
+
+func _camp_medical_frame(value: float) -> void:
+    if is_instance_valid(model_root) and _role == "camp_medico":
+        if CampArt.pose_deploy(model_root, value):
+            _update_details()
+
+func _camp_medical_animate(target: float) -> void:
+    if not is_instance_valid(model_root) or _role != "camp_medico" or model_root.get_meta("medical_art_revision", "") != "3.5" or int(model_root.get_meta("visual_damage", 0)) >= 2:
+        return
+    _camp_stop_medical()
+    MedicalSculpt.inspect_interior(model_root, false)
+    var start: float = float(model_root.get_meta("visual_deploy_progress", 1.0))
+    if absf(target - start) < 0.001:
+        return
+    _camp_medical_tween = create_tween()
+    _camp_medical_tween.tween_method(_camp_medical_frame, start, target, maxf(0.12, absf(target - start) * 3.6))
+
+func _camp_medical_monitor_frame(value: float) -> void:
+    if is_instance_valid(model_root) and _role == "camp_medico":
+        MedicalSculpt.monitor_frame(model_root, value)
+
+func _camp_medical_monitor() -> void:
+    if not is_instance_valid(model_root) or _role != "camp_medico" or not MedicalSculpt.monitor_frame(model_root, 0.0):
+        return
+    _camp_stop_medical()
+    _camp_medical_tween = create_tween()
+    _camp_medical_tween.tween_method(_camp_medical_monitor_frame, 0.0, 1.0, 2.4)
+
+func _camp_medical_interior(enabled: bool) -> void:
+    _camp_stop_medical()
+    if is_instance_valid(model_root) and _role == "camp_medico":
+        if MedicalSculpt.inspect_interior(model_root, enabled):
+            _update_details()
+
 func _camp_pose(progress: float) -> void:
     if model_root == null or not _role.begins_with("camp_"):
         return
+    _camp_stop_medical()
     _camp_stop_defense()
     _camp_stop_recon()
     _camp_stop_fx()
@@ -387,7 +451,7 @@ func _camp_animate_service() -> void:
 func _camp_has_damage_fx() -> bool:
     if not is_instance_valid(model_root):
         return false
-    return (_role == "camp_suministros" and model_root.get_meta("suministros_art_v4", 0) == 4) or (_role == "camp_reconocimiento" and model_root.get_meta("recon_art_v3", 0) == 3) or (_role == "camp_defensivo" and model_root.get_meta("defense_art_v3", 0) == 3)
+    return (_role == "camp_suministros" and model_root.get_meta("suministros_art_v4", 0) == 4) or (_role == "camp_reconocimiento" and model_root.get_meta("recon_art_v3", 0) == 3) or (_role == "camp_defensivo" and model_root.get_meta("defense_art_v3", 0) == 3) or (_role == "camp_medico" and model_root.get_meta("medical_art_v3", 0) == 3)
 
 func _camp_stop_fx() -> void:
     _camp_fx_generation += 1
@@ -404,12 +468,15 @@ func _camp_fx_frame(kind: String, progress: float) -> void:
         ReconStation.damage_fx_pose(model_root, kind, progress)
     elif model_root != null and _role == "camp_defensivo":
         DefenseMotion.damage_fx_pose(model_root, kind, progress)
+    elif model_root != null and _role == "camp_medico":
+        MedicalSculpt.damage_fx_pose(model_root, kind, progress)
 
 func _camp_play_fx(kind: String) -> void:
     if not _camp_has_damage_fx():
         return
     if kind in ["bullet", "blast"] and int(model_root.get_meta("visual_damage", 0)) == 3:
         return
+    _camp_stop_medical()
     _camp_stop_defense()
     _camp_stop_recon()
     _camp_stop_service()
@@ -425,6 +492,7 @@ func _camp_destroy_sequence() -> void:
         return
     if int(model_root.get_meta("visual_damage", 0)) >= 3:
         return
+    _camp_stop_medical()
     _camp_stop_defense()
     _camp_stop_recon()
     _camp_stop_service()

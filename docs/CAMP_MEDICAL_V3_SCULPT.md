@@ -1,0 +1,27 @@
+# Campamento médico V3 — estructura inicial
+
+Último campamento de la etapa artística. V3.0 construye una cubierta de lona cerrada con dos hojas articuladas ajustadas a la cumbrera, pilares, zapatas, vigas, refuerzos y suelo sanitario; modo inspección abre las hojas hacia fuera sin ocultar mobiliario. La pose recogida inicial mantiene las hojas elevadas; aún no es un embalaje compacto completo y requiere perfeccionamiento mecánico. Conserva emblema turquesa ficticio y colores oficiales, V2 para comparación en el visor original, sin alterar curación ni reglas. D2 conserva techo incompleto, D3 restos reconocibles. QA prevista: 72 combinaciones, 26 capturas. Próxima fase: camilla, equipo clínico y mobiliario a detalle; después animaciones, daños y cierre visual.
+
+## V3.1 — camilla clínica articulada
+
+Reemplazo del mobiliario V2 por chasis rígido, colchones biselados cerrados, respaldo y almohada unidos a pivote, cuatro ruedas con cubos y horquillas en ambos LOD, frenos y empuñaduras en LOD13. Barandillas giratorias con límites de daño y pose de transporte. Mantiene posición, facción, materiales opacos y comparación V2; sin cambios de curación. QA ampliada: 72 variantes y 28 PNG, dos acercamientos de camilla, contacto con suelo, mallas cerradas y conservación de dimensiones durante plegado. Pendiente CI y revisión visual. Siguiente: gabinete, monitor y equipo clínico.
+
+## V3.2 — equipamiento clínico y mobiliario
+
+Gabinete exterior con carcasa cerrada, zócalo, tres cajones con tiradores, puerta superior y emblema ficticio; monitor sobre carro de cuatro ruedas con pantalla opaca, mando, bandeja, cable trasero y toma; soporte de sueros con cuatro pies, mástil de dos secciones, collarín y bolsas opacas desmontables. Se acerca el soporte a la camilla para mejorar coherencia visual, sin alterar la huella ni las reglas. D2 retira bolsas, instrumental e indicadores; D3 no monta mobiliario intacto. LOD8 conserva las siluetas y LOD13 añade detalles. QA prevista: 72 variantes, 31 PNG (tres acercamientos nuevos), comprobación de apoyo y opacidad. Pendiente ejecución y revisión visual. Siguiente: perfeccionar plegado mecánico, animaciones y daños físicos.
+
+## V3.3 — secuencia mecánica y operación visual
+
+Despliegue reversible en fases: mástil de sueros telescópico y pantalla basculante, después respaldo y barandas, al final cubierta. Cada pieza mantiene sus dimensiones; la camilla se desplaza 0.10 hacia el centro para liberar la baranda exterior. Monitor decorativo opaco con ciclo de color, sin datos ni efectos de juego; bloqueado durante transporte y D2/D3. Visor original añade montaje/recogida animados, monitor y detención, cancela tween al reconstruir modelo o cambiar categoría. La cubierta recogida sigue elevada a 72 grados: no es todavía un bulto cerrado de transporte. QA prevista: 72 variantes, 31 PNG, cinco muestras de despliegue y comprobación de continuidad telescópica; pruebas del visor ampliadas. Pendiente ejecución CI y revisión visual. Próxima prioridad: daños físicos, impactos y destrucción con restos propios.
+
+## V3.4 — deterioro físico y destrucción
+
+D1 incorpora marcas superficiales sólidas y humo; D2 conserva techo incompleto, poste inclinado, refuerzo doblado, cajón desplazado, pantalla fracturada sin indicadores, D3 agrega chasis colapsado de camilla, colchón aplastado, rueda desprendida, monitor roto y mástil caído. Rig de efectos opacos independiente con límites LOD8/13, destello, humo, fuego, chispas y fragmentos; utiliza controles comunes del visor y transición D0-D3 con cancelación por generación. QA prevista: 72 variantes y 33 PNG, controles y destrucción en visor unificado. No modifica reglas. Pendiente CI/render y revisión de contactos físicos, silueta y embalaje compacto. Próxima prioridad: V3.5 acabado y auditoría 360.
+
+## V3.5 — acabado de contactos y cubierta plegable
+
+Cada hoja se divide en dos secciones rígidas con pasador, soportes y eje secundario elevado para apilar sin reducir dimensiones. La sección interior gira 180 grados en recogida; la estructura principal permanece montada y todavía no constituye un paquete completo de transporte. Ajusta zapatas a la plataforma, añade anclajes de barandas, pasacables y collarín; D2 incorpora guías del cajón y corrige el apoyo del poste, D3 sitúa las piezas giradas según sus vértices inferiores. QA prevista: 72 combinaciones, 35 PNG con recogida posterior y articulación intermedia, contacto de zapatas y escombros y continuidad de cumbrera. Pendiente CI nativa y examen visual 360; no fusionar sin evidencia. Siguiente: verificar y corregir resultados de render y regresiones antes de cerrar.
+
+## V3.6 — primera validación nativa y correcciones de encuadre
+
+Evidencia de revisión 4d7cb9061e965295b57fa20c74d7ee715de44871: GitHub Actions 45671608929, job 139408068779, PASS MEDICAL CAMP V3 NATIVE: 72 audits, 35 PNGs. Artefacto 15049822250 contiene 35 PNG médicos y el resto de los campamentos. Inspección del mosaico: silueta, daño y plegado visibles; el acercamiento del monitor estaba ocluido por cubierta y los impactos se capturaban con el techo recogido. Se corrigen cámaras de monitor y camilla, y se restaura despliegue antes del impacto. Se añade el modelo médico y su prueba a los filtros push del exportador web. Sin cambios de geometría ni reglas en esta corrección. Pendientes: nueva CI del cambio de encuadre, revisión de nuevas PNG, exportación unificada, prueba de rendimiento Android real y aprobación final. El PR #699 queda en borrador.
