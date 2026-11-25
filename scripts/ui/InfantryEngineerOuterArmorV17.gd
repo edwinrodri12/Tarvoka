@@ -313,6 +313,7 @@ static func _sculpt_harness(model: Node3D,hero: bool) -> bool:
         elif label.begins_with("V12_CierrePouchMetalico"):
             replacement=V13._rounded_press(0.073,0.039,0.029,
                 0.010,0.004,hero)
+            pos.z=0.150
         elif label.begins_with("V8_CosturaHombrera"):
             replacement=_conformal_press(0.220,0.016,0.018,
                 0.005,0.003,0.020,hero)
@@ -619,6 +620,93 @@ static func _sculpt_body(model: Node3D,hero: bool) -> bool:
         return false
     return true
 
+# Dorsal equipment pass. Keep all fixed cargo on TorsoRig and all
+# moving shield armor on the original panel/wing pivots. Do not make
+# the fixed pack follow the inspection or work animation.
+const DORSAL_PACK: String="V2_MochilaOrganica"
+const DORSAL_FIXED: Array[String]=["V12_SoporteEstucheFijo",
+    "V12_TapaEstucheBiselada","V12_IdentificadorEstuche",
+    "V12_InsigniaLateralEstuche"]
+const DORSAL_PANEL: Array[String]=["V12_CorazaExteriorBarreraCerrada",
+    "V12_RefuerzoPerimetralEscudo"]
+const DORSAL_WING: String="V12_RevestimientoAlaArticulada"
+
+static func _sculpt_dorsal(model: Node3D,hero: bool) -> bool:
+    var torso: Node3D=model.find_child("TorsoRig",true,false) as Node3D
+    var panel: Node3D=model.find_child("V6_BarreraArticuladaRig",true,false) as Node3D
+    var pack: MeshInstance3D=_find(model,DORSAL_PACK)
+    if torso==null or panel==null or pack==null or pack.get_parent()!=torso:
+        return false
+    # Slimmer top and lower rounded fabric profile, closer to ribcage.
+    # Keep pack within the old rear depth so shield clearance is not reduced.
+    var pack_rings: Array=[
+        Vector3(0.170,-0.350,0.090),
+        Vector3(0.247,-0.270,0.149),
+        Vector3(0.280,0.060,0.166),
+        Vector3(0.230,0.310,0.129),
+        Vector3(0.125,0.350,0.074)]
+    if not _change(model,DORSAL_PACK,V13._lathe(pack_rings,hero),
+            pack.scale,pack.position):
+        return false
+    for side in [-1,1]:
+        var suffix: String="_%d"%side
+        var x: float=float(side)
+        var wing: Node3D=model.find_child(
+            "V6_AlaIzquierdaRig" if side<0 else "V6_AlaDerechaRig",
+            true,false) as Node3D
+        var rack: MeshInstance3D=_find(model,DORSAL_FIXED[0]+suffix)
+        var lid: MeshInstance3D=_find(model,DORSAL_FIXED[1]+suffix)
+        var front_id: MeshInstance3D=_find(model,DORSAL_FIXED[2]+suffix)
+        var side_id: MeshInstance3D=_find(model,DORSAL_FIXED[3]+suffix)
+        if wing==null or wing.get_parent()!=panel:
+            return false
+        for fixed in [rack,lid,front_id,side_id]:
+            if fixed==null or fixed.get_parent()!=torso:
+                return false
+        # Low-profile molded carrier replaces the isolated spherical post.
+        if not _change(model,rack.name,V13._lathe([
+                Vector3(0.052,-0.218,0.049),
+                Vector3(0.083,-0.178,0.074),
+                Vector3(0.086,-0.027,0.076),
+                Vector3(0.080,0.142,0.070),
+                Vector3(0.054,0.218,0.050)],hero),
+                Vector3.ONE,Vector3(x*0.408,-0.150,0.337)):
+            return false
+        # Lid and emblems move in toward the actual new case, with
+        # curved closed faces instead of detached flat identifiers.
+        if not _change(model,lid.name,_conformal_press(
+                0.173,0.110,0.034,0.024,0.009,0.019,hero),
+                Vector3.ONE,Vector3(x*0.476,-0.099,0.204)):
+            return false
+        if not _change(model,front_id.name,_conformal_press(
+                0.119,0.039,0.019,0.010,0.004,0.008,hero),
+                Vector3.ONE,Vector3(x*0.478,-0.138,0.176)):
+            return false
+        if not _change(model,side_id.name,_conformal_press(
+                0.143,0.118,0.019,0.025,0.006,0.022,hero),
+                Vector3.ONE,Vector3(x*0.585,-0.238,0.336)):
+            return false
+        # Curved panel edges and wings stay at their original centres.
+        # No changes to main shield mesh or its physical hinge hardware.
+        var plate: MeshInstance3D=_find(model,DORSAL_PANEL[0]+suffix)
+        var rib: MeshInstance3D=_find(model,DORSAL_PANEL[1]+suffix)
+        var leaf: MeshInstance3D=_find(model,DORSAL_WING+suffix)
+        if plate==null or rib==null or leaf==null or (
+                plate.get_parent()!=panel or rib.get_parent()!=panel or leaf.get_parent()!=wing):
+            return false
+        if not _change(model,plate.name,_conformal_press(
+                0.420,0.273,0.035,0.065,0.020,0.023,hero),
+                plate.scale,plate.position):
+            return false
+        if not _change(model,rib.name,_strap_press(
+                0.071,0.403,0.035,0.014,hero),rib.scale,rib.position):
+            return false
+        if not _change(model,leaf.name,_conformal_press(
+                0.154,0.557,0.035,0.038,0.017,0.012,hero),
+                leaf.scale,leaf.position):
+            return false
+    return true
+
 static func apply(model: Node3D, hero: bool) -> bool:
     if model==null or has_model(model) or not V16.has_model(model):
         return false
@@ -841,7 +929,7 @@ static func apply(model: Node3D, hero: bool) -> bool:
         return false
     if not _sculpt_contact_links(model,hero):
         return false
-    if not _sculpt_harness(model,hero):
+    if not _sculpt_harness(model,hero) or not _sculpt_dorsal(model,hero):
         return false
     if not _local_wear(model,hero) or not _surface_finish(model,hero):
         return false

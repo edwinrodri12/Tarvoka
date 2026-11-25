@@ -415,6 +415,50 @@ func _run() -> void:
                         link.transform==saved,"A/B preserves animated contact transform")
                     check(V17.show_finish(model,true) and link.mesh==sculpt and
                         link.transform==saved,"restore new sleeve without snapping pose")
+            var panel: Node3D=model.find_child("V6_BarreraArticuladaRig",true,false) as Node3D
+            var pack: MeshInstance3D=model.find_child(V17.DORSAL_PACK,true,false) as MeshInstance3D
+            check(pack!=null and pack.get_parent()==torso and
+                pack.has_meta(V17.OLD) and closed_outward(pack.mesh),
+                "closed dorsal pack remains on stationary torso")
+            if pack!=null and pack.has_meta(V17.OLD):
+                var original: Dictionary=pack.get_meta(V17.OLD)
+                var former: Mesh=original["mesh"]
+                check(pack.mesh.get_aabb().size.z<=former.get_aabb().size.z and
+                    pack.position==original["position"],
+                    "backpack no deeper than old pack")
+            for side in [-1,1]:
+                var suffix: String="_%d"%side
+                var wing: Node3D=model.find_child(
+                    "V6_AlaIzquierdaRig" if side<0 else "V6_AlaDerechaRig",true,false) as Node3D
+                for prefix in V17.DORSAL_FIXED:
+                    var fixed: MeshInstance3D=model.find_child(prefix+suffix,true,false) as MeshInstance3D
+                    check(fixed!=null and fixed.get_parent()==torso and
+                        fixed.has_meta(V17.OLD) and closed_outward(fixed.mesh),
+                        "closed fitted torso-fixed dorsal piece "+prefix)
+                for prefix in V17.DORSAL_PANEL:
+                    var plate: MeshInstance3D=model.find_child(prefix+suffix,true,false) as MeshInstance3D
+                    check(plate!=null and plate.get_parent()==panel and
+                        plate.has_meta(V17.OLD) and closed_outward(plate.mesh),
+                        "closed moving shield plate "+prefix)
+                var leaf: MeshInstance3D=model.find_child(V17.DORSAL_WING+suffix,true,false) as MeshInstance3D
+                check(leaf!=null and leaf.get_parent()==wing and wing!=null and
+                    wing.get_parent()==panel and leaf.has_meta(V17.OLD) and
+                    closed_outward(leaf.mesh),"closed independent moving wing")
+                var case_part: MeshInstance3D=model.find_child(V17.CASE+suffix,true,false) as MeshInstance3D
+                var rack: MeshInstance3D=model.find_child(V17.DORSAL_FIXED[0]+suffix,true,false) as MeshInstance3D
+                var lid: MeshInstance3D=model.find_child(V17.DORSAL_FIXED[1]+suffix,true,false) as MeshInstance3D
+                if case_part!=null and rack!=null and lid!=null:
+                    var case_bounds: AABB=case_part.transform*case_part.mesh.get_aabb()
+                    check(case_bounds.intersects(rack.transform*rack.mesh.get_aabb()) and
+                        case_bounds.intersects(lid.transform*lid.mesh.get_aabb()),
+                        "dorsal carrier and lid overlap case envelope")
+                    var fixed_transform: Transform3D=case_part.transform
+                    for progress in [0.0,0.25,0.5,0.75,1.0]:
+                        check(V6.pose(model,"inspect",progress) and
+                            case_part.transform==fixed_transform and
+                            is_equal_approx(panel.rotation_degrees.x,-54.0*progress),
+                            "cargo stays fixed during independent shield sweep")
+                    check(V6.reset(model),"shield resets after dorsal sweep")
             var material_kinds: Dictionary={}
             for item in model.find_children("*","MeshInstance3D",true,false):
                 var part: MeshInstance3D=item as MeshInstance3D
