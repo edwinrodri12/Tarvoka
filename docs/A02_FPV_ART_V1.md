@@ -33,3 +33,7 @@ D0 restaura los materiales originales; D1–D4 aplican tonos de desgaste progres
 ## V9 — acabado del daño de presentación
 
 Variación tonal de desgaste entre superficies ornamentales, preservación del color de facción en D1–D3, humo opaco estilizado con transición tonal y oscilación de presentación, caída D4 interpolada en el mismo Studio. Detener o cambiar de facción conserva el estado; D0 restaura todos los recursos originales. QA amplía verificación de la caída y restauración de cada material. V7/V8 todavía no mostraban ejecuciones al iniciar esta revisión; no se afirma validación ni publicación. Sin cambios a reglas o mecánicas reales.
+
+## V10 — inventario de recursos de presentación
+
+Se añade informe JSON de las 80 combinaciones de las ocho facciones, dos LOD y cinco estados visuales, con instancias visibles, triángulos y recursos únicos de malla y material. Se conserva la geometría y el presupuesto existente de triángulos; se verifica un máximo inicial de 40 instancias visibles. No se presentan estos conteos como FPS, memoria o batería medida en Android. Pendientes ejecución, sincronización segura con main y publicación. No se alteran mecánicas ni modelos de otras unidades.

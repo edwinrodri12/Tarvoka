@@ -3,6 +3,25 @@ const Models=preload("res://scripts/ui/UnitModels3D.gd")
 const Art=preload("res://scripts/ui/A02FpvArtV1.gd")
 const Arsenal=preload("res://scripts/core/ModernArsenal.gd")
 var failures:int=0
+var workload:Array[Dictionary]=[]
+
+# Count visible render resources, not GPU frame time or Android memory.
+func _inventory(model:Node3D)->Dictionary:
+    var instances:int=0
+    var triangles:int=0
+    var meshes:Dictionary={}
+    var materials:Dictionary={}
+    for node in model.find_children("*","MeshInstance3D",true,false):
+        var piece:=node as MeshInstance3D
+        if not piece.is_visible_in_tree() or piece.mesh==null:
+            continue
+        instances+=1
+        triangles+=int(piece.mesh.get_faces().size()/3)
+        meshes[piece.mesh.get_instance_id()]=true
+        if piece.material_override!=null:
+            materials[piece.material_override.get_instance_id()]=true
+    return {"instances":instances,"triangles":triangles,
+        "unique_meshes":meshes.size(),"unique_materials":materials.size()}
 
 func check(ok:bool,msg:String)->void:
     if not ok:
@@ -232,6 +251,12 @@ func _run()->void:
                 check(effects!=null,"V8 presentation effects")
                 for damage in range(5):
                     check(Art.set_stage(model,damage) and Art.stage(model)==damage,"V8 stage")
+                    var inventory:Dictionary=_inventory(model)
+                    workload.append({"faction":faction,"lod":lod,"damage":damage,"resources":inventory})
+                    check(int(inventory.instances)<=40,"V10 visible instance ceiling")
+                    check(int(inventory.triangles)<=(12000 if lod==8 else 24000),"V10 visible triangle ceiling")
+                    check(int(inventory.unique_meshes)<=int(inventory.instances),"V10 valid mesh resource count")
+                    check(int(inventory.unique_materials)<=int(inventory.instances),"V10 valid material resource count")
                     var current:=paint.material_override as StandardMaterial3D
                     if current!=null:
                         if damage>0:
@@ -315,6 +340,12 @@ func _run()->void:
         Art.set_stage(inspection,0)
         vp.remove_child(inspection)
         inspection.free()
+    check(workload.size()==80,"V10 complete 8x2x5 workload")
+    var report:=FileAccess.open(out+"/a02-v10-workload.json",FileAccess.WRITE)
+    check(report!=null,"V10 resource report created")
+    if report!=null:
+        report.store_string(JSON.stringify({"revision":"V10","measurement":"visible native Godot mesh resources; not FPS or RAM","states":workload},"  "))
+        report.close()
     check(Arsenal.profile("fpv")==profile,"no catalogue changes")
     vp.queue_free()
     if failures==0:
