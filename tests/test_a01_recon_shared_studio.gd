@@ -313,6 +313,18 @@ func _run()->void:
     studio.call("_studio_run_animation","damage_4")
     check(DamageV6.stage(model)==4,
         "D4 displays destroyed composite aircraft")
+    var crash_tween:=studio.get("_a01_tween") as Tween
+    var wreck_body:=model.find_child(Drone.BODY,true,false) as Node3D
+    check(crash_tween!=null and crash_tween.is_running(),
+        "V22 D4 button starts actual crash preview tween")
+    studio.call("_a01_crash_tick",0.45,model)
+    check(wreck_body!=null and absf(wreck_body.rotation_degrees.x)>2.0,
+        "V22 viewer drives native crash trajectory")
+    studio.call("_studio_run_animation","stop")
+    check(DamageV6.stage(model)==4 and wreck_body!=null and
+        is_equal_approx(wreck_body.position.y,-0.18) and
+        is_zero_approx(wreck_body.rotation_degrees.x),
+        "V22 Stop settles wreck without silently repairing")
     var original_right:=model.find_child(AeroV4.WING_R,true,false) as MeshInstance3D
     var fractured:=model.find_child(DamageFinishV14.FRACTURE,true,false) as MeshInstance3D
     check(original_right!=null and fractured!=null and not original_right.visible and
