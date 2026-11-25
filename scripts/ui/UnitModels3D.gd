@@ -1311,11 +1311,67 @@ static func _destroyer(root: Node3D, art_level: int = 10) -> void:
         deck_stations.append([station[0],station[1]*0.86,0.738,0.802])
     _destroyer_shell(root,"Cubierta",deck_stations,ARMOR)
     _destroyer_enamel(root,stations)
-    root.set_meta("destroyer_art_revision","1.5")
+    root.set_meta("destroyer_art_revision","1.6")
     _destroyer_bridge(root)
     _destroyer_navigation(root,art_level)
     _destroyer_deck_equipment(root,art_level)
     _destroyer_aft(root,art_level)
+    _destroyer_motion_setup(root,art_level)
+
+# Purely cosmetic game animation, independent of tactical simulation.
+static func _destroyer_motion_setup(root: Node3D, art_level: int) -> void:
+    var pivot: Node3D = root.get_node("TorretaNavalPivot/CanonNavalPivot") as Node3D
+    var flash: MeshInstance3D = _sphere(pivot,"DestelloVisual",Vector3(0,0,-0.60),
+        Vector3(0.19,0.19,0.23),Color("#FFD18A"))
+    flash.hide()
+    var wake: Node3D = root.get_node("EstelaEspuma") as Node3D
+    var count: int = 5 if art_level >= 13 else 2
+    for i in range(count):
+        var patch: MeshInstance3D = _sphere(wake,"EspumaVisual_%d" % i,
+            Vector3(0,0.015,0.13+float(i)*0.12),
+            Vector3(0.50+float(i)*0.12,0.025,0.12),Color("#C6E1DF"))
+        patch.hide()
+    root.set_meta("destroyer_motion_v16",true)
+
+static func pose_destroyer(root: Node3D, kind: String, progress: float,
+        target_heading: Vector2i = Vector2i(0,-1)) -> bool:
+    if root == null or not root.get_meta("destroyer_motion_v16",false):
+        return false
+    if kind not in ["idle","move","attack","fire","aim"]:
+        return false
+    var t: float = clampf(progress,0.0,1.0)
+    var turret: Node3D = root.get_node("TorretaNavalPivot") as Node3D
+    var pivot: Node3D = turret.get_node("CanonNavalPivot") as Node3D
+    var barrel: Node3D = pivot.get_node("CanonNaval") as Node3D
+    var flash: Node3D = pivot.get_node("DestelloVisual") as Node3D
+    var wake: Node3D = root.get_node("EstelaEspuma") as Node3D
+    var moving: bool = kind == "move"
+    var firing: bool = kind in ["attack","fire"]
+    var aiming: bool = firing or kind == "aim"
+    var pulse: float = sin(t*TAU)
+    var recoil: float = sin(clampf(t/0.38,0.0,1.0)*PI) if firing else 0.0
+    turret.rotation.y = atan2(-float(target_heading.x),-float(target_heading.y)) if aiming and target_heading != Vector2i.ZERO else 0.0
+    pivot.rotation_degrees.x = -4.0*recoil
+    barrel.position.z = -0.30+0.065*recoil
+    flash.visible = firing and t > 0.01 and t < 0.18
+    pose_destroyer_radar(root,t)
+    pose_destroyer_aft(root,t*2.0 if moving else t*0.25,0.4*pulse if moving else 0.0)
+    # Preserve the map heading, scale and position owned by the caller.
+    root.rotation_degrees.x = (1.8 if moving else 0.7)*pulse
+    root.rotation_degrees.z = (2.0 if moving else 0.8)*sin(t*TAU)
+    for child in wake.get_children():
+        if child is MeshInstance3D:
+            var patch: MeshInstance3D = child as MeshInstance3D
+            var index: int = int(str(patch.name).get_slice("_",1))
+            patch.visible = moving and t > 0.0 and t < 1.0
+            patch.position.z = 0.13+float(index)*0.12+0.08*pulse
+    return true
+
+static func restore_destroyer_pose(root: Node3D) -> void:
+    if root == null or not root.get_meta("destroyer_motion_v16",false):
+        return
+    pose_destroyer(root,"idle",0.0)
+
 
 static func build(role: String, faction: int = -1, finish_enabled: bool = true, art_level: int = 10) -> Node3D:
     if not supports(role):
@@ -1918,6 +1974,8 @@ static func pose_model(role: String, model: Node3D, kind: String,
             return G11Rig.pose(model,kind,progress,target_heading)
         "attack_heli":
             return AttackHelicopterV1.pose(model,kind,progress,target_heading)
+        "destroyer":
+            return pose_destroyer(model,kind,progress,target_heading)
         "uav_recon":
             return A01Recon.pose(model,kind,progress)
         "logistics_mobile":
@@ -1973,6 +2031,8 @@ static func restore_model_pose(role: String, model: Node3D) -> void:
                 G11Rig.restore(model)
         "attack_heli":
             AttackHelicopterV1.restore(model)
+        "destroyer":
+            restore_destroyer_pose(model)
         "uav_recon":
             A01Recon.restore(model)
         "logistics_mobile":
