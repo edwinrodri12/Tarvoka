@@ -10,6 +10,8 @@ on:
       - "scripts/ui/CampSupplySculptV4.gd"
       - "scripts/ui/CampReconSculptV3.gd"
       - "scripts/ui/CampDefenseSculptV3.gd"
+      - "scripts/ui/CampMedicalSculptV3.gd"
+      - "tests/test_camp_medical_v3.gd"
       - "scripts/publishing/TestFourCampsSharedStudio.gd.txt"
       - "scripts/ui/CampModels3DV1.gd"
       - ".github/workflows/tarvoka-3d-pages.yml"
