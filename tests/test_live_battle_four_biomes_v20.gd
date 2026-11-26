@@ -283,6 +283,21 @@ func _run() -> void:
     main._open_battle_3d()
     assert(viewer._scene.get_meta("visual_biome")==Biomes.CANYON)
     viewer.close_view()
+    # V28: collect comparable real-battle frames, not showroom renders.
+    # Same map seed, camera defaults and clear weather for every biome.
+    if DisplayServer.get_name()!="headless":
+        for biome in Biomes.CHOICES:
+            board.new_game(2,true,false,false,true,false,false,0,0,
+                Vector2i(10,8),{},"clear",false,biome)
+            main._open_battle_3d()
+            assert(viewer._scene.get_meta("visual_biome")==biome)
+            for frame in range(8):
+                await process_frame
+            var review_image: Image = viewer.preview.get_texture().get_image()
+            assert(review_image!=null and not review_image.is_empty())
+            assert(review_image.save_png(
+                "res://artifacts/tarvoka_biomes_v20_review_v28_%s.png" % biome)==OK)
+            viewer.close_view()
     main.queue_free()
     print("PASS TARVOKA_3D_FOUR_BIOMES_V20: 4 true mesh biomes, 10x8/24x18/40x30, fog secrecy, 3D mobile battle controls, main save, bounded GPU resources")
     quit(0)
