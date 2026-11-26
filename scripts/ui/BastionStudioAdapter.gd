@@ -320,7 +320,7 @@ func _ready() -> void:
     if fpv_index>=0 and role_picker!=null:
         while role_picker.item_count<=fpv_index:
             role_picker.add_item(P06Models.ROLES[role_picker.item_count])
-        role_picker.set_item_text(fpv_index,"A02 · Dron FPV · V19 EN REVISIÓN")
+        role_picker.set_item_text(fpv_index,"A02 · Dron FPV · V20 EN REVISIÓN")
     # Preserve existing roles/indices; these are additional native 3D variants.
     for entry in [
         ["line","★ INFANTERÍA BÁSICA · Guardia"],
@@ -388,11 +388,12 @@ func _a02_web_entry_report()->void:
     for entry in _studio_animation_specs(_role):
         if entry.has("action"):
             actions.append(str(entry["action"]))
-    var report:Dictionary={"role":_role,"edition":"V19","lod":int(model_root.get_meta("tarvoka_a02_lod",0)),
+    var report:Dictionary={"role":_role,"edition":"V20","lod":int(model_root.get_meta("tarvoka_a02_lod",0)),
         "stage":A02PreviewArt.stage(model_root),"native_model":bool(model_root.get_meta(A02PreviewArt.FLAG,false)),
         "surface_finish":bool(model_root.get_meta("tarvoka_a02_v17_surface_finish",false)),
         "undershell_finish":bool(model_root.get_meta("tarvoka_a02_v18_undershell_finish",false)),
         "graphic_livery":bool(model_root.get_meta("tarvoka_a02_v19_graphic_livery",false)),
+        "surface_atlas":bool(model_root.get_meta("tarvoka_a02_v20_surface_atlas",false)),
         "visible_meshes":visible_meshes,"triangles":triangles,"transparent_meshes":transparent,
         "actions":actions,"faction_selector":faction_picker.visible}
     JavaScriptBridge.eval("window.__tarvokaA02Entry="+JSON.stringify(report),true)
@@ -816,7 +817,7 @@ func _studio_animation_specs(role: String) -> Array[Dictionary]:
     match role:
         "fpv":
             return [
-                {"group":"A02 V19 · ANIMACIONES VISUALES"},
+                {"group":"A02 V20 · ANIMACIONES VISUALES"},
                 {"title":"Movimiento", "action":"a02_move"},
                 {"title":"Suspensión visual", "action":"a02_hover"},
                 {"title":"Reacción a impacto", "action":"a02_hit"},
@@ -1079,7 +1080,7 @@ func _studio_run_animation(action: String) -> void:
             if _role=="fpv":
                 _a02_preview_stop()
                 if A02PreviewArt.set_stage(model_root,int(action.right(1))):
-                    status_label.text="A02 V19 · daño visual D%d" % A02PreviewArt.stage(model_root)
+                    status_label.text="A02 V20 · daño visual D%d" % A02PreviewArt.stage(model_root)
                     if A02PreviewArt.stage(model_root)==4:
                         var wreck:Node3D=model_root
                         A02PreviewArt.pose_wreck(wreck,0.0)
@@ -1845,14 +1846,14 @@ func _a02_preview_play(kind:String)->void:
         return
     _a02_preview_stop()
     if A02PreviewArt.stage(model_root)==4:
-        status_label.text="A02 V19 · restaurar D0 antes de reproducir."
+        status_label.text="A02 V20 · restaurar D0 antes de reproducir."
         return
     var art:Node3D=model_root
     _a02_preview_tween=create_tween()
     _a02_preview_tween.tween_method(Callable(self,"_a02_preview_tick").bind(art,kind),
         0.0,1.0,2.4 if kind=="hover" else 1.5)
     _a02_preview_tween.tween_callback(Callable(self,"_a02_preview_done").bind(art))
-    status_label.text="A02 V19 · demostración visual: "+kind
+    status_label.text="A02 V20 · demostración visual: "+kind
 
 func _a02_preview_tick(progress:float,art:Node3D,kind:String)->void:
     if is_instance_valid(art) and art==model_root and _role=="fpv":
@@ -2022,7 +2023,7 @@ func _studio_quick_action(kind: String) -> void:
             if kind in ["move","hover","hit"]:
                 _a02_preview_play(kind)
             else:
-                status_label.text="A02 V19 · demostración visual disponible en Animaciones."
+                status_label.text="A02 V20 · demostración visual disponible en Animaciones."
         "uav_recon":
             if kind in ["attack","attack_air","attack_ground"]:
                 status_label.text="A01 es un dron de reconocimiento SIN armamento."
@@ -2122,7 +2123,7 @@ func _refresh_unified_studio_navigation() -> void:
             "mlrs": label="G11 · Lanzador · V33"
             "attack_heli": label="A01 · Helicóptero HAT-29 · V14"
             "uav_recon": label="A01 · Dron de reconocimiento · V30 FINAL"
-            "fpv": label="A02 · Dron FPV · V19 EN REVISIÓN"
+            "fpv": label="A02 · Dron FPV · V20 EN REVISIÓN"
             "logistics_mobile": label="G16 · Logística blindada 6×6 · V6 PBR y suministros articulados"
             "ew_mobile": label="G15 · Guerra electrónica · V11 (neumáticos, óptica y electrónica 3D)"
             "aa_mobile": label="G13 · Antiaéreo · V54 caucho y rodadura 3D"
