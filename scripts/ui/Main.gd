@@ -694,6 +694,7 @@ func _ready() -> void:
     biome_picker.add_item("Canon rocoso · montanas y tierra seca",2)
     biome_picker.add_item("Delta costero · humedal y litoral",3)
     biome_picker.add_item("Desierto de dunas · arena y oasis",4)
+    biome_picker.add_item("Selva tropical · palmeras y vegetación densa",5)
     biome_picker.select(Winter.index_for(board.state))
     panel.add_child(biome_picker)
     var biome_help := Label.new()
