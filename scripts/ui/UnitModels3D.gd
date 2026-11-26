@@ -1095,7 +1095,9 @@ static func _destroyer_grain() -> ImageTexture:
         for x in range(64):
             var grain: float = float((x*37+y*73+x*y*11)%31)/30.0
             var streak: float = 0.5+0.5*sin(float(x)*1.18+float(y)*0.06)
-            var shade: float = 0.91+0.055*grain+0.035*streak
+            # Restrained tonal variation, not random corrosion or baked faction color.
+            var patina: float = 0.5+0.5*cos(TAU*float(x)/64.0)*sin(TAU*float(y)/64.0)
+            var shade: float = 0.885+0.055*grain+0.035*streak+0.025*patina
             img.set_pixel(x,y,Color(shade,shade,shade,1.0))
     img.generate_mipmaps()
     _destroyer_steel_texture = ImageTexture.create_from_image(img)
@@ -1164,6 +1166,22 @@ static func _destroyer_finish(node: Node, detail: bool) -> void:
     for child in node.get_children():
         _destroyer_finish(child,detail)
 
+# Closed beveled exterior insert using the established shell winding.
+# Local Z is the shallow depth; a quarter-turn adapts it to a side wall.
+static func _destroyer_insert(parent: Node3D, label: String, center: Vector3,
+        extent: Vector3, tint: Color, side_wall: bool = false) -> MeshInstance3D:
+    var half: Vector3 = extent*0.5
+    var part: MeshInstance3D = _destroyer_shell(parent,label,
+        [[-half.z,half.x*0.92,-half.y*0.92,half.y*0.92],
+         [-half.z*0.55,half.x,-half.y,half.y],
+         [half.z*0.55,half.x,-half.y,half.y],
+         [half.z,half.x*0.92,-half.y*0.92,half.y*0.92]],tint)
+    part.position = center
+    if side_wall:
+        part.rotation_degrees.y = 90.0
+    part.set_meta("destroyer_beveled_insert",true)
+    return part
+
 # Native solid bridge: compact footprint between existing forward deck
 # equipment and aft landing area. Windows are opaque inserts, not planes.
 static func _destroyer_bridge(root: Node3D, art_level: int) -> void:
@@ -1190,18 +1208,30 @@ static func _destroyer_bridge(root: Node3D, art_level: int) -> void:
     var window_tint := Color("#38566A")
     for i in range(3):
         var x: float = float(i - 1) * 0.19
-        _box(bridge,"MarcoFrontal_%d" % i,Vector3(x,1.375,0.119),
-            Vector3(0.181,0.145,0.035),DARK)
-        _box(bridge,"CristalFrontal_%d" % i,Vector3(x,1.375,0.099),
-            Vector3(0.147,0.111,0.023),window_tint)
+        if art_level >= 13:
+            _destroyer_insert(bridge,"MarcoFrontal_%d" % i,Vector3(x,1.375,0.126),
+                Vector3(0.181,0.145,0.048),DARK)
+            _destroyer_insert(bridge,"CristalFrontal_%d" % i,Vector3(x,1.375,0.100),
+                Vector3(0.147,0.111,0.027),window_tint)
+        else:
+            _box(bridge,"MarcoFrontal_%d" % i,Vector3(x,1.375,0.119),
+                Vector3(0.181,0.145,0.035),DARK)
+            _box(bridge,"CristalFrontal_%d" % i,Vector3(x,1.375,0.099),
+                Vector3(0.147,0.111,0.023),window_tint)
     for side in [-1,1]:
         var sign: float = float(side)
         for i in range(2):
             var z: float = 0.30 + float(i) * 0.16
-            _box(bridge,"MarcoLateral_%d_%d" % [side,i],Vector3(sign*0.445,1.37,z),
-                Vector3(0.045,0.14,0.145),DARK)
-            _box(bridge,"CristalLateral_%d_%d" % [side,i],Vector3(sign*0.470,1.37,z),
-                Vector3(0.026,0.107,0.113),window_tint)
+            if art_level >= 13:
+                _destroyer_insert(bridge,"MarcoLateral_%d_%d" % [side,i],
+                    Vector3(sign*0.441,1.37,z),Vector3(0.145,0.14,0.060),DARK,true)
+                _destroyer_insert(bridge,"CristalLateral_%d_%d" % [side,i],
+                    Vector3(sign*0.470,1.37,z),Vector3(0.113,0.107,0.028),window_tint,true)
+            else:
+                _box(bridge,"MarcoLateral_%d_%d" % [side,i],Vector3(sign*0.445,1.37,z),
+                    Vector3(0.045,0.14,0.145),DARK)
+                _box(bridge,"CristalLateral_%d_%d" % [side,i],Vector3(sign*0.470,1.37,z),
+                    Vector3(0.026,0.107,0.113),window_tint)
         _box(bridge,"FaccionPuente_%d" % side,Vector3(sign*0.43,1.11,0.41),
             Vector3(0.07,0.085,0.29),ARMOR)
         _box(bridge,"PuertaServicio_%d" % side,Vector3(sign*0.425,1.045,0.55),
@@ -1468,6 +1498,10 @@ static func _destroyer_trim(root: Node3D, art_level: int) -> void:
                     Vector3(sign*0.62,0.887,z),Vector3(0.026,0.17,0.026),STEEL)
             _box(trim,"BarandaPasillo_%d" % side,Vector3(sign*0.62,0.963,0.37),
                 Vector3(0.023,0.027,0.47),STEEL)
+            for i in range(3):
+                var z: float = 0.15+float(i)*0.22
+                _cylinder(trim,"BasePostePasillo_%d_%d" % [side,i],
+                    Vector3(sign*0.62,0.805,z),0.025,0.019,DARK,Vector3.ZERO,8)
     _box(trim,"RegistroProa",Vector3(0,0.819,-1.91),
         Vector3(0.20,0.035,0.16),STEEL)
     root.set_meta("destroyer_visual_review_v18",true)
@@ -1499,7 +1533,7 @@ static func _destroyer(root: Node3D, art_level: int = 10) -> void:
     for station in stations:
         deck_stations.append([station[0],station[1]*0.86,0.738,0.802])
     _destroyer_shell(root,"Cubierta",deck_stations,ARMOR)
-    root.set_meta("destroyer_art_revision","1.13")
+    root.set_meta("destroyer_art_revision","1.14")
     _destroyer_bridge(root,art_level)
     _destroyer_navigation(root,art_level)
     _destroyer_deck_equipment(root,art_level)

@@ -51,7 +51,7 @@ func _run() -> void:
             check(model != null, "Destroyer builds")
             if model == null:
                 continue
-            check(model.get_meta("destroyer_art_revision", "") == "1.13", "V1.13 faction and satin finish active")
+            check(model.get_meta("destroyer_art_revision", "") == "1.14", "V1.14 faction and satin finish active")
             for key in ["CascoNaval", "Cubierta", "Superestructura/ZocaloNaval", "Superestructura/CarcasaInferior", "Superestructura/Puente", "Superestructura/TechoPuente", "TorretaNavalPivot/CarcasaTorreta", "TorreMastil/CarcasaMastil", "TorreMastil/RadarPivot/Radar", "ConjuntoPopa/Helipuerto", "ConjuntoPopa/Propulsion_-1/TimonPivot/TimonVisual", "ConjuntoPopa/Propulsion_1/TimonPivot/TimonVisual"]:
                 var part: MeshInstance3D = model.get_node_or_null(key) as MeshInstance3D
                 check(part != null, "Native " + key)
@@ -107,9 +107,25 @@ func _run() -> void:
                     check(pane != null, "Front opaque window")
                     if pane != null:
                         check((pane.material_override as StandardMaterial3D).transparency == BaseMaterial3D.TRANSPARENCY_DISABLED, "No alpha glass")
+                        check(pane.get_meta("destroyer_beveled_insert",false) == (lod >= 13), "Beveled glass only at inspection LOD")
+                        if lod >= 13:
+                            check(_closed(pane.mesh) and _outward(pane.mesh),"Closed front glass insert")
+                            var frame: MeshInstance3D = bridge.get_node("MarcoFrontal_%d" % i) as MeshInstance3D
+                            check(_closed(frame.mesh) and _outward(frame.mesh),"Closed front frame")
+                            var front_box: AABB = pane.transform*pane.get_aabb()
+                            var frame_box: AABB = frame.transform*frame.get_aabb()
+                            check(front_box.intersects(frame_box),"Front pane seated in frame")
                 for side in [-1, 1]:
                     check(bridge.has_node("CristalLateral_%d_0" % side) and bridge.has_node("CristalLateral_%d_1" % side), "Both lateral panes")
                     check(bridge.has_node("FaccionPuente_%d" % side), "Bridge faction panel")
+                    for i in range(2):
+                        var pane: MeshInstance3D = bridge.get_node("CristalLateral_%d_%d" % [side,i]) as MeshInstance3D
+                        var frame: MeshInstance3D = bridge.get_node("MarcoLateral_%d_%d" % [side,i]) as MeshInstance3D
+                        check(pane.get_meta("destroyer_beveled_insert",false) == (lod >= 13), "Lateral insert detail tier")
+                        if lod >= 13:
+                            check(_closed(pane.mesh) and _outward(pane.mesh) and _closed(frame.mesh),"Closed lateral inserts")
+                            check((pane.transform*pane.get_aabb()).intersects(frame.transform*frame.get_aabb()),"Lateral pane seated in frame")
+                    check(model.has_node("AcabadoNavalV18/BasePostePasillo_%d_0" % side) == (lod >= 13),"Rail mounting detail tier")
             var turret: Node3D = model.get_node_or_null("TorretaNavalPivot") as Node3D
             var base: MeshInstance3D = model.get_node_or_null("BaseTorreProa") as MeshInstance3D
             var collar: MeshInstance3D = model.get_node_or_null("AnilloTorreProa") as MeshInstance3D
@@ -241,7 +257,7 @@ func _run() -> void:
     if failures != 0:
         quit(1)
         return
-    print("PASS DESTROYER HULL V1.13: 18 variants, 38 PNGs")
+    print("PASS DESTROYER HULL V1.14: 18 variants, 42 PNGs")
     quit(0)
 
 func _render() -> void:
@@ -305,7 +321,7 @@ func _render() -> void:
         var img: Image = view.get_texture().get_image()
         check(img != null and not img.is_empty(), "Real Godot image")
         if img != null and not img.is_empty():
-            check(img.save_png(output + "/destroyer_v113_%d.png" % i) == OK, "Capture saved")
+            check(img.save_png(output + "/destroyer_v114_%d.png" % i) == OK, "Capture saved")
     Art.restore_model_pose("destroyer",model)
     for d in range(5):
         Art.set_destroyer_damage(model,d,0.52 if d == 4 else 0.0)
@@ -318,7 +334,7 @@ func _render() -> void:
         var img: Image = view.get_texture().get_image()
         check(img != null and not img.is_empty(), "Damage image")
         if img != null and not img.is_empty():
-            check(img.save_png(output + "/destroyer_v113_D%d.png" % d) == OK, "Damage capture saved")
+            check(img.save_png(output + "/destroyer_v114_D%d.png" % d) == OK, "Damage capture saved")
     for d in [2,3]:
         Art.set_destroyer_damage(model,d)
         camera.position = Vector3(3.0,2.7,3.1)
@@ -330,7 +346,7 @@ func _render() -> void:
         var img: Image = view.get_texture().get_image()
         check(img != null and not img.is_empty(), "Close damage image")
         if img != null and not img.is_empty():
-            check(img.save_png(output + "/destroyer_v113_detail_D%d.png" % d) == OK, "Close damage capture")
+            check(img.save_png(output + "/destroyer_v114_detail_D%d.png" % d) == OK, "Close damage capture")
     # Fixed camera, opaque water, and a complete visual sinking sequence.
     var sea := MeshInstance3D.new()
     var plane := PlaneMesh.new()
@@ -360,7 +376,7 @@ func _render() -> void:
         var img: Image = view.get_texture().get_image()
         check(img != null and not img.is_empty(), "Fixed waterline sequence")
         if img != null and not img.is_empty():
-            check(img.save_png(output + "/destroyer_v113_sink_%d.png" % frame) == OK, "Fixed camera sink capture")
+            check(img.save_png(output + "/destroyer_v114_sink_%d.png" % frame) == OK, "Fixed camera sink capture")
             if empty_water != null and not empty_water.is_empty() and img.get_size() == empty_water.get_size():
                 var changed: int = 0
                 for y in range(0,img.get_height(),8):
@@ -395,7 +411,7 @@ func _render() -> void:
         var img: Image = view.get_texture().get_image()
         check(img != null and not img.is_empty(), "Directional relief inspection")
         if img != null and not img.is_empty():
-            check(img.save_png(output + "/destroyer_v113_light_%d.png" % side) == OK, "Relief inspection capture")
+            check(img.save_png(output + "/destroyer_v114_light_%d.png" % side) == OK, "Relief inspection capture")
     # Same lighting and angle for all eight factions plus neutral.
     model.hide()
     light.shadow_enabled = false
@@ -415,7 +431,32 @@ func _render() -> void:
         var image: Image = view.get_texture().get_image()
         check(image != null and not image.is_empty(),"Faction comparison image")
         if image != null and not image.is_empty():
-            check(image.save_png(output+"/destroyer_v113_faction_%d.png" % faction)==OK,"Faction comparison saved")
+            check(image.save_png(output+"/destroyer_v114_faction_%d.png" % faction)==OK,"Faction comparison saved")
         stage.remove_child(sample)
         sample.free()
+    # Matched inspection views under identical camera orientation and lighting.
+    # The reference is the authored P06 V25 hero, not the older tactical fallback.
+    var bastion: Node3D = Art.build("apc",0,true,14)
+    check(bastion != null,"Bastion reference builds")
+    if bastion != null:
+        check(bastion.get_meta("tarvoka_apc_closed_tires_v25",false),"Bastion V25 reference, not prototype")
+        stage.add_child(bastion)
+        bastion.hide()
+        for role in ["destroyer","bastion"]:
+            var subject: Node3D = model if role == "destroyer" else bastion
+            subject.show()
+            for side in range(2):
+                camera.size = 4.4
+                camera.position = Vector3(5,4,-6) if side == 0 else Vector3(-5,4,6)
+                camera.look_at(Vector3(0,0.8,0),Vector3.UP)
+                await process_frame
+                await process_frame
+                await process_frame
+                var comparison: Image = view.get_texture().get_image()
+                check(comparison != null and not comparison.is_empty(),"Matched reference image")
+                if comparison != null and not comparison.is_empty():
+                    check(comparison.save_png(output+"/destroyer_v114_compare_%s_%d.png" % [role,side])==OK,"Matched reference capture")
+            subject.hide()
+        stage.remove_child(bastion)
+        bastion.free()
     view.queue_free()
