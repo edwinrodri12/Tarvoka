@@ -110,6 +110,7 @@ on:
       - "scripts/ui/InfantryEngineerOuterArmorV17.gd"
       - "tests/test_infantry_family_v2.gd"
       - "scripts/ui/InfantrySculptFinishV2.gd"
+      - "scripts/ui/InfantryVariantsV4.gd"
       - "tests/test_bastion_v16_joint_finish.gd"
       - "tests/test_bastion_v17_contours.gd"
       - "tests/test_bastion_v17_360_capture.gd"
@@ -250,6 +251,9 @@ on:
       - "scripts/ui/CampDefenseFinishV2.gd"
       - "scripts/ui/CampMedicalFinishV2.gd"
       - "scripts/ui/CampMedicalSculptV3.gd"
+      - "scripts/ui/InfantrySculptFinishV2.gd"
+      - "scripts/ui/InfantryVariantsV4.gd"
+      - "tests/test_infantry_family_v2.gd"
       # Independently validate the Engineer's original shared Godot Studio.
       - "scripts/ui/BastionStudioAdapter.gd"
       - "scripts/ui/InfantryEngineerFinishV6.gd"
@@ -1835,7 +1839,20 @@ jobs:
             echo '::error::A02 shared Studio selector or actions failed' >&2; exit 1
           fi
           grep -F 'PASS A02 V17 SHARED STUDIO:' /tmp/a02-studio.log
-          test "$(find build/qa/a02-shared-studio -name '*.png' -size +2k | wc -l)" -eq 5
+          # Explicit expected files and diagnostics: keep the exact five
+          # screenshot requirement; never silently accept missing evidence.
+          a02_count="$(find build/qa/a02-shared-studio -name '*.png' -size +2k | wc -l)"
+          echo "A02 shared Studio valid PNG count: $a02_count"
+          find build/qa/a02-shared-studio -name '*.png' -printf '%f %s bytes\n'
+          if [ "$a02_count" -ne 5 ]; then
+            echo "::error::Expected exactly five A02 screenshots over 2 KiB; found $a02_count" >&2
+            exit 1
+          fi
+          for a02_frame in d0 d4 return top bottom; do
+            if [ ! -s "build/qa/a02-shared-studio/a02-v16-studio-$a02_frame.png" ]; then
+              echo "::error::Missing A02 shared Studio frame $a02_frame" >&2; exit 1
+            fi
+          done
           # Web export must not publish a blank civilian-city selection.
           xvfb-run -a -s '-screen 0 1280x720x24' env LIBGL_ALWAYS_SOFTWARE=1 \
             /tmp/Godot_v4.3-stable_linux.x86_64 \
@@ -2894,6 +2911,33 @@ jobs:
               fs.writeFileSync('build/qa/engineer-browser/report.json',JSON.stringify({info,errors},null,2));
               if(errors.length)throw Error(errors.join('\n'));
               if(info.transparent_meshes.length)console.log('REVIEW visible translucent materials',info.transparent_meshes);
+              // The five current infantry links must select genuine native
+              // models in this exact exported WebGL package, not another viewer.
+              if(fs.readFileSync('scripts/ui/BastionStudioAdapter.gd','utf8').includes('window.__tarvokaInfantryEntry=')){
+                const entries=[['guardia','line'],['fs24','infantry_commando'],
+                  ['francotirador','infantry_sniper'],['logistico','infantry_logistic'],
+                  ['medico','infantry_medic']];
+                const family=[];
+                await page.close();
+                for(const [key,role] of entries){
+                  const p=await browser.newPage({viewport:{width:1280,height:720},deviceScaleFactor:1});
+                  const faults=[];
+                  p.on('pageerror',e=>faults.push(String(e)));
+                  p.on('console',m=>{if(/SCRIPT ERROR:|Parse Error:|Could not create render/.test(m.text()))faults.push(m.text());});
+                  try{
+                    await p.goto('http://127.0.0.1:8123/?unidad='+key,{waitUntil:'domcontentloaded',timeout:60000});
+                    await p.waitForFunction(()=>window.__tarvokaInfantryEntry!==undefined,null,{timeout:180000});
+                    const model=await p.evaluate(()=>window.__tarvokaInfantryEntry);
+                    await p.waitForTimeout(1000);
+                    await p.screenshot({path:'build/qa/engineer-browser/infantry-'+key+'-real-webgl.png'});
+                    family.push({key,model,faults});
+                    fs.writeFileSync('build/qa/engineer-browser/infantry-report.json',JSON.stringify(family,null,2));
+                    if(model.role!==role||model.edition!=='V15'||!model.motion_v12||!model.contacts_v13||!model.relief_v14||!model.fit_v15||!model.native_viewport||
+                        model.visible_meshes<20||model.transparent_meshes.length||faults.length)
+                      throw Error('Wrong or non-opaque native infantry entry: '+JSON.stringify({key,model,faults}));
+                  }finally{await p.close();}
+                }
+              }
             } finally {await browser.close();}
           })().catch(e=>{console.error(e);process.exitCode=1;});
           JS

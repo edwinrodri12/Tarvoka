@@ -72,6 +72,23 @@ func closed_solid(mesh: Mesh) -> bool:
                 return false
     return true
 
+# The actual forearm endpoint must meet the actual palm after every
+# native pose, not merely appear close in one camera view.
+func family_grip_contact(model: Node3D, side: int) -> bool:
+    var gun: Node3D=model.find_child("ArmamentoRig",true,false) as Node3D
+    var arm: Node3D=model.find_child("BrazoRig_%d"%side,true,false) as Node3D
+    var palm: Node3D=model.find_child("V2_PalmaGuante_%d"%side,true,false) as Node3D
+    var link: Node3D=model.find_child("V2_AntebrazoCerrado_%d"%side,true,false) as Node3D
+    if gun==null or arm==null or palm==null or link==null or link.get_parent()!=arm:
+        return false
+    var active: bool=bool(model.get_meta(Finish.SERVICE_FLAG,false)) and side>0
+    var holder: Node3D=model.find_child(Finish.SERVICE_RIG,true,false) as Node3D if active else gun
+    if holder==null or palm.get_parent()!=holder:
+        return false
+    var endpoint: Vector3=arm.transform*(link.transform*Vector3(0,0.5,0))
+    var contact: Vector3=holder.transform*palm.position
+    return endpoint.distance_to(contact)<0.0001 and palm.visible and link.visible
+
 func _initialize() -> void:
     call_deferred("_run")
 
@@ -207,6 +224,237 @@ func _run() -> void:
                             "nondegenerate dimensional geometry "+name)
                         check(closed_solid(part.mesh),
                             "watertight non-open full 360 degree "+name)
+                var refined: bool=role in Finish.FAMILY_ANATOMY_ROLES
+                check(bool(model.get_meta(Finish.FAMILY_ANATOMY_V5,false))==refined,
+                    "V5 anatomy limited to five intended core roles "+role)
+                if refined:
+                    check(str(model.get_meta(Finish.FAMILY_IDENTITY_V6,""))==role,
+                        "V6 role-specific head and chest")
+                    check(bool(model.get_meta(Finish.SURFACE_V7,false)),
+                        "V7 native material finish applied")
+                    check(str(model.get_meta(Finish.SCULPT_V8,""))==role,
+                        "V8 face integrated on exact role")
+                    check(str(model.get_meta(Finish.ARMOR_V10,""))==role,
+                        "V10 role-specific closed armor and fitted arms")
+                    check(bool(model.get_meta(Finish.GAIT_V11,false)),
+                        "V11 articulated knees and ankles")
+                    for side in [-1,1]:
+                        var knee: Node3D=model.find_child("V11_RodillaRig_%d"%side,true,false) as Node3D
+                        var ankle: Node3D=model.find_child("V11_TobilloRig_%d"%side,true,false) as Node3D
+                        var sole: Node3D=model.find_child("V2_Suela_%d"%side,true,false) as Node3D
+                        check(knee!=null and ankle!=null and sole!=null and
+                            ankle.get_parent()==knee and sole.get_parent()==ankle,
+                            "closed boot follows independent ankle and knee")
+                    var body: Node3D=model.find_child("Infanteria_3D",true,false) as Node3D
+                    var rest_floor: float=float(model.get_meta(Finish.GROUND_V11,INF))
+                    var knee_motion: bool=false
+                    for phase in [0.0,0.125,0.25,0.375,0.5,0.625,0.75,0.875,1.0]:
+                        check(Models.pose_model(role,model,"move",phase),"articulated gait sample")
+                        var lowest: float=Finish.family_sole_floor(model)
+                        check(body!=null and is_finite(rest_floor) and
+                            absf(lowest+body.position.y-rest_floor)<0.0001,
+                            "stance sole remains at original floor level")
+                        for side in [-1,1]:
+                            var knee: Node3D=model.find_child("V11_RodillaRig_%d"%side,true,false) as Node3D
+                            var ankle: Node3D=model.find_child("V11_TobilloRig_%d"%side,true,false) as Node3D
+                            if knee!=null and ankle!=null:
+                                knee_motion=knee_motion or absf(knee.rotation_degrees.x)>5.0
+                                check(knee.rotation_degrees.x>=-33.01 and knee.rotation_degrees.x<=0.001 and
+                                    absf(ankle.rotation_degrees.x)<=20.01,
+                                    "bounded knee flex and ankle compensation")
+                    check(knee_motion,"independent knees really animate")
+                    check(str(model.get_meta(Finish.MOTION_V12,""))==role,"V12 exact role")
+                    check(str(model.get_meta(Finish.CONTACT_V13,""))==role,"V13 anatomy identity")
+                    check(str(model.get_meta(Finish.RELIEF_V14,""))==role,"V14 native material relief")
+                    check(str(model.get_meta(Finish.FIT_V15,""))==role,"V15 proportion fit")
+                    check(model.scale.is_equal_approx(Vector3.ONE*0.83),"same canonical model scale")
+                    for side in [-1,1]:
+                        var pad: MeshInstance3D=model.find_child("Rodillera_%d"%side,true,false) as MeshInstance3D
+                        check(pad!=null and closed_solid(pad.mesh) and pad.mesh.get_aabb().size.z<0.085,
+                            "thin closed knee pad instead of projecting ball")
+                    var cloth: MeshInstance3D=model.find_child("V2_MusloTaper_1",true,false) as MeshInstance3D
+                    var glove: MeshInstance3D=model.find_child("V2_PalmaGuante_1",true,false) as MeshInstance3D
+                    var detailed: bool=bool(model.get_meta("tarvoka_infantry_v2_hero",false))
+                    if cloth!=null and glove!=null:
+                        var fabric_mat: StandardMaterial3D=cloth.material_override as StandardMaterial3D
+                        var rubber_mat: StandardMaterial3D=glove.material_override as StandardMaterial3D
+                        check(fabric_mat.normal_enabled==detailed and rubber_mat.normal_enabled==detailed,
+                            "normal mapping only on detailed LOD")
+                        if detailed:
+                            check(fabric_mat.normal_texture!=null and rubber_mat.normal_texture!=null and
+                                fabric_mat.normal_texture!=rubber_mat.normal_texture and
+                                fabric_mat.normal_texture.get_width()==64 and fabric_mat.normal_texture.get_height()==64 and
+                                fabric_mat.normal_texture.get_image().has_mipmaps(),
+                                "distinct cached mipmapped fabric and rubber relief")
+                    for side in [-1,1]:
+                        var suffix: String="_%d"%side
+                        var palm: MeshInstance3D=model.find_child("V2_PalmaGuante"+suffix,true,false) as MeshInstance3D
+                        var thumb: MeshInstance3D=model.find_child("V13_Pulgar"+suffix,true,false) as MeshInstance3D
+                        var elbow: MeshInstance3D=model.find_child("V13_CodoProtegido"+suffix,true,false) as MeshInstance3D
+                        var cuff: MeshInstance3D=model.find_child("V13_CanaBota"+suffix,true,false) as MeshInstance3D
+                        var hero_detail: bool=bool(model.get_meta("tarvoka_infantry_v2_hero",false))
+                        check(palm!=null and palm.mesh is ArrayMesh and closed_solid(palm.mesh),
+                            "V13 sealed sculpted glove")
+                        if hero_detail:
+                            check(thumb!=null and thumb.get_parent()==palm and closed_solid(thumb.mesh),
+                                "physical closed thumb follows palm")
+                            check(elbow!=null and str(elbow.get_parent().name)=="BrazoRig"+suffix and closed_solid(elbow.mesh),
+                                "fitted closed elbow stays on arm")
+                            check(cuff!=null and str(cuff.get_parent().name)=="V11_TobilloRig"+suffix and closed_solid(cuff.mesh),
+                                "boot cuff follows ankle")
+                            for finger in range(4):
+                                var digit: MeshInstance3D=model.find_child("V2_DedoGuante_%d_%d"%[side,finger],true,false) as MeshInstance3D
+                                check(digit!=null and digit.get_parent()==palm.get_parent() and closed_solid(digit.mesh),
+                                    "four curved glove fingers with shared grip holder")
+                        else:
+                            check(thumb==null and elbow==null and cuff==null,"no new detail draw nodes on Android LOD8")
+                            var badge: Node3D=model.find_child("V3_IdentidadRodillaMapa"+suffix,true,false) as Node3D
+                            check(badge!=null and str(badge.get_parent().name)=="V11_RodillaRig"+suffix,
+                                "tactical faction marker follows moving knee")
+                    var helmet_badge: MeshInstance3D=model.find_child("V2_FaccionCasco",true,false) as MeshInstance3D
+                    check(helmet_badge!=null and helmet_badge.mesh is ArrayMesh and
+                        closed_solid(helmet_badge.mesh) and helmet_badge.mesh.get_aabb().size.y<0.060,
+                        "shallow closed faction helmet badge")
+                    var run_flex: float=0.0
+                    for action in ["run","aim","attack"]:
+                        for phase in [0.0,0.17,0.34,0.5,0.67,0.83,1.0]:
+                            check(Models.pose_model(role,model,action,phase),"V12 distinct visual pose "+action)
+                            check(absf(Finish.family_sole_floor(model)+body.position.y-rest_floor)<0.0001,
+                                "actual outsole vertices preserve floor "+action)
+                            for side in [-1,1]:
+                                check(family_grip_contact(model,side),"hand contact during "+action)
+                                var knee: Node3D=model.find_child("V11_RodillaRig_%d"%side,true,false) as Node3D
+                                if action=="run" and knee!=null:
+                                    run_flex=maxf(run_flex,absf(knee.rotation_degrees.x))
+                    check(run_flex>33.0 and run_flex<=52.01,"run differs from march")
+                    Models.restore_model_pose(role,model)
+                    for side in [-1,1]:
+                        var knee: Node3D=model.find_child("V11_RodillaRig_%d"%side,true,false) as Node3D
+                        var ankle: Node3D=model.find_child("V11_TobilloRig_%d"%side,true,false) as Node3D
+                        check(knee!=null and ankle!=null and is_zero_approx(knee.rotation_degrees.x) and
+                            is_zero_approx(ankle.rotation_degrees.x),"rest restores both joints")
+                    if role=="line":
+                        check(is_zero_approx(model.position.y) and
+                            str(model.get_meta(Finish.SCULPT_V8,""))=="line",
+                            "Guardia native role string is compared exactly; no legacy proxy offset")
+                    for name in ["V2_ProteccionBarbilla","V2_BordeFrontalCasco"]:
+                        var face: MeshInstance3D=model.find_child(name,true,false) as MeshInstance3D
+                        check(face!=null and face.visible and face.mesh is ArrayMesh and closed_solid(face.mesh),
+                            "V8 integrated sealed face part "+name)
+                    for side in [-1,1]:
+                        var cheek: Node3D=model.find_child("V2_Mejilla_%d"%side,true,false) as Node3D
+                        check(cheek!=null and not cheek.visible,"old floating cheek removed")
+                    var helmet_surface: MeshInstance3D=model.find_child("V2_CascoEsferoideCerrado",true,false) as MeshInstance3D
+                    if helmet_surface!=null:
+                        var clean: StandardMaterial3D=helmet_surface.material_override as StandardMaterial3D
+                        check(clean!=null and clean.transparency==BaseMaterial3D.TRANSPARENCY_DISABLED and
+                            (clean.albedo_texture!=null)==bool(model.get_meta("tarvoka_infantry_v2_hero",false)),
+                            "native texture on LOD13 only; opacity preserved")
+                        for damage in range(5):
+                            check(Infantry.set_damage(model,damage) and Models.pose_model(role,model,"idle",0.0),
+                                "V7 stage update "+str(damage))
+                            var worn: StandardMaterial3D=helmet_surface.material_override as StandardMaterial3D
+                            check(int(model.get_meta(Finish.DAMAGE_V7,-1))==damage and
+                                worn!=null and worn.albedo_color.a==1.0 and
+                                ((worn==clean)==(damage==0)),
+                                "stage-specific opaque materials")
+                            if damage>0:
+                                check(worn.albedo_color!=clean.albedo_color,
+                                    "damage has distinct surface color")
+                        Models.restore_model_pose(role,model)
+                        check(helmet_surface.material_override==clean and int(model.get_meta(Finish.DAMAGE_V7,-1))==0,
+                            "exact original surface restored after D4")
+                    for name in ["V2_CascoEsferoideCerrado","V2_VisorOpacoPBR","CuelloProtegido"]:
+                        var head_piece: MeshInstance3D=model.find_child(name,true,false) as MeshInstance3D
+                        check(head_piece!=null and head_piece.mesh is ArrayMesh and closed_solid(head_piece.mesh),
+                            "closed helmet, collar and visor V6 "+name)
+                    for side in [-1,1]:
+                        var suffix: String="_%d"%side
+                        for prefix in ["Hombrera","V2_MangaCerrada","V2_AntebrazoCerrado",
+                                "Rodillera","V2_BotaMoldeada","V2_Suela"]:
+                            var sculpt: MeshInstance3D=model.find_child(prefix+suffix,true,false) as MeshInstance3D
+                            check(sculpt!=null and sculpt.visible and sculpt.mesh is ArrayMesh and
+                                closed_solid(sculpt.mesh) and bool(sculpt.get_meta(Finish.FAMILY_ANATOMY_V5,false)),
+                                "V5 closed actual anatomical part "+prefix+suffix)
+                        var boot: MeshInstance3D=model.find_child("V2_BotaMoldeada"+suffix,true,false) as MeshInstance3D
+                        var sole: MeshInstance3D=model.find_child("V2_Suela"+suffix,true,false) as MeshInstance3D
+                        var toe: Node3D=model.find_child("V2_PunteraProtegida"+suffix,true,false) as Node3D
+                        if boot!=null and sole!=null:
+                            check(boot.get_parent()==sole.get_parent() and
+                                boot.mesh.get_aabb().position.y < sole.mesh.get_aabb().end.y and
+                                is_equal_approx(sole.mesh.get_aabb().position.y,-0.9675),
+                                "boot and outsole overlap; original floor contact retained")
+                        check(toe!=null and not toe.visible,"old detached toe hidden")
+                    check(bool(model.get_meta(Finish.FAMILY_GRIPS_V5,false)),
+                        "V5 physical hand contacts installed")
+                    for action in ["idle","move","aim","attack","capture","work"]:
+                        for phase in [0.0,0.27,0.5,0.91]:
+                            check(Models.pose_model(role,model,action,phase),
+                                "family contact pose "+action)
+                            for side in [-1,1]:
+                                check(family_grip_contact(model,side),
+                                    "no floating hand "+role+" "+action)
+                                var link: Node3D=model.find_child("V2_AntebrazoCerrado_%d"%side,true,false) as Node3D
+                                check(link!=null and link.scale.y>=0.30 and link.scale.y<=0.60,
+                                    "bounded anatomical lower arm "+role+" "+action)
+                            if role in ["infantry_logistic","infantry_medic"]:
+                                var service: Node3D=model.find_child(Finish.SERVICE_RIG,true,false) as Node3D
+                                var expected: bool=action=="work" and phase>0.04 and phase<0.96
+                                check(service!=null and service.visible==expected and
+                                    bool(model.get_meta(Finish.SERVICE_FLAG,false))==expected,
+                                    "service tool appears only during work phase")
+                    Models.restore_model_pose(role,model)
+                    check(family_grip_contact(model,-1) and family_grip_contact(model,1),
+                        "restore retains physical grips")
+                    for action in ["move","hit_bullet","hit_explosive"]:
+                        check(Models.pose_model(role,model,action,0.4),"V10 effect pose "+action)
+                        var batch: MultiMeshInstance3D=model.get_node_or_null(Finish.FX_V10) as MultiMeshInstance3D
+                        var budget: int=8 if bool(model.get_meta("tarvoka_infantry_v2_hero",false)) else 4
+                        check(batch!=null and batch.visible and batch.multimesh.instance_count==budget and
+                            batch.multimesh.visible_instance_count>0 and batch.multimesh.visible_instance_count<=budget,
+                            "one bounded native effect batch "+action)
+                    check(Infantry.set_damage(model,3) and Models.pose_model(role,model,"idle",0.4),"equipment smoke pose")
+                    var smoke: MultiMeshInstance3D=model.get_node_or_null(Finish.FX_V10) as MultiMeshInstance3D
+                    check(smoke!=null and smoke.visible and smoke.multimesh.visible_instance_count>0,
+                        "D3 persistent equipment smoke")
+                    Models.restore_model_pose(role,model)
+                    check(smoke!=null and not smoke.visible and smoke.multimesh.visible_instance_count==0,
+                        "D0 clears effect batch without resource churn")
+                    if Specialist.supports(role):
+                        check(bool(model.get_meta(Specialist.KIT_V5,false)),
+                            "specialist kit revision present")
+                        check(str(model.get_meta(Specialist.KIT_V9,""))==role,
+                            "V9 unique specialist silhouette")
+                        check(str(model.get_meta(Specialist.KIT_V14,""))==role,"V14 individual accessory finish")
+                        var surface_name: String=str(Specialist.KIT_V9_MAIN[role]) if role!="infantry_commando" else "V9_FS24_Radio"
+                        var accessory: MeshInstance3D=model.find_child(surface_name,true,false) as MeshInstance3D
+                        check(accessory!=null and accessory.has_meta(Finish.STAGE_MATS) and
+                            closed_solid(accessory.mesh),"specialist kit participates in opaque material damage")
+                        if accessory!=null and accessory.has_meta(Finish.STAGE_MATS):
+                            var original: Material=accessory.material_override
+                            check(Infantry.set_damage(model,3) and Models.pose_model(role,model,"idle",0.0) and
+                                accessory.material_override!=original,"specialist kit weathers at D3")
+                            Models.restore_model_pose(role,model)
+                            check(accessory.material_override==original,"specialist restores exact material")
+                        var signature: MeshInstance3D=model.find_child(str(Specialist.KIT_V9_MAIN[role]),true,false) as MeshInstance3D
+                        check(signature!=null and signature.visible and signature.mesh is ArrayMesh and closed_solid(signature.mesh),
+                            "V9 true closed primary kit geometry")
+                        var legacy: Dictionary={"infantry_sniper":["MiraPrecisionBase","CanonPrecisionBase"],
+                            "infantry_commando":["AntenaComandoBase"],"infantry_logistic":["CargaLogisticaBase"],
+                            "infantry_medic":["BotiquinMedicoBase","IdentificadorMedicoBase"]}
+                        for old_name in legacy[role]:
+                            var old_kit: Node3D=model.find_child(old_name,true,false) as Node3D
+                            check(old_kit!=null and not old_kit.visible,"no overlapping legacy accessory "+str(old_name))
+                        if role=="infantry_commando" and bool(model.get_meta("tarvoka_infantry_v2_hero",false)):
+                            for side in [-1,1]:
+                                var shoulder: Node3D=model.find_child("V4_HombreraEspecial_%d"%side,true,false) as Node3D
+                                check(shoulder!=null and str(shoulder.get_parent().name)=="BrazoRig_%d"%side,
+                                    "FS24 extra protection follows articulated arm")
+                        for part in model.find_children("V4_*","MeshInstance3D",true,false):
+                            if part.has_meta(Specialist.KIT_V5):
+                                var gear_mesh: MeshInstance3D=part as MeshInstance3D
+                                check(gear_mesh.mesh is ArrayMesh and closed_solid(gear_mesh.mesh),
+                                    "rounded specialist cargo is a closed physical volume")
                 # Real LOD8 tactical paint must be MUCH broader than tiny
                 # hero emblems, and must match one of the eight official
                 # palettes exactly (not a guessed or invented highlight).
@@ -261,8 +509,11 @@ func _run() -> void:
                 check(Models.pose_model(role,model,"move",0.27),
                     "V2 physical walking pose runs")
                 var arm: Node3D=model.find_child("BrazoRig_1",true,false) as Node3D
-                check(arm!=null and arm.rotation_degrees.x>35,
-                    "hands held up near weapon, no hanging floating-arm bug")
+                if model.has_meta(Finish.FIT_V15):
+                    check(arm!=null and family_grip_contact(model,1),"V15 real solved right grip")
+                else:
+                    check(arm!=null and arm.rotation_degrees.x>35,
+                        "hands held up near weapon, no hanging floating-arm bug")
                 var weapon: Node3D=model.find_child("ArmamentoRig",true,false) as Node3D
                 check(weapon!=null and weapon.rotation_degrees.y>55,
                     "weapon no longer points horizontally to the side")
@@ -272,6 +523,10 @@ func _run() -> void:
                     "V2_DestelloDisparo3D",true,false) as MeshInstance3D
                 check(flash!=null and flash.visible,
                     "real moving muzzle flash mounted at weapon muzzle")
+                if flash!=null and role=="infantry_sniper":
+                    check(is_equal_approx(flash.position.x,1.355),"sniper visual flash follows specialist mesh")
+                if flash!=null and role=="infantry_commando":
+                    check(is_equal_approx(flash.position.x,1.21),"FS24 visual flash follows specialist mesh")
                 var brass: MeshInstance3D=model.find_child(
                     "V2_CasquilloFisico",true,false) as MeshInstance3D
                 if bool(model.get_meta("tarvoka_infantry_v2_hero",false)) and role!="infantry_antitank":
@@ -281,9 +536,13 @@ func _run() -> void:
                     check(brass==null,
                         "mobile LOD and rocket launcher avoid extra casings")
                 var left: Node3D=model.find_child("BrazoRig_-1",true,false) as Node3D
-                check(left!=null and left.rotation_degrees.z>30 and
-                    arm.rotation_degrees.z< -20,
-                    "both shoulders converge hands on actual rifle grips")
+                if model.has_meta(Finish.FIT_V15):
+                    check(left!=null and family_grip_contact(model,-1) and family_grip_contact(model,1),
+                        "both V15 solved shoulders maintain actual grips during recoil")
+                else:
+                    check(left!=null and left.rotation_degrees.z>30 and
+                        arm.rotation_degrees.z< -20,
+                        "both shoulders converge hands on actual rifle grips")
                 check(Models.pose_model(role,model,"idle",0.0) and
                     flash!=null and not flash.visible,
                     "shot flash ends cleanly after attack, never stuck on")
@@ -308,6 +567,85 @@ func _run() -> void:
                 if faction==0:
                     hero.rotation_degrees.y=0
                     await save_frame(view,"v2_%s_f%d_back"%[role,faction])
+                    if role in Finish.FAMILY_ANATOMY_ROLES:
+                        camera.size=2.75
+                        for angle in [90,180,270]:
+                            hero.rotation_degrees.y=angle
+                            await save_frame(view,"v5_%s_detail_%d"%[role,angle])
+                        if Specialist.supports(role):
+                            camera.size=1.65
+                            camera.position=Vector3(2.2,2.1,3.4)
+                            camera.look_at(Vector3(0,1.25,0),Vector3.UP)
+                            hero.rotation_degrees.y=0
+                            await save_frame(view,"v9_%s_kit_rear"%role)
+                            hero.rotation_degrees.y=180
+                            await save_frame(view,"v9_%s_kit_front"%role)
+                        camera.size=1.25
+                        camera.position=Vector3(1.35,2.6,2.1)
+                        camera.look_at(Vector3(0,1.95,0),Vector3.UP)
+                        hero.rotation_degrees.y=180
+                        await save_frame(view,"v6_%s_helmet"%role)
+                        camera.size=3.6
+                        camera.position=Vector3(2.5,2.35,4.2)
+                        camera.look_at(Vector3(0,1.0,0),Vector3.UP)
+                        if role in ["infantry_logistic","infantry_medic"]:
+                            check(Models.pose_model(role,hero,"work",0.5),"specialist service animation")
+                            await save_frame(view,"v6_%s_service"%role)
+                            Models.restore_model_pose(role,hero)
+                        for phase in [0.25,0.5]:
+                            check(Models.pose_model(role,hero,"move",phase),"V11 actual gait capture")
+                            hero.rotation_degrees.y=90
+                            await save_frame(view,"v11_%s_gait_%d"%[role,roundi(phase*100)])
+                            Models.restore_model_pose(role,hero)
+                        for action in ["run","aim"]:
+                            check(Models.pose_model(role,hero,action,0.5),"V12 action capture")
+                            hero.rotation_degrees.y=120
+                            await save_frame(view,"v12_%s_%s"%[role,action])
+                            Models.restore_model_pose(role,hero)
+                        camera.size=1.45
+                        camera.position=Vector3(2.2,2.0,3.4)
+                        camera.look_at(Vector3(0,1.35,0),Vector3.UP)
+                        hero.rotation_degrees.y=0
+                        await save_frame(view,"v14_%s_material_rear"%role)
+                        hero.rotation_degrees.y=180
+                        await save_frame(view,"v14_%s_material_front"%role)
+                        camera.size=2.0
+                        camera.position=Vector3(3.4,1.65,0)
+                        camera.look_at(Vector3(0,1.15,0),Vector3.UP)
+                        hero.rotation_degrees.y=0
+                        await save_frame(view,"v15_%s_arm_rest"%role)
+                        check(Models.pose_model(role,hero,"aim",0.5),"V15 aim side capture")
+                        await save_frame(view,"v15_%s_arm_aim"%role)
+                        Models.restore_model_pose(role,hero)
+                        # Close views of actual extremities rather than
+                        # another wide full-body screenshot.
+                        hero.rotation_degrees.y=140
+                        camera.size=1.25
+                        camera.position=Vector3(2.2,1.75,3.4)
+                        camera.look_at(Vector3(0,1.15,0),Vector3.UP)
+                        await save_frame(view,"v13_%s_gloves"%role)
+                        camera.size=1.15
+                        camera.position=Vector3(2.2,0.85,3.4)
+                        camera.look_at(Vector3(0,0.35,0),Vector3.UP)
+                        await save_frame(view,"v13_%s_boots"%role)
+                        camera.size=3.6
+                        camera.position=Vector3(2.5,2.35,4.2)
+                        camera.look_at(Vector3(0,1.0,0),Vector3.UP)
+                        hero.rotation_degrees.y=180
+                        for action in ["hit_bullet","hit_explosive"]:
+                            check(Models.pose_model(role,hero,action,0.4),"V10 actual impact render")
+                            await save_frame(view,"v10_%s_%s"%[role,action])
+                            Models.restore_model_pose(role,hero)
+                        for damage in [2,4]:
+                            check(Infantry.set_damage(hero,damage) and Models.pose_model(role,hero,"idle",0.0),
+                                "V7 damage capture")
+                            if damage==4:
+                                camera.position=Vector3(3.3,1.6,4.2)
+                                camera.look_at(Vector3(0.85,0.22,0),Vector3.UP)
+                            await save_frame(view,"v7_%s_damage_%d"%[role,damage])
+                            camera.position=Vector3(2.5,2.35,4.2)
+                            camera.look_at(Vector3(0,1.0,0),Vector3.UP)
+                        Models.restore_model_pose(role,hero)
                 hero.get_parent().remove_child(hero)
             # Tactical camera uses the SAME real renderer with reduced
             # visible model size, NOT a second artist-only 3D fake.
@@ -320,7 +658,31 @@ func _run() -> void:
                 camera.size=3.6
             hero.free()
             mobile.free()
-    check(rendered==38,"38 real 3D comparison / tactical frames")
+    # All six approved models, identical faction, camera, ground and scale.
+    # Real 3D lineup makes relative size and silhouettes directly inspectable.
+    var lineup: Array[Node3D]=[]
+    var official: Array[String]=["line","infantry_commando","infantry_sniper",
+        "infantry_logistic","infantry_medic","infantry_engineer"]
+    for i in range(official.size()):
+        var unit: Node3D=Models.build(official[i],0,true,13)
+        check(unit!=null and unit.scale.is_equal_approx(Vector3.ONE*0.83),
+            "lineup uses canonical scale "+official[i])
+        if unit==null:
+            continue
+        unit.position.x=(float(i)-2.5)*1.55
+        unit.rotation_degrees.y=180
+        view.add_child(unit)
+        lineup.append(unit)
+    camera.size=8.7
+    camera.position=Vector3(0,2.0,11.0)
+    camera.look_at(Vector3(0,1.0,0),Vector3.UP)
+    await save_frame(view,"v15_six_official_front")
+    for unit in lineup:
+        unit.rotation_degrees.y=0
+    await save_frame(view,"v15_six_official_rear")
+    for unit in lineup:
+        unit.free()
+    check(rendered==140,"140 real 3D comparison / tactical frames")
     # Art-only variants must never enter the tactical roster.
     for role in ["infantry_urban","infantry_defense",
             "infantry_antitank","infantry_engineer",
@@ -331,5 +693,5 @@ func _run() -> void:
         push_error("FAIL INFANTRY V2 NATIVE 3D: %d failures"%failed)
         quit(1)
     else:
-        print("PASS INFANTRY V2 NATIVE 3D: 160 models (6 core + 4 legacy), 8 factions, 2 LOD, 38 true PNG")
+        print("PASS INFANTRY V2 NATIVE 3D: 160 models (6 core + 4 legacy), 8 factions, 2 LOD, 140 true PNG")
         quit(0)

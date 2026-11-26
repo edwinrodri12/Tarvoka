@@ -356,7 +356,7 @@ func _ready() -> void:
         role_picker.select(launch_index)
     _display_role(launch_role)
     _refresh_unified_studio_navigation()
-    if OS.has_feature("web") and launch_role=="infantry_engineer":
+    if OS.has_feature("web") and InfantryV1.supports(launch_role):
         _engineer_web_entry_report.call_deferred()
     if OS.has_feature("web") and launch_role=="fpv":
         _a02_web_entry_report.call_deferred()
@@ -398,7 +398,7 @@ func _a02_web_entry_report()->void:
 # input, remote callbacks, alternate geometry or scene manipulation.
 func _engineer_web_entry_report() -> void:
     await get_tree().process_frame
-    if _role!="infantry_engineer" or model_root==null:
+    if not InfantryV1.supports(_role) or model_root==null:
         return
     var visible_meshes: int=0
     var transparent_meshes: Array[String]=[]
@@ -415,7 +415,14 @@ func _engineer_web_entry_report() -> void:
                     transparent_meshes.append(str(part.name))
     var evidence: Dictionary={"role":_role,"edition":_infantry_review_edition(),
         "visible_meshes":visible_meshes,"transparent_meshes":transparent_meshes}
-    JavaScriptBridge.eval("window.__tarvokaEngineerEntry="+JSON.stringify(evidence),true)
+    evidence["motion_v12"]=str(model_root.get_meta("tarvoka_infantry_motion_uniform_v12",""))==_role
+    evidence["contacts_v13"]=str(model_root.get_meta("tarvoka_infantry_gloves_boots_v13",""))==_role
+    evidence["relief_v14"]=str(model_root.get_meta("tarvoka_infantry_relief_v14",""))==_role
+    evidence["fit_v15"]=str(model_root.get_meta("tarvoka_infantry_proportions_v15",""))==_role
+    evidence["native_viewport"]=model_root.get_parent()==preview
+    JavaScriptBridge.eval("window.__tarvokaInfantryEntry="+JSON.stringify(evidence),true)
+    if _role=="infantry_engineer":
+        JavaScriptBridge.eval("window.__tarvokaEngineerEntry="+JSON.stringify(evidence),true)
 
 func _studio_role_from_link_key(value:String) -> String:
     # Fixed allowlist: URL text never controls a scene or resource path.
@@ -428,6 +435,16 @@ func _studio_role_from_link_key(value:String) -> String:
             return "fpv"
         "g05", "ingeniero", "infantry_engineer":
             return "infantry_engineer"
+        "guardia", "line":
+            return "line"
+        "fs24", "fs-24", "comando", "infantry_commando":
+            return "infantry_commando"
+        "francotirador", "infantry_sniper":
+            return "infantry_sniper"
+        "logistico", "infantry_logistic":
+            return "infantry_logistic"
+        "medico", "infantry_medic":
+            return "infantry_medic"
         _:
             return "apc"
 
@@ -779,10 +796,12 @@ func _studio_jump_details() -> void:
 func _studio_animation_specs(role: String) -> Array[Dictionary]:
     if InfantryV1.supports(role):
         var actions: Array[Dictionary] = [
-            {"group":"INFANTERÍA V2 · MOVIMIENTO Y POSTURAS"},
+            {"group":"INFANTERÍA · MOVIMIENTO Y POSTURAS"},
             {"title":"Marcha con equipo","action":"move"},
             {"title":"Orientar y apuntar","action":"aim"}
         ]
+        if role in ["line","infantry_commando","infantry_sniper","infantry_logistic","infantry_medic"]:
+            actions.insert(2,{"title":"Carrera con equipo (visual)","action":"run"})
         if role in ["infantry_engineer","infantry_logistic","infantry_medic"]:
             var task_name:String="Trabajo y herramientas"
             if role=="infantry_logistic":
@@ -1662,6 +1681,24 @@ func _infantry_review_edition() -> String:
             return "V11"
         if EngineerFinishV9.has_model(model_root):
             return "V9"
+    if model_root!=null and str(model_root.get_meta("tarvoka_infantry_role_identity_v6",""))==_role:
+        if str(model_root.get_meta("tarvoka_infantry_proportions_v15",""))==_role:
+            return "V15"
+        if str(model_root.get_meta("tarvoka_infantry_relief_v14",""))==_role:
+            return "V14"
+        if str(model_root.get_meta("tarvoka_infantry_gloves_boots_v13",""))==_role:
+            return "V13"
+        if str(model_root.get_meta("tarvoka_infantry_motion_uniform_v12",""))==_role:
+            return "V12"
+        if bool(model_root.get_meta("tarvoka_infantry_articulated_gait_v11",false)):
+            return "V11"
+        if str(model_root.get_meta("tarvoka_infantry_armor_anatomy_v10",""))==_role:
+            return "V10"
+        if str(model_root.get_meta("tarvoka_infantry_specialist_silhouette_v9",""))==_role:
+            return "V9"
+        if str(model_root.get_meta("tarvoka_infantry_integrated_face_v8",""))==_role:
+            return "V8"
+        return "V7" if bool(model_root.get_meta("tarvoka_infantry_material_finish_v7",false)) else "V6"
     return "V2"
 
 func _engineer_v12_compare(new_finish: bool) -> void:
@@ -1979,13 +2016,16 @@ func _infantry_pose_tick(t: float, kind: String) -> void:
 func _infantry_play(kind: String) -> void:
     if not InfantryV1.supports(_role) or model_root==null:
         return
+    if kind=="run" and str(model_root.get_meta("tarvoka_infantry_motion_uniform_v12",""))!=_role:
+        status_label.text="Carrera disponible en el modelo actual; selecciona Ver última."
+        return
     if _engineer_v6_tween!=null and _engineer_v6_tween.is_running():
         _engineer_v6_tween.kill()
     if _infantry_tween!=null and _infantry_tween.is_running():
         _infantry_tween.kill()
     _infantry_tween=create_tween()
     _infantry_tween.tween_method(Callable(self,"_infantry_pose_tick").bind(kind),
-        0.0,1.0,1.15)
+        0.0,1.0,0.85 if kind=="run" else 1.15)
     status_label.text="Infantería · animación %s · modelo %s" % [kind,
         "3D "+_infantry_review_edition()]
 

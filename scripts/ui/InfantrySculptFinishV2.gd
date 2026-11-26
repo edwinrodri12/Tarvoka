@@ -62,35 +62,882 @@ static func _ring_pt(radius: Vector3, segment: int, total: int) -> Vector3:
 
 # Every segment is physically capped at each end: no floating cylinders,
 # open-sided planes, cut-off legs, backpack shells or faceless proxy surfaces.
-static func _organic(parent: Node3D, label: String, pos: Vector3,
-        rings: Array[Vector3], material: StandardMaterial3D,
-        sides: int = 12) -> MeshInstance3D:
+static func _organic_mesh(rings: Array[Vector3], sides: int=12,
+        offsets: PackedFloat32Array=PackedFloat32Array(), shape: float=1.0) -> ArrayMesh:
     var tool := SurfaceTool.new()
     tool.begin(Mesh.PRIMITIVE_TRIANGLES)
     var count: int = maxi(8,sides)
+    var points: Array[PackedVector3Array] = []
+    for row in range(rings.size()):
+        var ring := PackedVector3Array()
+        var shift: float = offsets[row] if offsets.size()==rings.size() else 0.0
+        for i in range(count):
+            var pt: Vector3 = _ring_pt(rings[row],i,count)
+            if shape!=1.0:
+                var angle: float = TAU*float(i)/float(count)
+                pt.x = signf(cos(angle))*pow(absf(cos(angle)),shape)*rings[row].x
+                pt.z = signf(sin(angle))*pow(absf(sin(angle)),shape)*rings[row].z
+            pt.z += shift
+            ring.append(pt)
+        points.append(ring)
     for row in range(rings.size()-1):
         for i in range(count):
-            var a: Vector3 = _ring_pt(rings[row],i,count)
-            var b: Vector3 = _ring_pt(rings[row],(i+1)%count,count)
-            var c: Vector3 = _ring_pt(rings[row+1],i,count)
-            var d: Vector3 = _ring_pt(rings[row+1],(i+1)%count,count)
+            var a: Vector3 = points[row][i]
+            var b: Vector3 = points[row][(i+1)%count]
+            var c: Vector3 = points[row+1][i]
+            var d: Vector3 = points[row+1][(i+1)%count]
             # Godot front faces use clockwise winding viewed from outside.
             for v in [a,b,c,b,d,c]:
                 tool.add_vertex(v)
-    var low: Vector3 = Vector3(0,rings[0].y,0)
-    var top: Vector3 = Vector3(0,rings[-1].y,0)
+    var low: Vector3 = Vector3(0,rings[0].y,offsets[0] if offsets.size()==rings.size() else 0.0)
+    var top: Vector3 = Vector3(0,rings[-1].y,offsets[-1] if offsets.size()==rings.size() else 0.0)
     for i in range(count):
-        var lower: Vector3 = _ring_pt(rings[0],i,count)
-        var lower_next: Vector3 = _ring_pt(rings[0],(i+1)%count,count)
+        var lower: Vector3 = points[0][i]
+        var lower_next: Vector3 = points[0][(i+1)%count]
         for v in [low,lower_next,lower]:
             tool.add_vertex(v)
-        var upper: Vector3 = _ring_pt(rings[-1],i,count)
-        var upper_next: Vector3 = _ring_pt(rings[-1],(i+1)%count,count)
+        var upper: Vector3 = points[-1][i]
+        var upper_next: Vector3 = points[-1][(i+1)%count]
         for v in [top,upper,upper_next]:
             tool.add_vertex(v)
     tool.generate_normals()
-    var sculpt: ArrayMesh = tool.commit()
-    return _mesh(parent,label,sculpt,material,pos)
+    return tool.commit()
+
+static func _organic(parent: Node3D, label: String, pos: Vector3,
+        rings: Array[Vector3], material: StandardMaterial3D,
+        sides: int = 12) -> MeshInstance3D:
+    return _mesh(parent,label,_organic_mesh(rings,sides),material,pos)
+
+# Refine only the five remaining official infantry identities. Keep G05
+# and the legacy studies untouched; keep all rig pivots and node names.
+const FAMILY_ANATOMY_V5 := "tarvoka_infantry_family_anatomy_v5"
+const FAMILY_ANATOMY_ROLES := ["line","infantry_commando","infantry_sniper","infantry_logistic","infantry_medic"]
+
+static func _resculpt(model: Node3D, label: String, profile: Array[Vector3],
+        pos: Vector3, sides: int, offsets: PackedFloat32Array=PackedFloat32Array(),
+        shape: float=1.0) -> bool:
+    var part: MeshInstance3D = _find(model,label) as MeshInstance3D
+    if part==null:
+        return false
+    part.mesh = _organic_mesh(profile,sides,offsets,shape)
+    part.position = pos
+    part.scale = Vector3.ONE
+    part.set_meta(FAMILY_ANATOMY_V5,true)
+    return true
+
+static func _refine_core(model: Node3D, hero: bool) -> bool:
+    var sides: int = 16 if hero else 10
+    if not _resculpt(model,"PetoBase",[
+            Vector3(0.20,-0.46,0.15),Vector3(0.27,-0.37,0.20),
+            Vector3(0.32,-0.18,0.235),Vector3(0.365,0.075,0.27),
+            Vector3(0.345,0.26,0.235),Vector3(0.19,0.41,0.15)],
+            Vector3.ZERO,sides):
+        return false
+    if not _resculpt(model,"CinturaEquipo",[
+            Vector3(0.19,-0.17,0.115),Vector3(0.27,-0.115,0.175),
+            Vector3(0.30,0.015,0.195),Vector3(0.26,0.12,0.17),
+            Vector3(0.18,0.16,0.11)],Vector3.ZERO,sides):
+        return false
+    for side in [-1,1]:
+        var suffix: String = "_%d"%side
+        if not _resculpt(model,"Hombrera"+suffix,[
+                Vector3(0.113,-0.145,0.118),Vector3(0.156,-0.10,0.147),
+                Vector3(0.164,-0.025,0.158),Vector3(0.138,0.065,0.137),
+                Vector3(0.075,0.101,0.08)],Vector3(0,0,-0.04),sides):
+            return false
+        if not _resculpt(model,"V2_MangaCerrada"+suffix,[
+                Vector3(0.102,-0.52,0.112),Vector3(0.123,-0.37,0.132),
+                Vector3(0.142,-0.16,0.145),Vector3(0.142,-0.03,0.139),
+                Vector3(0.117,0.06,0.119)],Vector3(0,0,0.005),sides):
+            return false
+        if not _resculpt(model,"V2_AntebrazoCerrado"+suffix,[
+                Vector3(0.087,-0.755,0.096),Vector3(0.106,-0.66,0.119),
+                Vector3(0.123,-0.55,0.131),Vector3(0.116,-0.46,0.122),
+                Vector3(0.103,-0.42,0.111)],Vector3(0,0,-0.060),sides):
+            return false
+        if not _resculpt(model,"Rodillera"+suffix,[
+                Vector3(0.077,-0.085,0.034),Vector3(0.109,-0.052,0.056),
+                Vector3(0.111,0.042,0.058),Vector3(0.078,0.082,0.036)],
+                Vector3(0,-0.48,-0.15),sides,PackedFloat32Array(),0.72):
+            return false
+        if not _resculpt(model,"V2_BotaMoldeada"+suffix,[
+                Vector3(0.112,-0.925,0.196),Vector3(0.126,-0.875,0.204),
+                Vector3(0.121,-0.815,0.181),Vector3(0.114,-0.74,0.15),
+                Vector3(0.103,-0.655,0.126)],Vector3(0,0,-0.14),sides,
+                PackedFloat32Array([0.0,0.0,0.025,0.065,0.10]),0.78):
+            return false
+        if not _resculpt(model,"V2_Suela"+suffix,[
+                Vector3(0.108,-0.9675,0.206),Vector3(0.127,-0.954,0.225),
+                Vector3(0.127,-0.91,0.225),Vector3(0.114,-0.8925,0.21)],
+                Vector3(0,0,-0.128),sides,PackedFloat32Array(),0.62):
+            return false
+        _hide(model,"V2_PunteraProtegida"+suffix)
+        var badge: MeshInstance3D = _find(model,"FaccionHombro"+suffix) as MeshInstance3D
+        if badge!=null:
+            badge.position.x=float(side)*0.151
+            badge.scale=Vector3(1,0.68,0.76)
+        var patch: MeshInstance3D = _find(model,"V2_FaccionParcheManga"+suffix) as MeshInstance3D
+        if patch!=null:
+            patch.position.x=float(side)*0.132
+        for row in range(3):
+            _hide(model,"V2_PliseManga_%d_%d"%[side,row])
+    model.set_meta(FAMILY_ANATOMY_V5,true)
+    if not _refine_head_and_armor(model,hero) or not _refine_face_and_profile(model,hero):
+        return false
+    if not _refine_outer_armor(model,hero) or not _refine_family_legs(model,hero):
+        return false
+    if not _refine_v15_fit(model,hero):
+        return false
+    return _attach_family_grips(model,hero)
+
+const FIT_V15 := "tarvoka_infantry_proportions_v15"
+const ELBOW_LOCAL := Vector3(0,-0.47,-0.035)
+
+# V14 visual review: reduce projecting knee pads, flatten hero insignia,
+# and soften side pouches without increasing mesh counts.
+static func _refine_v15_fit(model: Node3D,hero: bool) -> bool:
+    for side in [-1,1]:
+        var suffix: String="_%d"%side
+        var knee: MeshInstance3D=_find(model,"Rodillera"+suffix) as MeshInstance3D
+        var badge: MeshInstance3D=_find(model,"FaccionHombro"+suffix) as MeshInstance3D
+        if knee==null or badge==null:
+            return false
+        knee.mesh=_organic_mesh([
+            Vector3(0.082,-0.107,0.022),Vector3(0.116,-0.073,0.032),
+            Vector3(0.119,0.045,0.034),Vector3(0.085,0.099,0.022)],
+            16 if hero else 10,PackedFloat32Array([0.012,0.0,0.0,0.012]),0.6)
+        knee.position.z=-0.159
+        if hero:
+            badge.mesh=_organic_mesh([
+                Vector3(0.014,-0.061,0.054),Vector3(0.022,-0.045,0.080),
+                Vector3(0.022,0.045,0.080),Vector3(0.014,0.061,0.054)],
+                12,PackedFloat32Array(),0.6)
+            badge.scale=Vector3.ONE
+            var pouch: MeshInstance3D=_find(model,"BolsaCostado"+suffix) as MeshInstance3D
+            if pouch!=null:
+                pouch.mesh=_organic_mesh([
+                    Vector3(0.048,-0.137,0.080),Vector3(0.074,-0.110,0.116),
+                    Vector3(0.074,0.084,0.116),Vector3(0.053,0.137,0.089)],
+                    12,PackedFloat32Array(),0.55)
+                pouch.scale=Vector3.ONE
+    model.set_meta(FIT_V15,str(model.get_meta("tarvoka_infantry_role","")))
+    return true
+
+const FAMILY_IDENTITY_V6 := "tarvoka_infantry_role_identity_v6"
+# Role-specific closed helmets; scale and material changes apply only
+# to the five official non-engineer models. Paint is never recolored.
+static func _refine_head_and_armor(model: Node3D, hero: bool) -> bool:
+    var role: String = str(model.get_meta("tarvoka_infantry_role",""))
+    var sides: int = 20 if hero else 12
+    var width: float = 1.0
+    var height: float = 1.0
+    var depth: float = 1.0
+    var shade: Color = Color("#85938f")
+    var vest_scale := Vector3.ONE
+    match role:
+        "line":
+            shade=Color("#84918c")
+        "infantry_commando":
+            width=0.98
+            height=0.95
+            depth=1.02
+            shade=Color("#46545b")
+            vest_scale=Vector3(1.04,1.0,1.14)
+        "infantry_sniper":
+            width=1.03
+            height=0.96
+            depth=1.04
+            shade=Color("#65765f")
+            vest_scale=Vector3(0.91,0.94,0.82)
+        "infantry_logistic":
+            width=1.045
+            height=0.97
+            shade=Color("#838b74")
+            vest_scale=Vector3(1.0,1.0,0.9)
+        "infantry_medic":
+            width=0.96
+            height=1.01
+            shade=Color("#9da9a3")
+            vest_scale=Vector3(0.95,0.98,0.9)
+        _:
+            return false
+    var profile: Array[Vector3]=[]
+    for ring in [Vector3(0.175,0.105,0.18),Vector3(0.239,0.165,0.236),
+            Vector3(0.281,0.255,0.28),Vector3(0.290,0.39,0.292),
+            Vector3(0.267,0.505,0.265),Vector3(0.185,0.585,0.185),
+            Vector3(0.073,0.635,0.075)]:
+        profile.append(Vector3(ring.x*width,ring.y*height,ring.z*depth))
+    if not _resculpt(model,"V2_CascoEsferoideCerrado",profile,Vector3(0,0,0.016),sides):
+        return false
+    var helmet: MeshInstance3D=_find(model,"V2_CascoEsferoideCerrado") as MeshInstance3D
+    helmet.material_override=_coat(shade,0.10,0.57)
+    # Integrated curved opaque visor replaces the box without changing
+    # the original material or node identity used by damage/LOD QA.
+    var visor: MeshInstance3D=_find(model,"V2_VisorOpacoPBR") as MeshInstance3D
+    if visor==null:
+        return false
+    visor.mesh=_organic_mesh([Vector3(0.143,-0.069,0.037),
+        Vector3(0.181,-0.041,0.064),Vector3(0.190,0.021,0.067),
+        Vector3(0.151,0.068,0.041)],sides,PackedFloat32Array(),0.64)
+    visor.position=Vector3(0,0.235,-0.267)
+    visor.scale=Vector3.ONE
+    _hide(model,"V2_ReflejoCristalFisico")
+    var chest: MeshInstance3D=_find(model,"V2_CorazaPectoralHermetica") as MeshInstance3D
+    var collar: MeshInstance3D=_find(model,"CuelloProtegido") as MeshInstance3D
+    if chest==null or collar==null:
+        return false
+    chest.scale=vest_scale
+    chest.material_override=_coat(shade.lightened(0.05),0.11,0.59)
+    collar.mesh=_organic_mesh([Vector3(0.145,-0.10,0.13),
+        Vector3(0.175,-0.052,0.151),Vector3(0.167,0.067,0.151),
+        Vector3(0.14,0.125,0.13)],sides)
+    collar.position=Vector3(0,0.022,0.012)
+    collar.scale=Vector3.ONE
+    # keep badge on outer shell; use the existing exact faction paint
+    var cap_badge: Node3D=_find(model,"V2_FaccionCasco")
+    if cap_badge!=null:
+        cap_badge.position.y=0.56*height
+        cap_badge.position.z=-0.20*depth
+        cap_badge.rotation_degrees.x=-24.0
+    model.set_meta(FAMILY_IDENTITY_V6,role)
+    return true
+
+const SCULPT_V8 := "tarvoka_infantry_integrated_face_v8"
+
+# Native V7 renders exposed the two spherical cheeks and a rectangular
+# brow above the visor. Replace these with a continuous protective lower
+# mask and a fitted, closed brow. Reuse mesh nodes/materials, preserve rig.
+static func _refine_face_and_profile(model: Node3D,hero: bool) -> bool:
+    var role: String=str(model.get_meta("tarvoka_infantry_role",""))
+    var sides: int=20 if hero else 12
+    var mask_width: float=0.183
+    var brow_width: float=0.224
+    var mask_color: Color=Color("#45544f")
+    var mask_depth: float=0.105
+    match role:
+        "line":
+            mask_color=Color("#47564f")
+        "infantry_commando":
+            mask_width=0.198
+            brow_width=0.238
+            mask_color=Color("#303e44")
+            mask_depth=0.121
+        "infantry_sniper":
+            mask_width=0.182
+            brow_width=0.205
+            mask_color=Color("#465944")
+        "infantry_logistic":
+            mask_width=0.192
+            brow_width=0.229
+            mask_color=Color("#545d4a")
+        "infantry_medic":
+            mask_width=0.177
+            brow_width=0.214
+            mask_color=Color("#62716c")
+        _:
+            return false
+    if not _resculpt(model,"V2_ProteccionBarbilla",[
+            Vector3(mask_width*0.59,0.022,mask_depth*0.61),
+            Vector3(mask_width*0.88,0.061,mask_depth*0.91),
+            Vector3(mask_width,0.112,mask_depth),
+            Vector3(mask_width*0.98,0.167,mask_depth*0.88),
+            Vector3(mask_width*0.83,0.197,mask_depth*0.65)],
+            Vector3(0,0,-0.168),sides,PackedFloat32Array([0.04,0.012,0.0,0.0,0.018]),0.76):
+        return false
+    var mask: MeshInstance3D=_find(model,"V2_ProteccionBarbilla") as MeshInstance3D
+    mask.material_override=_coat(mask_color,0.02,0.84)
+    for side in [-1,1]:
+        _hide(model,"V2_Mejilla_%d"%side)
+        var ear: MeshInstance3D=_find(model,"V2_OrejeraMoldeada_%d"%side) as MeshInstance3D
+        if ear!=null:
+            ear.scale=Vector3(0.083,0.185,0.195)
+            ear.position=Vector3(float(side)*0.271,0.266,0.015)
+        var pin: Node3D=_find(model,"V2_OrejerasFijacion_%d"%side)
+        if pin!=null:
+            pin.position=Vector3(float(side)*0.309,0.25,0.015)
+            pin.scale=Vector3(1,0.74,0.71)
+        _hide(model,"HebillaBota_%d"%side)
+        var side_pouch: MeshInstance3D=_find(model,"BolsilloPierna_%d"%side) as MeshInstance3D
+        if side_pouch!=null:
+            side_pouch.mesh=_organic_mesh([Vector3(0.027,-0.10,0.077),
+                Vector3(0.043,-0.067,0.092),Vector3(0.043,0.065,0.092),
+                Vector3(0.027,0.10,0.077)],sides,PackedFloat32Array(),0.55)
+            side_pouch.scale=Vector3.ONE
+    # The brow follows the shell rather than projecting as a wide slab.
+    if not _resculpt(model,"V2_BordeFrontalCasco",[
+            Vector3(brow_width*0.87,-0.035,0.047),
+            Vector3(brow_width,-0.012,0.058),
+            Vector3(brow_width*0.96,0.020,0.057),
+            Vector3(brow_width*0.76,0.044,0.037)],
+            Vector3(0,0.354,-0.234),sides,PackedFloat32Array(),0.56):
+        return false
+    # Seat the chest and shoulder faction identifiers on actual surfaces.
+    # Do not alter the exact faction paint. Keep them prominent at LOD8.
+    var chest: MeshInstance3D=_find(model,"V2_CorazaPectoralHermetica") as MeshInstance3D
+    var mark: Node3D=_find(model,"V2_FaccionPechoArticulada")
+    if chest!=null and mark!=null:
+        mark.position.z=chest.position.z+chest.mesh.get_aabb().position.z*chest.scale.z-0.010
+    for side in [-1,1]:
+        var shoulder: Node3D=_find(model,"FaccionHombro_%d"%side)
+        if shoulder!=null:
+            shoulder.position=Vector3(float(side)*0.147,-0.029,-0.04)
+            shoulder.scale=Vector3(1,0.64,0.68)
+    model.set_meta(SCULPT_V8,role)
+    return true
+
+const ARMOR_V10 := "tarvoka_infantry_armor_anatomy_v10"
+
+# Keep the anatomical arm and hand endpoints. Shape a slimmer fitted
+# forearm, a curved chest and role-specific shoulder mass instead of
+# adding disconnected decoration or changing rig pivots.
+static func _refine_outer_armor(model: Node3D,hero: bool) -> bool:
+    var role: String=str(model.get_meta("tarvoka_infantry_role",""))
+    var sides: int=20 if hero else 12
+    var shoulder_width: float=1.0
+    var shoulder_depth: float=1.0
+    var chest_width: float=1.0
+    var chest_depth: float=1.0
+    match role:
+        "line":
+            pass
+        "infantry_commando":
+            shoulder_width=1.06
+            shoulder_depth=1.08
+            chest_width=1.04
+            chest_depth=1.12
+        "infantry_sniper":
+            shoulder_width=0.87
+            shoulder_depth=0.91
+            chest_width=0.94
+            chest_depth=0.88
+        "infantry_logistic":
+            shoulder_width=0.96
+            chest_depth=0.91
+        "infantry_medic":
+            shoulder_width=0.92
+            shoulder_depth=0.94
+            chest_width=0.96
+            chest_depth=0.91
+        _:
+            return false
+    for side in [-1,1]:
+        var suffix: String="_%d"%side
+        var shoulder_profile: Array[Vector3]=[]
+        for ring in [Vector3(0.105,-0.145,0.108),Vector3(0.139,-0.095,0.139),
+                Vector3(0.154,-0.02,0.147),Vector3(0.136,0.05,0.124),
+                Vector3(0.091,0.091,0.087),Vector3(0.052,0.113,0.054)]:
+            shoulder_profile.append(Vector3(ring.x*shoulder_width,ring.y,ring.z*shoulder_depth))
+        if not _resculpt(model,"Hombrera"+suffix,shoulder_profile,Vector3(0,0,-0.035),sides):
+            return false
+        var shoulder: Node3D=_find(model,"FaccionHombro"+suffix)
+        if shoulder!=null:
+            shoulder.position.x=float(side)*(0.147*shoulder_width)
+        if not _resculpt(model,"V2_MangaCerrada"+suffix,[
+                Vector3(0.103,-0.52,0.112),Vector3(0.118,-0.43,0.127),
+                Vector3(0.129,-0.30,0.135),Vector3(0.139,-0.15,0.143),
+                Vector3(0.143,-0.025,0.14),Vector3(0.119,0.06,0.12)],
+                Vector3(0,0,0.005),sides):
+            return false
+    var chest: MeshInstance3D=_find(model,"V2_CorazaPectoralHermetica") as MeshInstance3D
+    if chest==null:
+        return false
+    # Superelliptic closed shell with a tapered waist. Use the original
+    # chest center and keep all exact faction-colored pieces separate.
+    chest.mesh=_organic_mesh([
+        Vector3(0.235*chest_width,-0.265,0.045*chest_depth),
+        Vector3(0.282*chest_width,-0.205,0.063*chest_depth),
+        Vector3(0.319*chest_width,-0.055,0.079*chest_depth),
+        Vector3(0.337*chest_width,0.10,0.083*chest_depth),
+        Vector3(0.295*chest_width,0.207,0.060*chest_depth),
+        Vector3(0.205*chest_width,0.266,0.038*chest_depth)],
+        sides,PackedFloat32Array([0.012,0.002,-0.006,-0.006,0.0,0.018]),0.55)
+    chest.scale=Vector3.ONE
+    var mark: Node3D=_find(model,"V2_FaccionPechoArticulada")
+    if mark!=null:
+        mark.position.z=chest.position.z-0.069*chest_depth
+    model.set_meta(ARMOR_V10,role)
+    return true
+
+const GAIT_V11 := "tarvoka_infantry_articulated_gait_v11"
+const GROUND_V11 := "tarvoka_infantry_rest_sole_v11"
+
+# Existing thigh, calf and boot meshes remain closed. Add two transform-only
+# pivots per leg and reparent without changing the rest-space transforms.
+static func _move_to_joint(part: Node3D,parent: Node3D,offset: Vector3) -> void:
+    var old_position: Vector3=part.position
+    part.get_parent().remove_child(part)
+    parent.add_child(part)
+    part.position=old_position-offset
+
+static func _refine_family_legs(model: Node3D,hero: bool) -> bool:
+    var sides: int=16 if hero else 10
+    for side in [-1,1]:
+        var suffix: String="_%d"%side
+        var leg: Node3D=_find(model,"PiernaRig"+suffix)
+        if leg==null:
+            return false
+        for name in ["V2_PantorrillaTaper","Rodillera","V2_BotaMoldeada","V2_Suela"]:
+            var part: Node3D=_find(model,name+suffix)
+            if part==null or part.get_parent()!=leg:
+                return false
+        # Tapered cloth contours replace the horizontal floating box folds.
+        if not _resculpt(model,"V2_MusloTaper"+suffix,[
+                Vector3(0.126,-0.52,0.136),Vector3(0.140,-0.445,0.151),
+                Vector3(0.153,-0.33,0.164),Vector3(0.148,-0.245,0.171),
+                Vector3(0.159,-0.13,0.179),Vector3(0.149,0.012,0.169)],
+                Vector3(0,0,0.02),sides):
+            return false
+        if not _resculpt(model,"V2_PantorrillaTaper"+suffix,[
+                Vector3(0.105,-0.84,0.121),Vector3(0.119,-0.75,0.131),
+                Vector3(0.133,-0.63,0.146),Vector3(0.140,-0.565,0.151),
+                Vector3(0.130,-0.455,0.142),Vector3(0.119,-0.415,0.128)],
+                Vector3(0,0,-0.03),sides):
+            return false
+        for row in range(3):
+            _hide(model,"V2_PlisePantalon_%d_%d"%[side,row])
+        var knee:=Node3D.new()
+        knee.name="V11_RodillaRig"+suffix
+        leg.add_child(knee)
+        knee.position=Vector3(0,-0.47,0)
+        var ankle:=Node3D.new()
+        ankle.name="V11_TobilloRig"+suffix
+        knee.add_child(ankle)
+        ankle.position=Vector3(0,-0.31,0)
+        for name in ["V2_PantorrillaTaper","Rodillera"]:
+            _move_to_joint(_find(model,name+suffix),knee,Vector3(0,-0.47,0))
+        for name in ["V2_BotaMoldeada","V2_Suela"]:
+            _move_to_joint(_find(model,name+suffix),ankle,Vector3(0,-0.78,0))
+    model.set_meta(GAIT_V11,true)
+    if not _refine_v12_uniform(model,hero):
+        return false
+    model.set_meta(GROUND_V11,family_sole_floor(model))
+    return true
+
+const MOTION_V12 := "tarvoka_infantry_motion_uniform_v12"
+const SOLE_VERTICES_V12 := "tarvoka_infantry_sole_vertices_v12"
+
+# V11 images showed raised blue bars on the forehead. Use a shallow
+# curved closed emblem instead; retain the exact faction material.
+# Cloth pouches and chest pockets reuse their original node/material.
+static func _refine_v12_uniform(model: Node3D,hero: bool) -> bool:
+    var role: String=str(model.get_meta("tarvoka_infantry_role",""))
+    var helmet: MeshInstance3D=_find(model,"V2_CascoEsferoideCerrado") as MeshInstance3D
+    var badge: MeshInstance3D=_find(model,"V2_FaccionCasco") as MeshInstance3D
+    if helmet==null or badge==null:
+        return false
+    var bounds: AABB=helmet.mesh.get_aabb()
+    var width: float=bounds.size.x*0.255
+    var y: float=bounds.position.y+bounds.size.y*0.73
+    badge.mesh=_organic_mesh([
+        Vector3(width*0.74,-0.027,0.022),Vector3(width,-0.013,0.033),
+        Vector3(width,0.014,0.032),Vector3(width*0.73,0.027,0.021)],
+        16 if hero else 10,PackedFloat32Array(),0.75)
+    badge.position=Vector3(0,y,helmet.position.z+bounds.position.z+0.045)
+    badge.rotation_degrees=Vector3(-23,0,0)
+    badge.scale=Vector3.ONE
+    for side in [-1,1]:
+        var suffix: String="_%d"%side
+        var pocket: MeshInstance3D=_find(model,"V2_BolsilloPeitoral"+suffix) as MeshInstance3D
+        if pocket!=null:
+            pocket.mesh=_organic_mesh([
+                Vector3(0.054,-0.076,0.016),Vector3(0.073,-0.053,0.027),
+                Vector3(0.073,0.048,0.027),Vector3(0.054,0.075,0.016)],
+                12,PackedFloat32Array(),0.55)
+            pocket.scale=Vector3.ONE
+            pocket.position.z=-0.349
+        var strap: MeshInstance3D=_find(model,"V2_CinchaPortaequipo"+suffix) as MeshInstance3D
+        if strap!=null:
+            strap.mesh=_organic_mesh([
+                Vector3(0.031,-0.29,0.017),Vector3(0.038,-0.20,0.023),
+                Vector3(0.038,0.18,0.023),Vector3(0.029,0.29,0.017)],
+                10,PackedFloat32Array([0.0,0.008,0.008,0.0]),0.6)
+            strap.scale=Vector3.ONE
+        var sole: MeshInstance3D=_find(model,"V2_Suela"+suffix) as MeshInstance3D
+        if sole==null or not sole.mesh is ArrayMesh:
+            return false
+        # Cache unique mesh vertices once. The ground contact comes from
+        # the actual curved outsole, not an imaginary box corner.
+        var arrays: Array=sole.mesh.surface_get_arrays(0)
+        var source: PackedVector3Array=arrays[Mesh.ARRAY_VERTEX]
+        var unique: Dictionary={}
+        var points:=PackedVector3Array()
+        for vertex in source:
+            if not unique.has(vertex):
+                unique[vertex]=true
+                points.append(vertex)
+        sole.set_meta(SOLE_VERTICES_V12,points)
+    model.set_meta(MOTION_V12,role)
+    return true
+
+# Lowest actual sole vertex in the soldier's local frame. Works in a
+# detached native QA model, without relying on global transforms.
+static func family_sole_floor(model: Node3D) -> float:
+    var soldier: Node3D=_find(model,"Infanteria_3D")
+    var floor_y: float=INF
+    for side in [-1,1]:
+        var sole: MeshInstance3D=_find(model,"V2_Suela_%d"%side) as MeshInstance3D
+        if sole==null or sole.mesh==null:
+            continue
+        var bounds: AABB=sole.mesh.get_aabb()
+        var relative:=Transform3D.IDENTITY
+        var node: Node3D=sole
+        while node!=null and node!=soldier:
+            relative=node.transform*relative
+            node=node.get_parent() as Node3D
+        var vertices: PackedVector3Array=sole.get_meta(SOLE_VERTICES_V12,PackedVector3Array())
+        if vertices.is_empty():
+            for corner in range(8):
+                floor_y=minf(floor_y,(relative*bounds.get_endpoint(corner)).y)
+        else:
+            for vertex in vertices:
+                floor_y=minf(floor_y,(relative*vertex).y)
+    return floor_y
+
+static func _pose_family_legs(model: Node3D,kind: String,t: float,stage: int) -> bool:
+    if not bool(model.get_meta(GAIT_V11,false)):
+        return true
+    var soldier: Node3D=_find(model,"Infanteria_3D")
+    if soldier==null:
+        return false
+    var pulse: float=sin(t*PI)
+    for side in [-1,1]:
+        var leg: Node3D=_find(model,"PiernaRig_%d"%side)
+        var knee: Node3D=_find(model,"V11_RodillaRig_%d"%side)
+        var ankle: Node3D=_find(model,"V11_TobilloRig_%d"%side)
+        if leg==null or knee==null or ankle==null:
+            return false
+        leg.rotation_degrees.x=0.0
+        knee.rotation_degrees.x=0.0
+        ankle.rotation_degrees.x=0.0
+        if stage>=4:
+            continue
+        if kind=="move":
+            var wave: float=sin(t*TAU*2.0+float(side)*PI*0.5)*pulse
+            leg.rotation_degrees.x=20.0*wave
+            knee.rotation_degrees.x=-33.0*maxf(0.0,wave)
+            ankle.rotation_degrees.x=-(leg.rotation_degrees.x+knee.rotation_degrees.x)*0.90
+        elif kind=="run":
+            var wave: float=sin(t*TAU*3.0+float(side)*PI*0.5)*pulse
+            leg.rotation_degrees.x=32.0*wave
+            knee.rotation_degrees.x=-52.0*maxf(0.0,wave)
+            ankle.rotation_degrees.x=-(leg.rotation_degrees.x+knee.rotation_degrees.x)*0.85
+        elif kind in ["aim","attack"]:
+            var role: String=str(model.get_meta("tarvoka_infantry_role",""))
+            var crouch: float=1.0 if role=="infantry_sniper" else 0.55
+            leg.rotation_degrees.x=(17.0 if side<0 else -8.0)*pulse*crouch
+            knee.rotation_degrees.x=(-27.0 if side<0 else -13.0)*pulse*crouch
+            ankle.rotation_degrees.x=-(leg.rotation_degrees.x+knee.rotation_degrees.x)
+        elif kind in ["capture","work","repair"]:
+            leg.rotation_degrees.x=(24.0 if side<0 else -9.0)*pulse
+            knee.rotation_degrees.x=(-34.0 if side<0 else -12.0)*pulse
+            ankle.rotation_degrees.x=-(leg.rotation_degrees.x+knee.rotation_degrees.x)
+    if stage<4 and kind in ["move","run","aim","attack","capture","work","repair","idle"]:
+        var floor_y: float=family_sole_floor(model)
+        var rest: float=float(model.get_meta(GROUND_V11,floor_y))
+        if not is_finite(floor_y):
+            return false
+        soldier.position.y=rest-floor_y
+    return true
+
+const SURFACE_V7 := "tarvoka_infantry_material_finish_v7"
+const DAMAGE_V7 := "tarvoka_infantry_visual_damage_v7"
+const CLEAN_MAT := "tarvoka_infantry_v7_clean_material"
+const STAGE_MATS := "tarvoka_infantry_v7_stage_materials"
+static var _family_textures: Dictionary={}
+const RELIEF_V14 := "tarvoka_infantry_relief_v14"
+static var _family_normals: Dictionary={}
+
+# Periodic procedural microrelief. Actual normal textures, not transparent
+# overlays or additional mesh objects; one shared texture per surface class.
+static func _relief_height(kind: String,x: int,y: int) -> float:
+    var u: float=TAU*float(x)/64.0
+    var v: float=TAU*float(y)/64.0
+    var grain: float=sin(13.0*u+17.0*v)*cos(19.0*u-11.0*v)
+    match kind:
+        "fabric":
+            return 0.38*cos(8.0*u)*cos(8.0*v)+0.10*grain
+        "rubber":
+            return 0.30*cos(8.0*u+8.0*v)+0.07*grain
+        _:
+            return 0.035*grain
+
+static func _family_normal(kind: String) -> ImageTexture:
+    if _family_normals.has(kind):
+        return _family_normals[kind] as ImageTexture
+    var img: Image=Image.create(64,64,false,Image.FORMAT_RGBA8)
+    for y in range(64):
+        for x in range(64):
+            var dx: float=(_relief_height(kind,x+1,y)-_relief_height(kind,x-1,y))*0.5
+            var dy: float=(_relief_height(kind,x,y+1)-_relief_height(kind,x,y-1))*0.5
+            var n: Vector3=Vector3(-dx,-dy,1.0).normalized()
+            img.set_pixel(x,y,Color(n.x*0.5+0.5,n.y*0.5+0.5,n.z*0.5+0.5,1.0))
+    img.generate_mipmaps()
+    var tex: ImageTexture=ImageTexture.create_from_image(img)
+    _family_normals[kind]=tex
+    return tex
+
+# Small, shared procedural textures; no external resources and no
+# textures at tactical LOD8. Color is grayscale to preserve the palette.
+static func _family_texture(kind: String) -> ImageTexture:
+    if _family_textures.has(kind):
+        return _family_textures[kind] as ImageTexture
+    var img: Image=Image.create(64,64,false,Image.FORMAT_RGBA8)
+    for y in range(64):
+        for x in range(64):
+            var u: float=TAU*float(x)/64.0
+            var v: float=TAU*float(y)/64.0
+            var grain: float=sin(13*u+17*v)*cos(19*u-11*v)
+            var tone: float=0.96+0.022*grain
+            if kind=="fabric":
+                tone=0.92+0.035*cos(8*u)*cos(8*v)+0.023*grain
+            elif kind=="rubber":
+                tone=0.94+0.025*sin(12*u)*sin(12*v)+0.015*grain
+            img.set_pixel(x,y,Color(tone,tone,tone,1.0))
+    img.generate_mipmaps()
+    var tex: ImageTexture=ImageTexture.create_from_image(img)
+    _family_textures[kind]=tex
+    return tex
+
+static func _finish_kind(label: String) -> String:
+    if label in ["V2_CascoEsferoideCerrado","V2_CorazaPectoralHermetica"] or label.begins_with("Hombrera_") or label.begins_with("Rodillera_"):
+        return "armor"
+    if label in ["PetoBase","CinturaEquipo","V2_MochilaOrganica","CuelloProtegido","V2_ProteccionBarbilla"] or label.begins_with("V2_MangaCerrada_") or label.begins_with("V2_AntebrazoCerrado_") or label.begins_with("V2_MusloTaper_") or label.begins_with("V2_PantorrillaTaper_"):
+        return "fabric"
+    if label.begins_with("V2_BotaMoldeada_") or label.begins_with("V2_Suela_") or label.begins_with("V2_PalmaGuante_") or label.begins_with("V2_DedoGuante_") or label.begins_with("V13_Pulgar_") or label.begins_with("V13_CodoProtegido_") or label.begins_with("V13_CanaBota_") or label=="V2_BordeFrontalCasco":
+        return "rubber"
+    # Finish cloth accessories, not faction paint, medical emblems, or optics.
+    if label in ["V4_CapaCamuflajePrecision","V4_BolsaSuministros","V4_KitMedicoVerde",
+            "V4_BotiquinCintura","V4_FundaInstrumentos","V9_MedicalHarness"] or label.begins_with("V2_Bolsillo") or label.begins_with("V2_CinchaPortaequipo_") or label.begins_with("V9_CargaCincha_"):
+        return "fabric"
+    if label.begins_with("V4_ModuloSuministro_") or label.begins_with("V4_HombreraEspecial_") or label=="V9_FS24_Radio":
+        return "armor"
+    return ""
+
+static func _finish_family_materials(model: Node3D,hero: bool) -> bool:
+    if not bool(model.get_meta(FAMILY_ANATOMY_V5,false)):
+        return true
+    var cache: Dictionary={}
+    for item in model.find_children("*","MeshInstance3D",true,false):
+        var part: MeshInstance3D=item as MeshInstance3D
+        var kind: String=_finish_kind(str(part.name))
+        if kind.is_empty() or part.has_meta(STAGE_MATS):
+            continue
+        var src: StandardMaterial3D=part.material_override as StandardMaterial3D
+        if src==null:
+            return false
+        var key: String=str(src.get_instance_id())+":"+kind
+        if not cache.has(key):
+            var clean: StandardMaterial3D=src.duplicate() as StandardMaterial3D
+            clean.transparency=BaseMaterial3D.TRANSPARENCY_DISABLED
+            clean.cull_mode=BaseMaterial3D.CULL_BACK
+            clean.metallic=0.09 if kind=="armor" else 0.0
+            clean.roughness=0.58 if kind=="armor" else (0.92 if kind=="fabric" else 0.84)
+            clean.metallic_specular=0.38 if kind=="armor" else 0.24
+            if hero:
+                clean.albedo_texture=_family_texture(kind)
+                clean.uv1_triplanar=true
+                clean.uv1_world_triplanar=false
+                clean.uv1_scale=Vector3.ONE*4.0
+                clean.texture_filter=BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
+                clean.normal_enabled=true
+                clean.normal_texture=_family_normal(kind)
+                clean.normal_scale=0.30 if kind=="fabric" else (0.24 if kind=="rubber" else 0.20)
+            var stages: Array[StandardMaterial3D]=[clean]
+            for stage in range(1,5):
+                var weathered: StandardMaterial3D=clean.duplicate() as StandardMaterial3D
+                var c: Color=clean.albedo_color
+                c=c.lerp(Color("#39352e"),float(stage)*0.11)
+                c.a=1.0
+                weathered.albedo_color=c
+                weathered.roughness=minf(1.0,clean.roughness+float(stage)*0.065)
+                stages.append(weathered)
+            cache[key]=stages
+        var palette: Array=cache[key]
+        part.material_override=palette[0]
+        part.set_meta(CLEAN_MAT,palette[0])
+        part.set_meta(STAGE_MATS,palette)
+    # Reuse the existing four damage meshes and seat them on the new
+    # armor front. No added effects or permanent changes to the model.
+    var chest: MeshInstance3D=_find(model,"V2_CorazaPectoralHermetica") as MeshInstance3D
+    if chest!=null:
+        for stage in range(1,5):
+            var mark: Node3D=_find(model,"Impacto_%d"%stage)
+            if mark!=null:
+                mark.position.z=chest.position.z+chest.mesh.get_aabb().position.z*chest.scale.z-0.010
+                mark.position.y=0.14-float(stage)*0.09
+    model.set_meta(SURFACE_V7,true)
+    model.set_meta(DAMAGE_V7,0)
+    model.set_meta(RELIEF_V14,str(model.get_meta("tarvoka_infantry_role","")))
+    return true
+
+static func sync_family_damage(model: Node3D,stage: int) -> void:
+    if not bool(model.get_meta(SURFACE_V7,false)):
+        return
+    var level: int=clampi(stage,0,4)
+    if int(model.get_meta(DAMAGE_V7,-1))==level:
+        return
+    for item in model.find_children("*","MeshInstance3D",true,false):
+        var part: MeshInstance3D=item as MeshInstance3D
+        if part.has_meta(STAGE_MATS):
+            var palette: Array=part.get_meta(STAGE_MATS)
+            part.material_override=palette[level]
+    model.set_meta(DAMAGE_V7,level)
+
+const FAMILY_GRIPS_V5 := "tarvoka_infantry_grip_contacts_v5"
+
+static func family_grip_point(side: int) -> Vector3:
+    return Vector3(-0.04,-0.225,-0.052) if side>0 else Vector3(0.44,-0.155,-0.065)
+
+# Reuse the existing gloves, fingers and forearms. No new draw calls.
+# The forearm becomes a tapered link with its origin/length solved in
+# the original arm frame; the palm is a child of the actual weapon rig.
+static func _attach_family_grips(model: Node3D, hero: bool) -> bool:
+    var gun: Node3D = _find(model,"ArmamentoRig")
+    if gun==null:
+        return false
+    for side in [-1,1]:
+        if _find(model,"BrazoRig_%d"%side)==null or _find(model,"V2_PalmaGuante_%d"%side)==null or _find(model,"V2_AntebrazoCerrado_%d"%side)==null:
+            return false
+    for side in [-1,1]:
+        var arm: Node3D = _find(model,"BrazoRig_%d"%side)
+        var palm: MeshInstance3D = _find(model,"V2_PalmaGuante_%d"%side) as MeshInstance3D
+        var link: MeshInstance3D = _find(model,"V2_AntebrazoCerrado_%d"%side) as MeshInstance3D
+        if palm.get_parent()!=arm or link.get_parent()!=arm:
+            return false
+        arm.remove_child(palm)
+        gun.add_child(palm)
+        palm.position=family_grip_point(side)
+        palm.rotation_degrees=Vector3.ZERO
+        palm.scale=Vector3(0.165,0.18,0.185)
+        for finger in range(4):
+            var digit: Node3D = _find(model,"V2_DedoGuante_%d_%d"%[side,finger])
+            if digit==null:
+                continue
+            arm.remove_child(digit)
+            gun.add_child(digit)
+            digit.position=family_grip_point(side)+Vector3((float(finger)-1.5)*0.041,-0.071,-0.046)
+            digit.rotation_degrees=Vector3(12,0,0)
+            digit.scale=Vector3(0.85,0.76,0.85)
+        link.mesh=_organic_mesh([
+            Vector3(0.091,-0.5,0.104),Vector3(0.102,-0.35,0.110),
+            Vector3(0.098,-0.12,0.105),Vector3(0.083,0.10,0.090),
+            Vector3(0.073,0.29,0.079),Vector3(0.061,0.5,0.066)],16 if hero else 10)
+    model.set_meta(FAMILY_GRIPS_V5,true)
+    if not _refine_v13_contacts(model,hero):
+        return false
+    return _sync_family_grips(model)
+
+const CONTACT_V13 := "tarvoka_infantry_gloves_boots_v13"
+
+# Keep the established palm centers and solve all contacts as before.
+# Closed curved fingers and a thumb travel with the original palm/holder.
+# Elbow pads and ankle collars are hero-only, so LOD8 adds no mesh nodes.
+static func _refine_v13_contacts(model: Node3D,hero: bool) -> bool:
+    var role: String=str(model.get_meta("tarvoka_infantry_role",""))
+    for side in [-1,1]:
+        var suffix: String="_%d"%side
+        var palm: MeshInstance3D=_find(model,"V2_PalmaGuante"+suffix) as MeshInstance3D
+        var arm: Node3D=_find(model,"BrazoRig"+suffix)
+        var boot: MeshInstance3D=_find(model,"V2_BotaMoldeada"+suffix) as MeshInstance3D
+        var ankle: Node3D=_find(model,"V11_TobilloRig"+suffix)
+        var knee: Node3D=_find(model,"V11_RodillaRig"+suffix)
+        if palm==null or arm==null or boot==null or ankle==null or knee==null:
+            return false
+        var rubber: StandardMaterial3D=palm.material_override as StandardMaterial3D
+        if rubber==null:
+            return false
+        palm.mesh=_organic_mesh([
+            Vector3(0.057,-0.088,0.058),Vector3(0.079,-0.050,0.083),
+            Vector3(0.084,0.024,0.091),Vector3(0.071,0.069,0.074),
+            Vector3(0.052,0.087,0.054)],14 if hero else 10,
+            PackedFloat32Array([0.005,0.0,0.0,0.007,0.012]),0.72)
+        palm.scale=Vector3.ONE
+        for finger in range(4):
+            var digit: MeshInstance3D=_find(model,"V2_DedoGuante_%d_%d"%[side,finger]) as MeshInstance3D
+            if digit==null:
+                if hero:
+                    return false
+                continue
+            var len: float=0.94 if finger in [0,3] else 1.0
+            digit.mesh=_organic_mesh([
+                Vector3(0.012,-0.045*len,0.014),Vector3(0.019,-0.027*len,0.020),
+                Vector3(0.021,0.014,0.022),Vector3(0.019,0.052,0.023),
+                Vector3(0.015,0.067,0.018)],10,
+                PackedFloat32Array([-0.020,-0.012,0.004,0.009,0.010]))
+            digit.scale=Vector3.ONE
+        if hero:
+            _mesh(palm,"V13_Pulgar"+suffix,_organic_mesh([
+                Vector3(0.023,-0.055,0.027),Vector3(0.030,-0.026,0.032),
+                Vector3(0.027,0.025,0.030),Vector3(0.017,0.060,0.019)],12,
+                PackedFloat32Array([-0.009,0.0,0.012,0.016])),
+                rubber,Vector3(float(side)*0.061,-0.012,-0.045),Vector3(25,0,float(side)*24))
+            _mesh(arm,"V13_CodoProtegido"+suffix,_organic_mesh([
+                Vector3(0.079,-0.074,0.074),Vector3(0.103,-0.035,0.101),
+                Vector3(0.110,0.027,0.106),Vector3(0.082,0.070,0.076)],14),
+                rubber,Vector3(0,-0.47,-0.035))
+            # Rounded cuff overlaps the boot upper and shin at the ankle
+            # without changing the geometry or floor of the outsole.
+            _mesh(ankle,"V13_CanaBota"+suffix,_organic_mesh([
+                Vector3(0.106,-0.016,0.119),Vector3(0.119,0.016,0.132),
+                Vector3(0.118,0.057,0.129),Vector3(0.103,0.088,0.116)],14),
+                rubber,Vector3(0,0,-0.052))
+        # The tactical knee insignia formerly followed the thigh while
+        # the kneepad followed the knee. Preserve its rest transform.
+        var knee_badge: Node3D=_find(model,"V3_IdentidadRodillaMapa"+suffix)
+        if knee_badge!=null:
+            _move_to_joint(knee_badge,knee,Vector3(0,-0.47,0))
+    model.set_meta(CONTACT_V13,role)
+    return true
+
+static func _sync_family_grips(model: Node3D) -> bool:
+    if not bool(model.get_meta(FAMILY_GRIPS_V5,false)):
+        return false
+    var gun: Node3D = _find(model,"ArmamentoRig")
+    if gun==null:
+        return false
+    for side in [-1,1]:
+        var arm: Node3D = _find(model,"BrazoRig_%d"%side)
+        var link: MeshInstance3D = _find(model,"V2_AntebrazoCerrado_%d"%side) as MeshInstance3D
+        if arm==null or link==null:
+            return false
+        # Both arm and weapon are children of TorsoRig. Local transforms
+        # work even in native QA before the model enters a SceneTree.
+        var palm: Node3D=_find(model,"V2_PalmaGuante_%d"%side)
+        if palm==null:
+            return false
+        var holder: Node3D=palm.get_parent() as Node3D
+        if holder==null or holder.get_parent()!=arm.get_parent():
+            return false
+        var contact: Vector3=holder.transform*palm.position
+        # Two-link geometric solve in torso space. Keep the hand on the
+        # actual existing grip and orient the upper arm toward a bent elbow.
+        # The bend pole is down/outward rather than across the chest.
+        if model.has_meta(FIT_V15):
+            var reach: Vector3=contact-arm.position
+            var distance: float=reach.length()
+            if distance<0.001:
+                return false
+            var axis: Vector3=reach/distance
+            var upper_len: float=ELBOW_LOCAL.length()
+            var lower_len: float=maxf(0.455,distance-upper_len+0.025)
+            var projection: float=clampf((upper_len*upper_len+distance*distance-lower_len*lower_len)/(2.0*distance),-upper_len*0.98,upper_len*0.98)
+            var bend: Vector3=Vector3(float(side)*0.65,-1.0,0.18)
+            bend-=axis*bend.dot(axis)
+            if bend.length_squared()<0.0001:
+                bend=Vector3.RIGHT-axis*axis.x
+            var elbow_dir: Vector3=(axis*projection+bend.normalized()*sqrt(maxf(0.0,upper_len*upper_len-projection*projection))).normalized()
+            var old_dir: Vector3=(arm.basis*ELBOW_LOCAL).normalized()
+            arm.quaternion=Quaternion(old_dir,elbow_dir)*arm.quaternion
+        var target: Vector3 = arm.transform.affine_inverse()*contact
+        var elbow: Vector3 = ELBOW_LOCAL
+        var delta: Vector3 = target-elbow
+        var length: float = delta.length()
+        if length<0.0001:
+            return false
+        link.position=elbow+delta*0.5
+        link.quaternion=Quaternion(Vector3.UP,delta/length)
+        link.scale=Vector3(1,length,1)
+    return true
 
 # Eight-point rounded ballistic plate, a closed bevelled ArrayMesh, instead
 # of a flat square attached to the soldier's torso.
@@ -415,10 +1262,141 @@ static func apply(model: Node3D, faction_paint: Color, hero: bool) -> bool:
             Vector3(0.13,0.24,0.04),rubber)
         _plate(upper,"V2_FaccionHerramientas",Vector3(-0.34,-0.13,0.51),
             0.20,0.095,0.026,faction)
+    if role in FAMILY_ANATOMY_ROLES:
+        if not _refine_core(model,hero) or not _finish_family_materials(model,hero):
+            return false
     model.set_meta(FLAG,true)
     model.set_meta("tarvoka_infantry_v2_hero",hero)
     model.set_meta("tarvoka_infantry_v2_opaque",true)
     return pose(model,"idle",0.0)
+
+const SERVICE_RIG := "V6_EquipoServicioRig"
+const SERVICE_FLAG := "tarvoka_infantry_service_pose_v6"
+
+# The service prop lives beside ArmamentoRig under TorsoRig. Transfer
+# the original right palm and fingers between these two real rigs.
+static func _service_pose(model: Node3D, kind: String, t: float) -> bool:
+    var service: Node3D=_find(model,SERVICE_RIG)
+    if service==null:
+        return true
+    var gun: Node3D=_find(model,"ArmamentoRig")
+    var palm: Node3D=_find(model,"V2_PalmaGuante_1")
+    if gun==null or palm==null:
+        return false
+    var active: bool=kind in ["work","repair"] and t>0.04 and t<0.96 and int(model.get_meta("tarvoka_infantry_damage",0))<4
+    var holder: Node3D=service if active else gun
+    var contact: Vector3=Vector3(0.0,-0.065,0.018) if active else family_grip_point(1)
+    service.visible=active
+    service.position=Vector3(0.25,-0.27-0.085*sin(t*PI),-0.54)
+    service.rotation_degrees=Vector3(-20.0+12.0*sin(t*TAU),0,-10)
+    if palm.get_parent()!=holder:
+        palm.get_parent().remove_child(palm)
+        holder.add_child(palm)
+    palm.position=contact
+    for finger in range(4):
+        var digit: Node3D=_find(model,"V2_DedoGuante_1_%d"%finger)
+        if digit==null:
+            continue
+        if digit.get_parent()!=holder:
+            digit.get_parent().remove_child(digit)
+            holder.add_child(digit)
+        digit.position=contact+Vector3((float(finger)-1.5)*0.041,-0.071,-0.046)
+    model.set_meta(SERVICE_FLAG,active)
+    return true
+
+const FX_V10 := "V10_InfantryVisualFX"
+static var _family_fx_shape: SphereMesh
+static var _family_fx_material: StandardMaterial3D
+
+# One lazily created MultiMesh batch, not a particle node per soldier
+# effect. Root-space effects stay upright when the visual body falls.
+static func _family_fx_batch(model: Node3D) -> MultiMeshInstance3D:
+    var batch: MultiMeshInstance3D=model.get_node_or_null(FX_V10) as MultiMeshInstance3D
+    if batch!=null:
+        return batch
+    if _family_fx_shape==null:
+        _family_fx_shape=SphereMesh.new()
+        _family_fx_shape.radius=0.5
+        _family_fx_shape.height=1.0
+        _family_fx_shape.radial_segments=8
+        _family_fx_shape.rings=4
+        _family_fx_material=StandardMaterial3D.new()
+        _family_fx_material.vertex_color_use_as_albedo=true
+        _family_fx_material.roughness=1.0
+        _family_fx_material.transparency=BaseMaterial3D.TRANSPARENCY_DISABLED
+    batch=MultiMeshInstance3D.new()
+    batch.name=FX_V10
+    batch.cast_shadow=GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+    batch.material_override=_family_fx_material
+    var pool:=MultiMesh.new()
+    pool.transform_format=MultiMesh.TRANSFORM_3D
+    pool.use_colors=true
+    pool.mesh=_family_fx_shape
+    pool.instance_count=8 if bool(model.get_meta("tarvoka_infantry_v2_hero",false)) else 4
+    pool.visible_instance_count=0
+    batch.multimesh=pool
+    batch.visible=false
+    model.add_child(batch)
+    return batch
+
+static func _family_anchor(model: Node3D,rig: String,point: Vector3) -> Vector3:
+    var node: Node3D=_find(model,rig)
+    while node!=null and node!=model:
+        point=node.transform*point
+        node=node.get_parent() as Node3D
+    return point
+
+static func _family_fx(model: Node3D,kind: String,t: float,stage: int) -> void:
+    if str(model.get_meta(ARMOR_V10,"")) not in FAMILY_ANATOMY_ROLES:
+        return
+    var impact: bool=stage<4 and kind in ["hit_bullet","hit_explosive"] and t>0.08 and t<0.85
+    var dust: bool=stage<4 and kind in ["move","run"] and t>0.08 and t<0.92
+    # Equipment smoke is a stylized visual effect at D3/D4, no HP change.
+    var smoke: bool=stage>=3
+    var batch: MultiMeshInstance3D=model.get_node_or_null(FX_V10) as MultiMeshInstance3D
+    if not (impact or dust or smoke):
+        if batch!=null:
+            batch.visible=false
+            batch.multimesh.visible_instance_count=0
+        return
+    if batch==null:
+        batch=_family_fx_batch(model)
+    var pool: MultiMesh=batch.multimesh
+    var used: int=0
+    if smoke:
+        var count: int=pool.instance_count >> 1
+        var origin: Vector3=_family_anchor(model,"TorsoRig",Vector3(-0.32,0.22,0.40))
+        for i in range(count):
+            var p: float=fposmod(t+float(i)/float(count),1.0)
+            var at: Vector3=origin+Vector3(-0.08-0.12*p+0.065*sin(i*2.4),
+                0.20+0.70*p,0.06*cos(i*2.4))
+            var size: float=0.11+0.18*p
+            pool.set_instance_transform(used,Transform3D(Basis.from_scale(Vector3(size,size*1.22,size)),at))
+            pool.set_instance_color(used,Color("#52595a").lerp(Color("#a0a19b"),p))
+            used+=1
+    if impact or dust:
+        var explosive: bool=kind=="hit_explosive"
+        var count: int=pool.instance_count-used
+        if not explosive:
+            count=mini(count,pool.instance_count >> 1)
+        var p: float=clampf((t-0.08)/0.77,0.0,1.0)
+        var origin: Vector3=_family_anchor(model,"TorsoRig",Vector3(0,0,-0.43))
+        for i in range(count):
+            var angle: float=float(i)*2.399963
+            var radius: float=(0.36 if explosive else 0.18)*p
+            var at: Vector3=origin+Vector3(cos(angle)*radius,sin(angle)*radius,-0.07-0.20*p)
+            var size: float=(0.15 if explosive else 0.075)*(1.0-0.5*p)
+            var shade: Color=Color("#efac63").lerp(Color("#777d7c"),p) if explosive else Color("#e8d5ae")
+            if dust:
+                var side: float=-1.0 if i%2==0 else 1.0
+                at=Vector3(side*(0.21+0.20*p),0.08+0.10*p,0.13+0.25*p)
+                size=0.14*(1.0-0.45*p)
+                shade=Color("#b2a18c")
+            pool.set_instance_transform(used,Transform3D(Basis.from_scale(Vector3.ONE*size),at))
+            pool.set_instance_color(used,shade)
+            used+=1
+    pool.visible_instance_count=used
+    batch.visible=used>0
 
 static func has_model(model: Node3D) -> bool:
     return model!=null and bool(model.get_meta(FLAG,false))
@@ -435,6 +1413,13 @@ static func pose(model: Node3D, kind: String, t: float) -> bool:
     var walk: float=sin(phase*TAU*2.0)
     # Rifle points forward, not horizontally across the preview screenshot.
     rifle.rotation_degrees=Vector3(-6,67,0) if role!="infantry_antitank" else Vector3(-9,64,-12)
+    if model.has_meta(FIT_V15):
+        # Seat the preview weapon nearer the chest so the support arm
+        # no longer stretches to the opposite side of the body.
+        rifle.rotation_degrees=Vector3(-6,96,0)
+        rifle.position=Vector3(0.04,0.015,-0.25)
+        if kind=="attack":
+            rifle.position.z-=0.045*pulse
     for side in [-1,1]:
         var arm: Node3D=_find(model,"BrazoRig_%d"%side)
         if arm==null:
@@ -447,12 +1432,21 @@ static func pose(model: Node3D, kind: String, t: float) -> bool:
         if kind=="move":
             arm.rotation_degrees.x+=3.5*sin(phase*TAU*2.0+float(side)*PI*0.5)
             arm.rotation_degrees.z+=3.0*walk*float(side)
+        elif kind=="run":
+            arm.rotation_degrees.x+=6.0*pulse*sin(phase*TAU*3.0+float(side)*PI*0.5)
+            arm.rotation_degrees.z+=4.0*pulse*sin(phase*TAU*3.0)*float(side)
         elif kind in ["attack","aim"]:
             arm.rotation_degrees.x+=5.0
             arm.rotation_degrees.z+=(-3.0 if side<0 else 2.0)*pulse
         elif kind in ["work","repair","capture"]:
             arm.rotation_degrees.x=38.0+14.0*pulse
             arm.rotation_degrees.z=18.0 if side<0 else -14.0
+    if kind=="run":
+        var torso: Node3D=_find(model,"TorsoRig")
+        if torso!=null:
+            torso.rotation_degrees.x=-12.0*pulse
+            torso.rotation_degrees.y=5.0*sin(phase*TAU*3.0)*pulse
+        rifle.rotation_degrees.x+=8.0*pulse
     if kind=="attack":
         rifle.rotation_degrees.x-=6.5*pulse
         rifle.position.z-=0.045*pulse
@@ -474,9 +1468,27 @@ static func pose(model: Node3D, kind: String, t: float) -> bool:
         case_mesh.position=Vector3(0.09,0.10+0.09*pulse,0.21+0.13*pulse)
     # Damage remains owned by V1 and survives pose changes. Never amend HP.
     var stage: int=int(model.get_meta("tarvoka_infantry_damage",0))
+    if bool(model.get_meta(SURFACE_V7,false)):
+        sync_family_damage(model,stage)
+        var body: Node3D=_find(model,"Infanteria_3D")
+        if stage>=4:
+            if body!=null:
+                body.rotation_degrees.z=-74.0
+                body.position.y=-0.22
+            if flash!=null:
+                flash.visible=false
+            if case_mesh!=null:
+                case_mesh.visible=false
+        elif body!=null and not kind in ["damage","damaged","hit_bullet","hit_explosive"]:
+            body.rotation_degrees.z=0.0
     var scar: Node3D=_find(model,"V2_CicatrizCasco")
     if scar!=null:
         scar.visible=stage>=3
+    if bool(model.get_meta(FAMILY_GRIPS_V5,false)):
+        if not _pose_family_legs(model,kind,phase,stage):
+            return false
+        _family_fx(model,kind,phase,stage)
+        return _service_pose(model,kind,phase) and _sync_family_grips(model)
     return true
 
 static func restore(model: Node3D) -> void:

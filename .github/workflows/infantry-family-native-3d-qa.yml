@@ -4,6 +4,14 @@ on:
   push:
     branches: [main]
     paths:
+      - 'scripts/ui/InfantrySculptFinishV2.gd'
+      - 'scripts/ui/InfantryVariantsV4.gd'
+      - 'tests/test_infantry_family_v2.gd'
+      - 'scripts/ui/BattleTerrain3D.gd'
+      - 'tests/test_guardia_v15_live_battle.gd'
+      - 'scripts/ui/GuardiaBattleActionsV16.gd'
+      - 'scripts/ui/Battle3DMapView.gd'
+      - 'tests/test_immersive_battle_3d_hud.gd'
       - 'scripts/ui/InfantryEngineerOuterArmorV17.gd'
       - 'tests/test_engineer_v17_outer_armor.gd'
       - '.github/workflows/infantry-family-native-3d-qa.yml'
@@ -38,6 +46,11 @@ on:
       - 'scripts/ui/BastionStudioAdapter.gd'
       - 'tests/test_infantry_family_v1.gd'
       - 'tests/test_infantry_family_v2.gd'
+      - 'scripts/ui/BattleTerrain3D.gd'
+      - 'tests/test_guardia_v15_live_battle.gd'
+      - 'scripts/ui/GuardiaBattleActionsV16.gd'
+      - 'scripts/ui/Battle3DMapView.gd'
+      - 'tests/test_immersive_battle_3d_hud.gd'
       - 'tests/test_infantry_engineer_v6_360.gd'
       - '.github/workflows/infantry-family-native-3d-qa.yml'
   workflow_dispatch:
@@ -141,7 +154,7 @@ jobs:
           if grep -E 'SCRIPT ERROR:|ERROR:|Parse Error:|Assertion failed' /tmp/infantry-native.log; then exit 1; fi
           grep -Fq 'PASS INFANTRY V1 NATIVE 3D:' /tmp/infantry-native.log
           test "$(find build/qa/infantry-v1 -name '*.png' | wc -l)" -eq 17
-      - name: Verify 6 approved core designs + archived art, 8 facciones and 38 native renders
+      - name: Verify 6 approved core designs + archived art, 8 facciones and 140 native renders
         shell: bash
         run: |
           set -euo pipefail
@@ -151,7 +164,28 @@ jobs:
             --script res://tests/test_infantry_family_v2.gd 2>&1 | tee /tmp/infantry-v2-native.log
           if grep -E 'SCRIPT ERROR:|ERROR:|Parse Error:|Assertion failed' /tmp/infantry-v2-native.log; then exit 1; fi
           grep -Fq 'PASS INFANTRY V2 NATIVE 3D:' /tmp/infantry-v2-native.log
-          test "$(find build/qa/infantry-v2 -name '*.png' | wc -l)" -eq 38
+          test "$(find build/qa/infantry-v2 -name '*.png' | wc -l)" -eq 140
+      - name: Verify current Guardia LOD8 in actual 3D battle, fog, shared budget and performance receipt
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p build/qa/guardia-live-battle
+          timeout --signal=TERM --kill-after=5s 180s xvfb-run -a -s '-screen 0 1280x800x24' env LIBGL_ALWAYS_SOFTWARE=1 \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --rendering-method gl_compatibility --audio-driver Dummy --path . \
+            --script res://tests/test_guardia_v15_live_battle.gd 2>&1 | tee /tmp/guardia-live-battle.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Parse Error:|Assertion failed' /tmp/guardia-live-battle.log; then exit 1; fi
+          grep -Fq 'PASS GUARDIA LIVE BATTLE:' /tmp/guardia-live-battle.log
+          test "$(find build/qa/guardia-live-battle -name '*.png' | wc -l)" -eq 4
+          test -s build/qa/guardia-live-battle/metrics.json
+      - name: Verify actual two-tap Guardia order starts visual animation only after confirmation
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 180s xvfb-run -a -s '-screen 0 1280x800x24' env LIBGL_ALWAYS_SOFTWARE=1 \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --rendering-method gl_compatibility --audio-driver Dummy --path . \
+            --script res://tests/test_immersive_battle_3d_hud.gd 2>&1 | tee /tmp/guardia-order-confirmation.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Parse Error:|Assertion failed' /tmp/guardia-order-confirmation.log; then exit 1; fi
+          grep -Fq 'PASS immersive 3D HUD V16:' /tmp/guardia-order-confirmation.log
       - name: Verify Engineer V6-V11 pressed closed torso, anchored hip and coaxial shield hinges in 34 Godot QA images
         shell: bash
         run: |
@@ -248,6 +282,7 @@ jobs:
           path: |
             build/qa/infantry-v1/*.png
             build/qa/infantry-v2/*.png
+            build/qa/guardia-live-battle/
             build/qa/infantry-v6/*.png
             build/qa/infantry-v12/*.png
             build/qa/infantry-v123-opaque/*.png
