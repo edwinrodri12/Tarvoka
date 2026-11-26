@@ -51,8 +51,8 @@ func _run() -> void:
             check(model != null, "Destroyer builds")
             if model == null:
                 continue
-            check(model.get_meta("destroyer_art_revision", "") == "1.8", "V1.8 review finish active")
-            for key in ["CascoNaval", "Cubierta", "FaccionFranjaNaval", "Superestructura/ZocaloNaval", "Superestructura/CarcasaInferior", "Superestructura/Puente", "Superestructura/TechoPuente", "TorretaNavalPivot/CarcasaTorreta", "TorreMastil/CarcasaMastil", "TorreMastil/RadarPivot/Radar", "ConjuntoPopa/Helipuerto", "ConjuntoPopa/Propulsion_-1/TimonPivot/TimonVisual", "ConjuntoPopa/Propulsion_1/TimonPivot/TimonVisual"]:
+            check(model.get_meta("destroyer_art_revision", "") == "1.9", "V1.9 painted hull active")
+            for key in ["CascoNaval", "Cubierta", "Superestructura/ZocaloNaval", "Superestructura/CarcasaInferior", "Superestructura/Puente", "Superestructura/TechoPuente", "TorretaNavalPivot/CarcasaTorreta", "TorreMastil/CarcasaMastil", "TorreMastil/RadarPivot/Radar", "ConjuntoPopa/Helipuerto", "ConjuntoPopa/Propulsion_-1/TimonPivot/TimonVisual", "ConjuntoPopa/Propulsion_1/TimonPivot/TimonVisual"]:
                 var part: MeshInstance3D = model.get_node_or_null(key) as MeshInstance3D
                 check(part != null, "Native " + key)
                 if part != null:
@@ -64,11 +64,15 @@ func _run() -> void:
             var hull: MeshInstance3D = model.get_node_or_null("CascoNaval") as MeshInstance3D
             if hull != null:
                 check(hull.mesh.get_faces().size() == 188*3, "Twelve-point chamfered hull profile")
-            for side in [-1, 1]:
-                var badge: MeshInstance3D = model.get_node_or_null("FaccionIdentidadNaval_%d" % side) as MeshInstance3D
-                check(badge != null, "Faction markings on both sides")
-                if badge != null and faction >= 0:
-                    check((badge.material_override as StandardMaterial3D).albedo_color == Art.faction_paint_color(faction), "Independent faction enamel")
+            check(not model.has_node("FaccionFranjaNaval"), "No overlapping stripe shell")
+            if hull != null:
+                var hull_mat: StandardMaterial3D = hull.material_override as StandardMaterial3D
+                check(hull_mat.vertex_color_use_as_albedo, "Paint integrated into one hull")
+                var indices: PackedInt32Array = hull.get_meta("destroyer_stripe_vertices")
+                var colors: PackedColorArray = hull.mesh.surface_get_arrays(0)[Mesh.ARRAY_COLOR]
+                check(indices.size() == 84, "Two continuous painted bevels")
+                for index in indices:
+                    check(colors[index].is_equal_approx(Art.faction_paint_color(faction)), "Exact faction paint")
             var bridge: Node3D = model.get_node_or_null("Superestructura") as Node3D
             check(bridge != null, "Bridge present")
             if bridge != null:
@@ -203,7 +207,7 @@ func _run() -> void:
     if failures != 0:
         quit(1)
         return
-    print("PASS DESTROYER HULL V1.8: 18 variants, 21 PNGs")
+    print("PASS DESTROYER HULL V1.9: 18 variants, 23 PNGs")
     quit(0)
 
 func _render() -> void:
@@ -267,7 +271,7 @@ func _render() -> void:
         var img: Image = view.get_texture().get_image()
         check(img != null and not img.is_empty(), "Real Godot image")
         if img != null and not img.is_empty():
-            check(img.save_png(output + "/destroyer_v18_%d.png" % i) == OK, "Capture saved")
+            check(img.save_png(output + "/destroyer_v19_%d.png" % i) == OK, "Capture saved")
     Art.restore_model_pose("destroyer",model)
     for d in range(5):
         Art.set_destroyer_damage(model,d,0.52 if d == 4 else 0.0)
@@ -280,5 +284,17 @@ func _render() -> void:
         var img: Image = view.get_texture().get_image()
         check(img != null and not img.is_empty(), "Damage image")
         if img != null and not img.is_empty():
-            check(img.save_png(output + "/destroyer_v18_D%d.png" % d) == OK, "Damage capture saved")
+            check(img.save_png(output + "/destroyer_v19_D%d.png" % d) == OK, "Damage capture saved")
+    for d in [2,3]:
+        Art.set_destroyer_damage(model,d)
+        camera.position = Vector3(3.0,2.7,3.1)
+        camera.size = 2.3
+        camera.look_at(Vector3(0,1.0,0.45),Vector3.UP)
+        await process_frame
+        await process_frame
+        await process_frame
+        var img: Image = view.get_texture().get_image()
+        check(img != null and not img.is_empty(), "Close damage image")
+        if img != null and not img.is_empty():
+            check(img.save_png(output + "/destroyer_v19_detail_D%d.png" % d) == OK, "Close damage capture")
     view.queue_free()

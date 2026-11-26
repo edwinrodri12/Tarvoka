@@ -648,12 +648,15 @@ static func apply_faction_palette(model: Node3D, faction: int) -> int:
     # instances; recoloring a tank cannot modify any other unit.
     if model == null or faction < 0 or faction >= VisualStyle.FACTIONS.size():
         return 0
-    return _paint_panels(model,faction_paint_color(faction))
+    var painted: int = _paint_panels(model,faction_paint_color(faction))
+    if model.has_meta("destroyer_art_revision"):
+        painted += _destroyer_repaint_hull(model,faction_paint_color(faction))
+    return painted
 
 static func paintable_count(model: Node) -> int:
     if model == null:
         return 0
-    var total := 1 if model is MeshInstance3D and (model.has_meta(TANK_PAINT_META) or model.name.begins_with("Faccion")) else 0
+    var total := 1 if model is MeshInstance3D and (model.has_meta(TANK_PAINT_META) or model.name.begins_with("Faccion") or model.has_meta("destroyer_stripe_vertices")) else 0
     for child in model.get_children():
         total += paintable_count(child)
     return total
@@ -974,7 +977,7 @@ static func _fighter(root: Node3D) -> void:
 # V1 naval silhouette: joined closed transverse stations, with a separate
 # conformal deck and opaque faction markings. Presentation only.
 static func _destroyer_shell(root: Node3D, label: String, stations: Array,
-        tint: Color) -> MeshInstance3D:
+        tint: Color, painted_hull: bool = false) -> MeshInstance3D:
     var points: Array = []
     var faces: Array = []
     # Chamfer all transverse corners with a pair of nearby points.
@@ -1007,7 +1010,55 @@ static func _destroyer_shell(root: Node3D, label: String, stations: Array,
         rear.append(last+i)
     faces.append(front)
     faces.append(rear)
-    return _hull(root,label,points,faces,tint)
+    if not painted_hull:
+        return _hull(root,label,points,faces,tint)
+    # One sealed exterior, with a color band embedded in the surface.
+    # No second shell, polygon offset, intersecting stripe or detached badge.
+    var surface := SurfaceTool.new()
+    surface.begin(Mesh.PRIMITIVE_TRIANGLES)
+    var stripe_vertices := PackedInt32Array()
+    var vertex_index: int = 0
+    for face_index in range(faces.size()):
+        var face: Array = faces[face_index]
+        var side: int = face_index % count
+        var stripe: bool = face_index < (stations.size()-1)*count and side in [4,10]
+        var under: bool = face_index < (stations.size()-1)*count and side in [5,6,7,8,9]
+        var tone: Color = ARMOR if stripe else (Color("#465966") if under else tint)
+        for k in range(1,face.size()-1):
+            for index in [face[0],face[k],face[k+1]]:
+                var point: Vector3 = points[index]
+                surface.set_uv(Vector2(point.x*0.34+0.5,point.z*0.30+0.5))
+                surface.set_color(tone)
+                surface.add_vertex(point)
+                if stripe:
+                    stripe_vertices.append(vertex_index)
+                vertex_index += 1
+    surface.generate_normals()
+    var item := MeshInstance3D.new()
+    item.name = label
+    item.mesh = surface.commit()
+    var material: StandardMaterial3D = _material(Color.WHITE,0.20)
+    material.vertex_color_use_as_albedo = true
+    material.vertex_color_is_srgb = true
+    item.material_override = material
+    item.set_meta("destroyer_stripe_vertices",stripe_vertices)
+    root.add_child(item)
+    return item
+
+static func _destroyer_repaint_hull(root: Node3D, paint: Color) -> int:
+    var hull: MeshInstance3D = root.get_node_or_null("CascoNaval") as MeshInstance3D
+    if hull == null or not hull.has_meta("destroyer_stripe_vertices"):
+        return 0
+    var arrays: Array = hull.mesh.surface_get_arrays(0)
+    var colors: PackedColorArray = arrays[Mesh.ARRAY_COLOR]
+    var indices: PackedInt32Array = hull.get_meta("destroyer_stripe_vertices")
+    for index in indices:
+        colors[index] = paint
+    arrays[Mesh.ARRAY_COLOR] = colors
+    var fresh := ArrayMesh.new()
+    fresh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES,arrays)
+    hull.mesh = fresh
+    return 1
 
 # Only the naval model receives this opaque surface treatment. No textures,
 # transparency, real-world systems or battle logic are introduced.
@@ -1034,26 +1085,20 @@ static func _destroyer_finish(node: Node, detail: bool) -> void:
                 mat.metallic = 0.0
                 mat.roughness = 0.88
             elif label.contains("CascoNaval"):
-                mat.metallic = 0.24
-                mat.roughness = 0.66
+                mat.metallic = 0.28
+                mat.roughness = 0.62
+            elif label.begins_with("Humo"):
+                mat.metallic = 0.0
+                mat.roughness = 1.0
+            elif label.begins_with("Fuego") or label.begins_with("Impacto") or label == "DestelloVisual":
+                mat.metallic = 0.0
+                mat.roughness = 0.75
+                mat.emission_enabled = true
+                mat.emission = mat.albedo_color
+                mat.emission_energy_multiplier = 0.8
             part.set_meta("destroyer_surface_v15",true)
     for child in node.get_children():
         _destroyer_finish(child,detail)
-
-# Closed conformal enamel bands following the silhouette, instead of
-# detached rectangular patches. The outer hull remains one sealed mesh.
-static func _destroyer_enamel(root: Node3D, stations: Array) -> void:
-    var stripe: Array = []
-    for station in stations:
-        var y: float = lerpf(float(station[2]),float(station[3]),0.64)
-        stripe.append([station[0],float(station[1])*1.035,y-0.032,y+0.047])
-    _destroyer_shell(root,"FaccionFranjaNaval",stripe,ARMOR)
-    for side in [-1,1]:
-        # The tapered center plate sits against the stripe and shares its color family.
-        _box(root,"FaccionIdentidadNaval_%d" % side,
-            Vector3(float(side)*0.914,0.548,0.02),
-            Vector3(0.028,0.052,0.27),ARMOR)
-
 
 # Native solid bridge: compact footprint between existing forward deck
 # equipment and aft landing area. Windows are opaque inserts, not planes.
@@ -1338,13 +1383,12 @@ static func _destroyer(root: Node3D, art_level: int = 10) -> void:
         [-1.56,0.62,0.15,0.76],[-0.92,0.82,0.14,0.76],
         [0.0,0.90,0.14,0.76],[0.90,0.85,0.14,0.76],
         [1.51,0.66,0.17,0.76],[1.72,0.48,0.22,0.76]]
-    _destroyer_shell(root,"CascoNaval",stations,STEEL)
+    _destroyer_shell(root,"CascoNaval",stations,STEEL,true)
     var deck_stations: Array = []
     for station in stations:
         deck_stations.append([station[0],station[1]*0.86,0.738,0.802])
     _destroyer_shell(root,"Cubierta",deck_stations,ARMOR)
-    _destroyer_enamel(root,stations)
-    root.set_meta("destroyer_art_revision","1.8")
+    root.set_meta("destroyer_art_revision","1.9")
     _destroyer_bridge(root)
     _destroyer_navigation(root,art_level)
     _destroyer_deck_equipment(root,art_level)
@@ -1376,13 +1420,20 @@ static func _destroyer_damage_setup(root: Node3D, art_level: int) -> void:
     root.add_child(fx)
     for i in range(5):
         _box(fx,"Marca_%d" % i,Vector3(-0.34+float(i)*0.17,0.817,-0.83+float(i%2)*0.15),
-            Vector3(0.10,0.025,0.13),BLACK,Vector3(0,float(i)*17,0)).hide()
-    for i in range(3 if art_level >= 13 else 2):
-        _sphere(fx,"Humo_%d" % i,Vector3(0.19,1.62+float(i)*0.16,0.39),
-            Vector3(0.28,0.25,0.26),Color("#50555A")).hide()
-    for i in range(2):
-        _sphere(fx,"Fuego_%d" % i,Vector3(-0.19+float(i)*0.27,1.17,0.60),
-            Vector3(0.18,0.27,0.18),Color("#EE8846")).hide()
+            Vector3(0.14,0.028,0.18),BLACK,Vector3(0,float(i)*17,0)).hide()
+    for i in range(5 if art_level >= 13 else 3):
+        var step: float = float(i)
+        var smoke: MeshInstance3D = _sphere(fx,"Humo_%d" % i,
+            Vector3(0.23+0.085*step,1.36+0.23*step,0.50+0.045*step),
+            Vector3(0.27+0.095*step,0.31+0.075*step,0.29+0.075*step),
+            Color("#303840").lerp(Color("#737A7E"),step/5.0))
+        smoke.hide()
+    for i in range(4 if art_level >= 13 else 2):
+        var flame: MeshInstance3D = _sphere(fx,"Fuego_%d" % i,
+            Vector3(-0.24+float(i%2)*0.17,1.10+float(i/2)*0.14,0.72),
+            Vector3(0.17,0.34+float(i%2)*0.11,0.18),Color("#FF9435"))
+        flame.rotation_degrees.z = -16.0+float(i)*9.0
+        flame.hide()
     _box(fx,"FragmentoCubierta",Vector3(0.35,0.87,0.84),
         Vector3(0.22,0.06,0.25),STEEL,Vector3(15,20,18)).hide()
     _sphere(fx,"ImpactoBreve",Vector3(0.42,0.86,-0.72),

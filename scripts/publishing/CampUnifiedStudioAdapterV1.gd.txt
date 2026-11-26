@@ -59,9 +59,9 @@ func _ready() -> void:
             "camp:" + CAMP_KEYS[i])
     _camp_create_controls()
     camp_controls.visible = false
-    _naval_create_controls()
+    _destroyer_studio_create_controls()
     if OS.has_feature("web"):
-        call_deferred("_naval_select_from_url")
+        call_deferred("_destroyer_studio_select_from_url")
     # Deep links open a camp INSIDE the one original Pages 3D scene:
     # ?campamento=medico (also suministros, reconocimiento, defensivo).
     if OS.has_feature("web"):
@@ -226,9 +226,9 @@ func _camp_restore_prior_controls() -> void:
         camp_controls.visible = false
 
 func _change_selected_building(index: int) -> void:
-    _naval_stop()
-    if naval_controls != null:
-        naval_controls.hide()
+    _destroyer_studio_stop()
+    if destroyer_controls != null:
+        destroyer_controls.hide()
     if _camp_selected(index) and camp_controls != null:
         camp_kind = CAMP_KEYS[index - FIRST_CAMP_INDEX]
         _camp_hide_prior_controls()
@@ -239,9 +239,9 @@ func _change_selected_building(index: int) -> void:
 
 func _switch_category(index: int) -> void:
     if index != 0:
-        _naval_stop()
+        _destroyer_studio_stop()
     super._switch_category(index)
-    _naval_sync_visibility()
+    _destroyer_studio_sync_visibility()
     if camp_controls == null or building_picker == null:
         return
     if index == 1 and _camp_selected(building_picker.selected):
@@ -572,113 +572,113 @@ func _update_details() -> void:
 
 # Destroyer review in the exact same native viewport and unit catalogue.
 const NavalArt = preload("res://scripts/ui/UnitModels3D.gd")
-var naval_controls: VBoxContainer
-var naval_faction_picker: OptionButton
-var naval_lod_picker: OptionButton
-var naval_damage_picker: OptionButton
-var naval_status: Label
-var _naval_tween: Tween
+var destroyer_controls: VBoxContainer
+var destroyer_faction_picker: OptionButton
+var destroyer_lod_picker: OptionButton
+var destroyer_damage_picker: OptionButton
+var destroyer_status: Label
+var _destroyer_studio_tween: Tween
 
-func _naval_create_controls() -> void:
+func _destroyer_studio_create_controls() -> void:
     if role_picker == null:
         return
     var idx: int = NavalArt.ROLES.find("destroyer")
     if idx < 0 or idx >= role_picker.item_count:
         return
-    role_picker.set_item_text(idx,"Destructor naval · V1.8")
-    naval_controls = VBoxContainer.new()
-    naval_controls.name = "DestructorControlesNativos"
-    role_picker.get_parent().add_child(naval_controls)
-    _title(naval_controls,"DESTRUCTOR NAVAL · V1.8",14)
-    naval_faction_picker = OptionButton.new()
-    naval_faction_picker.add_item("Neutral")
+    role_picker.set_item_text(idx,"Destructor naval · V1.9")
+    destroyer_controls = VBoxContainer.new()
+    destroyer_controls.name = "DestructorControlesNativos"
+    role_picker.get_parent().add_child(destroyer_controls)
+    _title(destroyer_controls,"DESTRUCTOR NAVAL · V1.9",14)
+    destroyer_faction_picker = OptionButton.new()
+    destroyer_faction_picker.add_item("Neutral")
     for faction in CampStyle.FACTIONS:
-        naval_faction_picker.add_item(str(faction["name"]))
-    naval_faction_picker.select(1)
-    naval_faction_picker.item_selected.connect(_naval_option_changed)
-    naval_controls.add_child(naval_faction_picker)
-    naval_lod_picker = OptionButton.new()
-    naval_lod_picker.add_item("LOD8 · Táctico")
-    naval_lod_picker.add_item("LOD13 · Inspección")
-    naval_lod_picker.select(1)
-    naval_lod_picker.item_selected.connect(_naval_option_changed)
-    naval_controls.add_child(naval_lod_picker)
-    naval_damage_picker = OptionButton.new()
+        destroyer_faction_picker.add_item(str(faction["name"]))
+    destroyer_faction_picker.select(1)
+    destroyer_faction_picker.item_selected.connect(_destroyer_studio_option_changed)
+    destroyer_controls.add_child(destroyer_faction_picker)
+    destroyer_lod_picker = OptionButton.new()
+    destroyer_lod_picker.add_item("LOD8 · Táctico")
+    destroyer_lod_picker.add_item("LOD13 · Inspección")
+    destroyer_lod_picker.select(1)
+    destroyer_lod_picker.item_selected.connect(_destroyer_studio_option_changed)
+    destroyer_controls.add_child(destroyer_lod_picker)
+    destroyer_damage_picker = OptionButton.new()
     for i in range(5):
-        naval_damage_picker.add_item("D%d" % i)
-    naval_damage_picker.select(0)
-    naval_damage_picker.item_selected.connect(_naval_damage_changed)
-    naval_controls.add_child(naval_damage_picker)
-    _add_paired(naval_controls,"NAVEGAR",func(): _naval_play("move"),
-        "DISPARO",func(): _naval_play("attack"))
-    _add_paired(naval_controls,"RADAR",func(): _naval_play("idle"),
-        "HUNDIMIENTO",func(): _naval_play("sink"))
-    _add_paired(naval_controls,"IMPACTO LEVE",func(): _naval_play("hit_bullet"),
-        "IMPACTO EXPLOSIVO",func(): _naval_play("hit_blast"))
-    _add_paired(naval_controls,"DETENER",_naval_stop,
-        "REPARAR",func(): _naval_damage_changed(0))
-    naval_status = _title(naval_controls,"",11)
-    _naval_sync_visibility()
+        destroyer_damage_picker.add_item("D%d" % i)
+    destroyer_damage_picker.select(0)
+    destroyer_damage_picker.item_selected.connect(_destroyer_studio_damage_changed)
+    destroyer_controls.add_child(destroyer_damage_picker)
+    _add_paired(destroyer_controls,"NAVEGAR",func(): _destroyer_studio_play("move"),
+        "DISPARO",func(): _destroyer_studio_play("attack"))
+    _add_paired(destroyer_controls,"RADAR",func(): _destroyer_studio_play("idle"),
+        "HUNDIMIENTO",func(): _destroyer_studio_play("sink"))
+    _add_paired(destroyer_controls,"IMPACTO LEVE",func(): _destroyer_studio_play("hit_bullet"),
+        "IMPACTO EXPLOSIVO",func(): _destroyer_studio_play("hit_blast"))
+    _add_paired(destroyer_controls,"DETENER",_destroyer_studio_stop,
+        "REPARAR",func(): _destroyer_studio_damage_changed(0))
+    destroyer_status = _title(destroyer_controls,"",11)
+    _destroyer_studio_sync_visibility()
 
-func _naval_select_from_url() -> void:
+func _destroyer_studio_select_from_url() -> void:
     if not OS.has_feature("web"):
         return
     var key: String = str(JavaScriptBridge.eval(
         "(new URLSearchParams(window.location.search)).get('unidad') || ''",true))
-    if key == "destroyer" and naval_controls != null:
+    if key == "destroyer" and destroyer_controls != null:
         category_picker.select(0)
         _switch_category(0)
         role_picker.select(NavalArt.ROLES.find("destroyer"))
         _display_role("destroyer")
 
-func _naval_sync_visibility() -> void:
-    if naval_controls != null:
-        naval_controls.visible = _role == "destroyer" and category_picker != null and category_picker.selected == 0
+func _destroyer_studio_sync_visibility() -> void:
+    if destroyer_controls != null:
+        destroyer_controls.visible = _role == "destroyer" and category_picker != null and category_picker.selected == 0
 
 func _display_role(role: String) -> void:
-    _naval_stop()
+    _destroyer_studio_stop()
     super._display_role(role)
-    if role == "destroyer" and naval_controls != null:
-        _naval_rebuild()
-    _naval_sync_visibility()
+    if role == "destroyer" and destroyer_controls != null:
+        _destroyer_studio_rebuild()
+    _destroyer_studio_sync_visibility()
 
-func _naval_rebuild() -> void:
-    if _role != "destroyer" or naval_controls == null or preview == null:
+func _destroyer_studio_rebuild() -> void:
+    if _role != "destroyer" or destroyer_controls == null or preview == null:
         return
-    _naval_stop()
+    _destroyer_studio_stop()
     if is_instance_valid(model_root):
         if model_root.get_parent() != null:
             model_root.get_parent().remove_child(model_root)
         model_root.queue_free()
-    var lod: int = 8 if naval_lod_picker.selected == 0 else 13
-    model_root = NavalArt.build("destroyer",naval_faction_picker.selected-1,true,lod)
+    var lod: int = 8 if destroyer_lod_picker.selected == 0 else 13
+    model_root = NavalArt.build("destroyer",destroyer_faction_picker.selected-1,true,lod)
     if model_root == null:
         return
     preview.add_child(model_root)
     model_root.rotation_degrees.y = _yaw
-    _naval_damage_changed(naval_damage_picker.selected)
+    _destroyer_studio_damage_changed(destroyer_damage_picker.selected)
     _update_camera()
     _update_details()
 
-func _naval_option_changed(_index: int) -> void:
-    _naval_rebuild()
+func _destroyer_studio_option_changed(_index: int) -> void:
+    _destroyer_studio_rebuild()
 
-func _naval_damage_changed(stage: int) -> void:
+func _destroyer_studio_damage_changed(stage: int) -> void:
     if _role != "destroyer" or not is_instance_valid(model_root):
         return
-    _naval_stop()
-    naval_damage_picker.select(clampi(stage,0,4))
+    _destroyer_studio_stop()
+    destroyer_damage_picker.select(clampi(stage,0,4))
     NavalArt.set_destroyer_damage(model_root,stage,0.45 if stage == 4 else 0.0)
-    if naval_status != null:
-        naval_status.text = "Modelo nativo V1.8 · D%d" % stage
+    if destroyer_status != null:
+        destroyer_status.text = "Modelo nativo V1.9 · D%d" % stage
 
-func _naval_stop() -> void:
-    if _naval_tween != null and _naval_tween.is_running():
-        _naval_tween.kill()
+func _destroyer_studio_stop() -> void:
+    if _destroyer_studio_tween != null and _destroyer_studio_tween.is_running():
+        _destroyer_studio_tween.kill()
     if _role == "destroyer" and is_instance_valid(model_root):
         NavalArt.restore_model_pose("destroyer",model_root)
 
-func _naval_frame(kind: String, phase: float) -> void:
+func _destroyer_studio_frame(kind: String, phase: float) -> void:
     if _role != "destroyer" or not is_instance_valid(model_root):
         return
     if kind == "sink":
@@ -686,16 +686,22 @@ func _naval_frame(kind: String, phase: float) -> void:
     else:
         NavalArt.pose_model("destroyer",model_root,kind,phase)
 
-func _naval_play(kind: String) -> void:
+func _destroyer_studio_play(kind: String) -> void:
     if _role != "destroyer" or not is_instance_valid(model_root):
         return
-    _naval_stop()
+    _destroyer_studio_stop()
     if kind == "sink":
-        naval_damage_picker.select(4)
-        _naval_frame(kind,0.0)
+        destroyer_damage_picker.select(4)
+        _destroyer_studio_frame(kind,0.0)
     elif int(model_root.get_meta("destroyer_damage_stage",0)) >= 3:
-        naval_status.text = "Reparar el modelo antes de iniciar otra animación."
+        destroyer_status.text = "Reparar el modelo antes de iniciar otra animación."
         return
-    _naval_tween = create_tween()
-    _naval_tween.tween_method(func(v: float): _naval_frame(kind,v),0.0,1.0,
+    _destroyer_studio_tween = create_tween()
+    _destroyer_studio_tween.tween_method(func(v: float): _destroyer_studio_frame(kind,v),0.0,1.0,
         2.7 if kind == "sink" else 1.5)
+    _destroyer_studio_tween.finished.connect(func():
+        if _role == "destroyer" and is_instance_valid(model_root):
+            if kind != "sink":
+                NavalArt.restore_model_pose("destroyer",model_root)
+            else:
+                destroyer_status.text = "Modelo nativo V1.9 · D4 · Hundido")
