@@ -172,6 +172,28 @@ static func _panel(tool: SurfaceTool, nw: Vector3,ne: Vector3,
     _tri(tool,nw,sw,ne,color)
     _tri(tool,ne,sw,se,color)
 
+# V21: join the raised ground fan to the actual water plane. Both
+# endpoints reuse the shared world-space corners, including across chunks.
+# Known water only: never infer a shoreline from an unexplored neighbour.
+static func _append_water_banks(tool: SurfaceTool,cells: Dictionary,
+        cell: Vector2i,top: Array[Vector3],tint: Color) -> int:
+    var count := 0
+    var directions: Array[Vector2i] = [Vector2i(0,-1),Vector2i(1,0),
+        Vector2i(0,1),Vector2i(-1,0)]
+    for i in range(4):
+        var neighbour: Dictionary = cells.get(cell+directions[i],{})
+        if str(neighbour.get("kind","unknown")) != "water":
+            continue
+        var a: Vector3 = top[i]
+        var b: Vector3 = top[(i+1)%4]
+        var low_a := Vector3(a.x,WATER_LEVEL,a.z)
+        var low_b := Vector3(b.x,WATER_LEVEL,b.z)
+        var lower_tint: Color = tint.darkened(0.27)
+        _tri_tinted(tool,a,low_a,b,tint,lower_tint,tint)
+        _tri_tinted(tool,b,low_a,low_b,tint,lower_tint,lower_tint)
+        count += 1
+    return count
+
 static func _finish(parent: Node3D, label: String,
         tool: SurfaceTool, count: int, kind: String) -> void:
     if count == 0:
@@ -262,6 +284,13 @@ static func _build_chunk(parent: Node3D, data: Dictionary,
             _tri(ground,ne,middle,se,tinted)
             _tri(ground,se,middle,sw,tinted)
             _tri(ground,sw,middle,nw,tinted)
+        # Close exposed soil down to known water, including road crossings.
+        # Reuse the ground mesh/material; no additional draw batch.
+        var bank_top: Array[Vector3] = [nw,ne,se,sw]
+        var bank_tint: Color = _shore_color(biome)
+        if not bool(tile.get("details",false)):
+            bank_tint = bank_tint.darkened(0.60)
+        _append_water_banks(ground,cells,cell,bank_top,bank_tint)
         land_count += 1
         # No landscape detail on explored-but-currently-hidden positions.
         if not bool(tile.get("details",false)):
