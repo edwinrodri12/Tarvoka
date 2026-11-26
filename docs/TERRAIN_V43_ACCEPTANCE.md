@@ -2,7 +2,7 @@
 
 ## Review evidence
 
-The existing four-biome GPU workflow now requires 21 comparison files: nine fixed-layout images, nine geographic maps (24×18, seed 1729), and three weather frames. It also produces the original delta screenshot and logs of terrain chunk-build time and cached height counts. Desktop OpenGL is a visual regression proxy, not an Android benchmark.
+The existing four-biome GPU workflow now requires 30 comparison files: nine fixed-layout images, nine geographic maps (24×18, seed 1729), nine close-orbit detail images, and three weather frames. It also produces the original delta screenshot and logs of terrain chunk-build time and cached height counts. Desktop OpenGL is a visual regression proxy, not an Android benchmark.
 
 ## Acceptance gates
 
@@ -17,3 +17,7 @@ The existing four-biome GPU workflow now requires 21 comparison files: nine fixe
 ## Scope limits
 
 Geographic scenarios preserve strategic building anchors and symmetric land corridors. They do not dynamically relocate cities. Crossings have parapets but are not elevated naval passages. Water animation is texture motion, and desert dust is cosmetic; weather rules remain clear/rain/snow. Mixed-biome geography and additional weather mechanics are not implemented. The public studio and Android release are not updated by this draft.
+
+## V44 art finish candidate
+
+Nine cached 64×64 grayscale microtextures with mipmaps preserve biome vertex colors. Conifer trunks and foliage skirts are closed; coastal and desert scrub use the broadleaf silhouette. Rock undersides are capped and use the rock texture. Small natural patches remain inside visible plain cells and away from their centers. The same existing terrain and vegetation batches are used, but mesh triangle counts have increased and must be measured on physical devices. Review all nine close-orbit captures before accepting art quality. No claim of completed or approved individual biomes without rendered evidence.
