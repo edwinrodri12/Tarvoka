@@ -11,3 +11,5 @@ Se añadió además un detalle de cubierta deformable, inclinación de puente al
 ## V1.9 — auditoría real V1.8 y correcciones
 
 Run 45689956602: 18 variantes, 21 PNG y 90 estados aprobados. Run 45689956712: exportación web falló por dos miembros heredados duplicados (naval_controls y naval_damage_picker). Se aíslan todos los nombres nuevos de destructor del adaptador de base naval. En las 21 capturas V1.8 se observa z-fighting de esmalte en popa, daño poco visible y apariencia simplificada. V1.9 integra color de facción en los vértices del casco único, elimina la segunda envolvente y placas superpuestas; aumenta legibilidad de daños y efectos opacos/emisivos, agrega dos encuadres de daño. 23 capturas previstas. El fallo G13 V11 en el run 45689956774 sigue abierto; no se modifica su modelo ni sus pruebas. Pendiente CI nativa/Web y revisión visual V1.9.
+
+Seguimiento V1.9: animación periódica y reversible de humo/fuego; comprobación de precisión de color de 8 bits; regresión explícita de independencia de los controles de la base naval y el destructor. El mismo fallo G13 V11 se reprodujo en run 45688129493 anterior a V1.8.

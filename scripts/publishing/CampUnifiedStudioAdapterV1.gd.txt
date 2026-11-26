@@ -578,6 +578,7 @@ var destroyer_lod_picker: OptionButton
 var destroyer_damage_picker: OptionButton
 var destroyer_status: Label
 var _destroyer_studio_tween: Tween
+var _destroyer_fx_time: float = 0.0
 
 func _destroyer_studio_create_controls() -> void:
     if role_picker == null:
@@ -668,6 +669,7 @@ func _destroyer_studio_damage_changed(stage: int) -> void:
         return
     _destroyer_studio_stop()
     destroyer_damage_picker.select(clampi(stage,0,4))
+    _destroyer_fx_time = 0.0
     NavalArt.set_destroyer_damage(model_root,stage,0.45 if stage == 4 else 0.0)
     if destroyer_status != null:
         destroyer_status.text = "Modelo nativo V1.9 · D%d" % stage
@@ -705,3 +707,9 @@ func _destroyer_studio_play(kind: String) -> void:
                 NavalArt.restore_model_pose("destroyer",model_root)
             else:
                 destroyer_status.text = "Modelo nativo V1.9 · D4 · Hundido")
+
+func _process(delta: float) -> void:
+    super._process(delta)
+    if _role == "destroyer" and is_instance_valid(model_root):
+        _destroyer_fx_time = fposmod(_destroyer_fx_time+delta*0.65,1.0)
+        NavalArt.animate_destroyer_damage(model_root,_destroyer_fx_time)

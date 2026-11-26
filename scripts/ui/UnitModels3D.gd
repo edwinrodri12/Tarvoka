@@ -1427,12 +1427,14 @@ static func _destroyer_damage_setup(root: Node3D, art_level: int) -> void:
             Vector3(0.23+0.085*step,1.36+0.23*step,0.50+0.045*step),
             Vector3(0.27+0.095*step,0.31+0.075*step,0.29+0.075*step),
             Color("#303840").lerp(Color("#737A7E"),step/5.0))
+        smoke.set_meta("destroyer_fx_rest",smoke.transform)
         smoke.hide()
     for i in range(4 if art_level >= 13 else 2):
         var flame: MeshInstance3D = _sphere(fx,"Fuego_%d" % i,
             Vector3(-0.24+float(i%2)*0.17,1.10+float(i/2)*0.14,0.72),
             Vector3(0.17,0.34+float(i%2)*0.11,0.18),Color("#FF9435"))
         flame.rotation_degrees.z = -16.0+float(i)*9.0
+        flame.set_meta("destroyer_fx_rest",flame.transform)
         flame.hide()
     _box(fx,"FragmentoCubierta",Vector3(0.35,0.87,0.84),
         Vector3(0.22,0.06,0.25),STEEL,Vector3(15,20,18)).hide()
@@ -1461,6 +1463,8 @@ static func set_destroyer_damage(root: Node3D, stage: int, progress: float = 0.0
             child.transform = child.get_meta("naval_rest_transform")
     for child in fx.get_children():
         var label: String = str(child.name)
+        if child.has_meta("destroyer_fx_rest"):
+            (child as Node3D).transform = child.get_meta("destroyer_fx_rest")
         (child as Node3D).visible = (label.begins_with("Marca") and d>=1) or (label.begins_with("Humo") and d>=2) or (label.begins_with("Fuego") and d>=3) or (label=="FragmentoCubierta" and d>=3)
     var mast: Node3D = root.get_node("TorreMastil") as Node3D
     var bridge: Node3D = root.get_node("Superestructura") as Node3D
@@ -1486,6 +1490,30 @@ static func set_destroyer_damage(root: Node3D, stage: int, progress: float = 0.0
     var wake: Node3D = root.get_node("EstelaEspuma") as Node3D
     wake.visible = d < 3
     root.set_meta("destroyer_damage_stage",d)
+    return true
+
+# Periodic cosmetic motion: deterministic from rest, never affects combat.
+static func animate_destroyer_damage(root: Node3D, phase: float) -> bool:
+    if root == null or not root.has_node("DanoNavalVisual"):
+        return false
+    var stage: int = int(root.get_meta("destroyer_damage_stage",0))
+    if stage < 2 or stage >= 4:
+        return false
+    var fx: Node3D = root.get_node("DanoNavalVisual") as Node3D
+    for child in fx.get_children():
+        if not child is Node3D or not child.has_meta("destroyer_fx_rest"):
+            continue
+        var item: Node3D = child as Node3D
+        var label: String = str(item.name)
+        var i: float = float(int(label.get_slice("_",1)))
+        var rest: Transform3D = item.get_meta("destroyer_fx_rest")
+        var wave: float = sin(phase*TAU+i*0.82)
+        item.transform = rest
+        if label.begins_with("Humo"):
+            item.position += Vector3(0.032*wave,0.045*wave,0.024*cos(phase*TAU+i))
+            item.scale *= 1.0+0.085*wave
+        elif label.begins_with("Fuego"):
+            item.scale *= Vector3(1.0-0.06*wave,1.0+0.18*wave,1.0-0.06*wave)
     return true
 
 static func pose_destroyer(root: Node3D, kind: String, progress: float,

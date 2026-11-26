@@ -72,7 +72,9 @@ func _run() -> void:
                 var colors: PackedColorArray = hull.mesh.surface_get_arrays(0)[Mesh.ARRAY_COLOR]
                 check(indices.size() == 84, "Two continuous painted bevels")
                 for index in indices:
-                    check(colors[index].is_equal_approx(Art.faction_paint_color(faction)), "Exact faction paint")
+                    var expected: Color = Art.faction_paint_color(faction)
+                    var actual: Color = colors[index]
+                    check(absf(actual.r-expected.r)<0.006 and absf(actual.g-expected.g)<0.006 and absf(actual.b-expected.b)<0.006, "Faction paint within 8-bit color precision")
             var bridge: Node3D = model.get_node_or_null("Superestructura") as Node3D
             check(bridge != null, "Bridge present")
             if bridge != null:
@@ -188,6 +190,13 @@ func _run() -> void:
                 check((fx.get_node("Fuego_0") as Node3D).visible == (damage>=3), "Fire stage")
                 check((fx.get_node("FragmentoCubierta") as Node3D).visible == (damage>=3), "Physical deck fragment")
                 if damage in [2,3]:
+                    var smoke: Node3D = fx.get_node("Humo_0") as Node3D
+                    var smoke_rest: Transform3D = smoke.transform
+                    check(Art.animate_destroyer_damage(model,0.25), "Animated persistent smoke")
+                    var animated: Transform3D = smoke.transform
+                    check(not animated.is_equal_approx(smoke_rest), "Smoke visibly changes")
+                    Art.animate_destroyer_damage(model,0.25)
+                    check(smoke.transform.is_equal_approx(animated), "Smoke has no accumulated drift")
                     check(absf(mast.rotation_degrees.z)>10.0, "Visible mast damage")
                     check(absf(lid.rotation_degrees.z)>10.0, "Visible displaced deck lid")
                 if damage == 4:
@@ -202,6 +211,7 @@ func _run() -> void:
             check(Art.set_destroyer_damage(model,0), "Reset damage")
             check(hull.transform.is_equal_approx(hull_rest) and mast.transform.is_equal_approx(mast_rest), "Original geometry restored")
             check(lid.transform.is_equal_approx(lid_rest), "Deck detail restored")
+            check(not Art.animate_destroyer_damage(model,0.25), "Repaired model has no damage animation")
             model.free()
     await _render()
     if failures != 0:
