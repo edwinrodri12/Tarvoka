@@ -152,6 +152,8 @@ static func build(root:Node3D,faction:Color,hero:bool)->bool:
     dark_trim.vertex_color_is_srgb=true
     var trim_mesh:=_shell_finish(sculpt,Color("#455761"),Color("#263740"))
     var shell_mesh:=_shell_finish(sculpt,Color("#788891"),Color("#46545d"))
+    # V18: distinguish the closed lower ornamental shell from the upper paint.
+    var underside_mesh:=_shell_finish(sculpt,Color("#607782"),Color("#52636d"))
     # The four repeated ornamental rings reference one mesh resource.
     # This is resource reuse, not a change to the displayed geometry.
     var ring:=TorusMesh.new()
@@ -171,7 +173,7 @@ static func build(root:Node3D,faction:Color,hero:bool)->bool:
         Vector3(0.43,0.25,0.16),dark_trim)
     _part(body,"A02_FrontVisor",face_mesh,Vector3(0,0.98,-0.552),
         Vector3(0.32,0.16,0.065),glass)
-    _part(body,"A02_SealedUndershell",shell_mesh,Vector3(0,0.805,0.07),
+    _part(body,"A02_SealedUndershell",underside_mesh,Vector3(0,0.805,0.07),
         Vector3(0.57,0.25,0.77),coated_shell)
     for i in range(4):
         var side:float=-1.0 if i%2==0 else 1.0
@@ -211,7 +213,13 @@ static func build(root:Node3D,faction:Color,hero:bool)->bool:
             _part(body,"A02_V5_CrownAccent_"+str(side),sculpt,
                 Vector3(side*0.145,1.205,0.14),Vector3(0.045,0.016,0.12),emblem)
         _part(body,"A02_V5_BellyInsignia",sculpt,Vector3(0,0.680,0.07),
-            Vector3(0.18,0.018,0.23),dark_mark)
+            Vector3(0.18,0.018,0.23),emblem)
+        # Hero-only ornamental paint reliefs, embedded into the planar base.
+        # These have no functional role and reuse the original closed sculpt.
+        var lower_accent:=_mat(Color("#657781").lerp(faction,0.45),0.12,0.70)
+        for side in [-1.0,1.0]:
+            _part(body,"A02_V18_LowerAccent_"+str(side),sculpt,
+                Vector3(side*0.145,0.681,0.07),Vector3(0.055,0.016,0.28),lower_accent)
     # V8: only fictional presentation effects; never change gameplay state.
     var effects:=Node3D.new()
     effects.name=EFFECT
@@ -245,6 +253,7 @@ static func build(root:Node3D,faction:Color,hero:bool)->bool:
         if part.get_parent()!=effects:
             part.set_meta(BASE_MATERIAL,part.material_override)
     root.set_meta(DAMAGE,0)
+    root.set_meta("tarvoka_a02_v18_undershell_finish",true)
     root.set_meta("tarvoka_a02_v17_surface_finish",true)
     root.set_meta("tarvoka_a02_v16_damage_presentation",true)
     root.set_meta("tarvoka_a02_v12_smoke_finish",true)

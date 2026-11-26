@@ -228,6 +228,7 @@ var _a02_preview_tween: Tween = null
 var a02_360_panel:VBoxContainer
 var _a02_review_tween:Tween=null
 var _a02_review_focus:String="general"
+var _a02_inspection_fill:DirectionalLight3D=null
 var a01_360_panel:VBoxContainer
 var a01_lod_readout:Label=null
 var _a01_review_tween:Tween = null
@@ -319,7 +320,7 @@ func _ready() -> void:
     if fpv_index>=0 and role_picker!=null:
         while role_picker.item_count<=fpv_index:
             role_picker.add_item(P06Models.ROLES[role_picker.item_count])
-        role_picker.set_item_text(fpv_index,"A02 · Dron FPV · V17 EN REVISIÓN")
+        role_picker.set_item_text(fpv_index,"A02 · Dron FPV · V18 EN REVISIÓN")
     # Preserve existing roles/indices; these are additional native 3D variants.
     for entry in [
         ["line","★ INFANTERÍA BÁSICA · Guardia"],
@@ -387,9 +388,10 @@ func _a02_web_entry_report()->void:
     for entry in _studio_animation_specs(_role):
         if entry.has("action"):
             actions.append(str(entry["action"]))
-    var report:Dictionary={"role":_role,"edition":"V17","lod":int(model_root.get_meta("tarvoka_a02_lod",0)),
+    var report:Dictionary={"role":_role,"edition":"V18","lod":int(model_root.get_meta("tarvoka_a02_lod",0)),
         "stage":A02PreviewArt.stage(model_root),"native_model":bool(model_root.get_meta(A02PreviewArt.FLAG,false)),
         "surface_finish":bool(model_root.get_meta("tarvoka_a02_v17_surface_finish",false)),
+        "undershell_finish":bool(model_root.get_meta("tarvoka_a02_v18_undershell_finish",false)),
         "visible_meshes":visible_meshes,"triangles":triangles,"transparent_meshes":transparent,
         "actions":actions,"faction_selector":faction_picker.visible}
     JavaScriptBridge.eval("window.__tarvokaA02Entry="+JSON.stringify(report),true)
@@ -424,6 +426,12 @@ func _engineer_web_entry_report() -> void:
     evidence["kit_v17"]=str(model_root.get_meta("tarvoka_infantry_premium_kit_v17",""))==_role
     evidence["kit_meshes_v17"]=int(model_root.get_meta("tarvoka_infantry_premium_kit_count_v17",0))
     evidence["optics_v18"]=str(model_root.get_meta("tarvoka_infantry_optics_v18",""))==_role
+    evidence["surfaces_v19"]=str(model_root.get_meta("tarvoka_infantry_role_surfaces_v19",""))==_role
+    evidence["accessories_v20"]=str(model_root.get_meta("tarvoka_infantry_specialist_accessories_v20",""))==_role
+    evidence["accessory_count_v20"]=int(model_root.get_meta("tarvoka_infantry_specialist_accessory_count_v20",0))
+    evidence["motion_v21"]=str(model_root.get_meta("tarvoka_infantry_role_motion_v21",""))==_role
+    evidence["effects_v22"]=str(model_root.get_meta("tarvoka_infantry_impact_fx_v22",""))==_role
+    evidence["validation_v24"]=str(model_root.get_meta("tarvoka_infantry_validation_v24",""))==_role
     evidence["native_viewport"]=model_root.get_parent()==preview
     JavaScriptBridge.eval("window.__tarvokaInfantryEntry="+JSON.stringify(evidence),true)
     if _role=="infantry_engineer":
@@ -837,7 +845,7 @@ func _studio_animation_specs(role: String) -> Array[Dictionary]:
     match role:
         "fpv":
             return [
-                {"group":"A02 V17 · ANIMACIONES VISUALES"},
+                {"group":"A02 V18 · ANIMACIONES VISUALES"},
                 {"title":"Movimiento", "action":"a02_move"},
                 {"title":"Suspensión visual", "action":"a02_hover"},
                 {"title":"Reacción a impacto", "action":"a02_hit"},
@@ -1100,7 +1108,7 @@ func _studio_run_animation(action: String) -> void:
             if _role=="fpv":
                 _a02_preview_stop()
                 if A02PreviewArt.set_stage(model_root,int(action.right(1))):
-                    status_label.text="A02 V17 · daño visual D%d" % A02PreviewArt.stage(model_root)
+                    status_label.text="A02 V18 · daño visual D%d" % A02PreviewArt.stage(model_root)
                     if A02PreviewArt.stage(model_root)==4:
                         var wreck:Node3D=model_root
                         A02PreviewArt.pose_wreck(wreck,0.0)
@@ -1482,6 +1490,7 @@ func _studio_g11_turn_done(art: Node3D) -> void:
 # Reset the original Godot camera AND any specialized G16 close-up.
 # Otherwise the shared "Restablecer cámara" button did not exit hose view.
 func _studio_review_reset_camera() -> void:
+    _a02_hide_inspection_fill()
     _a02_review_stop()
     _a02_review_focus="general"
     if _g16_review_tween!=null and _g16_review_tween.is_running():
@@ -1497,6 +1506,25 @@ func _a02_review_stop()->void:
     if _a02_review_tween!=null and _a02_review_tween.is_running():
         _a02_review_tween.kill()
     _a02_review_tween=null
+
+# Neutral camera-only fill for the lower inspection view. Never changes
+# shared environment, other models, gameplay or the authored sculpture.
+func _a02_hide_inspection_fill()->void:
+    if is_instance_valid(_a02_inspection_fill):
+        _a02_inspection_fill.hide()
+
+func _a02_sync_inspection_fill()->void:
+    if _role!="fpv" or _a02_review_focus!="inferior" or not is_instance_valid(camera) or not is_instance_valid(model_root):
+        _a02_hide_inspection_fill()
+        return
+    if not is_instance_valid(_a02_inspection_fill):
+        _a02_inspection_fill=DirectionalLight3D.new()
+        _a02_inspection_fill.name="A02_StudioLowerInspectionFill"
+        _a02_inspection_fill.light_color=Color.WHITE
+        _a02_inspection_fill.light_energy=0.55
+        _a02_inspection_fill.shadow_enabled=false
+        camera.add_child(_a02_inspection_fill)
+    _a02_inspection_fill.show()
 
 func _a02_review_look(yaw:float,focus:String)->void:
     if _role!="fpv" or not is_instance_valid(model_root) or not bool(model_root.get_meta(A02PreviewArt.FLAG,false)):
@@ -1687,6 +1715,8 @@ func _infantry_review_edition() -> String:
         if EngineerFinishV9.has_model(model_root):
             return "V9"
     if model_root!=null and str(model_root.get_meta("tarvoka_infantry_role_identity_v6",""))==_role:
+        if str(model_root.get_meta("tarvoka_infantry_validation_v24",""))==_role:
+            return "V24"
         if str(model_root.get_meta("tarvoka_infantry_optics_v18",""))==_role:
             return "V18"
         if str(model_root.get_meta("tarvoka_infantry_premium_kit_v17",""))==_role:
@@ -1870,14 +1900,14 @@ func _a02_preview_play(kind:String)->void:
         return
     _a02_preview_stop()
     if A02PreviewArt.stage(model_root)==4:
-        status_label.text="A02 V17 · restaurar D0 antes de reproducir."
+        status_label.text="A02 V18 · restaurar D0 antes de reproducir."
         return
     var art:Node3D=model_root
     _a02_preview_tween=create_tween()
     _a02_preview_tween.tween_method(Callable(self,"_a02_preview_tick").bind(art,kind),
         0.0,1.0,2.4 if kind=="hover" else 1.5)
     _a02_preview_tween.tween_callback(Callable(self,"_a02_preview_done").bind(art))
-    status_label.text="A02 V17 · demostración visual: "+kind
+    status_label.text="A02 V18 · demostración visual: "+kind
 
 func _a02_preview_tick(progress:float,art:Node3D,kind:String)->void:
     if is_instance_valid(art) and art==model_root and _role=="fpv":
@@ -2050,7 +2080,7 @@ func _studio_quick_action(kind: String) -> void:
             if kind in ["move","hover","hit"]:
                 _a02_preview_play(kind)
             else:
-                status_label.text="A02 V17 · demostración visual disponible en Animaciones."
+                status_label.text="A02 V18 · demostración visual disponible en Animaciones."
         "uav_recon":
             if kind in ["attack","attack_air","attack_ground"]:
                 status_label.text="A01 es un dron de reconocimiento SIN armamento."
@@ -2150,7 +2180,7 @@ func _refresh_unified_studio_navigation() -> void:
             "mlrs": label="G11 · Lanzador · V33"
             "attack_heli": label="A01 · Helicóptero HAT-29 · V14"
             "uav_recon": label="A01 · Dron de reconocimiento · V30 FINAL"
-            "fpv": label="A02 · Dron FPV · V17 EN REVISIÓN"
+            "fpv": label="A02 · Dron FPV · V18 EN REVISIÓN"
             "logistics_mobile": label="G16 · Logística blindada 6×6 · V6 PBR y suministros articulados"
             "ew_mobile": label="G15 · Guerra electrónica · V11 (neumáticos, óptica y electrónica 3D)"
             "aa_mobile": label="G13 · Antiaéreo · V54 caucho y rodadura 3D"
@@ -4638,6 +4668,7 @@ func _update_camera() -> void:
             camera.position=target+Vector3(0,5.0 if top else -5.0,0)
             camera.look_at(target,Vector3(0,0,-1 if top else 1))
             camera.size=2.75/maxf(0.65,_zoom)
+    _a02_sync_inspection_fill()
     if (model_root!=null and camera!=null and InfantryV1.supports(_role) and
             infantry_review_lod==13):
         if _infantry_helmet_focus:
@@ -4789,6 +4820,7 @@ func _stage_p06() -> int:
         "tarvoka_apc_v3_damage_stage",0)),0,4)
 
 func _display_role(role: String) -> void:
+    _a02_hide_inspection_fill()
     _a02_review_stop()
     _a02_review_focus="general"
     _a02_preview_stop()
@@ -5069,6 +5101,7 @@ func _display_role(role: String) -> void:
 
 func _switch_category(index: int) -> void:
     if index!=0:
+        _a02_hide_inspection_fill()
         _a02_review_stop()
         _a02_review_focus="general"
     if index!=0:

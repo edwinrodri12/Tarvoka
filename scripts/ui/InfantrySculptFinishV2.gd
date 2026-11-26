@@ -833,6 +833,7 @@ static func _pose_family_legs(model: Node3D,kind: String,t: float,stage: int) ->
     var role: String=str(model.get_meta("tarvoka_infantry_role","line"))
     var gain: float=float(GAIT_GAIN_V21.get(role,1.0))
     model.set_meta(MOTION_V21,role)
+    model.set_meta("tarvoka_infantry_validation_v24",role)
     for side in [-1,1]:
         var leg: Node3D=_find(model,"PiernaRig_%d"%side)
         var knee: Node3D=_find(model,"V11_RodillaRig_%d"%side)

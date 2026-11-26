@@ -115,7 +115,15 @@ func _run() -> void:
         must(v2!=null and v2.get_parent()==original_preview,
             role+" V2 comparison remains in same 3D viewport")
         if role!="infantry_engineer":
-            var expected_edition: String="V18"
+            var expected_edition: String="V24"
+            must(str(v2.get_meta("tarvoka_infantry_validation_v24",""))==role and
+                str(v2.get_meta("tarvoka_infantry_role_surfaces_v19",""))==role and
+                str(v2.get_meta("tarvoka_infantry_role_motion_v21",""))==role and
+                str(v2.get_meta("tarvoka_infantry_impact_fx_v22",""))==role,
+                role+" V24 native identity evidence")
+            if Specialist.supports(role):
+                must(str(v2.get_meta(Specialist.KIT_V20,""))==role,
+                    role+" V20 actual specialist accessories")
             must(str(studio.call("_infantry_review_edition"))==expected_edition and
                 str(v2.get_meta("tarvoka_infantry_integrated_face_v8",""))==role and
                 bool(v2.get_meta("tarvoka_infantry_material_finish_v7",false)),

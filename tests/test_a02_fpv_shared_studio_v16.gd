@@ -73,7 +73,7 @@ func _run()->void:
         quit(1)
         return
     check(picker.is_visible_in_tree(),"A02 in visible unified unit selector")
-    check(picker.get_item_text(index).contains("A02") and picker.get_item_text(index).contains("V17"),
+    check(picker.get_item_text(index).contains("A02") and picker.get_item_text(index).contains("V18"),
         "A02 visibly labelled in shared unit list")
     check(str(studio.get("_role"))=="apc","ordinary Studio homepage starts with existing default")
     picker.select(index)
@@ -81,7 +81,7 @@ func _run()->void:
     studio.call("_studio_select_tab",0)
     await process_frame
     var model:=studio.get("model_root") as Node3D
-    check(model!=null and bool(model.get_meta("tarvoka_a02_v17_surface_finish",false)),"native V17 geometry")
+    check(model!=null and bool(model.get_meta("tarvoka_a02_v18_undershell_finish",false)),"native V18 geometry")
     if model==null:
         quit(1)
         return
@@ -133,10 +133,18 @@ func _run()->void:
         check(str(studio.get("_a02_review_focus"))=="superior" and camera.position.y>4.0,
             "actual camera above sculpture")
         check(studio.get("model_root")==model and Art.stage(model)==0,"top view preserves original model")
+        var top_fill:=studio.get("_a02_inspection_fill") as DirectionalLight3D
+        check(top_fill==null or not top_fill.visible,"V18.1 no lower fill on upper view")
         await _capture("a02-v16-studio-top")
         check(_press_camera(panel,"Inferior"),"underside view button")
         check(str(studio.get("_a02_review_focus"))=="inferior" and camera.position.y< -3.0,
             "actual camera below sculpture")
+        var bottom_fill:=studio.get("_a02_inspection_fill") as DirectionalLight3D
+        check(bottom_fill!=null and bottom_fill.visible and bottom_fill.get_parent()==camera,
+            "V18.1 neutral camera-only lower fill")
+        if bottom_fill!=null:
+            check(bottom_fill.light_color==Color.WHITE and not bottom_fill.shadow_enabled and
+                is_equal_approx(bottom_fill.light_energy,0.55),"V18.1 restrained neutral lighting")
         await _capture("a02-v16-studio-bottom")
         factions.select(2)
         studio.call("_on_faction",2)
@@ -144,26 +152,31 @@ func _run()->void:
         model=studio.get("model_root") as Node3D
         check(model!=null and str(studio.get("_a02_review_focus"))=="inferior" and camera.position.y< -3.0,
             "faction rebuild preserves inspection camera")
+        check(bottom_fill!=null and bottom_fill.visible and studio.get("_a02_inspection_fill")==bottom_fill,
+            "V18.1 faction rebuild reuses single fill")
         check(_press_camera(panel,"Giro 360°"),"orbit button")
         var orbit:=studio.get("_a02_review_tween") as Tween
         check(orbit!=null and orbit.is_running(),"orbit starts")
         check(_press_camera(panel,"Vista completa"),"full view button")
         check(str(studio.get("_a02_review_focus"))=="general" and (orbit==null or not orbit.is_running()),
             "full view stops orbit")
+        check(bottom_fill!=null and not bottom_fill.visible,"V18.1 full view removes inspection fill")
         check(_press_camera(panel,"Giro 360°"),"orbit before switch")
         orbit=studio.get("_a02_review_tween") as Tween
         studio.call("_display_role","apc")
         await process_frame
         check(not panel.is_visible_in_tree() and (orbit==null or not orbit.is_running()),
             "other unit hides panel and cancels orbit")
+        check(bottom_fill!=null and not bottom_fill.visible,"V18.1 other units unaffected")
         picker.select(index)
         picker.item_selected.emit(index)
         await process_frame
         check(_press_camera(panel,"Superior"),"return to inspection")
         studio.call("_studio_review_reset_camera")
         check(str(studio.get("_a02_review_focus"))=="general","reset returns to full model")
+        check(bottom_fill!=null and not bottom_fill.visible,"V18.1 reset removes inspection fill")
     studio.queue_free()
     await process_frame
     if failures==0:
-        print("PASS A02 V17 SHARED STUDIO: actual buttons, damage, faction, stop, model switching")
+        print("PASS A02 V18 SHARED STUDIO: actual buttons, damage, faction, stop, model switching")
     quit(0 if failures==0 else 1)
