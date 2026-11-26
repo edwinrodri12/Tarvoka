@@ -186,7 +186,42 @@ static func _refine_core(model: Node3D, hero: bool) -> bool:
         return false
     if not _refine_outer_armor(model,hero) or not _refine_family_legs(model,hero):
         return false
+    if not _refine_v15_fit(model,hero):
+        return false
     return _attach_family_grips(model,hero)
+
+const FIT_V15 := "tarvoka_infantry_proportions_v15"
+const ELBOW_LOCAL := Vector3(0,-0.47,-0.035)
+
+# V14 visual review: reduce projecting knee pads, flatten hero insignia,
+# and soften side pouches without increasing mesh counts.
+static func _refine_v15_fit(model: Node3D,hero: bool) -> bool:
+    for side in [-1,1]:
+        var suffix: String="_%d"%side
+        var knee: MeshInstance3D=_find(model,"Rodillera"+suffix) as MeshInstance3D
+        var badge: MeshInstance3D=_find(model,"FaccionHombro"+suffix) as MeshInstance3D
+        if knee==null or badge==null:
+            return false
+        knee.mesh=_organic_mesh([
+            Vector3(0.082,-0.107,0.022),Vector3(0.116,-0.073,0.032),
+            Vector3(0.119,0.045,0.034),Vector3(0.085,0.099,0.022)],
+            16 if hero else 10,PackedFloat32Array([0.012,0.0,0.0,0.012]),0.6)
+        knee.position.z=-0.159
+        if hero:
+            badge.mesh=_organic_mesh([
+                Vector3(0.014,-0.061,0.054),Vector3(0.022,-0.045,0.080),
+                Vector3(0.022,0.045,0.080),Vector3(0.014,0.061,0.054)],
+                12,PackedFloat32Array(),0.6)
+            badge.scale=Vector3.ONE
+            var pouch: MeshInstance3D=_find(model,"BolsaCostado"+suffix) as MeshInstance3D
+            if pouch!=null:
+                pouch.mesh=_organic_mesh([
+                    Vector3(0.048,-0.137,0.080),Vector3(0.074,-0.110,0.116),
+                    Vector3(0.074,0.084,0.116),Vector3(0.053,0.137,0.089)],
+                    12,PackedFloat32Array(),0.55)
+                pouch.scale=Vector3.ONE
+    model.set_meta(FIT_V15,str(model.get_meta("tarvoka_infantry_role","")))
+    return true
 
 const FAMILY_IDENTITY_V6 := "tarvoka_infantry_role_identity_v6"
 # Role-specific closed helmets; scale and material changes apply only
@@ -706,7 +741,7 @@ static func _finish_family_materials(model: Node3D,hero: bool) -> bool:
                 clean.texture_filter=BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
                 clean.normal_enabled=true
                 clean.normal_texture=_family_normal(kind)
-                clean.normal_scale=0.68 if kind=="fabric" else (0.46 if kind=="rubber" else 0.28)
+                clean.normal_scale=0.30 if kind=="fabric" else (0.24 if kind=="rubber" else 0.20)
             var stages: Array[StandardMaterial3D]=[clean]
             for stage in range(1,5):
                 var weathered: StandardMaterial3D=clean.duplicate() as StandardMaterial3D
@@ -873,8 +908,28 @@ static func _sync_family_grips(model: Node3D) -> bool:
         var holder: Node3D=palm.get_parent() as Node3D
         if holder==null or holder.get_parent()!=arm.get_parent():
             return false
-        var target: Vector3 = arm.transform.affine_inverse()*(holder.transform*palm.position)
-        var elbow := Vector3(0,-0.47,-0.035)
+        var contact: Vector3=holder.transform*palm.position
+        # Two-link geometric solve in torso space. Keep the hand on the
+        # actual existing grip and orient the upper arm toward a bent elbow.
+        # The bend pole is down/outward rather than across the chest.
+        if model.has_meta(FIT_V15):
+            var reach: Vector3=contact-arm.position
+            var distance: float=reach.length()
+            if distance<0.001:
+                return false
+            var axis: Vector3=reach/distance
+            var upper_len: float=ELBOW_LOCAL.length()
+            var lower_len: float=maxf(0.455,distance-upper_len+0.025)
+            var projection: float=clampf((upper_len*upper_len+distance*distance-lower_len*lower_len)/(2.0*distance),-upper_len*0.98,upper_len*0.98)
+            var bend: Vector3=Vector3(float(side)*0.65,-1.0,0.18)
+            bend-=axis*bend.dot(axis)
+            if bend.length_squared()<0.0001:
+                bend=Vector3.RIGHT-axis*axis.x
+            var elbow_dir: Vector3=(axis*projection+bend.normalized()*sqrt(maxf(0.0,upper_len*upper_len-projection*projection))).normalized()
+            var old_dir: Vector3=(arm.basis*ELBOW_LOCAL).normalized()
+            arm.quaternion=Quaternion(old_dir,elbow_dir)*arm.quaternion
+        var target: Vector3 = arm.transform.affine_inverse()*contact
+        var elbow: Vector3 = ELBOW_LOCAL
         var delta: Vector3 = target-elbow
         var length: float = delta.length()
         if length<0.0001:
@@ -1358,6 +1413,13 @@ static func pose(model: Node3D, kind: String, t: float) -> bool:
     var walk: float=sin(phase*TAU*2.0)
     # Rifle points forward, not horizontally across the preview screenshot.
     rifle.rotation_degrees=Vector3(-6,67,0) if role!="infantry_antitank" else Vector3(-9,64,-12)
+    if model.has_meta(FIT_V15):
+        # Seat the preview weapon nearer the chest so the support arm
+        # no longer stretches to the opposite side of the body.
+        rifle.rotation_degrees=Vector3(-6,96,0)
+        rifle.position=Vector3(0.04,0.015,-0.25)
+        if kind=="attack":
+            rifle.position.z-=0.045*pulse
     for side in [-1,1]:
         var arm: Node3D=_find(model,"BrazoRig_%d"%side)
         if arm==null:

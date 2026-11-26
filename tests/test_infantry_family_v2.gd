@@ -266,6 +266,12 @@ func _run() -> void:
                     check(str(model.get_meta(Finish.MOTION_V12,""))==role,"V12 exact role")
                     check(str(model.get_meta(Finish.CONTACT_V13,""))==role,"V13 anatomy identity")
                     check(str(model.get_meta(Finish.RELIEF_V14,""))==role,"V14 native material relief")
+                    check(str(model.get_meta(Finish.FIT_V15,""))==role,"V15 proportion fit")
+                    check(model.scale.is_equal_approx(Vector3.ONE*0.83),"same canonical model scale")
+                    for side in [-1,1]:
+                        var pad: MeshInstance3D=model.find_child("Rodillera_%d"%side,true,false) as MeshInstance3D
+                        check(pad!=null and closed_solid(pad.mesh) and pad.mesh.get_aabb().size.z<0.085,
+                            "thin closed knee pad instead of projecting ball")
                     var cloth: MeshInstance3D=model.find_child("V2_MusloTaper_1",true,false) as MeshInstance3D
                     var glove: MeshInstance3D=model.find_child("V2_PalmaGuante_1",true,false) as MeshInstance3D
                     var detailed: bool=bool(model.get_meta("tarvoka_infantry_v2_hero",false))
@@ -388,6 +394,9 @@ func _run() -> void:
                             for side in [-1,1]:
                                 check(family_grip_contact(model,side),
                                     "no floating hand "+role+" "+action)
+                                var link: Node3D=model.find_child("V2_AntebrazoCerrado_%d"%side,true,false) as Node3D
+                                check(link!=null and link.scale.y>=0.30 and link.scale.y<=0.60,
+                                    "bounded anatomical lower arm "+role+" "+action)
                             if role in ["infantry_logistic","infantry_medic"]:
                                 var service: Node3D=model.find_child(Finish.SERVICE_RIG,true,false) as Node3D
                                 var expected: bool=action=="work" and phase>0.04 and phase<0.96
@@ -500,8 +509,11 @@ func _run() -> void:
                 check(Models.pose_model(role,model,"move",0.27),
                     "V2 physical walking pose runs")
                 var arm: Node3D=model.find_child("BrazoRig_1",true,false) as Node3D
-                check(arm!=null and arm.rotation_degrees.x>35,
-                    "hands held up near weapon, no hanging floating-arm bug")
+                if model.has_meta(Finish.FIT_V15):
+                    check(arm!=null and family_grip_contact(model,1),"V15 real solved right grip")
+                else:
+                    check(arm!=null and arm.rotation_degrees.x>35,
+                        "hands held up near weapon, no hanging floating-arm bug")
                 var weapon: Node3D=model.find_child("ArmamentoRig",true,false) as Node3D
                 check(weapon!=null and weapon.rotation_degrees.y>55,
                     "weapon no longer points horizontally to the side")
@@ -524,9 +536,13 @@ func _run() -> void:
                     check(brass==null,
                         "mobile LOD and rocket launcher avoid extra casings")
                 var left: Node3D=model.find_child("BrazoRig_-1",true,false) as Node3D
-                check(left!=null and left.rotation_degrees.z>30 and
-                    arm.rotation_degrees.z< -20,
-                    "both shoulders converge hands on actual rifle grips")
+                if model.has_meta(Finish.FIT_V15):
+                    check(left!=null and family_grip_contact(model,-1) and family_grip_contact(model,1),
+                        "both V15 solved shoulders maintain actual grips during recoil")
+                else:
+                    check(left!=null and left.rotation_degrees.z>30 and
+                        arm.rotation_degrees.z< -20,
+                        "both shoulders converge hands on actual rifle grips")
                 check(Models.pose_model(role,model,"idle",0.0) and
                     flash!=null and not flash.visible,
                     "shot flash ends cleanly after attack, never stuck on")
@@ -593,6 +609,14 @@ func _run() -> void:
                         await save_frame(view,"v14_%s_material_rear"%role)
                         hero.rotation_degrees.y=180
                         await save_frame(view,"v14_%s_material_front"%role)
+                        camera.size=2.0
+                        camera.position=Vector3(3.4,1.65,0)
+                        camera.look_at(Vector3(0,1.15,0),Vector3.UP)
+                        hero.rotation_degrees.y=0
+                        await save_frame(view,"v15_%s_arm_rest"%role)
+                        check(Models.pose_model(role,hero,"aim",0.5),"V15 aim side capture")
+                        await save_frame(view,"v15_%s_arm_aim"%role)
+                        Models.restore_model_pose(role,hero)
                         # Close views of actual extremities rather than
                         # another wide full-body screenshot.
                         hero.rotation_degrees.y=140
@@ -634,7 +658,31 @@ func _run() -> void:
                 camera.size=3.6
             hero.free()
             mobile.free()
-    check(rendered==128,"128 real 3D comparison / tactical frames")
+    # All six approved models, identical faction, camera, ground and scale.
+    # Real 3D lineup makes relative size and silhouettes directly inspectable.
+    var lineup: Array[Node3D]=[]
+    var official: Array[String]=["line","infantry_commando","infantry_sniper",
+        "infantry_logistic","infantry_medic","infantry_engineer"]
+    for i in range(official.size()):
+        var unit: Node3D=Models.build(official[i],0,true,13)
+        check(unit!=null and unit.scale.is_equal_approx(Vector3.ONE*0.83),
+            "lineup uses canonical scale "+official[i])
+        if unit==null:
+            continue
+        unit.position.x=(float(i)-2.5)*1.55
+        unit.rotation_degrees.y=180
+        view.add_child(unit)
+        lineup.append(unit)
+    camera.size=8.7
+    camera.position=Vector3(0,2.0,11.0)
+    camera.look_at(Vector3(0,1.0,0),Vector3.UP)
+    await save_frame(view,"v15_six_official_front")
+    for unit in lineup:
+        unit.rotation_degrees.y=0
+    await save_frame(view,"v15_six_official_rear")
+    for unit in lineup:
+        unit.free()
+    check(rendered==140,"140 real 3D comparison / tactical frames")
     # Art-only variants must never enter the tactical roster.
     for role in ["infantry_urban","infantry_defense",
             "infantry_antitank","infantry_engineer",
@@ -645,5 +693,5 @@ func _run() -> void:
         push_error("FAIL INFANTRY V2 NATIVE 3D: %d failures"%failed)
         quit(1)
     else:
-        print("PASS INFANTRY V2 NATIVE 3D: 160 models (6 core + 4 legacy), 8 factions, 2 LOD, 128 true PNG")
+        print("PASS INFANTRY V2 NATIVE 3D: 160 models (6 core + 4 legacy), 8 factions, 2 LOD, 140 true PNG")
         quit(0)
