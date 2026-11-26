@@ -637,7 +637,7 @@ static func _finish_kind(label: String) -> String:
         return "armor"
     if label in ["PetoBase","CinturaEquipo","V2_MochilaOrganica","CuelloProtegido","V2_ProteccionBarbilla"] or label.begins_with("V2_MangaCerrada_") or label.begins_with("V2_AntebrazoCerrado_") or label.begins_with("V2_MusloTaper_") or label.begins_with("V2_PantorrillaTaper_"):
         return "fabric"
-    if label.begins_with("V2_BotaMoldeada_") or label.begins_with("V2_Suela_") or label.begins_with("V2_PalmaGuante_") or label=="V2_BordeFrontalCasco":
+    if label.begins_with("V2_BotaMoldeada_") or label.begins_with("V2_Suela_") or label.begins_with("V2_PalmaGuante_") or label.begins_with("V2_DedoGuante_") or label.begins_with("V13_Pulgar_") or label.begins_with("V13_CodoProtegido_") or label.begins_with("V13_CanaBota_") or label=="V2_BordeFrontalCasco":
         return "rubber"
     return ""
 
@@ -747,7 +747,71 @@ static func _attach_family_grips(model: Node3D, hero: bool) -> bool:
             Vector3(0.098,-0.12,0.105),Vector3(0.083,0.10,0.090),
             Vector3(0.073,0.29,0.079),Vector3(0.061,0.5,0.066)],16 if hero else 10)
     model.set_meta(FAMILY_GRIPS_V5,true)
+    if not _refine_v13_contacts(model,hero):
+        return false
     return _sync_family_grips(model)
+
+const CONTACT_V13 := "tarvoka_infantry_gloves_boots_v13"
+
+# Keep the established palm centers and solve all contacts as before.
+# Closed curved fingers and a thumb travel with the original palm/holder.
+# Elbow pads and ankle collars are hero-only, so LOD8 adds no mesh nodes.
+static func _refine_v13_contacts(model: Node3D,hero: bool) -> bool:
+    var role: String=str(model.get_meta("tarvoka_infantry_role",""))
+    for side in [-1,1]:
+        var suffix: String="_%d"%side
+        var palm: MeshInstance3D=_find(model,"V2_PalmaGuante"+suffix) as MeshInstance3D
+        var arm: Node3D=_find(model,"BrazoRig"+suffix)
+        var boot: MeshInstance3D=_find(model,"V2_BotaMoldeada"+suffix) as MeshInstance3D
+        var ankle: Node3D=_find(model,"V11_TobilloRig"+suffix)
+        var knee: Node3D=_find(model,"V11_RodillaRig"+suffix)
+        if palm==null or arm==null or boot==null or ankle==null or knee==null:
+            return false
+        var rubber: StandardMaterial3D=palm.material_override as StandardMaterial3D
+        if rubber==null:
+            return false
+        palm.mesh=_organic_mesh([
+            Vector3(0.057,-0.088,0.058),Vector3(0.079,-0.050,0.083),
+            Vector3(0.084,0.024,0.091),Vector3(0.071,0.069,0.074),
+            Vector3(0.052,0.087,0.054)],14 if hero else 10,
+            PackedFloat32Array([0.005,0.0,0.0,0.007,0.012]),0.72)
+        palm.scale=Vector3.ONE
+        for finger in range(4):
+            var digit: MeshInstance3D=_find(model,"V2_DedoGuante_%d_%d"%[side,finger]) as MeshInstance3D
+            if digit==null:
+                if hero:
+                    return false
+                continue
+            var len: float=0.94 if finger in [0,3] else 1.0
+            digit.mesh=_organic_mesh([
+                Vector3(0.012,-0.045*len,0.014),Vector3(0.019,-0.027*len,0.020),
+                Vector3(0.021,0.014,0.022),Vector3(0.019,0.052,0.023),
+                Vector3(0.015,0.067,0.018)],10,
+                PackedFloat32Array([-0.020,-0.012,0.004,0.009,0.010]))
+            digit.scale=Vector3.ONE
+        if hero:
+            _mesh(palm,"V13_Pulgar"+suffix,_organic_mesh([
+                Vector3(0.023,-0.055,0.027),Vector3(0.030,-0.026,0.032),
+                Vector3(0.027,0.025,0.030),Vector3(0.017,0.060,0.019)],12,
+                PackedFloat32Array([-0.009,0.0,0.012,0.016])),
+                rubber,Vector3(float(side)*0.061,-0.012,-0.045),Vector3(25,0,float(side)*24))
+            _mesh(arm,"V13_CodoProtegido"+suffix,_organic_mesh([
+                Vector3(0.079,-0.074,0.074),Vector3(0.103,-0.035,0.101),
+                Vector3(0.110,0.027,0.106),Vector3(0.082,0.070,0.076)],14),
+                rubber,Vector3(0,-0.47,-0.035))
+            # Rounded cuff overlaps the boot upper and shin at the ankle
+            # without changing the geometry or floor of the outsole.
+            _mesh(ankle,"V13_CanaBota"+suffix,_organic_mesh([
+                Vector3(0.106,-0.016,0.119),Vector3(0.119,0.016,0.132),
+                Vector3(0.118,0.057,0.129),Vector3(0.103,0.088,0.116)],14),
+                rubber,Vector3(0,0,-0.052))
+        # The tactical knee insignia formerly followed the thigh while
+        # the kneepad followed the knee. Preserve its rest transform.
+        var knee_badge: Node3D=_find(model,"V3_IdentidadRodillaMapa"+suffix)
+        if knee_badge!=null:
+            _move_to_joint(knee_badge,knee,Vector3(0,-0.47,0))
+    model.set_meta(CONTACT_V13,role)
+    return true
 
 static func _sync_family_grips(model: Node3D) -> bool:
     if not bool(model.get_meta(FAMILY_GRIPS_V5,false)):

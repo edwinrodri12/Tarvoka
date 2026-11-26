@@ -46,3 +46,7 @@ La prueba de inventario de animaciones ahora exige la nueva carrera solo en cinc
 
 ### Sincronización de base antes de V13
 V12 nativa 45772134764 y Android 45772134905 exitosas; artifact 15093994000, 25 renders inspeccionados. Pages 45772134748 falló antes de importar por ausencia de A02FpvArtV1.gd al preparar la rama antigua. Se integra el árbol principal exacto 101073b6 con A02 y los cambios de infantería mediante resolución explícita en tres archivos compartidos; no se fusiona infantería hacia main. Se mantiene la regresión histórica G13 separada.
+
+## V13 — extremos y articulaciones
+
+25 renders V12 inspeccionados: aún hace falta detalle de guantes, codos y botas. Palma cerrada con forma de guante, cuatro dedos curvados y pulgar anclado a la palma, protección cerrada de codo y caña de bota articulada. Se mantienen los centros de contacto V5 y la suela V12; seis nuevos nodos únicamente en LOD13, ningún nodo de malla nuevo en LOD8. Distintivo táctico de rodilla transferido al pivote correcto sin alterar su transform en reposo. Se exige 118 PNG (10 nuevos de manos/botas), cierre, anclaje y presupuesto. Studio y Chromium verifican edición V13. G05 intacto. Pendiente QA del nuevo HEAD y revisión visual; no fusionar.

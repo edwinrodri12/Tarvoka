@@ -264,6 +264,32 @@ func _run() -> void:
                                     "bounded knee flex and ankle compensation")
                     check(knee_motion,"independent knees really animate")
                     check(str(model.get_meta(Finish.MOTION_V12,""))==role,"V12 exact role")
+                    check(str(model.get_meta(Finish.CONTACT_V13,""))==role,"V13 anatomy identity")
+                    for side in [-1,1]:
+                        var suffix: String="_%d"%side
+                        var palm: MeshInstance3D=model.find_child("V2_PalmaGuante"+suffix,true,false) as MeshInstance3D
+                        var thumb: MeshInstance3D=model.find_child("V13_Pulgar"+suffix,true,false) as MeshInstance3D
+                        var elbow: MeshInstance3D=model.find_child("V13_CodoProtegido"+suffix,true,false) as MeshInstance3D
+                        var cuff: MeshInstance3D=model.find_child("V13_CanaBota"+suffix,true,false) as MeshInstance3D
+                        var hero_detail: bool=bool(model.get_meta("tarvoka_infantry_v2_hero",false))
+                        check(palm!=null and palm.mesh is ArrayMesh and closed_solid(palm.mesh),
+                            "V13 sealed sculpted glove")
+                        if hero_detail:
+                            check(thumb!=null and thumb.get_parent()==palm and closed_solid(thumb.mesh),
+                                "physical closed thumb follows palm")
+                            check(elbow!=null and str(elbow.get_parent().name)=="BrazoRig"+suffix and closed_solid(elbow.mesh),
+                                "fitted closed elbow stays on arm")
+                            check(cuff!=null and str(cuff.get_parent().name)=="V11_TobilloRig"+suffix and closed_solid(cuff.mesh),
+                                "boot cuff follows ankle")
+                            for finger in range(4):
+                                var digit: MeshInstance3D=model.find_child("V2_DedoGuante_%d_%d"%[side,finger],true,false) as MeshInstance3D
+                                check(digit!=null and digit.get_parent()==palm.get_parent() and closed_solid(digit.mesh),
+                                    "four curved glove fingers with shared grip holder")
+                        else:
+                            check(thumb==null and elbow==null and cuff==null,"no new detail draw nodes on Android LOD8")
+                            var badge: Node3D=model.find_child("V3_IdentidadRodillaMapa"+suffix,true,false) as Node3D
+                            check(badge!=null and str(badge.get_parent().name)=="V11_RodillaRig"+suffix,
+                                "tactical faction marker follows moving knee")
                     var helmet_badge: MeshInstance3D=model.find_child("V2_FaccionCasco",true,false) as MeshInstance3D
                     check(helmet_badge!=null and helmet_badge.mesh is ArrayMesh and
                         closed_solid(helmet_badge.mesh) and helmet_badge.mesh.get_aabb().size.y<0.060,
@@ -534,6 +560,20 @@ func _run() -> void:
                             hero.rotation_degrees.y=120
                             await save_frame(view,"v12_%s_%s"%[role,action])
                             Models.restore_model_pose(role,hero)
+                        # Close views of actual extremities rather than
+                        # another wide full-body screenshot.
+                        hero.rotation_degrees.y=140
+                        camera.size=1.25
+                        camera.position=Vector3(2.2,1.75,3.4)
+                        camera.look_at(Vector3(0,1.15,0),Vector3.UP)
+                        await save_frame(view,"v13_%s_gloves"%role)
+                        camera.size=1.15
+                        camera.position=Vector3(2.2,0.85,3.4)
+                        camera.look_at(Vector3(0,0.35,0),Vector3.UP)
+                        await save_frame(view,"v13_%s_boots"%role)
+                        camera.size=3.6
+                        camera.position=Vector3(2.5,2.35,4.2)
+                        camera.look_at(Vector3(0,1.0,0),Vector3.UP)
                         hero.rotation_degrees.y=180
                         for action in ["hit_bullet","hit_explosive"]:
                             check(Models.pose_model(role,hero,action,0.4),"V10 actual impact render")
@@ -561,7 +601,7 @@ func _run() -> void:
                 camera.size=3.6
             hero.free()
             mobile.free()
-    check(rendered==108,"108 real 3D comparison / tactical frames")
+    check(rendered==118,"118 real 3D comparison / tactical frames")
     # Art-only variants must never enter the tactical roster.
     for role in ["infantry_urban","infantry_defense",
             "infantry_antitank","infantry_engineer",
@@ -572,5 +612,5 @@ func _run() -> void:
         push_error("FAIL INFANTRY V2 NATIVE 3D: %d failures"%failed)
         quit(1)
     else:
-        print("PASS INFANTRY V2 NATIVE 3D: 160 models (6 core + 4 legacy), 8 factions, 2 LOD, 108 true PNG")
+        print("PASS INFANTRY V2 NATIVE 3D: 160 models (6 core + 4 legacy), 8 factions, 2 LOD, 118 true PNG")
         quit(0)
