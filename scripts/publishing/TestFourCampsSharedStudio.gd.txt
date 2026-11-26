@@ -467,8 +467,19 @@ func _run() -> void:
         _check(naval_image != null and not naval_image.is_empty(),"Destroyer real viewport image")
         if naval_image != null and not naval_image.is_empty():
             _check(naval_image.save_png(naval_dir+"/destroyer_v112_shared.png") == OK,"Destroyer shared capture")
+    studio.call("_display_role","patrol")
+    await _frames(4)
+    var patrol: Node3D = studio.get("model_root") as Node3D
+    var patrol_controls: Control = studio.get("patrol_controls") as Control
+    _check(patrol != null and patrol.get_meta("patrol_art_revision","") == "1.0","M01 model uses same factory")
+    _check(patrol_controls != null and patrol_controls.visible,"M01 controls in original Studio")
+    _check(studio.get("preview") == original_viewport,"M01 same viewport")
+    studio.call("_patrol_studio_damage",2)
+    _check(patrol != null and int(patrol.get_meta("patrol_damage",-1)) == 2,"M01 damage controls")
+    studio.call("_patrol_studio_damage",0)
     studio.call("_display_role","tank")
     await _frames(4)
+    _check(patrol_controls == null or not patrol_controls.visible,"M01 controls isolated")
     _check(destroyer_controls == null or not destroyer_controls.visible,"Destroyer controls hidden for tank")
     _check(destroyer_water == null or not destroyer_water.visible,"Water never leaks into tank inspection")
     _check(inspection_light == null or not inspection_light.visible,"Detail light never leaks into tank inspection")

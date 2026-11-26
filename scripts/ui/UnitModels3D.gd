@@ -4,7 +4,7 @@ class_name TarvokaUnitModels3D
 # First actual editable 3D geometry for TARVOKA. These eight models are native
 # Godot MeshInstance3D trees, NOT SVG sprites or AI-rendered concept images.
 # Tuned to existing approved category silhouettes; no tactical stats live here.
-const ROLES := ["line","scout","apc","tank","mlrs","attack_heli","fighter","destroyer","aa_mobile","mobile_aa","ew_mobile","logistics_mobile","infantry_urban","infantry_defense","infantry_antitank","infantry_engineer","infantry_sniper","infantry_logistic","infantry_medic","infantry_commando","uav_recon","fpv"]
+const ROLES := ["line","scout","apc","tank","mlrs","attack_heli","fighter","destroyer","aa_mobile","mobile_aa","ew_mobile","logistics_mobile","infantry_urban","infantry_defense","infantry_antitank","infantry_engineer","infantry_sniper","infantry_logistic","infantry_medic","infantry_commando","uav_recon","fpv","patrol"]
 const VisualStyle = preload("res://scripts/ui/VisualStyle.gd")
 const TankSurface = preload("res://scripts/ui/TankSurface3D.gd")
 const TankRig = preload("res://scripts/ui/TankVisualRig3D.gd")
@@ -650,7 +650,7 @@ static func apply_faction_palette(model: Node3D, faction: int) -> int:
     if model == null or faction < 0 or faction >= VisualStyle.FACTIONS.size():
         return 0
     var painted: int = _paint_panels(model,faction_paint_color(faction))
-    if model.has_meta("destroyer_art_revision"):
+    if model.has_meta("destroyer_art_revision") or model.has_meta("patrol_art_revision"):
         painted += _destroyer_repaint_hull(model,faction_paint_color(faction))
     return painted
 
@@ -1642,6 +1642,108 @@ static func restore_destroyer_pose(root: Node3D) -> void:
         pose_destroyer(root,"idle",0.0)
 
 
+# M01: original fictional coastal patrol silhouette. Reuses only the
+# verified closed-shell geometry helper, not the destroyer's model or rules.
+static func _patrol(root: Node3D, detail: int) -> void:
+    var stations: Array = [[-1.55,0.035,0.26,0.53],[-1.30,0.25,0.12,0.53],
+        [-0.76,0.47,0.09,0.53],[0.0,0.55,0.08,0.53],
+        [0.72,0.52,0.09,0.53],[1.20,0.43,0.14,0.53]]
+    _destroyer_shell(root,"CascoNaval",stations,STEEL,true)
+    var deck: Array = []
+    for p in stations:
+        deck.append([p[0],float(p[1])*0.86,0.515,0.565])
+    _destroyer_shell(root,"CubiertaPatrulla",deck,DARK)
+    var bridge := Node3D.new()
+    bridge.name = "CabinaPatrulla"
+    root.add_child(bridge)
+    _destroyer_shell(bridge,"ZocaloCabina",[[-0.56,0.24,0.55,0.68],[-0.39,0.36,0.55,0.68],[0.35,0.36,0.55,0.68],[0.49,0.27,0.55,0.68]],STEEL)
+    _destroyer_shell(bridge,"CarcasaCabina",[[-0.44,0.24,0.66,1.05],[-0.29,0.33,0.66,1.05],[0.27,0.33,0.66,1.05],[0.40,0.26,0.66,1.05]],STEEL)
+    _destroyer_shell(bridge,"FaccionTechoCabina",[[-0.46,0.25,1.03,1.10],[-0.28,0.36,1.03,1.10],[0.28,0.36,1.03,1.10],[0.43,0.27,1.03,1.10]],ARMOR)
+    for side in [-1,1]:
+        var sign: float = float(side)
+        for i in range(2):
+            _box(bridge,"MarcoPatrulla_%d_%d" % [side,i],Vector3(sign*0.307,0.91,-0.13+float(i)*0.22),Vector3(0.048,0.16,0.19),DARK)
+            _box(bridge,"CristalPatrulla_%d_%d" % [side,i],Vector3(sign*0.335,0.91,-0.13+float(i)*0.22),Vector3(0.020,0.124,0.15),Color("#38596C"))
+        _box(bridge,"PuertaPatrulla_%d" % side,Vector3(sign*0.295,0.77,0.29),Vector3(0.040,0.18,0.13),DARK)
+        _box(root,"FaccionBandaCubierta_%d" % side,Vector3(sign*0.32,0.571,0.74),Vector3(0.08,0.022,0.35),ARMOR)
+        _box(root,"DefensaLateral_%d" % side,Vector3(sign*0.46,0.47,0.47),Vector3(0.11,0.11,0.39),RUBBER)
+        if detail >= 13:
+            for i in range(3):
+                _box(root,"PostePatrulla_%d_%d" % [side,i],Vector3(sign*0.34,0.65,0.57+float(i)*0.17),Vector3(0.025,0.19,0.025),STEEL)
+            _box(root,"BarandaPatrulla_%d" % side,Vector3(sign*0.34,0.736,0.74),Vector3(0.025,0.026,0.37),STEEL)
+    for i in range(2):
+        _box(bridge,"CristalFrontalPatrulla_%d" % i,Vector3(-0.10+float(i)*0.20,0.92,-0.45),Vector3(0.17,0.13,0.035),Color("#38596C"))
+    _box(root,"RegistroPopaPatrulla",Vector3(0,0.58,0.82),Vector3(0.36,0.04,0.37),STEEL)
+    _box(root,"BaseProaPatrulla",Vector3(0,0.58,-0.91),Vector3(0.30,0.06,0.32),DARK)
+    var mast := Node3D.new()
+    mast.name = "MastilPatrulla"
+    mast.position = Vector3(0,1.10,0.11)
+    root.add_child(mast)
+    _box(mast,"SoporteMastil",Vector3(0,0.16,0),Vector3(0.10,0.34,0.12),STEEL)
+    var radar := Node3D.new()
+    radar.name = "RadarPatrulla"
+    radar.position.y = 0.34
+    mast.add_child(radar)
+    _box(radar,"SensorOpaco",Vector3(0,0.046,0),Vector3(0.34,0.09,0.11),DARK)
+    var wake := Node3D.new()
+    wake.name = "EstelaPatrulla"
+    root.add_child(wake)
+    for i in range(4 if detail >= 13 else 2):
+        _sphere(wake,"Espuma_%d" % i,Vector3(0,0.14,1.28+float(i)*0.13),Vector3(0.25+float(i)*0.12,0.025,0.18),Color("#C5E3E4")).hide()
+    var fx := Node3D.new()
+    fx.name = "DanoPatrulla"
+    root.add_child(fx)
+    _box(fx,"Marca",Vector3(0.22,0.58,-0.73),Vector3(0.14,0.025,0.16),DARK).hide()
+    _sphere(fx,"Humo",Vector3(0.15,1.12,0.29),Vector3(0.32,0.45,0.31),Color("#555B62")).hide()
+    _sphere(fx,"Fuego",Vector3(-0.16,0.88,0.46),Vector3(0.22,0.38,0.20),Color("#F49138")).hide()
+    for child in root.get_children():
+        if child is Node3D:
+            child.set_meta("patrol_rest",child.transform)
+    root.set_meta("patrol_art_revision","1.0")
+    root.set_meta("patrol_damage",0)
+
+static func set_patrol_damage(root: Node3D, stage: int, phase: float = 0.0) -> bool:
+    if root == null or not root.has_meta("patrol_art_revision"):
+        return false
+    var d: int = clampi(stage,0,4)
+    root.set_meta("patrol_damage",d)
+    root.rotation_degrees.x = 0.0
+    root.rotation_degrees.z = 0.0
+    for child in root.get_children():
+        if child is Node3D and child.has_meta("patrol_rest"):
+            child.transform = child.get_meta("patrol_rest")
+    for foam in root.get_node("EstelaPatrulla").get_children():
+        (foam as Node3D).hide()
+    var effects: Node3D = root.get_node("DanoPatrulla") as Node3D
+    (effects.get_node("Marca") as Node3D).visible = d >= 1
+    (effects.get_node("Humo") as Node3D).visible = d >= 2
+    (effects.get_node("Fuego") as Node3D).visible = d >= 3
+    var mast: Node3D = root.get_node("MastilPatrulla") as Node3D
+    mast.rotation_degrees.z = 0.0 if d < 2 else (13.0 if d == 2 else 30.0)
+    if d == 4:
+        var t: float = clampf(phase,0.0,1.0)
+        var tilt := Basis(Vector3.BACK,deg_to_rad(25.0*t))
+        for child in root.get_children():
+            if child is Node3D:
+                var rest: Transform3D = child.transform
+                child.transform = Transform3D(tilt*rest.basis,tilt*rest.origin+Vector3(0,-2.2*t,0))
+    return true
+
+static func pose_patrol(root: Node3D, kind: String, phase: float) -> bool:
+    if root == null or not root.has_meta("patrol_art_revision") or int(root.get_meta("patrol_damage",0)) >= 3:
+        return false
+    if kind not in ["idle","move","hit","damage","damaged"]:
+        return false
+    var t: float = clampf(phase,0.0,1.0)
+    var wave: float = sin(t*TAU)
+    root.rotation_degrees.x = wave*(1.8 if kind == "move" else 0.5)
+    root.rotation_degrees.z = wave*(2.5 if kind == "move" else 0.7)
+    var radar: Node3D = root.get_node("MastilPatrulla/RadarPatrulla") as Node3D
+    radar.rotation.y = t*TAU
+    for foam in root.get_node("EstelaPatrulla").get_children():
+        (foam as Node3D).visible = kind == "move" and t > 0.0 and t < 1.0
+    return true
+
 static func build(role: String, faction: int = -1, finish_enabled: bool = true, art_level: int = 10) -> Node3D:
     if not supports(role):
         return null
@@ -1766,6 +1868,10 @@ static func build(role: String, faction: int = -1, finish_enabled: bool = true, 
                 return null
         "fighter":
             _fighter(model)
+        "patrol":
+            _patrol(model,art_level)
+            apply_faction_palette(model,faction)
+            _destroyer_finish(model,art_level >= 13)
         "destroyer":
             _destroyer(model,art_level)
             apply_faction_palette(model,faction)
@@ -2017,7 +2123,7 @@ static func build(role: String, faction: int = -1, finish_enabled: bool = true, 
     if role in ["line","scout"]:
         model.scale = Vector3.ONE * 0.82
         model.position.y = -0.58
-    elif role in ["attack_heli","fighter","destroyer"]:
+    elif role in ["attack_heli","fighter","destroyer","patrol"]:
         model.scale = Vector3.ONE * 0.77
         model.position.y = -0.11
     elif InfantryFamily.supports(role):
@@ -2246,6 +2352,10 @@ static func pose_model(role: String, model: Node3D, kind: String,
             return G11Rig.pose(model,kind,progress,target_heading)
         "attack_heli":
             return AttackHelicopterV1.pose(model,kind,progress,target_heading)
+        "patrol":
+            if kind in ["sink","destroy"]:
+                return set_patrol_damage(model,4,progress)
+            return pose_patrol(model,kind,progress)
         "destroyer":
             if kind in ["damage","damaged","hit"]:
                 return pose_destroyer(model,"hit",progress,target_heading)
@@ -2309,6 +2419,8 @@ static func restore_model_pose(role: String, model: Node3D) -> void:
                 G11Rig.restore(model)
         "attack_heli":
             AttackHelicopterV1.restore(model)
+        "patrol":
+            pose_patrol(model,"idle",0.0)
         "destroyer":
             restore_destroyer_pose(model)
         "uav_recon":
