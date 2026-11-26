@@ -1738,8 +1738,9 @@ static func _patrol(root: Node3D, detail: int) -> void:
     _sphere(fx,"FuegoSecundario",Vector3(0.19,0.94,0.51),Vector3(0.21,0.33,0.20),Color("#FFAD54")).hide()
     _box(fx,"MarcaPasillo",Vector3(0.36,0.578,-0.22),Vector3(0.11,0.024,0.17),Color("#252B30")).hide()
     _box(fx,"Fragmento",Vector3(0.21,0.66,0.82),Vector3(0.18,0.055,0.18),STEEL,Vector3(15,22,30)).hide()
-    var hatch: Node3D = root.get_node("RegistroPopaPatrulla") as Node3D
-    hatch.set_meta("patrol_rest",hatch.transform)
+    for child in fx.get_children():
+        if child is Node3D and (str(child.name).begins_with("Humo") or str(child.name).begins_with("Fuego")):
+            child.set_meta("patrol_effect_rest",child.transform)
     for child in root.get_children():
         if child is Node3D:
             child.set_meta("patrol_rest",child.transform)
@@ -1761,6 +1762,9 @@ static func set_patrol_damage(root: Node3D, stage: int, phase: float = 0.0) -> b
     (root.get_node("ModuloVisualPatrulla/DestelloVisual") as Node3D).hide()
     (root.get_node("MastilPatrulla/RadarPatrulla") as Node3D).rotation.y = 0.0
     var effects: Node3D = root.get_node("DanoPatrulla") as Node3D
+    for child in effects.get_children():
+        if child is Node3D and child.has_meta("patrol_effect_rest"):
+            child.transform = child.get_meta("patrol_effect_rest")
     (effects.get_node("Marca") as Node3D).visible = d >= 1
     (effects.get_node("Humo") as Node3D).visible = d >= 2
     (effects.get_node("Fuego") as Node3D).visible = d >= 3
@@ -1781,6 +1785,27 @@ static func set_patrol_damage(root: Node3D, stage: int, phase: float = 0.0) -> b
             if child is Node3D:
                 var rest: Transform3D = child.transform
                 child.transform = Transform3D(tilt*rest.basis,tilt*rest.origin+Vector3(0,-2.2*t,0))
+    return true
+
+static func animate_patrol_damage(root: Node3D, phase: float) -> bool:
+    if root == null or not root.has_meta("patrol_art_revision"):
+        return false
+    var stage: int = int(root.get_meta("patrol_damage",0))
+    if stage < 2 or stage >= 4:
+        return false
+    var effects: Node3D = root.get_node("DanoPatrulla") as Node3D
+    var i: int = 0
+    for child in effects.get_children():
+        if child is Node3D and child.has_meta("patrol_effect_rest"):
+            var effect: Node3D = child as Node3D
+            effect.transform = effect.get_meta("patrol_effect_rest")
+            var wave: float = sin(phase*TAU+float(i)*0.9)
+            if str(effect.name).begins_with("Humo"):
+                effect.position += Vector3(0.035*wave,0.05*wave,0.02*cos(phase*TAU))
+                effect.scale *= 1.0+0.08*wave
+            else:
+                effect.scale *= Vector3(1.0,1.0+0.16*wave,1.0)
+            i += 1
     return true
 
 static func pose_patrol(root: Node3D, kind: String, phase: float, heading: Vector2i = Vector2i(0,-1)) -> bool:

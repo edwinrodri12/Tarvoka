@@ -228,6 +228,8 @@ func _camp_restore_prior_controls() -> void:
 
 func _change_selected_building(index: int) -> void:
     _patrol_studio_stop()
+    _patrol_restore_floor()
+    _patrol_underwater = false
     if patrol_controls != null:
         patrol_controls.hide()
     _destroyer_studio_stop()
@@ -249,6 +251,8 @@ func _change_selected_building(index: int) -> void:
 func _switch_category(index: int) -> void:
     if index != 0:
         _patrol_studio_stop()
+        _patrol_restore_floor()
+        _patrol_underwater = false
         _destroyer_studio_stop()
         _destroyer_studio_restore_floor()
     super._switch_category(index)
@@ -540,7 +544,7 @@ func _update_camera() -> void:
     if _role == "patrol" and camera != null:
         camera.projection = Camera3D.PROJECTION_ORTHOGONAL
         camera.size = 2.7 / clampf(_zoom,0.65,2.8)
-        camera.position = Vector3(4.5,3.4,5.2)
+        camera.position = Vector3(4.5,-2.8,5.2) if _patrol_underwater else Vector3(4.5,3.4,5.2)
         camera.look_at(Vector3(0,0.35,0),Vector3.UP)
         return
     if _role == "destroyer" and camera != null and destroyer_controls != null:
@@ -691,12 +695,15 @@ func _destroyer_studio_sync_visibility() -> void:
     if destroyer_controls != null:
         destroyer_controls.visible = _role == "destroyer" and category_picker != null and category_picker.selected == 0
     if is_instance_valid(_destroyer_water):
-        _destroyer_water.visible = category_picker != null and category_picker.selected == 0 and (_role == "patrol" or (_role == "destroyer" and not _destroyer_underwater))
+        _destroyer_water.visible = category_picker != null and category_picker.selected == 0 and ((_role == "patrol" and not _patrol_underwater) or (_role == "destroyer" and not _destroyer_underwater))
     if is_instance_valid(_destroyer_inspection_light):
         _destroyer_inspection_light.visible = _role == "destroyer" and category_picker != null and category_picker.selected == 0 and _destroyer_light_enabled
 
 func _display_role(role: String) -> void:
     _patrol_studio_stop()
+    if role != "patrol" or _role != "patrol":
+        _patrol_restore_floor()
+        _patrol_underwater = false
     _destroyer_studio_stop()
     if role != "destroyer" or _role != "destroyer":
         _destroyer_studio_restore_floor()
@@ -810,6 +817,9 @@ func _process(delta: float) -> void:
     if _role == "destroyer" and is_instance_valid(model_root):
         _destroyer_fx_time = fposmod(_destroyer_fx_time+delta*0.65,1.0)
         NavalArt.animate_destroyer_damage(model_root,_destroyer_fx_time)
+    elif _role == "patrol" and is_instance_valid(model_root):
+        _patrol_fx_time = fposmod(_patrol_fx_time+delta*0.65,1.0)
+        NavalArt.animate_patrol_damage(model_root,_patrol_fx_time)
 
 # M01 uses the same unit selector and native viewport, not a second scene.
 var patrol_controls: VBoxContainer
@@ -817,6 +827,9 @@ var patrol_faction: OptionButton
 var patrol_lod: OptionButton
 var patrol_damage: OptionButton
 var _patrol_tween: Tween
+var _patrol_fx_time: float = 0.0
+var _patrol_underwater: bool = false
+var _patrol_hidden_floor: Array[MeshInstance3D] = []
 
 func _patrol_studio_create() -> void:
     var idx: int = NavalArt.ROLES.find("patrol")
@@ -849,6 +862,8 @@ func _patrol_studio_create() -> void:
         "RADAR",func(): _patrol_studio_play("idle"))
     _add_paired(patrol_controls,"DISPARO",func(): _patrol_studio_play("attack"),
         "DETENER",_patrol_studio_stop)
+    _add_paired(patrol_controls,"VISTA MAR",func(): _patrol_studio_view(false),
+        "VISTA INFERIOR",func(): _patrol_studio_view(true))
     _add_paired(patrol_controls,"HUNDIMIENTO",func(): _patrol_studio_play("sink"),
         "REPARAR",func(): _patrol_studio_damage(0))
     _patrol_studio_sync()
@@ -881,7 +896,31 @@ func _patrol_studio_damage(stage: int) -> void:
         return
     _patrol_studio_stop()
     patrol_damage.select(clampi(stage,0,4))
+    _patrol_fx_time = 0.0
     NavalArt.set_patrol_damage(model_root,stage,0.5 if stage == 4 else 0.0)
+
+func _patrol_restore_floor() -> void:
+    for floor_mesh in _patrol_hidden_floor:
+        if is_instance_valid(floor_mesh):
+            floor_mesh.show()
+    _patrol_hidden_floor.clear()
+
+func _patrol_studio_view(underwater: bool) -> void:
+    if _role != "patrol":
+        return
+    _patrol_restore_floor()
+    _patrol_underwater = underwater
+    if underwater and is_instance_valid(preview) and is_instance_valid(model_root):
+        for candidate in preview.find_children("*","MeshInstance3D",true,false):
+            var floor_mesh: MeshInstance3D = candidate as MeshInstance3D
+            if floor_mesh == null or floor_mesh == _destroyer_water or model_root.is_ancestor_of(floor_mesh):
+                continue
+            var label: String = str(floor_mesh.name).to_lower()
+            if floor_mesh.visible and (floor_mesh.mesh is PlaneMesh or label.contains("suelo") or label.contains("floor") or label.contains("ground")):
+                _patrol_hidden_floor.append(floor_mesh)
+                floor_mesh.hide()
+    _destroyer_studio_sync_visibility()
+    _update_camera()
 
 func _patrol_studio_play(kind: String) -> void:
     if _role != "patrol" or not is_instance_valid(model_root):
@@ -890,6 +929,7 @@ func _patrol_studio_play(kind: String) -> void:
     if kind != "sink" and int(model_root.get_meta("patrol_damage",0)) >= 3:
         return
     if kind == "sink":
+        _patrol_studio_view(false)
         patrol_damage.select(4)
     _patrol_tween = create_tween()
     _patrol_tween.tween_method(func(t: float):

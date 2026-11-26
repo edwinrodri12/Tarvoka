@@ -48,12 +48,20 @@ func _run() -> void:
                 check(int(model.get_meta("patrol_damage",-1)) == stage,"Damage state")
                 if stage in [2,3]:
                     check(absf(hatch.rotation_degrees.z)>10,"Physical hatch damage")
+                    var smoke: Node3D = model.get_node("DanoPatrulla/Humo") as Node3D
+                    var rest_fx: Transform3D = smoke.transform
+                    check(Art.animate_patrol_damage(model,0.25),"Persistent damage motion")
+                    var moved: Transform3D = smoke.transform
+                    check(not moved.is_equal_approx(rest_fx),"Smoke visibly moves")
+                    Art.animate_patrol_damage(model,0.25)
+                    check(smoke.transform.is_equal_approx(moved),"No cumulative effect drift")
                 if stage == 4:
                     check(hull.position.y < -1.0,"Sinking")
                     check(not Art.pose_patrol(model,"move",0.25),"No resurrection")
             Art.set_patrol_damage(model,0)
             check(hull.transform.is_equal_approx(rest),"Restore")
             check(hatch.transform.is_equal_approx(hatch_rest),"Hatch restored")
+            check(not Art.animate_patrol_damage(model,0.25),"No effect animation after repair")
             check(Art.pose_model("patrol",model,"move",0.25),"Motion dispatch")
             check(absf((model.get_node("RotorPatrulla_1") as Node3D).rotation.z)>0.5,"Rotor movement")
             check(Art.pose_model("patrol",model,"attack",0.1,Vector2i(1,0)),"Action dispatch")

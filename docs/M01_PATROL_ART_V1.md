@@ -8,3 +8,5 @@ Módulo visual de proa articulado, destello temporal, detalles de popa y propuls
 ## V1.2 — revisión de renders V1.1
 
 Run 45903512754 aprobado (18 variantes, 90 estados, 13 PNG; artefacto 15157745973). Se inspeccionaron las 13 imágenes: cabina simple, superficies demasiado oscuras, daño D1–D3 poco distinguible, popa inferior sin detalle visible. V1.2 añade puerta posterior, visera, ventilaciones, iluminación de navegación, relieves de cubierta, rotores visuales articulados, deformación de registro y efectos ampliados. Materiales opacos propios M01 y luz ambiental de QA corregida. 16 PNG previstos con tres encuadres adicionales. No se alteran reglas ni el destructor. Pendiente prueba nativa/web V1.2.
+
+Seguimiento V1.2: animación continua y reversible del humo y fuego, inspección inferior con ocultación temporal de suelo y agua, regreso automático a superficie para hundimiento y regresiones de cámara, estado y efectos. Publicación destructor V1.12 confirmada por push run 45902848167, PASS PUBLIC STUDIO SOURCE AND PACKAGE 101073b64b2b66b0a76c2aa8c507aa1094ad9585. Main avanzó en paralelo; reconciliar antes de fusionar M01.
