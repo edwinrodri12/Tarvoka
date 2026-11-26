@@ -60,6 +60,9 @@ jobs:
           if grep -E 'SCRIPT ERROR:|Parse Error:|Assertion failed' /tmp/v20-gpu.log; then exit 1; fi
           grep -q 'PASS TARVOKA_3D_FOUR_BIOMES_V20:' /tmp/v20-gpu.log
           test -s artifacts/tarvoka_biomes_v20_delta_in_battle.png
+          for biome in temperate winter canyon coastal; do
+            test -s "artifacts/tarvoka_biomes_v20_review_v28_${biome}.png"
+          done
       - name: Archive true 3D battle frame and test logs
         if: always()
         uses: actions/upload-artifact@v4
