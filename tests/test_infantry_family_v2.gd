@@ -297,6 +297,8 @@ func _run() -> void:
                     check(str(model.get_meta(Finish.GEAR_V17,""))==role,"V17 role-specific kit")
                     check(str(model.get_meta(Finish.OPTICS_V18,""))==role,"V18 optics identity")
                     check(str(model.get_meta(Finish.SURFACES_V19,""))==role,"V19 individual surface identity")
+                    check(str(model.get_meta(Finish.MOTION_V21,""))==role,"V21 role motion identity")
+                    check(str(model.get_meta(Finish.FX_V22,""))==role,"V22 role effect identity")
                     var optic_names: Array[String]=["V2_VisorOpacoPBR"]
                     if role=="infantry_commando":
                         for side in [-1,0,1]:
@@ -518,6 +520,13 @@ func _run() -> void:
                     Models.restore_model_pose(role,model)
                     check(family_grip_contact(model,-1) and family_grip_contact(model,1),
                         "restore retains physical grips")
+                    check(Models.pose_model(role,model,"move",0.5),"V21 exact mid-stride sample")
+                    for side in [-1,1]:
+                        var hip: Node3D=model.find_child("PiernaRig_%d"%side,true,false) as Node3D
+                        var expected_hip: float=20.0*float(side)*float(Finish.GAIT_GAIN_V21[role])
+                        check(hip!=null and absf(hip.rotation_degrees.x-expected_hip)<0.001,
+                            "V21 role-specific gait amplitude")
+                    Models.restore_model_pose(role,model)
                     for action in ["move","hit_bullet","hit_explosive"]:
                         check(Models.pose_model(role,model,action,0.4),"V10 effect pose "+action)
                         var batch: MultiMeshInstance3D=model.get_node_or_null(Finish.FX_V10) as MultiMeshInstance3D
@@ -525,6 +534,15 @@ func _run() -> void:
                         check(batch!=null and batch.visible and batch.multimesh.instance_count==budget and
                             batch.multimesh.visible_instance_count>0 and batch.multimesh.visible_instance_count<=budget,
                             "one bounded native effect batch "+action)
+                        if batch!=null and batch.multimesh.visible_instance_count>0:
+                            var basis: Basis=batch.multimesh.get_instance_transform(0).basis
+                            if action=="hit_bullet":
+                                check(basis.z.length()>basis.x.length()*3.0,"V22 narrow bullet streak")
+                            elif action=="hit_explosive":
+                                check(is_equal_approx(basis.x.length(),basis.z.length()),
+                                    "V22 radial explosive plume")
+                            else:
+                                check(basis.y.length()<basis.x.length(),"V22 low outsole dust")
                     check(Infantry.set_damage(model,3) and Models.pose_model(role,model,"idle",0.4),"equipment smoke pose")
                     var smoke: MultiMeshInstance3D=model.get_node_or_null(Finish.FX_V10) as MultiMeshInstance3D
                     check(smoke!=null and smoke.visible and smoke.multimesh.visible_instance_count>0,
@@ -538,6 +556,26 @@ func _run() -> void:
                         check(str(model.get_meta(Specialist.KIT_V9,""))==role,
                             "V9 unique specialist silhouette")
                         check(str(model.get_meta(Specialist.KIT_V14,""))==role,"V14 individual accessory finish")
+                        check(str(model.get_meta(Specialist.KIT_V20,""))==role,"V20 specialist accessory identity")
+                        var premium: bool=bool(model.get_meta("tarvoka_infantry_v2_hero",false))
+                        var accessory_names: Array=Specialist.KIT_PARTS_V20[role]
+                        check(int(model.get_meta(Specialist.KIT_COUNT_V20,-1))==(accessory_names.size() if premium else 0),
+                            "V20 same accessory nodes, tactical untouched")
+                        for label in accessory_names:
+                            var refined: MeshInstance3D=model.find_child(str(label),true,false) as MeshInstance3D
+                            if not premium:
+                                check(refined==null or not refined.has_meta(Specialist.KIT_V20),
+                                    "V20 tactical mesh unchanged")
+                            else:
+                                check(refined!=null and refined.has_meta(Specialist.KIT_V20) and
+                                    closed_solid(refined.mesh) and refined.has_meta(Finish.STAGE_MATS),
+                                    "V20 closed staged specialist accessory "+str(label))
+                                if refined!=null and refined.has_meta("tarvoka_v20_original_bounds"):
+                                    var original_bounds: AABB=refined.get_meta("tarvoka_v20_original_bounds")
+                                    var actual_bounds: AABB=refined.mesh.get_aabb()
+                                    check(actual_bounds.size.is_equal_approx(original_bounds.size) and
+                                        actual_bounds.get_center().is_equal_approx(original_bounds.get_center()),
+                                        "V20 exact accessory envelope")
                         var surface_name: String=str(Specialist.KIT_V9_MAIN[role]) if role!="infantry_commando" else "V9_FS24_Radio"
                         var accessory: MeshInstance3D=model.find_child(surface_name,true,false) as MeshInstance3D
                         check(accessory!=null and accessory.has_meta(Finish.STAGE_MATS) and
