@@ -310,6 +310,49 @@ static func _append_road_finish(tool: SurfaceTool,at: Vector3,
 # V25: static depth shading using only public water/land records.
 # Every shared water corner has the same world-space pigment; no shader,
 # animated geometry, or additional batches are needed.
+# V39: reinforced crossing parapets only when public water is on both
+# sides of an existing straight causeway. Same tile, same route, no claim
+# that ships can travel beneath the solid road cell.
+static func _append_crossing_parapets(tool: SurfaceTool,at: Vector3,
+        surface: Dictionary,tile: Dictionary) -> int:
+    var axis: int = _road_axis(tile["roads"])
+    var shores: Dictionary = tile["shore"]
+    var across: bool = (axis==1 and bool(shores.get("west",false))
+        and bool(shores.get("east",false))) or (axis==2 and bool(shores.get("north",false))
+        and bool(shores.get("south",false)))
+    if not across:
+        return 0
+    var half: float = float(surface["half"])
+    var concrete := Color("#a6a9a1")
+    for side in [-1.0,1.0]:
+        var inner: float = float(side)*0.78
+        var outer: float = float(side)*0.88
+        # Shared endpoints follow the same slope on neighbouring tiles.
+        for i in range(2):
+            var start: float = -half+float(i)*half
+            var end: float = start+half
+            var a: Vector2 = Vector2(inner,start) if axis==1 else Vector2(start,inner)
+            var b: Vector2 = Vector2(inner,end) if axis==1 else Vector2(end,inner)
+            var d: Vector2 = Vector2(outer,start) if axis==1 else Vector2(start,outer)
+            var e: Vector2 = Vector2(outer,end) if axis==1 else Vector2(end,outer)
+            var la: Vector3 = RoadShore._point(at,surface,a.x,a.y,0.08)
+            var lb: Vector3 = RoadShore._point(at,surface,b.x,b.y,0.08)
+            var ld: Vector3 = RoadShore._point(at,surface,d.x,d.y,0.08)
+            var le: Vector3 = RoadShore._point(at,surface,e.x,e.y,0.08)
+            var up: Vector3 = Vector3.UP*0.19
+            _panel(tool,la,lb,lb+up,la+up,concrete.darkened(0.12))
+            _panel(tool,ld,le,le+up,ld+up,concrete.darkened(0.19))
+            _panel(tool,la+up,lb+up,le+up,ld+up,concrete)
+        # End caps: no open shell when zoomed into a crossing.
+        for z in [-half,half]:
+            var a: Vector2 = Vector2(inner,z) if axis==1 else Vector2(z,inner)
+            var b: Vector2 = Vector2(outer,z) if axis==1 else Vector2(z,outer)
+            var lo_a: Vector3 = RoadShore._point(at,surface,a.x,a.y,0.08)
+            var lo_b: Vector3 = RoadShore._point(at,surface,b.x,b.y,0.08)
+            _panel(tool,lo_a,lo_b,lo_b+Vector3.UP*0.19,
+                lo_a+Vector3.UP*0.19,concrete)
+    return 1
+
 static func _water_corner_tint(cells: Dictionary,corner: Vector2i,
         biome: String) -> Color:
     var known_land := 0
@@ -377,6 +420,7 @@ static func _build_chunk(parent: Node3D, data: Dictionary,
     var water_count := 0
     var hidden_count := 0
     var roads_count := 0
+    var crossings_count := 0
     var shores_count := 0
     var blended_count := 0
     for tile in data["cells"]:
@@ -452,6 +496,7 @@ static func _build_chunk(parent: Node3D, data: Dictionary,
             _append_extended_ground(ground,at,surface_cell,cell,biome)
         if kind == "road":
             _append_road_finish(road,at,surface_cell,tile,biome)
+            crossings_count += _append_crossing_parapets(road,at,surface_cell,tile)
             roads_count += 1
         else:
             var shore_edges: Dictionary = tile["shore"]
@@ -496,7 +541,7 @@ static func _build_chunk(parent: Node3D, data: Dictionary,
     chunk.set_meta("origin",data["origin"])
     chunk.set_meta("tiles",data["tile_count"])
     return {"land":land_count,"water":water_count,"unknown":hidden_count,
-        "roads":roads_count,"shore_edges":shores_count,
+        "roads":roads_count,"shore_edges":shores_count,"crossings_v39":crossings_count,
         "blended_tiles":blended_count}
 
 # V20b: use one reusable 21-facet layered fir mesh, NOT hundreds of
@@ -1107,7 +1152,7 @@ static func build(state: Dictionary, selected_id: String = "", viewer: int = 0) 
                 cells[tile["cell"]] = tile
             chunks.append(chunk)
     var counters: Dictionary = {"land":0,"water":0,"unknown":0,
-        "roads":0,"shore_edges":0,"blended_tiles":0}
+        "roads":0,"shore_edges":0,"blended_tiles":0,"crossings_v39":0}
     # One palette sample per global grid corner, reused by up to four
     # tiles and across 8x8 sectors. Cache only for this render build.
     var corner_cache: Dictionary = {}
