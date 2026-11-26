@@ -1551,6 +1551,8 @@ func _infantry_review_edition() -> String:
         if EngineerFinishV9.has_model(model_root):
             return "V9"
     if model_root!=null and str(model_root.get_meta("tarvoka_infantry_role_identity_v6",""))==_role:
+        if str(model_root.get_meta("tarvoka_infantry_specialist_silhouette_v9",""))==_role:
+            return "V9"
         if str(model_root.get_meta("tarvoka_infantry_integrated_face_v8",""))==_role:
             return "V8"
         return "V7" if bool(model_root.get_meta("tarvoka_infantry_material_finish_v7",false)) else "V6"

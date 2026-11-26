@@ -305,6 +305,22 @@ func _run() -> void:
                     if Specialist.supports(role):
                         check(bool(model.get_meta(Specialist.KIT_V5,false)),
                             "specialist kit revision present")
+                        check(str(model.get_meta(Specialist.KIT_V9,""))==role,
+                            "V9 unique specialist silhouette")
+                        var signature: MeshInstance3D=model.find_child(str(Specialist.KIT_V9_MAIN[role]),true,false) as MeshInstance3D
+                        check(signature!=null and signature.visible and signature.mesh is ArrayMesh and closed_solid(signature.mesh),
+                            "V9 true closed primary kit geometry")
+                        var legacy: Dictionary={"infantry_sniper":["MiraPrecisionBase","CanonPrecisionBase"],
+                            "infantry_commando":["AntenaComandoBase"],"infantry_logistic":["CargaLogisticaBase"],
+                            "infantry_medic":["BotiquinMedicoBase","IdentificadorMedicoBase"]}
+                        for old_name in legacy[role]:
+                            var old_kit: Node3D=model.find_child(old_name,true,false) as Node3D
+                            check(old_kit!=null and not old_kit.visible,"no overlapping legacy accessory "+str(old_name))
+                        if role=="infantry_commando" and bool(model.get_meta("tarvoka_infantry_v2_hero",false)):
+                            for side in [-1,1]:
+                                var shoulder: Node3D=model.find_child("V4_HombreraEspecial_%d"%side,true,false) as Node3D
+                                check(shoulder!=null and str(shoulder.get_parent().name)=="BrazoRig_%d"%side,
+                                    "FS24 extra protection follows articulated arm")
                         for part in model.find_children("V4_*","MeshInstance3D",true,false):
                             if part.has_meta(Specialist.KIT_V5):
                                 var gear_mesh: MeshInstance3D=part as MeshInstance3D
@@ -420,6 +436,14 @@ func _run() -> void:
                         for angle in [90,180,270]:
                             hero.rotation_degrees.y=angle
                             await save_frame(view,"v5_%s_detail_%d"%[role,angle])
+                        if Specialist.supports(role):
+                            camera.size=1.65
+                            camera.position=Vector3(2.2,2.1,3.4)
+                            camera.look_at(Vector3(0,1.25,0),Vector3.UP)
+                            hero.rotation_degrees.y=0
+                            await save_frame(view,"v9_%s_kit_rear"%role)
+                            hero.rotation_degrees.y=180
+                            await save_frame(view,"v9_%s_kit_front"%role)
                         camera.size=1.25
                         camera.position=Vector3(1.35,2.6,2.1)
                         camera.look_at(Vector3(0,1.95,0),Vector3.UP)
@@ -454,7 +478,7 @@ func _run() -> void:
                 camera.size=3.6
             hero.free()
             mobile.free()
-    check(rendered==70,"70 real 3D comparison / tactical frames")
+    check(rendered==78,"78 real 3D comparison / tactical frames")
     # Art-only variants must never enter the tactical roster.
     for role in ["infantry_urban","infantry_defense",
             "infantry_antitank","infantry_engineer",
@@ -465,5 +489,5 @@ func _run() -> void:
         push_error("FAIL INFANTRY V2 NATIVE 3D: %d failures"%failed)
         quit(1)
     else:
-        print("PASS INFANTRY V2 NATIVE 3D: 160 models (6 core + 4 legacy), 8 factions, 2 LOD, 70 true PNG")
+        print("PASS INFANTRY V2 NATIVE 3D: 160 models (6 core + 4 legacy), 8 factions, 2 LOD, 78 true PNG")
         quit(0)
