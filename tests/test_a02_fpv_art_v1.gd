@@ -4,6 +4,7 @@ const Art=preload("res://scripts/ui/A02FpvArtV1.gd")
 const Arsenal=preload("res://scripts/core/ModernArsenal.gd")
 var failures:int=0
 var workload:Array[Dictionary]=[]
+var v19_shared_livery:Texture2D=null
 
 # Count visible render resources, not GPU frame time or Android memory.
 func _inventory(model:Node3D)->Dictionary:
@@ -118,9 +119,28 @@ func _run()->void:
                     check(tones.size()>=3,"graduated faction and neutral tones")
             check(bool(model.get_meta("tarvoka_a02_v4_surface_normals",false)),"V4 deliberate face shading")
             check(bool(model.get_meta("tarvoka_a02_v17_surface_finish",false)),"V17 satin sculpt finish")
+            check(bool(model.get_meta("tarvoka_a02_v19_graphic_livery",false)),"V19 authored opaque decorative paint")
             if paint!=null and paint.mesh is ArrayMesh:
                 var paint_data:Array=paint.mesh.surface_get_arrays(0)
                 var paint_vertices:PackedVector3Array=paint_data[Mesh.ARRAY_VERTEX]
+                var paint_uv:PackedVector2Array=paint_data[Mesh.ARRAY_TEX_UV]
+                check(paint_uv.size()==paint_vertices.size(),"V19 complete UV coordinates")
+                var painted:=paint.material_override as StandardMaterial3D
+                check(painted.albedo_texture!=null,"V19 actual paint texture")
+                if painted.albedo_texture!=null:
+                    if v19_shared_livery==null:
+                        v19_shared_livery=painted.albedo_texture
+                        var image:=v19_shared_livery.get_image()
+                        check(image!=null and image.get_size()==Vector2i(128,128) and image.has_mipmaps(),"V19 compact mipmapped texture")
+                        if image!=null:
+                            var shades:Dictionary={}
+                            for y in range(image.get_height()):
+                                for x in range(image.get_width()):
+                                    var pigment:Color=image.get_pixel(x,y)
+                                    check(pigment.a>=0.999,"V19 fully opaque graphic pigment")
+                                    shades[pigment.to_html()]=true
+                            check(shades.size()>=6,"V19 deliberate multi-tone authored pattern")
+                    check(painted.albedo_texture==v19_shared_livery,"V19 shared texture across factions and LODs")
                 var paint_normals:PackedVector3Array=paint_data[Mesh.ARRAY_NORMAL]
                 var paint_colors:PackedColorArray=paint_data[Mesh.ARRAY_COLOR]
                 check(paint_vertices.size()==paint_normals.size() and paint_vertices.size()==paint_colors.size(),
@@ -452,7 +472,7 @@ func _run()->void:
     var report:=FileAccess.open(out+"/a02-v10-workload.json",FileAccess.WRITE)
     check(report!=null,"V10 resource report created")
     if report!=null:
-        report.store_string(JSON.stringify({"revision":"V18","measurement":"visible native Godot mesh resources; not FPS or RAM","states":workload},"  "))
+        report.store_string(JSON.stringify({"revision":"V19","measurement":"visible native Godot mesh resources; not FPS or RAM","states":workload},"  "))
         report.close()
     check(Arsenal.profile("fpv")==profile,"no catalogue changes")
     vp.queue_free()
