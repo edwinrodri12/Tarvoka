@@ -21,3 +21,15 @@ Geographic scenarios preserve strategic building anchors and symmetric land corr
 ## V44 art finish candidate
 
 Nine cached 64×64 grayscale microtextures with mipmaps preserve biome vertex colors. Conifer trunks and foliage skirts are closed; coastal and desert scrub use the broadleaf silhouette. Rock undersides are capped and use the rock texture. Small natural patches remain inside visible plain cells and away from their centers. The same existing terrain and vegetation batches are used, but mesh triangle counts have increased and must be measured on physical devices. Review all nine close-orbit captures before accepting art quality. No claim of completed or approved individual biomes without rendered evidence.
+
+## V45–V47 relief and vegetation refinement
+
+- Dunes: two curved low relief strips per visible desert plain, away from the tile center; original height sampler and unit positions unchanged. 32 triangles per decorated tile (previous three subdivided stripes used 24).
+- Ridges: 20 triangles per shared closed mountain mesh (previously 8); silhouette heights vary by biome. Verify steep-slope grounding and unit visibility at close orbit.
+- Vegetation: palm fronds are closed creased volumes; reed seed heads are capped. Existing vegetation instance counts and materials remain; foliage geometry increases.
+- Shores: paired narrow material bands; sparse foam segments on visible coastal/archipelago water only beside currently visible land. No water displacement or new navigation routes.
+- Added regression assertions for bounds, mesh counts, public visibility and flat-surface alignment. These tests must run under Godot before acceptance.
+
+## Next structural work (not implemented)
+
+V48 elevated bridges need explicit public crossing metadata and two-domain occupancy/routing semantics, plus tests for ground and naval movement, attack, AI, supply, fog, save and bridge picking. Do not render a navigable opening while the authoritative map still treats the tile as solid road. Start with an opt-in scenario and preserve previous versioned maps. V49 mixed biomes need versioned per-cell region metadata, deterministic transitions, same preview/save contract and fog-safe rendering. Keep the nine single-biome options unchanged. Do not merge these larger rule changes into the art candidate before baseline validation.
