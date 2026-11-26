@@ -17,6 +17,8 @@ const Ranges = preload("res://scripts/ui/BattleRanges3D.gd")
 const Orders = preload("res://scripts/ui/Battle3DOrders.gd")
 const G11ActionsV29 = preload("res://scripts/ui/G11BattleActionsV29.gd")
 const Biomes = preload("res://scripts/ui/WinterBattleBiome.gd")
+const Crossings = preload("res://scripts/core/LayeredCrossingsV48.gd")
+const BridgeArt = preload("res://scripts/ui/LayeredBridgeArtV48.gd")
 const WeatherOverlay = preload("res://scripts/ui/BattleWeatherOverlay3D.gd")
 const ImmersiveHud = preload("res://scripts/ui/ImmersiveBattleHud.gd")
 const SiteInteraction = preload("res://scripts/ui/SiteInteractionData.gd")
@@ -640,7 +642,7 @@ func open_from_board(board: Control) -> bool:
     if board == null:
         return false
     var state: Variant = board.get("state")
-    if not state is Dictionary:
+    if not state is Dictionary or state.has(Crossings.FIELD):
         return false
     var viewer: int = 0 if bool(board.get("ai_enabled")) else int(state.get("faction",0))
     if not open_from_state(state,str(board.get("selected_id")),viewer):
@@ -896,6 +898,11 @@ func inspect_cell(cell: Vector2i, recenter: bool = true) -> bool:
     var tile: Dictionary = _cells[cell]
     var kind: String = str(tile.get("kind","unknown"))
     var label_text: String = "No explorada" if kind=="unknown" else kind.capitalize()
+    if tile.has("bridge_axis_v48"):
+        label_text = "Puente elevado · "+str(tile["bridge_axis_v48"]).to_upper()
+        var options: Array = Crossings.selectable_units(_state_snapshot,cell,_viewing_side,{cell:true})
+        for option in options:
+            label_text += " · %s %s" % [option["domain"],option["id"]]
     var visibility: String = " · Con niebla" if bool(tile.get("seen",false)) and not bool(tile.get("visible",false)) else ""
     inspection.text = "Casilla (%d, %d) · %s%s · %s" % [
         cell.x+1,cell.y+1,label_text,visibility,
@@ -916,7 +923,7 @@ func inspect_cell(cell: Vector2i, recenter: bool = true) -> bool:
     cursor.name = "CursorInspeccionSinOrden"
     cursor.mesh = ring
     cursor.position = Terrain.world_at(cell)+Vector3(0,
-        Terrain.height_at(_cells,cell)+0.065,0)
+        (BridgeArt.ROAD_TOP if tile.has("bridge_axis_v48") else Terrain.height_at(_cells,cell))+0.065,0)
     _scene.add_child(cursor)
     _cursor = cursor
     if recenter or _look_at == Vector3.ZERO:
@@ -939,6 +946,9 @@ func _refresh_ranges() -> void:
         _ranges_node.queue_free()
         _ranges_node = null
     if _scene == null:
+        return
+    if _state_snapshot.has(Crossings.FIELD):
+        _range_text.text = "Puente experimental · alcances visuales pendientes."
         return
     if not _ranges_visible:
         _range_text.text = "Alcances ocultos · Toca «Alcances» para verlos."
