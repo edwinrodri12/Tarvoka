@@ -120,6 +120,16 @@ func _run() -> void:
                 str(v2.get_meta("tarvoka_infantry_integrated_face_v8",""))==role and
                 bool(v2.get_meta("tarvoka_infantry_material_finish_v7",false)),
                 role+" real new version correctly identified by studio")
+            var specs: Array=studio.call("_studio_animation_specs",role)
+            must(specs.any(func(spec: Dictionary)->bool: return str(spec.get("action",""))=="run"),
+                role+" real run preview control exposed")
+            studio.call("_infantry_pose_tick",0.5,"run")
+            var knee: Node3D=v2.find_child("V11_RodillaRig_1",true,false) as Node3D
+            var other: Node3D=v2.find_child("V11_RodillaRig_-1",true,false) as Node3D
+            must(knee!=null and other!=null and
+                maxf(absf(knee.rotation_degrees.x),absf(other.rotation_degrees.x))>33.0,
+                role+" run preview drives the actual native knee rig")
+            Models.restore_model_pose(role,v2)
         # Switch between genuine dense 3D hero and smaller tactical LOD8
         # without changing the original Godot SubViewport or controls.
         studio.call("_infantry_review_lod",8)

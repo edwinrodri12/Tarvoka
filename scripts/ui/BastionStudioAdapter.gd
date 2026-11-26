@@ -346,14 +346,14 @@ func _ready() -> void:
         role_picker.select(launch_index)
     _display_role(launch_role)
     _refresh_unified_studio_navigation()
-    if OS.has_feature("web") and launch_role=="infantry_engineer":
+    if OS.has_feature("web") and InfantryV1.supports(launch_role):
         _engineer_web_entry_report.call_deferred()
 
 # Read-only evidence from the actual loaded Godot Web model. No external
 # input, remote callbacks, alternate geometry or scene manipulation.
 func _engineer_web_entry_report() -> void:
     await get_tree().process_frame
-    if _role!="infantry_engineer" or model_root==null:
+    if not InfantryV1.supports(_role) or model_root==null:
         return
     var visible_meshes: int=0
     var transparent_meshes: Array[String]=[]
@@ -370,7 +370,11 @@ func _engineer_web_entry_report() -> void:
                     transparent_meshes.append(str(part.name))
     var evidence: Dictionary={"role":_role,"edition":_infantry_review_edition(),
         "visible_meshes":visible_meshes,"transparent_meshes":transparent_meshes}
-    JavaScriptBridge.eval("window.__tarvokaEngineerEntry="+JSON.stringify(evidence),true)
+    evidence["motion_v12"]=str(model_root.get_meta("tarvoka_infantry_motion_uniform_v12",""))==_role
+    evidence["native_viewport"]=model_root.get_parent()==preview
+    JavaScriptBridge.eval("window.__tarvokaInfantryEntry="+JSON.stringify(evidence),true)
+    if _role=="infantry_engineer":
+        JavaScriptBridge.eval("window.__tarvokaEngineerEntry="+JSON.stringify(evidence),true)
 
 func _studio_role_from_link_key(value:String) -> String:
     # Fixed allowlist: URL text never controls a scene or resource path.
@@ -1848,6 +1852,9 @@ func _infantry_pose_tick(t: float, kind: String) -> void:
 
 func _infantry_play(kind: String) -> void:
     if not InfantryV1.supports(_role) or model_root==null:
+        return
+    if kind=="run" and str(model_root.get_meta("tarvoka_infantry_motion_uniform_v12",""))!=_role:
+        status_label.text="Carrera disponible en el modelo actual; selecciona Ver última."
         return
     if _engineer_v6_tween!=null and _engineer_v6_tween.is_running():
         _engineer_v6_tween.kill()
