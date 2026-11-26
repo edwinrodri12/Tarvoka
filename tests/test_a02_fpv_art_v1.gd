@@ -193,6 +193,29 @@ func _run()->void:
                 check(underside!=null and _closed(belly.mesh) and
                     (belly.transform*belly.mesh.get_aabb()).intersects(
                         underside.transform*underside.mesh.get_aabb()),"V5 underside relief embedded")
+            check(bool(model.get_meta("tarvoka_a02_v18_undershell_finish",false)),"V18 lower finish")
+            var lower_shell:=model.find_child("A02_SealedUndershell",true,false) as MeshInstance3D
+            check(lower_shell!=null and casing!=null and lower_shell.mesh!=casing.mesh,
+                "V18 distinct lower pigment resource")
+            if lower_shell!=null and casing!=null:
+                check(_closed(lower_shell.mesh) and lower_shell.mesh.get_faces()==casing.mesh.get_faces(),
+                    "V18 lower pigment leaves sealed topology unchanged")
+            var accents:=model.find_children("A02_V18_LowerAccent_*","MeshInstance3D",true,false)
+            check(accents.size()==(2 if lod==13 else 0),"V18 ornaments only at inspection LOD")
+            if accents.size()==2 and lower_shell!=null:
+                var left:=accents[0] as MeshInstance3D
+                var right:=accents[1] as MeshInstance3D
+                check(left.mesh==right.mesh and left.material_override==right.material_override,
+                    "V18 shared ornamental resources")
+                check(is_equal_approx(left.position.x,-right.position.x),"V18 mirrored decorative finish")
+                var lower_bounds:AABB=lower_shell.transform*lower_shell.mesh.get_aabb()
+                for accent_node in accents:
+                    var accent:=accent_node as MeshInstance3D
+                    check(_closed(accent.mesh) and lower_bounds.intersects(accent.transform*accent.mesh.get_aabb()),
+                        "V18 sealed and embedded lower relief")
+                    check(accent.position.y<lower_shell.position.y,"V18 underside only")
+                check(belly!=null and insignia!=null and belly.material_override==insignia.material_override,
+                    "V18 matching contrasting neutral insignia")
             check(bool(model.get_meta("tarvoka_a02_v6_material_coherence",false)),"V6 material coherence")
             var first_guard:=model.find_child("A02_ClosedRotorGuard_0",true,false) as MeshInstance3D
             if first_guard!=null:
@@ -285,6 +308,9 @@ func _run()->void:
                     var inventory:Dictionary=_inventory(model)
                     workload.append({"faction":faction,"lod":lod,"damage":damage,"resources":inventory})
                     check(int(inventory.instances)<=40,"V10 visible instance ceiling")
+                    if damage==0:
+                        check(int(inventory.instances)==(27 if lod==8 else 36),"V18 exact intact mesh count")
+                        check(int(inventory.triangles)==(2436 if lod==8 else 5808),"V18 exact intact triangle count")
                     check(int(inventory.triangles)<=(12000 if lod==8 else 24000),"V10 visible triangle ceiling")
                     check(int(inventory.unique_meshes)<=int(inventory.instances),"V10 valid mesh resource count")
                     check(int(inventory.unique_materials)<=int(inventory.instances),"V10 valid material resource count")
@@ -426,7 +452,7 @@ func _run()->void:
     var report:=FileAccess.open(out+"/a02-v10-workload.json",FileAccess.WRITE)
     check(report!=null,"V10 resource report created")
     if report!=null:
-        report.store_string(JSON.stringify({"revision":"V17","measurement":"visible native Godot mesh resources; not FPS or RAM","states":workload},"  "))
+        report.store_string(JSON.stringify({"revision":"V18","measurement":"visible native Godot mesh resources; not FPS or RAM","states":workload},"  "))
         report.close()
     check(Arsenal.profile("fpv")==profile,"no catalogue changes")
     vp.queue_free()
