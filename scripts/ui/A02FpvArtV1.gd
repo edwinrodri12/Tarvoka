@@ -8,6 +8,7 @@ const PAINT:String="A02_FactionCrown"
 const DAMAGE:String="tarvoka_a02_visual_damage"
 const EFFECT:String="A02_V8_StylizedDamageEffect"
 const BASE_MATERIAL:String="tarvoka_a02_original_visual_material"
+static var _decorative_crown_texture:ImageTexture
 
 static func _mat(color:Color,metal:float,rough:float)->StandardMaterial3D:
     var m:=StandardMaterial3D.new()
@@ -63,6 +64,7 @@ static func _face(t:SurfaceTool,a:Vector3,b:Vector3,c:Vector3,outward:Vector3)->
         ordered[2]=b
     for point in ordered:
         t.set_normal(_surface_normal(normal,point))
+        t.set_uv(Vector2(point.x+0.5,point.z+0.5))
         t.add_vertex(point)
 
 static func _sculpt()->ArrayMesh:
@@ -110,14 +112,46 @@ static func _shell_finish(source:ArrayMesh,upper:Color,lower:Color)->ArrayMesh:
     mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES,arrays)
     return mesh
 
+# V19 graphic livery: purely ornamental paint on a sealed fictional shell.
+# White preserves faction hue; darker strokes multiply that same hue.
+# One shared opaque texture, not extra parts or simulated mechanisms.
+static func _crown_livery()->ImageTexture:
+    if is_instance_valid(_decorative_crown_texture):
+        return _decorative_crown_texture
+    var image:=Image.create(128,128,false,Image.FORMAT_RGBA8)
+    image.fill(Color("#f8f8f8"))
+    # Parallel decorative framed color blocks and short printed accents.
+    # All graphics are flat pigment; no openings or mechanical detail.
+    for x in [23,85]:
+        image.fill_rect(Rect2i(x,29,20,68),Color("#9aa1a6"))
+        image.fill_rect(Rect2i(x+2,31,16,64),Color("#e2e5e7"))
+        image.fill_rect(Rect2i(x+2,33,2,60),Color("#ffffff"))
+        image.fill_rect(Rect2i(x+4,50,12,2),Color("#a4abb1"))
+        image.fill_rect(Rect2i(x+4,76,12,2),Color("#a4abb1"))
+        for y in [38,44,83]:
+            image.fill_rect(Rect2i(x+6,y,8,2),Color("#c0c7cb"))
+    # Narrow contrasting graphic trim around the two ends.
+    for y in [22,101]:
+        image.fill_rect(Rect2i(43,y,42,3),Color("#9fa8ad"))
+        image.fill_rect(Rect2i(47,y+3,34,2),Color("#ffffff"))
+    image.generate_mipmaps()
+    _decorative_crown_texture=ImageTexture.create_from_image(image)
+    return _decorative_crown_texture
+
 static func _guard_finish(primitive:TorusMesh,faction:Color)->ArrayMesh:
     # Color is baked into existing visual geometry; no decal or alpha.
     var arrays:Array=primitive.get_mesh_arrays()
     var vertices:PackedVector3Array=arrays[Mesh.ARRAY_VERTEX]
     var pigments:=PackedColorArray()
     for vertex in vertices:
-        pigments.append(Color("#43535d").lerp(faction,
-            0.10+0.72*smoothstep(-0.015,0.06,vertex.y)))
+        # Broad ornamental color segments and a neutral lower band.
+        # Preserve closed geometry and the authored silhouette.
+        var phase:float=atan2(vertex.z,vertex.x)
+        var blocks:float=smoothstep(0.12,0.45,absf(sin(phase*4.0)))
+        var upper:float=smoothstep(-0.015,0.06,vertex.y)
+        var shade:Color=Color("#43535d").lerp(faction,0.12+0.74*upper)
+        var graphic:float=(1.0-blocks)*upper*0.20
+        pigments.append(shade.lerp(Color("#25353f"),graphic))
     arrays[Mesh.ARRAY_COLOR]=pigments
     var mesh:=ArrayMesh.new()
     mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES,arrays)
@@ -141,6 +175,9 @@ static func build(root:Node3D,faction:Color,hero:bool)->bool:
     var enamel:=_mat(faction,0.12,0.66)
     enamel.vertex_color_use_as_albedo=true
     enamel.vertex_color_is_srgb=true
+    var crown_livery:=enamel.duplicate() as StandardMaterial3D
+    crown_livery.albedo_texture=_crown_livery()
+    crown_livery.texture_filter=BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
     var crown_mesh:=_shell_finish(sculpt,Color.WHITE,Color("#a0adb5"))
     # V6: a restrained blue-gray decorative face with opaque tonal finish.
     var glass:=_mat(Color.WHITE,0.10,0.46)
@@ -165,7 +202,7 @@ static func build(root:Node3D,faction:Color,hero:bool)->bool:
     _part(body,"A02_ClosedCentralShell",shell_mesh,Vector3(0,0.96,0),
         Vector3(0.72,0.44,1.05),coated_shell)
     _part(body,PAINT,crown_mesh,Vector3(0,1.105,-0.045),
-        Vector3(0.61,0.20,0.83),enamel)
+        Vector3(0.61,0.20,0.83),crown_livery)
     # V3: a stylized opaque faceplate, not a real imaging assembly.
     # The bevelled dark frame overlaps the existing sculpture; the inset
     # colored face overlaps the frame, with no detached or transparent panel.
@@ -253,6 +290,7 @@ static func build(root:Node3D,faction:Color,hero:bool)->bool:
         if part.get_parent()!=effects:
             part.set_meta(BASE_MATERIAL,part.material_override)
     root.set_meta(DAMAGE,0)
+    root.set_meta("tarvoka_a02_v19_graphic_livery",true)
     root.set_meta("tarvoka_a02_v18_undershell_finish",true)
     root.set_meta("tarvoka_a02_v17_surface_finish",true)
     root.set_meta("tarvoka_a02_v16_damage_presentation",true)
