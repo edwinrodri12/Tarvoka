@@ -600,6 +600,26 @@ func _run() -> void:
                         var destroyed_flash: Node3D=model.find_child("V2_DestelloDisparo3D",true,false) as Node3D
                         check(destroyed_flash!=null and not destroyed_flash.visible,
                             "V24 destroyed model cannot show attack flash")
+                        var wreck_nodes: Array[Node3D]=[]
+                        var wreck_transforms: Array[Transform3D]=[]
+                        for wreck_name in ["Infanteria_3D","TorsoRig","CabezaRig","ArmamentoRig",
+                                "BrazoRig_-1","BrazoRig_1","PiernaRig_-1","PiernaRig_1",
+                                "V11_RodillaRig_-1","V11_RodillaRig_1"]:
+                            var wreck_part: Node3D=model.find_child(wreck_name,true,false) as Node3D
+                            if wreck_part!=null:
+                                wreck_nodes.append(wreck_part)
+                                wreck_transforms.append(wreck_part.transform)
+                        check(wreck_nodes.size()==10,"V25.2 full destroyed rig sampled")
+                        for wreck_action in ["idle","move","run","aim","attack","capture","work","repair","hit_bullet","hit_explosive"]:
+                            check(Models.pose_model(role,model,wreck_action,0.62),
+                                "V25.2 destroyed pose accepts preview request")
+                            for wreck_index in range(wreck_nodes.size()):
+                                check(wreck_nodes[wreck_index].transform.is_equal_approx(wreck_transforms[wreck_index]),
+                                    "V25.2 destroyed rig remains static "+wreck_action)
+                            check(Infantry.damage_stage(model)==4 and family_grip_contact(model,-1) and
+                                family_grip_contact(model,1),"V25.2 persistent D4 and hand contact")
+                        check(smoke.visible and smoke.multimesh.visible_instance_count==(smoke.multimesh.instance_count >> 1),
+                            "V25.2 destroyed rig still has independent smoke")
                     Models.restore_model_pose(role,model)
                     check(smoke!=null and not smoke.visible and smoke.multimesh.visible_instance_count==0,
                         "D0 clears effect batch without resource churn")
