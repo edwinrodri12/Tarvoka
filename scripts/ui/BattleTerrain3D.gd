@@ -1286,6 +1286,10 @@ static func _make_units(parent: Node3D,state: Dictionary,
             APCTactical.rebase(model)
         if bridge_cells.has(cell):
             var domain: String = Domains.domain(unit)
+            # Native destroyer hull stations run along local Z. Orient the
+            # ship along the channel, perpendicular to the bridge deck.
+            if domain=="naval" and role=="destroyer":
+                model.rotation.y = PI*0.5 if bridge_cells[cell]=="ns" else 0.0
             model.position = Vector3.ZERO
             # Determine the real visible bounds with the model's existing
             # scale. Do not rescale or modify any approved unit mesh.
@@ -1299,7 +1303,14 @@ static func _make_units(parent: Node3D,state: Dictionary,
                 model.position = world_at(cell)+Vector3.UP*(base_y-box.position.y)
                 if domain in [Domains.GROUND,Domains.NAVAL]:
                     var adjusted := AABB(box.position+Vector3.UP*(base_y-box.position.y),box.size)
-                    model.set_meta("bridge_clearance_v48",BridgeArt.clearance_report(adjusted,domain))
+                    var report: Dictionary = BridgeArt.clearance_report(adjusted,domain)
+                    if domain=="naval":
+                        var across_x: bool = bridge_cells[cell]=="ew"
+                        var lateral_min: float = adjusted.position.x if across_x else adjusted.position.z
+                        var lateral_max: float = adjusted.end.x if across_x else adjusted.end.z
+                        report["fits_channel_width"] = lateral_min>=-CELL*0.5+0.03 and lateral_max<=CELL*0.5-0.03
+                        report["channel_width"] = CELL
+                    model.set_meta("bridge_clearance_v48",report)
             else:
                 model.position = world_at(cell)+Vector3.UP*(base_y+altitude)
                 model.set_meta("bridge_clearance_v48",{"fits_vertical":false,"unmeasured":true})
