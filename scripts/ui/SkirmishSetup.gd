@@ -145,7 +145,8 @@ func _ready() -> void:
     _section(content,"02  /  TEATRO DE OPERACIONES")
     scenario_picker = _picker(content,"Escenario",[
         "Campo abierto","Bosque de las Dos Rutas","Puentes de la Cuenca",
-        "Costa de las Dos Bahias","Mapa aleatorio (semilla)"
+        "Costa de las Dos Bahias","Mapa aleatorio (semilla)",
+        "Geografía del bioma (semilla)"
     ])
     biome_picker = _picker(content,"Bioma · nueve paisajes",[
         "Valle boscoso · templado",
@@ -449,7 +450,7 @@ func _changed(manual: bool = false) -> void:
     elif roster_picker.selected == 0:
         economy_picker.select(0)
     economy_picker.disabled = roster_picker.selected in [0,2]
-    seed_picker.editable = scenario_picker.selected == Scenarios.RANDOM_SCENARIO_ID
+    seed_picker.editable = Scenarios.uses_seed(scenario_picker.selected)
     var preset_summary: String = "%s · %s · %s" % [
         scenario_picker.get_item_text(scenario_picker.selected),
         size_picker.get_item_text(size_picker.selected),
@@ -465,7 +466,7 @@ func _changed(manual: bool = false) -> void:
     preset_summary += " · Clima: %s (%s)" % [
         ["Despejado","Lluvia","Nieve"][weather_picker.selected],
         "cada dos rondas" if weather_cycle_picker.selected == 1 else "fijo"]
-    if scenario_picker.selected == Scenarios.RANDOM_SCENARIO_ID:
+    if Scenarios.uses_seed(scenario_picker.selected):
         preset_summary += "\nSemilla reproducible: %d" % int(seed_picker.value)
     var blue: String = Identity.name_for({Identity.STATE_FIELD:selected_factions},0)
     var red: String = Identity.name_for({Identity.STATE_FIELD:selected_factions},1)
