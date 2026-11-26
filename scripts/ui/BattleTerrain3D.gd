@@ -226,6 +226,64 @@ static func _shore_color(biome: String) -> Color:
         return Color("#7fa896")
     return Color("#c4b18d")
 
+# V22: roads and causeways keep the exact tactical footprint. All geometry
+# is batched in the existing road surface and follows the ground fan.
+static func _road_axis(edges: Dictionary) -> int:
+    var n: bool = bool(edges.get("north",false))
+    var s: bool = bool(edges.get("south",false))
+    var w: bool = bool(edges.get("west",false))
+    var e: bool = bool(edges.get("east",false))
+    if n and s and not w and not e:
+        return 1
+    if w and e and not n and not s:
+        return 2
+    return 0
+
+static func _append_road_layer(tool: SurfaceTool,at: Vector3,
+        surface: Dictionary,edges: Dictionary,width: float,
+        color: Color,lift: float) -> void:
+    var half: float = float(surface["half"])
+    RoadShore._rect(tool,at,surface,-width,width,-width,width,color,lift)
+    if bool(edges.get("north",false)):
+        RoadShore._rect(tool,at,surface,-width,width,-half,-width,color,lift)
+    if bool(edges.get("south",false)):
+        RoadShore._rect(tool,at,surface,-width,width,width,half,color,lift)
+    if bool(edges.get("west",false)):
+        RoadShore._rect(tool,at,surface,-half,-width,-width,width,color,lift)
+    if bool(edges.get("east",false)):
+        RoadShore._rect(tool,at,surface,width,half,-width,width,color,lift)
+
+static func _append_road_finish(tool: SurfaceTool,at: Vector3,
+        surface: Dictionary,tile: Dictionary,biome: String) -> void:
+    var edges: Dictionary = tile["roads"]
+    var shoulder: Color = _shore_color(biome).darkened(0.10)
+    _append_road_layer(tool,at,surface,edges,0.77,shoulder,0.032)
+    _append_road_layer(tool,at,surface,edges,0.67,_road_color(biome),ROAD_LIFT)
+    var axis: int = _road_axis(edges)
+    var half: float = float(surface["half"])
+    var stripe: Color = Color("#d8d5b7") if biome!=Biomes.WINTER else Biomes.SNOW
+    for center in [-0.80,0.0,0.80]:
+        var start: float = float(center)-0.18
+        var end: float = float(center)+0.18
+        if axis==1:
+            RoadShore._rect(tool,at,surface,-0.025,0.025,start,end,stripe,0.084)
+        elif axis==2:
+            RoadShore._rect(tool,at,surface,start,end,-0.025,0.025,stripe,0.084)
+    # Water-facing curb bands are visual only: they do not create a bridge
+    # over a water tile or change naval connectivity.
+    var shores: Dictionary = tile["shore"]
+    var curb: Color = shoulder.lightened(0.20)
+    if axis==1:
+        if bool(shores.get("west",false)):
+            RoadShore._rect(tool,at,surface,-0.77,-0.68,-half,half,curb,0.105)
+        if bool(shores.get("east",false)):
+            RoadShore._rect(tool,at,surface,0.68,0.77,-half,half,curb,0.105)
+    elif axis==2:
+        if bool(shores.get("north",false)):
+            RoadShore._rect(tool,at,surface,-half,half,-0.77,-0.68,curb,0.105)
+        if bool(shores.get("south",false)):
+            RoadShore._rect(tool,at,surface,-half,half,0.68,0.77,curb,0.105)
+
 static func _build_chunk(parent: Node3D, data: Dictionary,
         cells: Dictionary,corner_cache: Dictionary,
         biome: String = Biomes.TEMPERATE) -> Dictionary:
@@ -299,22 +357,7 @@ static func _build_chunk(parent: Node3D, data: Dictionary,
             "x":cell.x,"z":cell.y,"top":_cell_height(tile),
             "half":half,"corners":corners}
         if kind == "road":
-            var width := 0.70
-            RoadShore._rect(road,at,surface_cell,-width,width,-width,width,
-                _road_color(biome),ROAD_LIFT)
-            var roads: Dictionary = tile["roads"]
-            if bool(roads["north"]):
-                RoadShore._rect(road,at,surface_cell,-width,width,-half,-width,
-                    _road_color(biome),ROAD_LIFT)
-            if bool(roads["south"]):
-                RoadShore._rect(road,at,surface_cell,-width,width,width,half,
-                    _road_color(biome),ROAD_LIFT)
-            if bool(roads["west"]):
-                RoadShore._rect(road,at,surface_cell,-half,-width,-width,width,
-                    _road_color(biome),ROAD_LIFT)
-            if bool(roads["east"]):
-                RoadShore._rect(road,at,surface_cell,width,half,-width,width,
-                    _road_color(biome),ROAD_LIFT)
+            _append_road_finish(road,at,surface_cell,tile,biome)
             roads_count += 1
         else:
             var shore_edges: Dictionary = tile["shore"]
@@ -375,9 +418,14 @@ static func _make_cone_trees(parent: Node3D,cells: Dictionary,
             at.y = height_at(cells,cell,shift.x,shift.y)+0.41
             var angle: float = float(posmod(
                 cell.x*37+cell.y*83+j*19,16))/16.0*TAU
+            # V24: deterministic crown/height variation without extra trees
+            # or batches. Keep the base at the same terrain anchor.
             var scale: float = 0.82+float(posmod(cell.x*7+cell.y*13+j,5))*0.075
+            var crown: float = 0.91+float(posmod(cell.x*19+cell.y*7+j*11,5))*0.04
+            var height_scale: float = 0.90+float(posmod(cell.x*13+cell.y*23+j*3,5))*0.05
             var rotated := Basis(Vector3.UP,angle).scaled(
-                Vector3(scale,scale,scale))
+                Vector3(scale*crown,scale*height_scale,scale*crown))
+            at.y = height_at(cells,cell,shift.x,shift.y)+0.32*scale*height_scale
             positions.append(Transform3D(rotated,at))
     if positions.is_empty():
         return 0
@@ -446,6 +494,26 @@ static func _make_cone_trees(parent: Node3D,cells: Dictionary,
 # Two high points and six lateral faces, all painted in this actual rock
 # mesh. This explicitly replaces the small generic cones that made the
 # battlefield mountains appear separate from the V18b/V19 environments.
+# V23: align connected mountains with their known cardinal neighbours.
+# Never inspect unexplored ground; isolated peaks keep deterministic rotation.
+static func _ridge_angle(cells: Dictionary,cell: Vector2i) -> float:
+    var east_west := 0
+    var north_south := 0
+    for direction in [Vector2i(-1,0),Vector2i(1,0),Vector2i(0,-1),Vector2i(0,1)]:
+        var neighbour: Dictionary = cells.get(cell+direction,{})
+        if str(neighbour.get("kind","unknown"))!="mountain":
+            continue
+        if direction.x!=0:
+            east_west += 1
+        else:
+            north_south += 1
+    var jitter: float = float(posmod(cell.x*31+cell.y*17,13))/13.0
+    if east_west>north_south:
+        return (jitter-0.5)*0.24
+    if north_south>east_west:
+        return PI*0.5+(jitter-0.5)*0.24
+    return jitter*TAU
+
 static func _make_mountain_ridges(parent: Node3D,cells: Dictionary,
         biome: String) -> int:
     var transforms: Array[Transform3D] = []
@@ -455,8 +523,7 @@ static func _make_mountain_ridges(parent: Node3D,cells: Dictionary,
             continue
         var base: Vector3 = world_at(cell)
         base.y = height_at(cells,cell)+0.33
-        var angle: float = float(posmod(
-            cell.x*31+cell.y*17,13))/13.0*TAU
+        var angle: float = _ridge_angle(cells,cell)
         var shape := Basis(Vector3.UP,angle).scaled(
             Vector3(0.95,0.9+float(posmod(cell.x*11+cell.y,4))*0.07,0.95))
         transforms.append(Transform3D(shape,base))
