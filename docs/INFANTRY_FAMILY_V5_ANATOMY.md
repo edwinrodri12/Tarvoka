@@ -67,3 +67,7 @@ Se detectó que BattleTerrain3D todavía instanciaba Guardia `line` con finish=f
 
 ### V15.1 — sincronización de A02 V16.3
 Se incorporó main exacto 01a6024 (cámaras de A02, prueba de cinco PNG) mediante merge de dos padres. Se preserva la puerta estricta de cinco archivos d0/d4/return/top/bottom y el diagnóstico de tamaño/conteo. V15 nativa 45906216641 completa exitosa, artefacto 15157819943 revisado: ambas alineaciones y diez vistas laterales. Misma altura nominal, G05 con detalle notablemente mayor; sin afirmar equivalencia artística. No se fusionó en main.
+
+## V15.2 — controlador de animaciones de Guardia en batalla
+
+Se añade controlador visual V16 en escena real, sólo para Guardia LOD8 ya visible del bando del visor. Battle3DMapView inicia marcha/ataque exclusivamente tras Orders.confirm exitoso y reconstrucción de la escena, incluyendo soldados clásicos sin clave role. El origen usa casilla autorizada y altura de suela; no se reejecuta la orden. Interpolación 0.86 s y disparo 0.95 s, ajuste a posición confirmada, orientación y pose de reposo que conserva D0-D4 (no restauración de showroom). Se rechazan objetivo inexistente, enemigo, modelo genérico, acción inválida y D4. Se amplía prueba real de cuatro imágenes, estados de daño y efectos, más prueba de dos toques/cancelación en Main.tscn. Sin cambios tácticos ni G05. V15.1 45907332073 seguía en cola al comenzar; esta revisión no afirma validación final ni FPS físico.

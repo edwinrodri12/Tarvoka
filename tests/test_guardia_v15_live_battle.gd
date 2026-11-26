@@ -4,6 +4,8 @@ extends SceneTree
 const Terrain=preload("res://scripts/ui/BattleTerrain3D.gd")
 const Models=preload("res://scripts/ui/UnitModels3D.gd")
 const Finish=preload("res://scripts/ui/InfantrySculptFinishV2.gd")
+const Actions=preload("res://scripts/ui/GuardiaBattleActionsV16.gd")
+const Infantry=preload("res://scripts/ui/InfantryFamilyV1.gd")
 const Engineer=preload("res://scripts/ui/InfantryEngineerOuterArmorV17.gd")
 const Roles=preload("res://scripts/core/UnitRoles.gd")
 const Arsenal=preload("res://scripts/core/ModernArsenal.gd")
@@ -119,9 +121,37 @@ func _run()->void:
     check(int(metrics["meshes"])>25 and int(metrics["meshes"])<=100 and
         int(metrics["triangles"])>0 and int(metrics["transparent"])==0,
         "bounded visible opaque LOD8 geometry")
-    for action in ["move","aim","attack"]:
-        check(Models.pose_model("line",guard,action,0.45),"native battle model pose "+action)
-        await _shot(view,"guardia_"+action)
+    var actions: Node=scene.find_child("GuardiaV16_AccionesBatalla",false,false)
+    check(actions!=null,"one production animation driver registered")
+    if actions!=null:
+        var destination: Vector3=guard.position
+        var origin: Vector3=destination-Vector3(Terrain.CELL,0,0)
+        check(not actions.play("missing","attack",destination),"cannot animate missing unit")
+        check(not actions.play("Guardia-E","attack",rival.position),"cannot animate opposing team")
+        check(not actions.play("Guardia-H","invalid",destination),"invalid kind rejected")
+        check(actions.play("Guardia-H","move",origin,Vector2i(1,0)),"actual movement driver")
+        actions.set_process(false)
+        actions.advance(Actions.MOVE_TIME*0.45)
+        check(guard.position.distance_to(destination)>0.1 and guard.position.distance_to(origin)>0.1,
+            "intermediate movement uses the existing LOD8 model")
+        await _shot(view,"guardia_move")
+        actions.advance(Actions.MOVE_TIME)
+        check(not actions.active() and guard.position.is_equal_approx(destination),"move snaps to committed tile")
+        check(Models.pose_model("line",guard,"aim",0.45),"native battle model aim")
+        await _shot(view,"guardia_aim")
+        check(Infantry.set_damage(guard,2),"prepare persistent visual damage")
+        check(actions.play("Guardia-H","attack",destination,Vector2i(1,0)),"actual attack driver")
+        actions.set_process(false)
+        actions.advance(Actions.ATTACK_TIME*0.45)
+        var flash: Node3D=guard.find_child("V2_DestelloDisparo3D",true,false) as Node3D
+        check(flash!=null and flash.visible,"native muzzle effect during attack")
+        await _shot(view,"guardia_attack")
+        actions.advance(Actions.ATTACK_TIME)
+        check(not actions.active() and guard.position.is_equal_approx(destination) and
+            Infantry.damage_stage(guard)==2 and flash!=null and not flash.visible,
+            "completion preserves damage and clears transient effect")
+        check(Infantry.set_damage(guard,4) and not actions.play("Guardia-H","attack",destination),
+            "destroyed visual model cannot animate attack")
         Models.restore_model_pose("line",guard)
     check(state==before,"preview pose and rendering never mutate battle state")
     # Production fog/budget routine with a controlled crowded visible set.

@@ -9,6 +9,9 @@ on:
       - 'tests/test_infantry_family_v2.gd'
       - 'scripts/ui/BattleTerrain3D.gd'
       - 'tests/test_guardia_v15_live_battle.gd'
+      - 'scripts/ui/GuardiaBattleActionsV16.gd'
+      - 'scripts/ui/Battle3DMapView.gd'
+      - 'tests/test_immersive_battle_3d_hud.gd'
       - 'scripts/ui/InfantryEngineerOuterArmorV17.gd'
       - 'tests/test_engineer_v17_outer_armor.gd'
       - '.github/workflows/infantry-family-native-3d-qa.yml'
@@ -45,6 +48,9 @@ on:
       - 'tests/test_infantry_family_v2.gd'
       - 'scripts/ui/BattleTerrain3D.gd'
       - 'tests/test_guardia_v15_live_battle.gd'
+      - 'scripts/ui/GuardiaBattleActionsV16.gd'
+      - 'scripts/ui/Battle3DMapView.gd'
+      - 'tests/test_immersive_battle_3d_hud.gd'
       - 'tests/test_infantry_engineer_v6_360.gd'
       - '.github/workflows/infantry-family-native-3d-qa.yml'
   workflow_dispatch:
@@ -171,6 +177,15 @@ jobs:
           grep -Fq 'PASS GUARDIA LIVE BATTLE:' /tmp/guardia-live-battle.log
           test "$(find build/qa/guardia-live-battle -name '*.png' | wc -l)" -eq 4
           test -s build/qa/guardia-live-battle/metrics.json
+      - name: Verify actual two-tap Guardia order starts visual animation only after confirmation
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 180s xvfb-run -a -s '-screen 0 1280x800x24' env LIBGL_ALWAYS_SOFTWARE=1 \
+            /tmp/Godot_v4.3-stable_linux.x86_64 --rendering-method gl_compatibility --audio-driver Dummy --path . \
+            --script res://tests/test_immersive_battle_3d_hud.gd 2>&1 | tee /tmp/guardia-order-confirmation.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Parse Error:|Assertion failed' /tmp/guardia-order-confirmation.log; then exit 1; fi
+          grep -Fq 'PASS immersive 3D HUD V16:' /tmp/guardia-order-confirmation.log
       - name: Verify Engineer V6-V11 pressed closed torso, anchored hip and coaxial shield hinges in 34 Godot QA images
         shell: bash
         run: |

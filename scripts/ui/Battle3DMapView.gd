@@ -11,6 +11,8 @@ signal resupply_requested
 signal site_production_requested(site_pos: Vector2i)
 
 const Terrain = preload("res://scripts/ui/BattleTerrain3D.gd")
+const GuardiaActions = preload("res://scripts/ui/GuardiaBattleActionsV16.gd")
+const GuardiaSculpt = preload("res://scripts/ui/InfantrySculptFinishV2.gd")
 const Rules = preload("res://scripts/core/Rules.gd")
 const Picker = preload("res://scripts/ui/BattleTerrainPicker3D.gd")
 const Ranges = preload("res://scripts/ui/BattleRanges3D.gd")
@@ -725,16 +727,29 @@ func _confirm_3d_order() -> void:
     if str(order.get("kind","")) in ["move","attack"]:
         for item in _state_snapshot.get("units",[]):
             if item is Dictionary and str(item.get("id",""))==command_id and (
-                    str(item.get("role","")) in ["mlrs","mobile_aa"]) and (
+                    str(item.get("role","line")) in ["mlrs","mobile_aa","line"]) and (
                     int(item.get("faction",-1))==_viewing_side) and (
                     int(item.get("hp",0))>0):
+                var role: String=str(item.get("role","line"))
+                var origin: Vector2i=item["pos"]
+                var altitude: float=0.43
+                if role=="line":
+                    # Use the old logical tile and native sole height, not
+                    # a possibly mid-tween position or a fallback marker.
+                    var native: Node3D=_scene.find_child("Unidad3D_"+command_id,false,false) as Node3D if _scene!=null else null
+                    if not GuardiaActions.supports(native):
+                        break
+                    var floor_y: float=GuardiaSculpt.family_sole_floor(native)
+                    if not is_finite(floor_y):
+                        break
+                    altitude=0.025-floor_y*native.scale.y
                 visual={
                     "unit_id":command_id,
-                    "role":str(item.get("role","")),
+                    "role":role,
                     "kind":str(order.get("kind","")),
                     "before":item.get("pos",Vector2i.ZERO),
-                    "from_world":Terrain.world_at(item["pos"])+Vector3(
-                        0,Terrain.height_at(_cells,item["pos"])+0.43,0),
+                    "from_world":Terrain.world_at(origin)+Vector3(
+                        0,Terrain.height_at(_cells,origin)+altitude,0),
                     "target":order.get("cell",Vector2i.ZERO),
                     "faction":_viewing_side}
                 break
@@ -763,7 +778,8 @@ func _confirm_3d_order() -> void:
                     break
                 var action_name: String = (
                     "G13V70_AccionesBatalla" if str(visual["role"])=="mobile_aa"
-                    else "G11V29_AccionesBatalla")
+                    else ("GuardiaV16_AccionesBatalla" if str(visual["role"])=="line"
+                    else "G11V29_AccionesBatalla"))
                 var actions: Node = _scene.find_child(action_name,true,false)
                 if actions!=null:
                     var origin: Vector2i=visual["before"]

@@ -12,6 +12,7 @@ const SurfaceSampler = preload("res://scripts/ui/TerrainSurfaceSampler3D.gd")
 const RoadShore = preload("res://scripts/ui/TerrainStudioRoadShore3D.gd")
 const Models = preload("res://scripts/ui/UnitModels3D.gd")
 const InfantryFinish = preload("res://scripts/ui/InfantrySculptFinishV2.gd")
+const GuardiaActions = preload("res://scripts/ui/GuardiaBattleActionsV16.gd")
 const InfantryBarracks = preload("res://scripts/ui/InfantryBarracksBattle3D.gd")
 const ArmoredWorkshop = preload("res://scripts/ui/ArmoredWorkshopBattle3D.gd")
 const ArmoredWorkshopLOD = preload("res://scripts/ui/ArmoredWorkshopBattleLOD.gd")
@@ -926,6 +927,14 @@ static func build(state: Dictionary, selected_id: String = "", viewer: int = 0) 
         counters["g13_v70_visual_actions"] = true
     else:
         counters["g13_v70_visual_actions"] = false
+    # Single visual driver for currently visible detailed Guardia models.
+    if int(counters["units"].get("guardia_lod8",0))>0:
+        var guardia_actions: Node=GuardiaActions.new()
+        guardia_actions.name="GuardiaV16_AccionesBatalla"
+        scene.add_child(guardia_actions)
+        counters["guardia_visual_actions"]=true
+    else:
+        counters["guardia_visual_actions"]=false
     counters["chunks"] = chunks.size()
     # A shared vertex palette reuses the existing ground mesh/material;
     # no extra render batches for 24x18 or 40x30 mobile boards.

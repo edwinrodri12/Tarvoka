@@ -2,6 +2,7 @@ extends SceneTree
 
 const Hints = preload("res://scripts/core/TacticalHints.gd")
 const Scenarios = preload("res://scripts/core/Scenarios.gd")
+const GuardiaActions = preload("res://scripts/ui/GuardiaBattleActionsV16.gd")
 
 func _initialize() -> void:
     call_deferred("_run")
@@ -57,7 +58,7 @@ func _run() -> void:
     var chosen: Dictionary = {}
     var landing := Vector2i(-1,-1)
     for unit in baseline["units"]:
-        if not unit is Dictionary or int(unit.get("faction",-1)) != 0:
+        if not unit is Dictionary or int(unit.get("faction",-1)) != 0 or str(unit.get("role","line"))!="line":
             continue
         var legal: Dictionary = Hints.for_unit(baseline,str(unit.get("id",""))).get("moves",{})
         if not legal.is_empty():
@@ -91,6 +92,8 @@ func _run() -> void:
     assert(str(main.board.selected_id) == str(chosen["id"]))
     assert(not hud.order_panel.visible)
     assert(main.board.state == baseline)
+    var before_driver: Node=view._scene.find_child("GuardiaV16_AccionesBatalla",false,false)
+    assert(before_driver!=null and not before_driver.active())
 
     assert(view.tap_battle_cell(landing)) # New preview.
     assert(view._look_at.is_equal_approx(before_preview_camera))
@@ -104,6 +107,15 @@ func _run() -> void:
             after_pos = unit["pos"]
     assert(after_pos == landing)
     assert(not view._order_quote.get("valid",false))
+    # Actual two-tap order must animate only after confirmation.
+    var after_driver: Node=view._scene.find_child("GuardiaV16_AccionesBatalla",false,false)
+    assert(after_driver!=null and after_driver.active())
+    var moved: Node3D=view._scene.find_child("Unidad3D_"+str(chosen["id"]),false,false) as Node3D
+    assert(moved!=null and str(moved.get_meta(GuardiaActions.FLAG,""))=="move")
+    var committed_state: Dictionary=main.board.state.duplicate(true)
+    after_driver.set_process(false)
+    after_driver.advance(GuardiaActions.MOVE_TIME)
+    assert(not after_driver.active() and main.board.state==committed_state)
     # Real command center from 3D, with proper exit and no duplicate layers.
     hud.menu_button.pressed.emit()
     assert(not view.visible)
