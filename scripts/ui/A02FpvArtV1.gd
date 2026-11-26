@@ -9,6 +9,7 @@ const DAMAGE:String="tarvoka_a02_visual_damage"
 const EFFECT:String="A02_V8_StylizedDamageEffect"
 const BASE_MATERIAL:String="tarvoka_a02_original_visual_material"
 static var _decorative_crown_texture:ImageTexture
+static var _decorative_roughness_texture:ImageTexture
 
 static func _mat(color:Color,metal:float,rough:float)->StandardMaterial3D:
     var m:=StandardMaterial3D.new()
@@ -176,9 +177,31 @@ static func _crown_livery()->ImageTexture:
     # Distinct end-face graphic identity; no extra physical pieces.
     image.fill_rect(Rect2i(168,178,48,26),Color("#bfc9d0"))
     image.fill_rect(Rect2i(178,184,28,14),Color("#e6edf1"))
+    # Deliberately vary the sheen of the printed graphic families. This
+    # single opaque grayscale resource is shared between the painted shells.
+    var roughness:=Image.create(256,256,false,Image.FORMAT_RGBA8)
+    for y in range(image.get_height()):
+        for x in range(image.get_width()):
+            var pigment:Color=image.get_pixel(x,y)
+            var value:float=lerpf(0.68,1.0,smoothstep(0.35,0.95,pigment.get_luminance()))
+            roughness.set_pixel(x,y,Color(value,value,value,1.0))
+    roughness.generate_mipmaps()
+    _decorative_roughness_texture=ImageTexture.create_from_image(roughness)
     image.generate_mipmaps()
     _decorative_crown_texture=ImageTexture.create_from_image(image)
     return _decorative_crown_texture
+
+# Two closed decorative crest strips in one draw instance. These are
+# purely ornamental, with no function, animation or separate game state.
+# Both share the original sculpt and stay embedded in the existing crown.
+static func _crest_reliefs(sculpt:ArrayMesh)->ArrayMesh:
+    var surface:=SurfaceTool.new()
+    surface.begin(Mesh.PRIMITIVE_TRIANGLES)
+    for side in [-1.0,1.0]:
+        var transform:=Transform3D(Basis.IDENTITY.scaled(Vector3(0.060,0.032,0.245)),
+            Vector3(side*0.175,1.205,-0.085))
+        surface.append_from(sculpt,0,transform)
+    return surface.commit()
 
 static func _guard_finish(primitive:TorusMesh,faction:Color)->ArrayMesh:
     # Color is baked into existing visual geometry; no decal or alpha.
@@ -210,6 +233,8 @@ static func build(root:Node3D,faction:Color,hero:bool)->bool:
     coated_shell.vertex_color_use_as_albedo=true
     coated_shell.vertex_color_is_srgb=true
     coated_shell.albedo_texture=_crown_livery()
+    coated_shell.roughness_texture=_decorative_roughness_texture
+    coated_shell.roughness_texture_channel=BaseMaterial3D.TEXTURE_CHANNEL_RED
     coated_shell.texture_filter=BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
     var shell:=_mat(Color("#697b86"),0.16,0.64)
     var coated_guard:=_mat(Color.WHITE,0.15,0.63)
@@ -221,6 +246,8 @@ static func build(root:Node3D,faction:Color,hero:bool)->bool:
     enamel.vertex_color_is_srgb=true
     var crown_livery:=enamel.duplicate() as StandardMaterial3D
     crown_livery.albedo_texture=_crown_livery()
+    crown_livery.roughness_texture=_decorative_roughness_texture
+    crown_livery.roughness_texture_channel=BaseMaterial3D.TEXTURE_CHANNEL_RED
     crown_livery.texture_filter=BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
     var crown_mesh:=_shell_finish(sculpt,Color.WHITE,Color("#a0adb5"))
     # V6: a restrained blue-gray decorative face with opaque tonal finish.
@@ -290,6 +317,11 @@ static func build(root:Node3D,faction:Color,hero:bool)->bool:
     _part(body,"A02_V5_RearBadge",sculpt,Vector3(0,0.965,0.510),
         Vector3(0.30,0.15,0.055),dark_mark)
     if hero:
+        # A restrained, sculpted ornamental highlight over the flat livery.
+        # Kept as a single closed mesh resource at inspection detail only.
+        var crest_material:=_mat(insignia_color.lerp(faction,0.30),0.18,0.50)
+        _part(body,"A02_V20_OrnamentalCrest",_crest_reliefs(sculpt),
+            Vector3.ZERO,Vector3.ONE,crest_material)
         for side in [-1.0,1.0]:
             _part(body,"A02_V5_CrownAccent_"+str(side),sculpt,
                 Vector3(side*0.145,1.205,0.14),Vector3(0.045,0.016,0.12),emblem)
@@ -334,6 +366,7 @@ static func build(root:Node3D,faction:Color,hero:bool)->bool:
         if part.get_parent()!=effects:
             part.set_meta(BASE_MATERIAL,part.material_override)
     root.set_meta(DAMAGE,0)
+    root.set_meta("tarvoka_a02_v20_material_relief",true)
     root.set_meta("tarvoka_a02_v20_surface_atlas",true)
     root.set_meta("tarvoka_a02_v19_graphic_livery",true)
     root.set_meta("tarvoka_a02_v18_undershell_finish",true)
