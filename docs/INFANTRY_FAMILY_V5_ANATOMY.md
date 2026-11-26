@@ -74,3 +74,7 @@ Se añade controlador visual V16 en escena real, sólo para Guardia LOD8 ya visi
 
 ### Sincronización V15.2
 Merge de main 8045d3e: A02 V17 acabado opaco y verificación de superficie. Se preservan las cinco capturas A02 con diagnóstico explícito y pruebas WebGL de infantería. No cambia la rama principal. Pendiente CI exacto.
+
+## V16 — candidato de acabado premium separado
+
+Comparación V15 real 15157819943: cinco soldados más simples que G05, especialmente casco posterior, cintura y espinillas. Siete detalles cerrados por LOD13: protector posterior de casco, dos carriles de casco, dos placas de cintura y dos protectores de tibia, anclados en pivotes reales. Cinco perfiles y tonos según rol; materiales opacos D0-D4 por la paleta existente, facciones y G05 intactos. LOD8 no añade geometría. QA exige 150 capturas (diez nuevas), mallas cerradas, pivotes y presupuesto 7/0; Studio/Chromium exige V16. Rama art/infantry-premium-v16-20261126 separada de PR #703 para no cancelar CI V15.2 (41 ejecuciones pendientes al iniciar, una ya exitosa). No fusionar ni publicar antes de validar V15.2 y ejecutar V16. El detalle es una propuesta implementada, no una aprobación visual.

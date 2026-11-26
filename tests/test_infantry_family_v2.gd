@@ -267,6 +267,25 @@ func _run() -> void:
                     check(str(model.get_meta(Finish.CONTACT_V13,""))==role,"V13 anatomy identity")
                     check(str(model.get_meta(Finish.RELIEF_V14,""))==role,"V14 native material relief")
                     check(str(model.get_meta(Finish.FIT_V15,""))==role,"V15 proportion fit")
+                    check(str(model.get_meta(Finish.PREMIUM_V16,""))==role,"V16 premium art identity")
+                    var high: bool=bool(model.get_meta("tarvoka_infantry_v2_hero",false))
+                    var expected_parts: Dictionary={"V16_ArmorNape":"CabezaRig"}
+                    for side in [-1,1]:
+                        var suffix: String="_%d"%side
+                        expected_parts["V16_RubberHelmetRail"+suffix]="CabezaRig"
+                        expected_parts["V16_ArmorWaist"+suffix]="TorsoRig"
+                        expected_parts["V16_ArmorShin"+suffix]="V11_RodillaRig"+suffix
+                    check(int(model.get_meta(Finish.PREMIUM_COUNT_V16,-1))==(7 if high else 0),
+                        "V16 fixed premium budget and no tactical meshes")
+                    for key in expected_parts:
+                        var detail: MeshInstance3D=model.find_child(str(key),true,false) as MeshInstance3D
+                        if high:
+                            check(detail!=null and detail.mesh is ArrayMesh and closed_solid(detail.mesh) and
+                                str(detail.get_parent().name)==str(expected_parts[key]) and
+                                detail.has_meta(Finish.STAGE_MATS),
+                                "closed premium plate follows actual pivot "+str(key))
+                        else:
+                            check(detail==null,"LOD8 excludes premium plate "+str(key))
                     check(model.scale.is_equal_approx(Vector3.ONE*0.83),"same canonical model scale")
                     for side in [-1,1]:
                         var pad: MeshInstance3D=model.find_child("Rodillera_%d"%side,true,false) as MeshInstance3D
@@ -617,6 +636,17 @@ func _run() -> void:
                         check(Models.pose_model(role,hero,"aim",0.5),"V15 aim side capture")
                         await save_frame(view,"v15_%s_arm_aim"%role)
                         Models.restore_model_pose(role,hero)
+                        # Same real camera and lighting for rear shell and leg finish.
+                        camera.size=1.25
+                        camera.position=Vector3(1.4,2.7,3.0)
+                        camera.look_at(Vector3(0,1.92,0),Vector3.UP)
+                        hero.rotation_degrees.y=0
+                        await save_frame(view,"v16_%s_rear_helmet"%role)
+                        camera.size=1.50
+                        camera.position=Vector3(2.1,1.35,3.2)
+                        camera.look_at(Vector3(0,0.62,0),Vector3.UP)
+                        hero.rotation_degrees.y=180
+                        await save_frame(view,"v16_%s_shin_waist"%role)
                         # Close views of actual extremities rather than
                         # another wide full-body screenshot.
                         hero.rotation_degrees.y=140
@@ -682,7 +712,7 @@ func _run() -> void:
     await save_frame(view,"v15_six_official_rear")
     for unit in lineup:
         unit.free()
-    check(rendered==140,"140 real 3D comparison / tactical frames")
+    check(rendered==150,"150 real 3D comparison / tactical frames")
     # Art-only variants must never enter the tactical roster.
     for role in ["infantry_urban","infantry_defense",
             "infantry_antitank","infantry_engineer",
@@ -693,5 +723,5 @@ func _run() -> void:
         push_error("FAIL INFANTRY V2 NATIVE 3D: %d failures"%failed)
         quit(1)
     else:
-        print("PASS INFANTRY V2 NATIVE 3D: 160 models (6 core + 4 legacy), 8 factions, 2 LOD, 140 true PNG")
+        print("PASS INFANTRY V2 NATIVE 3D: 160 models (6 core + 4 legacy), 8 factions, 2 LOD, 150 true PNG")
         quit(0)

@@ -186,9 +186,86 @@ static func _refine_core(model: Node3D, hero: bool) -> bool:
         return false
     if not _refine_outer_armor(model,hero) or not _refine_family_legs(model,hero):
         return false
-    if not _refine_v15_fit(model,hero):
+    if not _refine_v15_fit(model,hero) or not _refine_v16_exterior(model,hero):
         return false
     return _attach_family_grips(model,hero)
+
+const PREMIUM_V16 := "tarvoka_infantry_premium_exterior_v16"
+const PREMIUM_COUNT_V16 := "tarvoka_infantry_premium_mesh_count_v16"
+
+# Seven small closed pieces on existing head/torso/knee pivots.
+# Only studio LOD13 receives added geometry; the tactical tree stays intact.
+static func _refine_v16_exterior(model: Node3D,hero: bool) -> bool:
+    var role: String=str(model.get_meta("tarvoka_infantry_role",""))
+    if role not in FAMILY_ANATOMY_ROLES:
+        return false
+    model.set_meta(PREMIUM_V16,role)
+    model.set_meta(PREMIUM_COUNT_V16,0)
+    if not hero:
+        return true
+    var head: Node3D=_find(model,"CabezaRig")
+    var upper: Node3D=_find(model,"TorsoRig")
+    var helmet: MeshInstance3D=_find(model,"V2_CascoEsferoideCerrado") as MeshInstance3D
+    if head==null or upper==null or helmet==null:
+        return false
+    # Different armoring weights, without changing shared proportions or
+    # repainting the faction emblems. Medical and supply gear remains lighter.
+    var profile: Vector3=Vector3(1.0,1.0,1.0)
+    var shade: Color=Color("#53645f")
+    match role:
+        "infantry_commando":
+            profile=Vector3(1.08,1.06,1.12)
+            shade=Color("#35484c")
+        "infantry_sniper":
+            profile=Vector3(0.84,0.90,0.85)
+            shade=Color("#54684d")
+        "infantry_logistic":
+            profile=Vector3(0.95,1.0,0.90)
+            shade=Color("#626b50")
+        "infantry_medic":
+            profile=Vector3(0.88,0.90,0.83)
+            shade=Color("#72817a")
+    var armor: StandardMaterial3D=_coat(shade,0.09,0.62)
+    var trim: StandardMaterial3D=_coat(shade.darkened(0.23),0.02,0.86)
+    var bounds: AABB=helmet.mesh.get_aabb()
+    var rear_z: float=helmet.position.z+bounds.end.z
+    var rear_y: float=bounds.position.y+bounds.size.y*0.47
+    # Shallow rear neck protector overlaps the shell instead of floating.
+    _mesh(head,"V16_ArmorNape",_organic_mesh([
+        Vector3(0.105,-0.076,0.025),Vector3(0.153,-0.049,0.043),
+        Vector3(0.158,0.027,0.042),Vector3(0.115,0.065,0.022)],
+        16,PackedFloat32Array([-0.025,0.0,0.0,-0.012]),0.66),
+        armor,Vector3(0,rear_y,rear_z-0.035))
+    for side in [-1,1]:
+        var suffix: String="_%d"%side
+        var knee: Node3D=_find(model,"V11_RodillaRig"+suffix)
+        if knee==null:
+            return false
+        # Recessed shell rail sits along the lower rear flank of the helmet.
+        _mesh(head,"V16_RubberHelmetRail"+suffix,_organic_mesh([
+            Vector3(0.020,-0.054,0.048),Vector3(0.030,-0.033,0.074),
+            Vector3(0.032,0.033,0.074),Vector3(0.020,0.056,0.042)],
+            12,PackedFloat32Array(),0.55),trim,
+            Vector3(float(side)*(bounds.size.x*0.40),rear_y+0.012,0.13),
+            Vector3(0,float(side)*-21,float(side)*-12))
+        # Low-profile waist plates live on the torso rig, not on arms.
+        _mesh(upper,"V16_ArmorWaist"+suffix,_organic_mesh([
+            Vector3(0.062*profile.x,-0.087,0.022*profile.z),
+            Vector3(0.100*profile.x,-0.061,0.038*profile.z),
+            Vector3(0.105*profile.x,0.039,0.039*profile.z),
+            Vector3(0.072*profile.x,0.080,0.023*profile.z)],
+            14,PackedFloat32Array(),0.59),armor,
+            Vector3(float(side)*0.135,-0.265,-0.237),Vector3(0,float(side)*-15,0))
+        # Shins have a separate fitted front shell that follows knee motion.
+        _mesh(knee,"V16_ArmorShin"+suffix,_organic_mesh([
+            Vector3(0.062*profile.x,-0.259*profile.y,0.023*profile.z),
+            Vector3(0.091*profile.x,-0.228*profile.y,0.035*profile.z),
+            Vector3(0.101*profile.x,-0.130,0.037*profile.z),
+            Vector3(0.087*profile.x,-0.090,0.023*profile.z)],
+            14,PackedFloat32Array([0.010,0.0,0.0,0.012]),0.70),
+            armor,Vector3(0,0,-0.139))
+    model.set_meta(PREMIUM_COUNT_V16,7)
+    return true
 
 const FIT_V15 := "tarvoka_infantry_proportions_v15"
 const ELBOW_LOCAL := Vector3(0,-0.47,-0.035)
@@ -699,6 +776,10 @@ static func _family_texture(kind: String) -> ImageTexture:
     return tex
 
 static func _finish_kind(label: String) -> String:
+    if label.begins_with("V16_Armor"):
+        return "armor"
+    if label.begins_with("V16_Rubber"):
+        return "rubber"
     if label in ["V2_CascoEsferoideCerrado","V2_CorazaPectoralHermetica"] or label.begins_with("Hombrera_") or label.begins_with("Rodillera_"):
         return "armor"
     if label in ["PetoBase","CinturaEquipo","V2_MochilaOrganica","CuelloProtegido","V2_ProteccionBarbilla"] or label.begins_with("V2_MangaCerrada_") or label.begins_with("V2_AntebrazoCerrado_") or label.begins_with("V2_MusloTaper_") or label.begins_with("V2_PantorrillaTaper_"):

@@ -154,7 +154,7 @@ jobs:
           if grep -E 'SCRIPT ERROR:|ERROR:|Parse Error:|Assertion failed' /tmp/infantry-native.log; then exit 1; fi
           grep -Fq 'PASS INFANTRY V1 NATIVE 3D:' /tmp/infantry-native.log
           test "$(find build/qa/infantry-v1 -name '*.png' | wc -l)" -eq 17
-      - name: Verify 6 approved core designs + archived art, 8 facciones and 140 native renders
+      - name: Verify 6 approved core designs + archived art, 8 facciones and 150 native renders
         shell: bash
         run: |
           set -euo pipefail
@@ -164,7 +164,7 @@ jobs:
             --script res://tests/test_infantry_family_v2.gd 2>&1 | tee /tmp/infantry-v2-native.log
           if grep -E 'SCRIPT ERROR:|ERROR:|Parse Error:|Assertion failed' /tmp/infantry-v2-native.log; then exit 1; fi
           grep -Fq 'PASS INFANTRY V2 NATIVE 3D:' /tmp/infantry-v2-native.log
-          test "$(find build/qa/infantry-v2 -name '*.png' | wc -l)" -eq 140
+          test "$(find build/qa/infantry-v2 -name '*.png' | wc -l)" -eq 150
       - name: Verify current Guardia LOD8 in actual 3D battle, fog, shared budget and performance receipt
         shell: bash
         run: |

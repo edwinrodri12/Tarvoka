@@ -2932,7 +2932,7 @@ jobs:
                     await p.screenshot({path:'build/qa/engineer-browser/infantry-'+key+'-real-webgl.png'});
                     family.push({key,model,faults});
                     fs.writeFileSync('build/qa/engineer-browser/infantry-report.json',JSON.stringify(family,null,2));
-                    if(model.role!==role||model.edition!=='V15'||!model.motion_v12||!model.contacts_v13||!model.relief_v14||!model.fit_v15||!model.native_viewport||
+                    if(model.role!==role||model.edition!=='V16'||!model.motion_v12||!model.contacts_v13||!model.relief_v14||!model.fit_v15||!model.premium_v16||model.premium_meshes_v16!==7||!model.native_viewport||
                         model.visible_meshes<20||model.transparent_meshes.length||faults.length)
                       throw Error('Wrong or non-opaque native infantry entry: '+JSON.stringify({key,model,faults}));
                   }finally{await p.close();}
