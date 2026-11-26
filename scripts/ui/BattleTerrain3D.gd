@@ -1287,6 +1287,8 @@ static func build(state: Dictionary, selected_id: String = "", viewer: int = 0) 
     counters["terrain_blend_palette_samples"] = corner_cache.size()
     counters["water_palette_samples_v27"] = water_cache.size()
     counters["shared_chunk_materials_v27"] = materials.size()
+    if materials.has("water"):
+        scene.set_meta("water_material_v40",materials["water"])
     counters["site_foundations_v26"] = int(scene.get_meta("terrain_foundations_v26",0))
     scene.set_meta("board_size",dims)
     scene.set_meta("viewer",viewer)
