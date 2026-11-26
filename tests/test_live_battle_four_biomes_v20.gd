@@ -357,6 +357,19 @@ func _run() -> void:
             main._open_battle_3d()
             assert(viewer._scene.get_meta("visual_biome")==biome)
             assert(int(viewer._scene.get_meta("render_stats")["site_foundations_v26"])>0)
+            var lights := 0
+            var environments := 0
+            for child in viewer.preview.get_children():
+                if child is DirectionalLight3D:
+                    lights += 1
+                    assert(child.light_energy>=0.95 and child.light_energy<=1.12)
+                    if biome==Biomes.TEMPERATE:
+                        assert(child.light_color==Color.WHITE)
+                elif child is WorldEnvironment:
+                    environments += 1
+                    assert(child.environment.ambient_light_energy>=0.40)
+                    assert(child.environment.ambient_light_energy<=0.49)
+            assert(lights==1 and environments==1)
             for frame in range(8):
                 await process_frame
             var review_image: Image = viewer.preview.get_texture().get_image()
