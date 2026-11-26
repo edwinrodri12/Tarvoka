@@ -1,0 +1,40 @@
+name: TARVOKA V48-V49 experimental terrain graph
+on:
+  pull_request:
+    paths:
+      - "scripts/core/LayeredCrossingsV48.gd"
+      - "scripts/core/MixedBiomeRegionsV49.gd"
+      - "scripts/ui/LayeredBridgeArtV48.gd"
+      - "tests/test_layered_crossings_mixed_biomes_v49.gd"
+      - ".github/workflows/terrain-layered-crossings-v49.yml"
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  prototype:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Godot and import checkout
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -fsSL --retry 3 https://github.com/godotengine/godot/releases/download/4.3-stable/Godot_v4.3-stable_linux.x86_64.zip -o /tmp/godot.zip
+          unzip -q /tmp/godot.zip -d /tmp
+          chmod +x /tmp/Godot_v4.3-stable_linux.x86_64
+          rm -f scripts/ui/BastionStudioAdapter.gd scripts/ui/CivilianCityStudioAdapter.gd
+          timeout 140s /tmp/Godot_v4.3-stable_linux.x86_64 --headless --editor --path . --import --quit 2>&1 | tee /tmp/v49-import.log
+          if grep -E 'SCRIPT ERROR:|Parse Error:|Import failed' /tmp/v49-import.log; then exit 1; fi
+      - name: Run isolated graph and region assertions
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout 150s /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . --script res://tests/test_layered_crossings_mixed_biomes_v49.gd 2>&1 | tee /tmp/v49-test.log
+          if grep -E 'SCRIPT ERROR:|Parse Error:|Assertion failed' /tmp/v49-test.log; then exit 1; fi
+          grep -q 'PASS V48_V49_EXPERIMENT:' /tmp/v49-test.log
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: TARVOKA-V49-experimental-logs
+          path: /tmp/v49-*.log
