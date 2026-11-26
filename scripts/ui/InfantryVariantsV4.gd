@@ -228,6 +228,8 @@ static func apply(model: Node3D, role: String, faction_color: Color,
         return false
     if not Sculpt.refine_v17_kit(model,role,hero):
         return false
+    if not _refine_v20_accessories(model,role,hero):
+        return false
     # Dedicated optic colors stay distinct from the common helmet visor.
     # Reuse the existing closed lens meshes and their exact mount positions.
     if role=="infantry_commando":
@@ -440,6 +442,50 @@ static func _refine_v14_kit(model: Node3D,role: String,hero: bool) -> bool:
         _:
             return false
     model.set_meta(KIT_V14,role)
+    return true
+
+const KIT_V20 := "tarvoka_infantry_specialist_accessories_v20"
+const KIT_COUNT_V20 := "tarvoka_infantry_specialist_accessory_count_v20"
+const KIT_PARTS_V20 := {
+    "infantry_sniper":["V9_MantleSeam_-1","V9_MantleSeam_1"],
+    "infantry_logistic":["V9_CargaAsa","V6_SupplyCase","V6_ServiceHandle"],
+    "infantry_medic":["V4_BotiquinCintura","V4_FundaInstrumentos","V6_MedicalPouch","V6_ServiceHandle"],
+    "infantry_commando":["V4_HombreraEspecial_-1","V4_HombreraEspecial_1"]
+}
+
+# Reuse the actual accessory pivots and original extents. No added draw
+# calls, no motion changes, and no modification to any faction emblems.
+static func _refine_v20_accessories(model: Node3D,role: String,hero: bool) -> bool:
+    if not KIT_PARTS_V20.has(role):
+        return false
+    model.set_meta(KIT_V20,role)
+    model.set_meta(KIT_COUNT_V20,0)
+    if not hero:
+        return true
+    var count: int=0
+    for label in KIT_PARTS_V20[role]:
+        var part: MeshInstance3D=_node(model,str(label)) as MeshInstance3D
+        if part==null or part.mesh==null:
+            return false
+        var before: AABB=part.mesh.get_aabb()
+        var r: Vector3=before.size*0.5
+        if minf(r.x,minf(r.y,r.z))<=0.0 or not before.get_center().is_zero_approx():
+            return false
+        var shoulder: bool=str(label).begins_with("V4_HombreraEspecial_")
+        var handle: bool=str(label).ends_with("Handle") or str(label).ends_with("Asa")
+        var corner: float=0.66 if shoulder else (0.52 if handle else 0.78)
+        var profile: Array[Vector3]=[
+            Vector3(r.x*corner,-r.y,r.z*corner),
+            Vector3(r.x*0.96,-r.y*0.76,r.z*0.96),
+            Vector3(r.x,-r.y*0.42,r.z),
+            Vector3(r.x,r.y*0.42,r.z),
+            Vector3(r.x*0.96,r.y*0.76,r.z*0.96),
+            Vector3(r.x*corner,r.y,r.z*corner)]
+        part.mesh=Sculpt._organic_mesh(profile,16,PackedFloat32Array(),0.48)
+        part.set_meta(KIT_V20,true)
+        part.set_meta("tarvoka_v20_original_bounds",before)
+        count+=1
+    model.set_meta(KIT_COUNT_V20,count)
     return true
 
 static func has_model(model: Node3D, role: String) -> bool:
