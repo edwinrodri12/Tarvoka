@@ -29,6 +29,16 @@ func _press(studio:Control,action:String)->bool:
                 return true
     return false
 
+func _press_camera(panel:VBoxContainer,label:String)->bool:
+    if panel==null:
+        return false
+    for child in panel.find_children("*","Button",true,false):
+        var button:=child as Button
+        if button.text==label and button.is_visible_in_tree() and not button.disabled:
+            button.pressed.emit()
+            return true
+    return false
+
 func _capture(name:String)->void:
     await process_frame
     await process_frame
@@ -114,6 +124,44 @@ func _run()->void:
     model=studio.get("model_root") as Node3D
     check(model!=null and Art.stage(model)==0,"return to A02 starts intact")
     await _capture("a02-v16-studio-return")
+    studio.call("_studio_select_tab",1)
+    var panel:=studio.get("a02_360_panel") as VBoxContainer
+    var camera:=studio.get("camera") as Camera3D
+    check(panel!=null and panel.is_visible_in_tree() and camera!=null,"A02 camera panel visible")
+    if panel!=null and camera!=null and model!=null:
+        check(_press_camera(panel,"Superior"),"top view button")
+        check(str(studio.get("_a02_review_focus"))=="superior" and camera.position.y>4.0,
+            "actual camera above sculpture")
+        check(studio.get("model_root")==model and Art.stage(model)==0,"top view preserves original model")
+        await _capture("a02-v16-studio-top")
+        check(_press_camera(panel,"Inferior"),"underside view button")
+        check(str(studio.get("_a02_review_focus"))=="inferior" and camera.position.y< -3.0,
+            "actual camera below sculpture")
+        await _capture("a02-v16-studio-bottom")
+        factions.select(2)
+        studio.call("_on_faction",2)
+        await process_frame
+        model=studio.get("model_root") as Node3D
+        check(model!=null and str(studio.get("_a02_review_focus"))=="inferior" and camera.position.y< -3.0,
+            "faction rebuild preserves inspection camera")
+        check(_press_camera(panel,"Giro 360°"),"orbit button")
+        var orbit:=studio.get("_a02_review_tween") as Tween
+        check(orbit!=null and orbit.is_running(),"orbit starts")
+        check(_press_camera(panel,"Vista completa"),"full view button")
+        check(str(studio.get("_a02_review_focus"))=="general" and (orbit==null or not orbit.is_running()),
+            "full view stops orbit")
+        check(_press_camera(panel,"Giro 360°"),"orbit before switch")
+        orbit=studio.get("_a02_review_tween") as Tween
+        studio.call("_display_role","apc")
+        await process_frame
+        check(not panel.is_visible_in_tree() and (orbit==null or not orbit.is_running()),
+            "other unit hides panel and cancels orbit")
+        picker.select(index)
+        picker.item_selected.emit(index)
+        await process_frame
+        check(_press_camera(panel,"Superior"),"return to inspection")
+        studio.call("_studio_review_reset_camera")
+        check(str(studio.get("_a02_review_focus"))=="general","reset returns to full model")
     studio.queue_free()
     await process_frame
     if failures==0:

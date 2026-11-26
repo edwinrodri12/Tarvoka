@@ -225,6 +225,9 @@ var _g15_tween: Tween
 var _g16_tween: Tween
 var _a01_tween: Tween = null
 var _a02_preview_tween: Tween = null
+var a02_360_panel:VBoxContainer
+var _a02_review_tween:Tween=null
+var _a02_review_focus:String="general"
 var a01_360_panel:VBoxContainer
 var a01_lod_readout:Label=null
 var _a01_review_tween:Tween = null
@@ -520,6 +523,20 @@ func _install_unified_studio_navigation() -> void:
     _add_paired(studio_camera_panel,"Alejar",func(): _change_zoom(-1),
         "Acercar",func(): _change_zoom(1))
     _button(studio_camera_panel,"Restablecer cámara",_studio_review_reset_camera)
+    a02_360_panel=VBoxContainer.new()
+    a02_360_panel.name="A02_InspeccionV16_3"
+    a02_360_panel.add_theme_constant_override("separation",6)
+    studio_camera_panel.add_child(a02_360_panel)
+    _title(a02_360_panel,"A02 · INSPECCIÓN DEL MODELO",13)
+    _add_paired(a02_360_panel,"Frente",func(): _a02_review_look(180.0,"general"),
+        "Trasera",func(): _a02_review_look(0.0,"general"))
+    _add_paired(a02_360_panel,"Lateral izquierdo",func(): _a02_review_look(90.0,"general"),
+        "Lateral derecho",func(): _a02_review_look(270.0,"general"))
+    _add_paired(a02_360_panel,"Superior",func(): _a02_review_look(0.0,"superior"),
+        "Inferior",func(): _a02_review_look(0.0,"inferior"))
+    _add_paired(a02_360_panel,"Giro 360°",_a02_review_spin,
+        "Vista completa",func(): _a02_review_look(35.0,"general"))
+    a02_360_panel.visible=false
     g16_360_panel=VBoxContainer.new()
     g16_360_panel.name="G16V6_InspeccionReal360MismoVisor"
     g16_360_panel.add_theme_constant_override("separation",6)
@@ -1459,6 +1476,8 @@ func _studio_g11_turn_done(art: Node3D) -> void:
 # Reset the original Godot camera AND any specialized G16 close-up.
 # Otherwise the shared "Restablecer cámara" button did not exit hose view.
 func _studio_review_reset_camera() -> void:
+    _a02_review_stop()
+    _a02_review_focus="general"
     if _g16_review_tween!=null and _g16_review_tween.is_running():
         _g16_review_tween.kill()
     if _a01_review_tween!=null and _a01_review_tween.is_running():
@@ -1466,6 +1485,36 @@ func _studio_review_reset_camera() -> void:
     _g16_review_focus="general"
     _a01_review_focus="general"
     _reset_camera()
+
+# A02 inspection operates on the original viewport and existing sculpture.
+func _a02_review_stop()->void:
+    if _a02_review_tween!=null and _a02_review_tween.is_running():
+        _a02_review_tween.kill()
+    _a02_review_tween=null
+
+func _a02_review_look(yaw:float,focus:String)->void:
+    if _role!="fpv" or not is_instance_valid(model_root) or not bool(model_root.get_meta(A02PreviewArt.FLAG,false)):
+        return
+    _a02_review_stop()
+    _a02_review_focus=focus if focus in ["general","superior","inferior"] else "general"
+    _yaw=yaw
+    model_root.rotation_degrees.y=yaw
+    _update_camera()
+
+func _a02_review_spin_tick(angle:float,art:Node3D)->void:
+    if _role=="fpv" and is_instance_valid(art) and art==model_root:
+        _yaw=angle
+        art.rotation_degrees.y=angle
+
+func _a02_review_spin()->void:
+    if _role!="fpv" or not is_instance_valid(model_root) or not bool(model_root.get_meta(A02PreviewArt.FLAG,false)):
+        return
+    _a02_review_stop()
+    _a02_review_focus="general"
+    _update_camera()
+    _a02_review_tween=create_tween()
+    _a02_review_tween.tween_method(Callable(self,"_a02_review_spin_tick").bind(model_root),
+        _yaw,_yaw+360.0,7.0).set_trans(Tween.TRANS_LINEAR)
 
 # A01 cameras operate in the same Godot SubViewport.  No tactical fog,
 # combat target acquisition or fake aircraft is introduced by this rig.
@@ -2130,6 +2179,8 @@ func _refresh_unified_studio_navigation() -> void:
         infantry_360_panel.visible=not building and InfantryV1.supports(_role)
     if g16_360_panel!=null:
         g16_360_panel.visible=not building and _role=="logistics_mobile"
+    if a02_360_panel!=null:
+        a02_360_panel.visible=not building and _role=="fpv"
     if a01_360_panel!=null:
         a01_360_panel.visible=not building and _role=="uav_recon"
     if studio_animation_panel!=null:
@@ -4568,6 +4619,13 @@ func _show_p06_fleet(count: int) -> void:
 
 func _update_camera() -> void:
     super._update_camera()
+    if _role=="fpv" and is_instance_valid(model_root) and camera!=null:
+        if _a02_review_focus in ["superior","inferior"]:
+            var target:=model_root.to_global(Vector3(0,0.95,0))
+            var top:bool=_a02_review_focus=="superior"
+            camera.position=target+Vector3(0,5.0 if top else -5.0,0)
+            camera.look_at(target,Vector3(0,0,-1 if top else 1))
+            camera.size=2.75/maxf(0.65,_zoom)
     if (model_root!=null and camera!=null and InfantryV1.supports(_role) and
             infantry_review_lod==13):
         if _infantry_helmet_focus:
@@ -4719,6 +4777,8 @@ func _stage_p06() -> int:
         "tarvoka_apc_v3_damage_stage",0)),0,4)
 
 func _display_role(role: String) -> void:
+    _a02_review_stop()
+    _a02_review_focus="general"
     _a02_preview_stop()
     _infantry_helmet_focus=false
     if _a01_tween!=null and _a01_tween.is_running():
@@ -4997,6 +5057,9 @@ func _display_role(role: String) -> void:
 
 func _switch_category(index: int) -> void:
     if index!=0:
+        _a02_review_stop()
+        _a02_review_focus="general"
+    if index!=0:
         _heli_mast_view_active_v145=false
     if index!=0 and _heli_night_enabled_v143:
         _heli_set_night_v143(false)
@@ -5015,8 +5078,10 @@ func _on_faction(index: int) -> void:
         var saved_yaw:float=_yaw
         var saved_zoom:float=_zoom
         var saved_damage:int=A02PreviewArt.stage(model_root)
+        var saved_focus:String=_a02_review_focus
         _faction=index
         _display_role("fpv")
+        _a02_review_focus=saved_focus
         if is_instance_valid(model_root):
             A02PreviewArt.set_stage(model_root,saved_damage)
         _yaw=saved_yaw
