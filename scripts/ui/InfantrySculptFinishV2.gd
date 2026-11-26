@@ -812,6 +812,13 @@ static func family_sole_floor(model: Node3D) -> float:
                 floor_y=minf(floor_y,(relative*vertex).y)
     return floor_y
 
+const MOTION_V21 := "tarvoka_infantry_role_motion_v21"
+# Motion amplitude only; shared timings and contact solvers stay unchanged.
+const GAIT_GAIN_V21 := {
+    "line":1.0,"infantry_commando":0.96,"infantry_sniper":0.89,
+    "infantry_logistic":0.88,"infantry_medic":0.92
+}
+
 static func _pose_family_legs(model: Node3D,kind: String,t: float,stage: int) -> bool:
     if not bool(model.get_meta(GAIT_V11,false)):
         return true
@@ -819,6 +826,9 @@ static func _pose_family_legs(model: Node3D,kind: String,t: float,stage: int) ->
     if soldier==null:
         return false
     var pulse: float=sin(t*PI)
+    var role: String=str(model.get_meta("tarvoka_infantry_role","line"))
+    var gain: float=float(GAIT_GAIN_V21.get(role,1.0))
+    model.set_meta(MOTION_V21,role)
     for side in [-1,1]:
         var leg: Node3D=_find(model,"PiernaRig_%d"%side)
         var knee: Node3D=_find(model,"V11_RodillaRig_%d"%side)
@@ -832,16 +842,15 @@ static func _pose_family_legs(model: Node3D,kind: String,t: float,stage: int) ->
             continue
         if kind=="move":
             var wave: float=sin(t*TAU*2.0+float(side)*PI*0.5)*pulse
-            leg.rotation_degrees.x=20.0*wave
-            knee.rotation_degrees.x=-33.0*maxf(0.0,wave)
+            leg.rotation_degrees.x=20.0*wave*gain
+            knee.rotation_degrees.x=-33.0*maxf(0.0,wave)*gain
             ankle.rotation_degrees.x=-(leg.rotation_degrees.x+knee.rotation_degrees.x)*0.90
         elif kind=="run":
             var wave: float=sin(t*TAU*3.0+float(side)*PI*0.5)*pulse
-            leg.rotation_degrees.x=32.0*wave
-            knee.rotation_degrees.x=-52.0*maxf(0.0,wave)
+            leg.rotation_degrees.x=32.0*wave*gain
+            knee.rotation_degrees.x=-52.0*maxf(0.0,wave)*gain
             ankle.rotation_degrees.x=-(leg.rotation_degrees.x+knee.rotation_degrees.x)*0.85
         elif kind in ["aim","attack"]:
-            var role: String=str(model.get_meta("tarvoka_infantry_role",""))
             var crouch: float=1.0 if role=="infantry_sniper" else 0.55
             leg.rotation_degrees.x=(17.0 if side<0 else -8.0)*pulse*crouch
             knee.rotation_degrees.x=(-27.0 if side<0 else -13.0)*pulse*crouch
@@ -938,6 +947,12 @@ static func _finish_kind(label: String) -> String:
         return "armor"
     if label.begins_with("V17_Fabric"):
         return "fabric"
+    if label in ["V9_MantleSeam_-1","V9_MantleSeam_1","V6_MedicalPouch"]:
+        return "fabric"
+    if label in ["V9_CargaAsa","V6_ServiceHandle"]:
+        return "rubber"
+    if label in ["V6_SupplyCase","V4_FundaInstrumentos"]:
+        return "armor"
     if label.begins_with("V16_Rubber") or label.begins_with("V17_Rubber"):
         return "rubber"
     if label in ["V2_CascoEsferoideCerrado","V2_CorazaPectoralHermetica"] or label.begins_with("Hombrera_") or label.begins_with("Rodillera_"):
@@ -1719,6 +1734,14 @@ static func pose(model: Node3D, kind: String, t: float) -> bool:
         head.rotation_degrees.x=2.0+2.5*walk if kind=="move" else (
             -3.5*pulse if kind in ["attack","aim"] else 0.0)
         head.rotation_degrees.y=-4.0*walk if kind=="move" else 0.0
+        if role in FAMILY_ANATOMY_ROLES:
+            # Distinct reconnaissance/cargo posture without moving grips.
+            if kind=="move":
+                head.rotation_degrees.y*=float(GAIT_GAIN_V21.get(role,1.0))
+            elif kind=="run":
+                head.rotation_degrees.x=-3.0*pulse*float(GAIT_GAIN_V21.get(role,1.0))
+            elif kind in ["work","repair"] and role in ["infantry_logistic","infantry_medic"]:
+                head.rotation_degrees.x=(8.0 if role=="infantry_medic" else 5.0)*pulse
     var flash: Node3D=_find(model,"V2_DestelloDisparo3D")
     if flash!=null:
         flash.visible=kind=="attack" and phase>0.13 and phase<0.53
