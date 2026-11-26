@@ -71,7 +71,42 @@ func _check_biome(value: String,dims: Vector2i,
     model.free()
     return stats
 
+# V21: the east bank at a chunk boundary must meet both the
+# shared land corners and the exact water plane; unknown water is not drawn.
+func _check_water_bank_geometry() -> void:
+    var cell := Vector2i(7,3)
+    var at: Vector3 = Terrain.world_at(cell)
+    var h: float = Terrain.CELL*0.5
+    var top: Array[Vector3] = [
+        at+Vector3(-h,0.20,-h),at+Vector3(h,0.35,-h),
+        at+Vector3(h,0.45,h),at+Vector3(-h,0.19,h)]
+    var cells: Dictionary = {}
+    cells[cell] = {"kind":"road"}
+    cells[cell+Vector2i(1,0)] = {"kind":"water","seen":true}
+    cells[cell+Vector2i(-1,0)] = {"kind":"unknown","seen":false}
+    var surface := SurfaceTool.new()
+    surface.begin(Mesh.PRIMITIVE_TRIANGLES)
+    assert(Terrain._append_water_banks(surface,cells,cell,top,Color.WHITE)==1)
+    var mesh: ArrayMesh = surface.commit()
+    var vertices: PackedVector3Array = mesh.surface_get_arrays(0)[Mesh.ARRAY_VERTEX]
+    assert(vertices.size()==6)
+    var high_count := 0
+    var low_count := 0
+    for v in vertices:
+        assert(is_equal_approx(v.x,at.x+h))
+        if is_equal_approx(v.y,Terrain.WATER_LEVEL):
+            low_count += 1
+        else:
+            assert(v.is_equal_approx(top[1]) or v.is_equal_approx(top[2]))
+            high_count += 1
+    assert(high_count==3 and low_count==3)
+    cells[cell+Vector2i(1,0)] = {"kind":"unknown","seen":false}
+    var hidden := SurfaceTool.new()
+    hidden.begin(Mesh.PRIMITIVE_TRIANGLES)
+    assert(Terrain._append_water_banks(hidden,cells,cell,top,Color.WHITE)==0)
+
 func _run() -> void:
+    _check_water_bank_geometry()
     root.content_scale_size = Vector2i(1280,800)
     assert(Biomes.CHOICES.size()==4)
     assert(Biomes.from_index(0)==Biomes.TEMPERATE)
