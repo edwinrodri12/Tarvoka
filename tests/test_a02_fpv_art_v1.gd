@@ -123,6 +123,7 @@ func _run()->void:
             check(bool(model.get_meta("tarvoka_a02_v19_graphic_livery",false)),"V19 authored opaque decorative paint")
             check(bool(model.get_meta("tarvoka_a02_v20_surface_atlas",false)),"V20 four-face ornamental atlas")
             check(bool(model.get_meta("tarvoka_a02_v20_material_relief",false)),"V20 ornamental relief and varied material finish")
+            check(bool(model.get_meta("tarvoka_a02_v21_distinct_end_art",false)),"V21 distinct front and rear graphic artwork")
             if paint!=null and paint.mesh is ArrayMesh:
                 var paint_data:Array=paint.mesh.surface_get_arrays(0)
                 var paint_vertices:PackedVector3Array=paint_data[Mesh.ARRAY_VERTEX]
@@ -136,16 +137,17 @@ func _run()->void:
                         var a:Vector2=paint_uv[uv_indices[i]]
                         var b:Vector2=paint_uv[uv_indices[i+1]]
                         var c:Vector2=paint_uv[uv_indices[i+2]]
-                        var tile:Vector2=(a*2.0).floor()
+                        var grid:=Vector2(4,2)
+                        var tile:Vector2=(a*grid).floor()
                         atlas_tiles[str(tile)]=true
-                        check(tile==(b*2.0).floor() and tile==(c*2.0).floor(),
+                        check(tile==(b*grid).floor() and tile==(c*grid).floor(),
                             "V20 no triangle crosses an atlas seam")
                         check(absf((b-a).cross(c-a))>0.000001,"V20 nondegenerate UV face")
                         for uv in [a,b,c]:
-                            var local_uv:Vector2=uv*2.0-tile
+                            var local_uv:Vector2=uv*grid-tile
                             check(local_uv.x>=0.03 and local_uv.x<=0.97 and local_uv.y>=0.03 and local_uv.y<=0.97,
                                 "V20 padded atlas tile")
-                    check(atlas_tiles.size()==4,"V20 all four atlas tiles in use")
+                    check(atlas_tiles.size()==5 and atlas_tiles.has(str(Vector2(1,1))) and atlas_tiles.has(str(Vector2(2,1))),"V21 five occupied tiles including distinct ends")
                 var painted:=paint.material_override as StandardMaterial3D
                 check(painted.albedo_texture!=null,"V19 actual paint texture")
                 check(painted.roughness_texture!=null and painted.roughness_texture_channel==BaseMaterial3D.TEXTURE_CHANNEL_RED,
@@ -154,7 +156,7 @@ func _run()->void:
                     if v20_shared_roughness==null:
                         v20_shared_roughness=painted.roughness_texture
                         var rough_image:=v20_shared_roughness.get_image()
-                        check(rough_image!=null and rough_image.get_size()==Vector2i(256,256) and rough_image.has_mipmaps(),
+                        check(rough_image!=null and rough_image.get_size()==Vector2i(512,256) and rough_image.has_mipmaps(),
                             "V20 compact mipmapped roughness resource")
                         if rough_image!=null:
                             var low:float=1.0
@@ -172,7 +174,7 @@ func _run()->void:
                     if v19_shared_livery==null:
                         v19_shared_livery=painted.albedo_texture
                         var image:=v19_shared_livery.get_image()
-                        check(image!=null and image.get_size()==Vector2i(256,256) and image.has_mipmaps(),"V19 compact mipmapped texture")
+                        check(image!=null and image.get_size()==Vector2i(512,256) and image.has_mipmaps(),"V19 compact mipmapped texture")
                         if image!=null:
                             var shades:Dictionary={}
                             for y in range(image.get_height()):
@@ -182,10 +184,10 @@ func _run()->void:
                                     shades[pigment.to_html()]=true
                             check(shades.size()>=6,"V19 deliberate multi-tone authored pattern")
                             var fingerprints:Dictionary={}
-                            for tile in [Vector2i(0,0),Vector2i(1,0),Vector2i(0,1),Vector2i(1,1)]:
+                            for tile in [Vector2i(0,0),Vector2i(1,0),Vector2i(0,1),Vector2i(1,1),Vector2i(2,1)]:
                                 var tile_image:=image.get_region(Rect2i(tile*128,Vector2i(128,128)))
                                 fingerprints[hash(tile_image.get_data())]=true
-                            check(fingerprints.size()==4,"V20 distinct face-family graphic patterns")
+                            check(fingerprints.size()==5,"V21 five distinct face-family graphic patterns")
                     check(painted.albedo_texture==v19_shared_livery,"V19 shared texture across factions and LODs")
                 var paint_normals:PackedVector3Array=paint_data[Mesh.ARRAY_NORMAL]
                 var paint_colors:PackedColorArray=paint_data[Mesh.ARRAY_COLOR]
@@ -547,7 +549,7 @@ func _run()->void:
     var report:=FileAccess.open(out+"/a02-v10-workload.json",FileAccess.WRITE)
     check(report!=null,"V10 resource report created")
     if report!=null:
-        report.store_string(JSON.stringify({"revision":"V20","measurement":"visible native Godot mesh resources; not FPS or RAM","states":workload},"  "))
+        report.store_string(JSON.stringify({"revision":"V21","measurement":"visible native Godot mesh resources; not FPS or RAM","states":workload},"  "))
         report.close()
     check(Arsenal.profile("fpv")==profile,"no catalogue changes")
     vp.queue_free()
