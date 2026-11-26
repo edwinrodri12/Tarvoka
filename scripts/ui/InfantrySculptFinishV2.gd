@@ -866,55 +866,69 @@ static var _family_textures: Dictionary={}
 const RELIEF_V14 := "tarvoka_infantry_relief_v14"
 static var _family_normals: Dictionary={}
 
-# Periodic procedural microrelief. Actual normal textures, not transparent
-# overlays or additional mesh objects; one shared texture per surface class.
-static func _relief_height(kind: String,x: int,y: int) -> float:
+const SURFACES_V19 := "tarvoka_infantry_role_surfaces_v19"
+# Integer periodic frequencies keep tiled mipmapped textures seamless.
+# Each role has its own weave, tread and coating profile, independent of faction.
+const SURFACE_PROFILES_V19 := {
+    "line":Vector3i(8,8,11),
+    "infantry_commando":Vector3i(12,8,15),
+    "infantry_sniper":Vector3i(6,10,9),
+    "infantry_logistic":Vector3i(5,7,7),
+    "infantry_medic":Vector3i(10,12,13)
+}
+
+static func _relief_height(kind: String,x: int,y: int,role: String) -> float:
+    var profile: Vector3i=SURFACE_PROFILES_V19.get(role,Vector3i(8,8,11))
     var u: float=TAU*float(x)/64.0
     var v: float=TAU*float(y)/64.0
     var grain: float=sin(13.0*u+17.0*v)*cos(19.0*u-11.0*v)
+    var warp: float=float(profile.x)
+    var weft: float=float(profile.y)
+    var finish: float=float(profile.z)
     match kind:
         "fabric":
-            return 0.38*cos(8.0*u)*cos(8.0*v)+0.10*grain
+            return 0.30*cos(warp*u)*cos(weft*v)+0.07*cos(warp*u+weft*v)+0.07*grain
         "rubber":
-            return 0.30*cos(8.0*u+8.0*v)+0.07*grain
+            return 0.24*cos(warp*u+weft*v)+0.06*cos(warp*u-weft*v)+0.05*grain
         _:
-            return 0.035*grain
+            return 0.045*sin(finish*u+3.0*v)*cos(5.0*u-finish*v)+0.023*grain
 
-static func _family_normal(kind: String) -> ImageTexture:
-    if _family_normals.has(kind):
-        return _family_normals[kind] as ImageTexture
+static func _family_normal(kind: String,role: String) -> ImageTexture:
+    var key: String=role+":"+kind
+    if _family_normals.has(key):
+        return _family_normals[key] as ImageTexture
     var img: Image=Image.create(64,64,false,Image.FORMAT_RGBA8)
     for y in range(64):
         for x in range(64):
-            var dx: float=(_relief_height(kind,x+1,y)-_relief_height(kind,x-1,y))*0.5
-            var dy: float=(_relief_height(kind,x,y+1)-_relief_height(kind,x,y-1))*0.5
+            var dx: float=(_relief_height(kind,x+1,y,role)-_relief_height(kind,x-1,y,role))*0.5
+            var dy: float=(_relief_height(kind,x,y+1,role)-_relief_height(kind,x,y-1,role))*0.5
             var n: Vector3=Vector3(-dx,-dy,1.0).normalized()
             img.set_pixel(x,y,Color(n.x*0.5+0.5,n.y*0.5+0.5,n.z*0.5+0.5,1.0))
     img.generate_mipmaps()
     var tex: ImageTexture=ImageTexture.create_from_image(img)
-    _family_normals[kind]=tex
+    _family_normals[key]=tex
     return tex
 
-# Small, shared procedural textures; no external resources and no
-# textures at tactical LOD8. Color is grayscale to preserve the palette.
-static func _family_texture(kind: String) -> ImageTexture:
-    if _family_textures.has(kind):
-        return _family_textures[kind] as ImageTexture
+# Grayscale role-specific microstructure preserves faction colors.
+# Only hero LOD allocates these textures; all damage states share them.
+static func _family_texture(kind: String,role: String) -> ImageTexture:
+    var key: String=role+":"+kind
+    if _family_textures.has(key):
+        return _family_textures[key] as ImageTexture
     var img: Image=Image.create(64,64,false,Image.FORMAT_RGBA8)
     for y in range(64):
         for x in range(64):
-            var u: float=TAU*float(x)/64.0
-            var v: float=TAU*float(y)/64.0
-            var grain: float=sin(13*u+17*v)*cos(19*u-11*v)
-            var tone: float=0.96+0.022*grain
+            var h: float=_relief_height(kind,x,y,role)
+            var tone: float=0.96+0.15*h
             if kind=="fabric":
-                tone=0.92+0.035*cos(8*u)*cos(8*v)+0.023*grain
+                tone=0.92+0.12*h
             elif kind=="rubber":
-                tone=0.94+0.025*sin(12*u)*sin(12*v)+0.015*grain
+                tone=0.94+0.12*h
+            tone=clampf(tone,0.0,1.0)
             img.set_pixel(x,y,Color(tone,tone,tone,1.0))
     img.generate_mipmaps()
     var tex: ImageTexture=ImageTexture.create_from_image(img)
-    _family_textures[kind]=tex
+    _family_textures[key]=tex
     return tex
 
 static func _finish_kind(label: String) -> String:
@@ -943,6 +957,7 @@ static func _finish_kind(label: String) -> String:
 static func _finish_family_materials(model: Node3D,hero: bool) -> bool:
     if not bool(model.get_meta(FAMILY_ANATOMY_V5,false)):
         return true
+    var role: String=str(model.get_meta("tarvoka_infantry_role","line"))
     var cache: Dictionary={}
     for item in model.find_children("*","MeshInstance3D",true,false):
         var part: MeshInstance3D=item as MeshInstance3D
@@ -956,6 +971,9 @@ static func _finish_family_materials(model: Node3D,hero: bool) -> bool:
         if not cache.has(key):
             var clean: StandardMaterial3D=src.duplicate() as StandardMaterial3D
             clean.transparency=BaseMaterial3D.TRANSPARENCY_DISABLED
+            var opaque_color: Color=clean.albedo_color
+            opaque_color.a=1.0
+            clean.albedo_color=opaque_color
             clean.cull_mode=BaseMaterial3D.CULL_BACK
             clean.metallic=0.09 if kind=="armor" else 0.0
             clean.roughness=0.58 if kind=="armor" else (0.92 if kind=="fabric" else 0.84)
@@ -969,13 +987,13 @@ static func _finish_family_materials(model: Node3D,hero: bool) -> bool:
                 clean.clearcoat_roughness=0.09
                 clean.normal_enabled=false
             elif hero:
-                clean.albedo_texture=_family_texture(kind)
+                clean.albedo_texture=_family_texture(kind,role)
                 clean.uv1_triplanar=true
                 clean.uv1_world_triplanar=false
                 clean.uv1_scale=Vector3.ONE*4.0
                 clean.texture_filter=BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
                 clean.normal_enabled=true
-                clean.normal_texture=_family_normal(kind)
+                clean.normal_texture=_family_normal(kind,role)
                 clean.normal_scale=0.30 if kind=="fabric" else (0.24 if kind=="rubber" else 0.20)
             var stages: Array[StandardMaterial3D]=[clean]
             for stage in range(1,5):
@@ -1009,6 +1027,7 @@ static func _finish_family_materials(model: Node3D,hero: bool) -> bool:
     model.set_meta(SURFACE_V7,true)
     model.set_meta(DAMAGE_V7,0)
     model.set_meta(RELIEF_V14,str(model.get_meta("tarvoka_infantry_role","")))
+    model.set_meta(SURFACES_V19,role)
     return true
 
 static func sync_family_damage(model: Node3D,stage: int) -> void:
