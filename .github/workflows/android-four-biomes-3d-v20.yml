@@ -5,6 +5,8 @@ on:
     paths:
       - "scripts/ui/BattleTerrain3D.gd"
       - "scripts/ui/Battle3DMapView.gd"
+      - "scripts/ui/BattleWeatherOverlay3D.gd"
+      - "scripts/core/Scenarios.gd"
       - "scripts/ui/Battle3DOrders.gd"
       - "scripts/ui/BattleTerrainPicker3D.gd"
       - "scripts/ui/TerrainVisualMapBridge3D.gd"
@@ -21,7 +23,7 @@ permissions:
 jobs:
   playable-four-biomes:
     runs-on: ubuntu-22.04
-    timeout-minutes: 15
+    timeout-minutes: 18
     steps:
       - uses: actions/checkout@v4
       - name: Download Godot 4.3 and import real Android game
@@ -52,7 +54,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          timeout --signal=TERM --kill-after=5s 420s xvfb-run -a -s "-screen 0 1280x800x24" \
+          timeout --signal=TERM --kill-after=5s 540s xvfb-run -a -s "-screen 0 1280x800x24" \
             /tmp/Godot_v4.3-stable_linux.x86_64 --path . \
             --rendering-driver opengl3 --audio-driver Dummy \
             --script res://tests/test_live_battle_four_biomes_v20.gd \
@@ -62,7 +64,12 @@ jobs:
           test -s artifacts/tarvoka_biomes_v20_delta_in_battle.png
           for biome in temperate winter canyon coastal desert tropical wetland urban archipelago; do
             test -s "artifacts/tarvoka_biomes_v20_review_v28_${biome}.png"
+            test -s "artifacts/tarvoka_biomes_v20_geography_v43_${biome}.png"
           done
+          for mode in rain snow dust; do
+            test -s "artifacts/tarvoka_biomes_v20_weather_v41_${mode}.png"
+          done
+          grep -q 'V42_TERRAIN_COST' /tmp/v20-gpu.log
       - name: Archive true 3D battle frame and test logs
         if: always()
         uses: actions/upload-artifact@v4
