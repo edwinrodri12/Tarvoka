@@ -284,6 +284,22 @@ static func _append_road_finish(tool: SurfaceTool,at: Vector3,
         if bool(shores.get("south",false)):
             RoadShore._rect(tool,at,surface,-half,half,0.68,0.77,curb,0.105)
 
+# V25: static depth shading using only public water/land records.
+# Every shared water corner has the same world-space pigment; no shader,
+# animated geometry, or additional batches are needed.
+static func _water_corner_tint(cells: Dictionary,corner: Vector2i,
+        biome: String) -> Color:
+    var known_land := 0
+    for dy in [-1,0]:
+        for dx in [-1,0]:
+            var tile: Dictionary = cells.get(corner+Vector2i(dx,dy),{})
+            var kind: String = str(tile.get("kind","unknown"))
+            if kind not in ["unknown","water"]:
+                known_land += 1
+    var deep: Color = _biome_color("water",corner,biome)
+    var shallow: Color = deep.lightened(0.23)
+    return deep.lerp(shallow,clampf(float(known_land)*0.34,0.0,1.0))
+
 static func _build_chunk(parent: Node3D, data: Dictionary,
         cells: Dictionary,corner_cache: Dictionary,
         biome: String = Biomes.TEMPERATE) -> Dictionary:
@@ -315,8 +331,19 @@ static func _build_chunk(parent: Node3D, data: Dictionary,
             continue
         if kind == "water":
             var sea: Vector3 = at+Vector3(0,WATER_LEVEL,0)
-            _panel(water,sea+Vector3(-half,0,-half),sea+Vector3(half,0,-half),
-                sea+Vector3(half,0,half),sea+Vector3(-half,0,half),tinted)
+            var wn: Vector3 = sea+Vector3(-half,0,-half)
+            var we: Vector3 = sea+Vector3(half,0,-half)
+            var ws: Vector3 = sea+Vector3(half,0,half)
+            var ww: Vector3 = sea+Vector3(-half,0,half)
+            if bool(tile.get("details",false)):
+                var cn: Color = _water_corner_tint(cells,cell,biome)
+                var ce: Color = _water_corner_tint(cells,cell+Vector2i(1,0),biome)
+                var cs: Color = _water_corner_tint(cells,cell+Vector2i(1,1),biome)
+                var cw: Color = _water_corner_tint(cells,cell+Vector2i(0,1),biome)
+                _tri_tinted(water,wn,ww,we,cn,cw,ce)
+                _tri_tinted(water,we,ww,ws,ce,cw,cs)
+            else:
+                _panel(water,wn,we,ws,ww,tinted)
             water_count += 1
             continue
         var corners: PackedFloat32Array = _corners(cells,cell)
