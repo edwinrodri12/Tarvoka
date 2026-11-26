@@ -17,6 +17,7 @@ const Ranges = preload("res://scripts/ui/BattleRanges3D.gd")
 const Orders = preload("res://scripts/ui/Battle3DOrders.gd")
 const G11ActionsV29 = preload("res://scripts/ui/G11BattleActionsV29.gd")
 const Biomes = preload("res://scripts/ui/WinterBattleBiome.gd")
+const WeatherOverlay = preload("res://scripts/ui/BattleWeatherOverlay3D.gd")
 const ImmersiveHud = preload("res://scripts/ui/ImmersiveBattleHud.gd")
 const SiteInteraction = preload("res://scripts/ui/SiteInteractionData.gd")
 const BuildingInfoCard = preload("res://scripts/ui/BuildingInfoPanel.gd")
@@ -32,6 +33,8 @@ var stats_label: Label
 var _scene: Node3D
 var _water_clock: float = 0.0
 var _water_tick: float = 0.0
+var _weather_overlay: Control
+var _battle_sun: DirectionalLight3D
 var _cursor: MeshInstance3D
 var _cells: Dictionary = {}
 var _dims := Vector2i.ZERO
@@ -113,6 +116,15 @@ func _ready() -> void:
     sun.light_energy = 1.06
     sun.shadow_enabled = true
     preview.add_child(sun)
+    _battle_sun = sun
+    var weather_layer := CanvasLayer.new()
+    weather_layer.name = "ClimaVisualV41"
+    weather_layer.layer = 5
+    preview.add_child(weather_layer)
+    _weather_overlay = WeatherOverlay.new()
+    weather_layer.add_child(_weather_overlay)
+    preview.size_changed.connect(_sync_weather_overlay_size)
+    _sync_weather_overlay_size()
     camera = Camera3D.new()
     camera.name = "CamaraBatalla3D"
     camera.projection = Camera3D.PROJECTION_ORTHOGONAL
@@ -455,6 +467,22 @@ func _process(_delta: float) -> void:
     if preview.size.x > 1280 or preview.size.y > 800:
         holder.stretch_shrink = mini(8,holder.stretch_shrink+1)
     _advance_water(_delta)
+    _update_weather_effects(_delta)
+
+func _sync_weather_overlay_size() -> void:
+    if is_instance_valid(_weather_overlay) and preview!=null:
+        _weather_overlay.size = Vector2(preview.size)
+
+func _update_weather_effects(delta: float) -> void:
+    if _scene==null or not is_instance_valid(_weather_overlay):
+        return
+    var conserving: bool = _live_board!=null and bool(_live_board.get("battery_saver"))
+    _weather_overlay.configure(_current_state(),conserving)
+    _weather_overlay.advance(delta)
+    # V42: restore shadows when leaving a conserving battle, and honor
+    # a live toggle without creating another light or rebuilding the map.
+    if is_instance_valid(_battle_sun):
+        _battle_sun.shadow_enabled = not conserving
 
 # V40: slow, subtle texture motion on the one scene-local water material.
 # No displacement, collision, extra lights or per-cell updates.
@@ -569,6 +597,8 @@ func open_from_state(state: Dictionary, selected_id: String = "", viewer: int = 
             child.light_color = sunlight
             child.light_energy = sun_energy
     _state_snapshot = state.duplicate(true)
+    _weather_overlay.reset()
+    _update_weather_effects(0.0)
     _selected_hint_unit_id = selected_id
     _ranges_visible = true
     _reset_gesture()
@@ -626,10 +656,7 @@ func open_from_board(board: Control) -> bool:
     radar_view.mouse_filter = Control.MOUSE_FILTER_IGNORE
     radar_frame.tooltip_text = (
         "Radar táctico con niebla protegida; arrastra en el mapa para mover cámara.")
-    if bool(board.get("battery_saver")):
-        for child in preview.get_children():
-            if child is DirectionalLight3D:
-                child.shadow_enabled = false
+    _update_weather_effects(0.0)
     _update_order_ui()
     return true
 
@@ -1105,6 +1132,8 @@ func close_view() -> void:
     _set_immersive_mode(false)
     hide()
     preview.render_target_update_mode = SubViewport.UPDATE_DISABLED
+    if is_instance_valid(_weather_overlay):
+        _weather_overlay.reset()
     city_perf_probe.set_recording(false)
     city_perf_probe.attach_battle(null)
     if _scene != null:
