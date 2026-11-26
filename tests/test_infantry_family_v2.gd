@@ -235,7 +235,9 @@ func _run() -> void:
                     check(str(model.get_meta(Finish.SCULPT_V8,""))==role,
                         "V8 face integrated on exact role")
                     if role=="line":
-                        check(is_zero_approx(model.position.y),"Guardia no longer inherits below-ground proxy offset")
+                        check(is_zero_approx(model.position.y) and
+                            str(model.get_meta(Finish.SCULPT_V8,""))=="line",
+                            "Guardia native role string is compared exactly; no legacy proxy offset")
                     for name in ["V2_ProteccionBarbilla","V2_BordeFrontalCasco"]:
                         var face: MeshInstance3D=model.find_child(name,true,false) as MeshInstance3D
                         check(face!=null and face.visible and face.mesh is ArrayMesh and closed_solid(face.mesh),

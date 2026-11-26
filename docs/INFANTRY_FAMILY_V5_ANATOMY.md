@@ -23,3 +23,7 @@ V7 `3923a09`: 22 workflows exitosos, incluida QA nativa 45689803274 (artefacto 1
 ## V9 — refinamiento individual de los cuatro kits
 
 FS-24: montaje curvo de ópticas, radio y protecciones especiales ancladas al brazo, antena duplicada oculta. Francotirador: capa de reconocimiento de perfil bajo, mochila reducida y retirada de accesorios redundantes. Logístico: una mochila de carga cerrada, módulos y cinchas; se retira el bloque V1 y el equipamiento superpuesto. Médico: bolsa médica cerrada, insignia blanca frontal, arnés y señalización dorsal. Las ocho pinturas de facción se conservan; no se crean roles ni se cambia combate. Guardia conserva V8; los cuatro especialistas V9; G05 V17 intacto. Se añaden 8 vistas de detalle de equipo, 78 PNG en total. QA de sólidos, piezas heredadas ocultas y rig de FS-24. Pendiente render real de V8/V9 antes de aprobar.
+
+### Corrección de ejecución V9.1
+
+Run V8 45754268783, job 139689068458: Godot 4.3 reportó `Invalid call. Nonexistent 'bool' constructor` en UnitModels3D.gd:1381 al convertir el metadato de identidad (String) a bool. Esto abortó Guardia y originó errores secundarios de recursos al salir. La condición ahora compara el rol String exacto; no se desactiva ninguna prueba. QA pendiente del nuevo HEAD.
