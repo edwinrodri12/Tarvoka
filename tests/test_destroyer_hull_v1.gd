@@ -325,6 +325,13 @@ func _render() -> void:
     camera.position = Vector3(5,3.5,-6)
     camera.size = 3.7
     camera.look_at(Vector3(0,0.35,0),Vector3.UP)
+    model.hide()
+    await process_frame
+    await process_frame
+    await process_frame
+    var empty_water: Image = view.get_texture().get_image()
+    model.show()
+    check(empty_water != null and not empty_water.is_empty(), "Empty water reference")
     for frame in range(4):
         Art.set_destroyer_damage(model,0 if frame == 0 else 4,float(frame)/3.0)
         await process_frame
@@ -334,4 +341,16 @@ func _render() -> void:
         check(img != null and not img.is_empty(), "Fixed waterline sequence")
         if img != null and not img.is_empty():
             check(img.save_png(output + "/destroyer_v110_sink_%d.png" % frame) == OK, "Fixed camera sink capture")
+            if empty_water != null and not empty_water.is_empty() and img.get_size() == empty_water.get_size():
+                var changed: int = 0
+                for y in range(0,img.get_height(),8):
+                    for x in range(0,img.get_width(),8):
+                        var before: Color = empty_water.get_pixel(x,y)
+                        var after: Color = img.get_pixel(x,y)
+                        if absf(before.r-after.r)+absf(before.g-after.g)+absf(before.b-after.b)>0.12:
+                            changed += 1
+                if frame == 0:
+                    check(changed>100,"Intact ship visibly above water")
+                elif frame == 3:
+                    check(changed<10,"Complete submersion verified against empty sea")
     view.queue_free()
