@@ -184,7 +184,7 @@ static func _refine_core(model: Node3D, hero: bool) -> bool:
     model.set_meta(FAMILY_ANATOMY_V5,true)
     if not _refine_head_and_armor(model,hero) or not _refine_face_and_profile(model,hero):
         return false
-    if not _refine_outer_armor(model,hero):
+    if not _refine_outer_armor(model,hero) or not _refine_family_legs(model,hero):
         return false
     return _attach_family_grips(model,hero)
 
@@ -421,6 +421,113 @@ static func _refine_outer_armor(model: Node3D,hero: bool) -> bool:
     if mark!=null:
         mark.position.z=chest.position.z-0.069*chest_depth
     model.set_meta(ARMOR_V10,role)
+    return true
+
+const GAIT_V11 := "tarvoka_infantry_articulated_gait_v11"
+const GROUND_V11 := "tarvoka_infantry_rest_sole_v11"
+
+# Existing thigh, calf and boot meshes remain closed. Add two transform-only
+# pivots per leg and reparent without changing the rest-space transforms.
+static func _move_to_joint(part: Node3D,parent: Node3D,offset: Vector3) -> void:
+    var old_position: Vector3=part.position
+    part.get_parent().remove_child(part)
+    parent.add_child(part)
+    part.position=old_position-offset
+
+static func _refine_family_legs(model: Node3D,hero: bool) -> bool:
+    var sides: int=16 if hero else 10
+    for side in [-1,1]:
+        var suffix: String="_%d"%side
+        var leg: Node3D=_find(model,"PiernaRig"+suffix)
+        if leg==null:
+            return false
+        for name in ["V2_PantorrillaTaper","Rodillera","V2_BotaMoldeada","V2_Suela"]:
+            var part: Node3D=_find(model,name+suffix)
+            if part==null or part.get_parent()!=leg:
+                return false
+        # Tapered cloth contours replace the horizontal floating box folds.
+        if not _resculpt(model,"V2_MusloTaper"+suffix,[
+                Vector3(0.126,-0.52,0.136),Vector3(0.140,-0.445,0.151),
+                Vector3(0.153,-0.33,0.164),Vector3(0.148,-0.245,0.171),
+                Vector3(0.159,-0.13,0.179),Vector3(0.149,0.012,0.169)],
+                Vector3(0,0,0.02),sides):
+            return false
+        if not _resculpt(model,"V2_PantorrillaTaper"+suffix,[
+                Vector3(0.105,-0.84,0.121),Vector3(0.119,-0.75,0.131),
+                Vector3(0.133,-0.63,0.146),Vector3(0.140,-0.565,0.151),
+                Vector3(0.130,-0.455,0.142),Vector3(0.119,-0.415,0.128)],
+                Vector3(0,0,-0.03),sides):
+            return false
+        for row in range(3):
+            _hide(model,"V2_PlisePantalon_%d_%d"%[side,row])
+        var knee:=Node3D.new()
+        knee.name="V11_RodillaRig"+suffix
+        leg.add_child(knee)
+        knee.position=Vector3(0,-0.47,0)
+        var ankle:=Node3D.new()
+        ankle.name="V11_TobilloRig"+suffix
+        knee.add_child(ankle)
+        ankle.position=Vector3(0,-0.31,0)
+        for name in ["V2_PantorrillaTaper","Rodillera"]:
+            _move_to_joint(_find(model,name+suffix),knee,Vector3(0,-0.47,0))
+        for name in ["V2_BotaMoldeada","V2_Suela"]:
+            _move_to_joint(_find(model,name+suffix),ankle,Vector3(0,-0.78,0))
+    model.set_meta(GAIT_V11,true)
+    model.set_meta(GROUND_V11,family_sole_floor(model))
+    return true
+
+# Lowest sole corner in the soldier's local frame. Works in the same
+# detached native QA model, without relying on global transforms.
+static func family_sole_floor(model: Node3D) -> float:
+    var soldier: Node3D=_find(model,"Infanteria_3D")
+    var floor_y: float=INF
+    for side in [-1,1]:
+        var sole: MeshInstance3D=_find(model,"V2_Suela_%d"%side) as MeshInstance3D
+        if sole==null or sole.mesh==null:
+            continue
+        var bounds: AABB=sole.mesh.get_aabb()
+        var relative:=Transform3D.IDENTITY
+        var node: Node3D=sole
+        while node!=null and node!=soldier:
+            relative=node.transform*relative
+            node=node.get_parent() as Node3D
+        for corner in range(8):
+            floor_y=minf(floor_y,(relative*bounds.get_endpoint(corner)).y)
+    return floor_y
+
+static func _pose_family_legs(model: Node3D,kind: String,t: float,stage: int) -> bool:
+    if not bool(model.get_meta(GAIT_V11,false)):
+        return true
+    var soldier: Node3D=_find(model,"Infanteria_3D")
+    if soldier==null:
+        return false
+    var pulse: float=sin(t*PI)
+    for side in [-1,1]:
+        var leg: Node3D=_find(model,"PiernaRig_%d"%side)
+        var knee: Node3D=_find(model,"V11_RodillaRig_%d"%side)
+        var ankle: Node3D=_find(model,"V11_TobilloRig_%d"%side)
+        if leg==null or knee==null or ankle==null:
+            return false
+        leg.rotation_degrees.x=0.0
+        knee.rotation_degrees.x=0.0
+        ankle.rotation_degrees.x=0.0
+        if stage>=4:
+            continue
+        if kind=="move":
+            var wave: float=sin(t*TAU*2.0+float(side)*PI*0.5)*pulse
+            leg.rotation_degrees.x=20.0*wave
+            knee.rotation_degrees.x=-33.0*maxf(0.0,wave)
+            ankle.rotation_degrees.x=-(leg.rotation_degrees.x+knee.rotation_degrees.x)*0.90
+        elif kind in ["capture","work","repair"]:
+            leg.rotation_degrees.x=(24.0 if side<0 else -9.0)*pulse
+            knee.rotation_degrees.x=(-34.0 if side<0 else -12.0)*pulse
+            ankle.rotation_degrees.x=-(leg.rotation_degrees.x+knee.rotation_degrees.x)
+    if stage<4 and kind in ["move","capture","work","repair","idle"]:
+        var floor_y: float=family_sole_floor(model)
+        var rest: float=float(model.get_meta(GROUND_V11,floor_y))
+        if not is_finite(floor_y):
+            return false
+        soldier.position.y=rest-floor_y
     return true
 
 const SURFACE_V7 := "tarvoka_infantry_material_finish_v7"
@@ -1128,6 +1235,8 @@ static func pose(model: Node3D, kind: String, t: float) -> bool:
     if scar!=null:
         scar.visible=stage>=3
     if bool(model.get_meta(FAMILY_GRIPS_V5,false)):
+        if not _pose_family_legs(model,kind,phase,stage):
+            return false
         _family_fx(model,kind,phase,stage)
         return _service_pose(model,kind,phase) and _sync_family_grips(model)
     return true

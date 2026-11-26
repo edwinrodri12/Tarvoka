@@ -236,6 +236,39 @@ func _run() -> void:
                         "V8 face integrated on exact role")
                     check(str(model.get_meta(Finish.ARMOR_V10,""))==role,
                         "V10 role-specific closed armor and fitted arms")
+                    check(bool(model.get_meta(Finish.GAIT_V11,false)),
+                        "V11 articulated knees and ankles")
+                    for side in [-1,1]:
+                        var knee: Node3D=model.find_child("V11_RodillaRig_%d"%side,true,false) as Node3D
+                        var ankle: Node3D=model.find_child("V11_TobilloRig_%d"%side,true,false) as Node3D
+                        var sole: Node3D=model.find_child("V2_Suela_%d"%side,true,false) as Node3D
+                        check(knee!=null and ankle!=null and sole!=null and
+                            ankle.get_parent()==knee and sole.get_parent()==ankle,
+                            "closed boot follows independent ankle and knee")
+                    var body: Node3D=model.find_child("Infanteria_3D",true,false) as Node3D
+                    var rest_floor: float=float(model.get_meta(Finish.GROUND_V11,INF))
+                    var knee_motion: bool=false
+                    for phase in [0.0,0.125,0.25,0.375,0.5,0.625,0.75,0.875,1.0]:
+                        check(Models.pose_model(role,model,"move",phase),"articulated gait sample")
+                        var lowest: float=Finish.family_sole_floor(model)
+                        check(body!=null and is_finite(rest_floor) and
+                            absf(lowest+body.position.y-rest_floor)<0.0001,
+                            "stance sole remains at original floor level")
+                        for side in [-1,1]:
+                            var knee: Node3D=model.find_child("V11_RodillaRig_%d"%side,true,false) as Node3D
+                            var ankle: Node3D=model.find_child("V11_TobilloRig_%d"%side,true,false) as Node3D
+                            if knee!=null and ankle!=null:
+                                knee_motion=knee_motion or absf(knee.rotation_degrees.x)>5.0
+                                check(knee.rotation_degrees.x>=-33.01 and knee.rotation_degrees.x<=0.001 and
+                                    absf(ankle.rotation_degrees.x)<=20.01,
+                                    "bounded knee flex and ankle compensation")
+                    check(knee_motion,"independent knees really animate")
+                    Models.restore_model_pose(role,model)
+                    for side in [-1,1]:
+                        var knee: Node3D=model.find_child("V11_RodillaRig_%d"%side,true,false) as Node3D
+                        var ankle: Node3D=model.find_child("V11_TobilloRig_%d"%side,true,false) as Node3D
+                        check(knee!=null and ankle!=null and is_zero_approx(knee.rotation_degrees.x) and
+                            is_zero_approx(ankle.rotation_degrees.x),"rest restores both joints")
                     if role=="line":
                         check(is_zero_approx(model.position.y) and
                             str(model.get_meta(Finish.SCULPT_V8,""))=="line",
@@ -474,6 +507,12 @@ func _run() -> void:
                             check(Models.pose_model(role,hero,"work",0.5),"specialist service animation")
                             await save_frame(view,"v6_%s_service"%role)
                             Models.restore_model_pose(role,hero)
+                        for phase in [0.25,0.5]:
+                            check(Models.pose_model(role,hero,"move",phase),"V11 actual gait capture")
+                            hero.rotation_degrees.y=90
+                            await save_frame(view,"v11_%s_gait_%d"%[role,roundi(phase*100)])
+                            Models.restore_model_pose(role,hero)
+                        hero.rotation_degrees.y=180
                         for action in ["hit_bullet","hit_explosive"]:
                             check(Models.pose_model(role,hero,action,0.4),"V10 actual impact render")
                             await save_frame(view,"v10_%s_%s"%[role,action])
@@ -500,7 +539,7 @@ func _run() -> void:
                 camera.size=3.6
             hero.free()
             mobile.free()
-    check(rendered==88,"88 real 3D comparison / tactical frames")
+    check(rendered==98,"98 real 3D comparison / tactical frames")
     # Art-only variants must never enter the tactical roster.
     for role in ["infantry_urban","infantry_defense",
             "infantry_antitank","infantry_engineer",
@@ -511,5 +550,5 @@ func _run() -> void:
         push_error("FAIL INFANTRY V2 NATIVE 3D: %d failures"%failed)
         quit(1)
     else:
-        print("PASS INFANTRY V2 NATIVE 3D: 160 models (6 core + 4 legacy), 8 factions, 2 LOD, 88 true PNG")
+        print("PASS INFANTRY V2 NATIVE 3D: 160 models (6 core + 4 legacy), 8 factions, 2 LOD, 98 true PNG")
         quit(0)

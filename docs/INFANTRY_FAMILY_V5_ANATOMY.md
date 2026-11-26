@@ -31,3 +31,7 @@ Run V8 45754268783, job 139689068458: Godot 4.3 reportó `Invalid call. Nonexist
 ## V10 — brazo afinado, coraza individual y efectos nativos
 
 Cinco perfiles de hombro y pecho cerrados, conservando pivotes, contacto de manos y pinturas. Antebrazo de menor volumen con transición hacia muñeca; reutiliza la geometría y nodos. Efectos visuales únicamente: polvo de marcha, impacto de bala/explosión y humo estilizado del equipamiento en D3/D4 con un MultiMesh perezoso de 8 instancias LOD13 o 4 LOD8; se oculta al restaurar D0. Sin cambios de HP/daño real ni de G05. QA exige 88 PNG, 10 capturas nuevas de impactos, verificación de límite de instancias y limpieza reversible. V8 había fallado por conversión de String a bool, corregida en dd49b93. V9 y V10 todavía requieren CI y revisión visual; no fusionar.
+
+## V11 — rodilla y tobillo articulados, uniforme inferior
+
+Dos pivotes sin nueva malla por pierna, reaprovechando pantorrilla, rodillera, bota y suela cerradas con sus mismas transformaciones en reposo. Flexión de rodilla y compensación del tobillo durante marcha/servicio, retorno a pose neutra. Compensación de altura mediante la menor Y de las esquinas de ambas suelas en espacio local, conservando el nivel de apoyo original. Perfiles de muslo/pantorrilla y retirada de pliegues rectangulares, sin modificar G05 ni reglas. 98 PNG requeridos, 10 nuevas muestras de marcha y nueve fases comprobadas por cada uno de los 80 modelos; pruebas de pivotes y límites de ángulo. V9.1 y V10 QA en curso al inicio de esta ejecución; V11 aún no validada.
