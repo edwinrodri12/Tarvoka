@@ -1787,10 +1787,18 @@ static func _patrol(root: Node3D, detail: int) -> void:
     for child in fx.get_children():
         if child is Node3D and (str(child.name).begins_with("Humo") or str(child.name).begins_with("Fuego")):
             child.set_meta("patrol_effect_rest",child.transform)
+    if detail <= 6:
+        for piece in root.find_children("*","MeshInstance3D",true,false):
+            var part: MeshInstance3D = piece as MeshInstance3D
+            if part.mesh is SphereMesh:
+                var sphere_mesh: SphereMesh = part.mesh as SphereMesh
+                sphere_mesh.radial_segments = 8
+                sphere_mesh.rings = 4
     for child in root.get_children():
         if child is Node3D:
             child.set_meta("patrol_rest",child.transform)
-    root.set_meta("patrol_art_revision","1.5")
+    root.set_meta("patrol_art_revision","1.6")
+    root.set_meta("patrol_lod",detail)
     root.set_meta("patrol_damage",0)
 
 # Small closed, tapered stylized effects, never transparent billboards.
@@ -1915,7 +1923,6 @@ static func _patrol_finish(node: Node, detail: bool) -> void:
             mat.roughness = 0.65
             if label.begins_with("Cristal"):
                 mat.metallic = 0.03
-                mat.roughness = 0.34
                 mat.albedo_color = Color("#41647C")
                 mat.roughness = 0.27
             elif label.begins_with("Humo") or label.begins_with("Espuma"):

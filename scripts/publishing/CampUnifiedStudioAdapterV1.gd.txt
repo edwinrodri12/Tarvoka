@@ -835,7 +835,7 @@ func _patrol_studio_create() -> void:
     var idx: int = NavalArt.ROLES.find("patrol")
     if role_picker == null or idx < 0 or idx >= role_picker.item_count:
         return
-    role_picker.set_item_text(idx,"M01 · Patrullero V1.5")
+    role_picker.set_item_text(idx,"M01 · Patrullero V1.6")
     patrol_controls = VBoxContainer.new()
     role_picker.get_parent().add_child(patrol_controls)
     _title(patrol_controls,"M01 · PATRULLERO",14)

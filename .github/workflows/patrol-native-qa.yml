@@ -3,12 +3,14 @@ on:
   pull_request:
     paths:
       - 'scripts/ui/UnitModels3D.gd'
+      - 'scripts/ui/BattleTerrain3D.gd'
       - 'tests/test_patrol_v1.gd'
       - '.github/workflows/patrol-native-qa.yml'
   push:
     branches: [main, art/m01-patrol-v1-20261126]
     paths:
       - 'scripts/ui/UnitModels3D.gd'
+      - 'scripts/ui/BattleTerrain3D.gd'
       - 'tests/test_patrol_v1.gd'
       - '.github/workflows/patrol-native-qa.yml'
   workflow_dispatch:
@@ -39,10 +41,10 @@ jobs:
           set -euo pipefail
           timeout 300s xvfb-run -a -s '-screen 0 1280x720x24' env LIBGL_ALWAYS_SOFTWARE=1 /tmp/Godot_v4.3-stable_linux.x86_64 --rendering-method gl_compatibility --audio-driver Dummy --path . --script res://tests/test_patrol_v1.gd 2>&1 | tee /tmp/patrol.log
           if grep -E 'SCRIPT ERROR:|ERROR:|Parse Error:|Assertion failed' /tmp/patrol.log; then exit 1; fi
-          grep -F 'PASS M01 PATROL V1.5: 18 variants, 20 PNGs' /tmp/patrol.log
+          grep -F 'PASS M01 PATROL V1.6: 18 variants, 20 PNGs' /tmp/patrol.log
           test "$(find build/qa/patrol-v1 -name '*.png' | wc -l)" -eq 20
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: tarvoka-patrol-v15-native
+          name: tarvoka-patrol-v16-native
           path: build/qa/patrol-v1/*.png

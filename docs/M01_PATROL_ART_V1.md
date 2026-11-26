@@ -22,3 +22,7 @@ Main 01a6024eb212bb3d53c2df7a57f25927600323ec (cuatro commits paralelos A02) inc
 ## V1.5 — contraste, identidad y coste geométrico
 
 V1.3 y V1.4 aprobadas en QA nativa (45907147272 y 45907458558; 18 y 20 PNG inspeccionados; artefactos 15159395048 y 15158303395). V1.5 añade relieves laterales, paneles de facción de cabina y contraste de ventanas sin transparencia. Se mide el número real de mallas y triángulos por LOD en todas las facciones y se exige menor geometría en LOD8. No se afirma FPS sin medición en dispositivo. Reconciliados ocho commits de main 8045d3e64ad4fd33c7f62fac32a0bd9c1fedf3fc: conservados A02 V17 y sus pruebas, sin cambios fuera del conjunto M01. Pendiente QA exacta V1.5 y visor; sin cambios tácticos.
+
+## V1.6 — integración visual en mapa táctico
+
+Se detectó que el límite genérico de 8 modelos detallados convierte las unidades restantes en discos. M01 conserva su silueta en todas las unidades visibles: hasta ocho LOD8 y siguientes LOD6, con teselación reducida de esferas, tamaño 0.64 y ajuste de altura a la superficie. La facción artística procede de la selección real; daño D0–D3 deriva de HP actual exclusivamente para representación, D4 nunca aplicado a unidades vivas. Se conserva niebla, coordenadas, ID, reglas, estadísticas y estado de partida. QA de renderer con doce patrulleros visibles y enemigo oculto, dos LOD, recuento de triángulos y estado sin mutación. Pendiente CI; no se afirma rendimiento físico ni publicación. V1.5 aún en cola al comenzar.

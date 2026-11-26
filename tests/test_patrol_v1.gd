@@ -1,5 +1,8 @@
 extends SceneTree
 const Art = preload("res://scripts/ui/UnitModels3D.gd")
+const Terrain = preload("res://scripts/ui/BattleTerrain3D.gd")
+const Roles = preload("res://scripts/core/UnitRoles.gd")
+const Identity = preload("res://scripts/ui/FactionIdentity.gd")
 var issues: int = 0
 func _initialize() -> void:
     call_deferred("_run")
@@ -20,7 +23,50 @@ func closed(mesh: Mesh) -> bool:
         if n != 2:
             return false
     return not counts.is_empty()
+func triangles_of(model: Node3D) -> int:
+    var count: int = 0
+    for piece in model.find_children("*","MeshInstance3D",true,false):
+        count += int(float((piece as MeshInstance3D).mesh.get_faces().size())/3.0)
+    return count
+
+func check_live_battle() -> void:
+    var parent := Node3D.new()
+    var state: Dictionary = {"units":[]}
+    state[Identity.STATE_FIELD] = {"0":"dominio_turquesa","1":"orden_onix"}
+    var cells: Dictionary = {}
+    for i in range(12):
+        var cell := Vector2i(i,0)
+        var unit: Dictionary = Roles.make_unit("M01-%d" % i,0,cell,"patrol")
+        if i == 10:
+            unit["hp"] = 2
+        state["units"].append(unit)
+        cells[cell] = {"kind":"water","seen":true,"visible":true}
+    var hidden_cell := Vector2i(12,0)
+    state["units"].append(Roles.make_unit("M01-hidden",1,hidden_cell,"patrol"))
+    cells[hidden_cell] = {"kind":"water","seen":true,"visible":false}
+    var original: Dictionary = state.duplicate(true)
+    var stats: Dictionary = Terrain._make_units(parent,state,cells,"M01-0",0)
+    check(int(stats.get("patrol_visible",0)) == 12,"All twelve visible patrols retain native model")
+    check(int(stats.get("patrol_lod8",0)) == 8,"Eight LOD8 and four LOD6")
+    check(int(stats.get("hidden_enemies",0)) == 1,"Hidden enemy not exposed")
+    var detailed: Node3D = parent.get_node_or_null("Unidad3D_M01-0") as Node3D
+    var light: Node3D = parent.get_node_or_null("Unidad3D_M01-10") as Node3D
+    check(detailed != null and light != null,"Both LODs present in battle renderer")
+    if detailed != null and light != null:
+        check(int(detailed.get_meta("patrol_lod",0)) == 8 and int(light.get_meta("patrol_lod",0)) == 6,"Correct battle LODs")
+        check(triangles_of(light) < triangles_of(detailed),"Real LOD6 triangle reduction")
+        check(int(light.get_meta("patrol_damage",-1)) == 3,"HP visual damage only")
+        check(int(detailed.get_meta("tarvoka_patrol_visual_faction",-1)) == 6,"Chosen art faction")
+        check(int(detailed.get_meta("faction",-1)) == 0,"Logical side preserved")
+        check(detailed.scale.is_equal_approx(Vector3.ONE*0.64),"Fits grid cell")
+        check(detailed.position.is_equal_approx(Terrain.world_at(Vector2i.ZERO)+Vector3(0,Terrain.height_at(cells,Vector2i.ZERO)-0.07,0)),"Waterline placement")
+        print("M01 battle LOD6 triangles=",triangles_of(light)," LOD8 triangles=",triangles_of(detailed))
+    check(not parent.has_node("Unidad3D_M01-hidden"),"Fog does not instantiate hidden enemy")
+    check(state == original,"Battle state never mutated")
+    parent.free()
+
 func _run() -> void:
+    check_live_battle()
     for faction in range(-1,8):
         var low_meshes: int = 0
         var low_triangles: int = 0
@@ -29,7 +75,7 @@ func _run() -> void:
             check(model != null,"Factory")
             if model == null:
                 continue
-            check(model.get_meta("patrol_art_revision","") == "1.5","Correct revision")
+            check(model.get_meta("patrol_art_revision","") == "1.6","Correct revision")
             for path in ["CascoNaval","CubiertaPatrulla","CabinaPatrulla/CarcasaCabina","CabinaPatrulla/FaccionTechoCabina"]:
                 var part: MeshInstance3D = model.get_node_or_null(path) as MeshInstance3D
                 check(part != null and closed(part.mesh),"Closed "+path)
@@ -212,5 +258,5 @@ func _run() -> void:
     if issues > 0:
         quit(1)
     else:
-        print("PASS M01 PATROL V1.5: 18 variants, 20 PNGs")
+        print("PASS M01 PATROL V1.6: 18 variants, 20 PNGs")
         quit(0)
