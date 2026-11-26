@@ -4,6 +4,7 @@ on:
   pull_request:
     paths:
       - "scripts/ui/BattleTerrain3D.gd"
+      - "scripts/ui/TerrainSurfaceFinish3D.gd"
       - "scripts/ui/Battle3DMapView.gd"
       - "scripts/ui/BattleWeatherOverlay3D.gd"
       - "scripts/core/Scenarios.gd"
@@ -54,7 +55,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          timeout --signal=TERM --kill-after=5s 540s xvfb-run -a -s "-screen 0 1280x800x24" \
+          timeout --signal=TERM --kill-after=5s 600s xvfb-run -a -s "-screen 0 1280x800x24" \
             /tmp/Godot_v4.3-stable_linux.x86_64 --path . \
             --rendering-driver opengl3 --audio-driver Dummy \
             --script res://tests/test_live_battle_four_biomes_v20.gd \
@@ -65,6 +66,7 @@ jobs:
           for biome in temperate winter canyon coastal desert tropical wetland urban archipelago; do
             test -s "artifacts/tarvoka_biomes_v20_review_v28_${biome}.png"
             test -s "artifacts/tarvoka_biomes_v20_geography_v43_${biome}.png"
+            test -s "artifacts/tarvoka_biomes_v20_detail_v44_${biome}.png"
           done
           for mode in rain snow dust; do
             test -s "artifacts/tarvoka_biomes_v20_weather_v41_${mode}.png"
