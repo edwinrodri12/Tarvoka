@@ -8,6 +8,7 @@ on:
       - "tests/test_a01_recon_*.gd"
       - "scripts/ui/A02FpvArtV1.gd"
       - "tests/test_a02_fpv_art_v1.gd"
+      - "tests/test_a02_fpv_shared_studio_v16.gd"
       - "scripts/publishing/CampUnifiedStudioAdapterV1.gd.txt"
       - "scripts/ui/CampSupplySculptV4.gd"
       - "scripts/ui/CampReconSculptV3.gd"
@@ -235,6 +236,7 @@ on:
       - "tests/test_a01_recon_*.gd"
       - "scripts/ui/A02FpvArtV1.gd"
       - "tests/test_a02_fpv_art_v1.gd"
+      - "tests/test_a02_fpv_shared_studio_v16.gd"
       - ".github/workflows/tarvoka-3d-pages.yml"
       - "scripts/publishing/CampUnifiedStudioAdapterV1.gd.txt"
       - "scripts/ui/CampSupplySculptV4.gd"
@@ -644,6 +646,8 @@ jobs:
           cp hq-android-v15/tests/test_g13_v69_muzzle_mount_finish.gd tests/test_g13_v69_muzzle_mount_finish.gd
           test -s hq-android-v15/tests/test_unified_studio_navigation.gd
           cp hq-android-v15/tests/test_unified_studio_navigation.gd tests/test_unified_studio_navigation.gd
+          test -s hq-android-v15/tests/test_a02_fpv_shared_studio_v16.gd
+          cp hq-android-v15/tests/test_a02_fpv_shared_studio_v16.gd tests/
           test -s hq-android-v15/tests/test_studio_full_animation_inventory.gd
           cp hq-android-v15/tests/test_studio_full_animation_inventory.gd tests/test_studio_full_animation_inventory.gd
           # City V43: current art branch fixes repeated model regeneration on
@@ -1820,6 +1824,18 @@ jobs:
             echo "Unified Studio navigation regression"; exit 1
           fi
           grep -F 'PASS UNIFIED STUDIO NAVIGATION:' /tmp/unified-menu-smoke.log
+          # A02 control tests require this fully assembled production scene,
+          # not the Android repository's isolated native model checkout.
+          timeout 160s xvfb-run -a -s '-screen 0 1280x720x24' env LIBGL_ALWAYS_SOFTWARE=1 \
+            /tmp/Godot_v4.3-stable_linux.x86_64 \
+            --rendering-method gl_compatibility --audio-driver Dummy --path . \
+            --script res://tests/test_a02_fpv_shared_studio_v16.gd \
+            2>&1 | tee /tmp/a02-studio.log
+          if grep -E 'SCRIPT ERROR:|ERROR:|Parse Error:|Assertion failed' /tmp/a02-studio.log; then
+            echo '::error::A02 shared Studio selector or actions failed' >&2; exit 1
+          fi
+          grep -F 'PASS A02 V16 SHARED STUDIO:' /tmp/a02-studio.log
+          test "$(find build/qa/a02-shared-studio -name '*.png' -size +2k | wc -l)" -eq 3
           # Web export must not publish a blank civilian-city selection.
           xvfb-run -a -s '-screen 0 1280x720x24' env LIBGL_ALWAYS_SOFTWARE=1 \
             /tmp/Godot_v4.3-stable_linux.x86_64 \
@@ -2946,6 +2962,16 @@ jobs:
           })().catch(e=>{console.error(e);process.exitCode=1;});
           JS
           node /tmp/a02-browser.cjs
+      - name: Archive A02 shared native selector and controls evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: tarvoka-a02-v16-shared-native-controls
+          path: |
+            build/qa/a02-shared-studio/*.png
+            /tmp/a02-studio.log
+          if-no-files-found: warn
+          retention-days: 14
       - name: Archive A02 shared browser proof
         if: always()
         uses: actions/upload-artifact@v4
