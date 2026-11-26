@@ -835,7 +835,7 @@ func _patrol_studio_create() -> void:
     var idx: int = NavalArt.ROLES.find("patrol")
     if role_picker == null or idx < 0 or idx >= role_picker.item_count:
         return
-    role_picker.set_item_text(idx,"M01 · Patrullero V1.3")
+    role_picker.set_item_text(idx,"M01 · Patrullero V1.4")
     patrol_controls = VBoxContainer.new()
     role_picker.get_parent().add_child(patrol_controls)
     _title(patrol_controls,"M01 · PATRULLERO",14)
@@ -859,13 +859,15 @@ func _patrol_studio_create() -> void:
     patrol_damage.item_selected.connect(_patrol_studio_damage)
     patrol_controls.add_child(patrol_damage)
     _add_paired(patrol_controls,"NAVEGAR",func(): _patrol_studio_play("move"),
-        "RADAR",func(): _patrol_studio_play("idle"))
-    _add_paired(patrol_controls,"DISPARO",func(): _patrol_studio_play("attack"),
         "DETENER",_patrol_studio_stop)
+    _add_paired(patrol_controls,"DISPARO",func(): _patrol_studio_play("attack"),
+        "IMPACTO",func(): _patrol_studio_play("hit"))
+    _add_paired(patrol_controls,"RADAR",func(): _patrol_studio_play("idle"),
+        "REPARAR",func(): _patrol_studio_damage(0))
     _add_paired(patrol_controls,"VISTA MAR",func(): _patrol_studio_view(false),
         "VISTA INFERIOR",func(): _patrol_studio_view(true))
     _add_paired(patrol_controls,"HUNDIMIENTO",func(): _patrol_studio_play("sink"),
-        "REPARAR",func(): _patrol_studio_damage(0))
+        "D0 INTACTO",func(): _patrol_studio_damage(0))
     _patrol_studio_sync()
 
 func _patrol_studio_sync() -> void:
@@ -926,7 +928,7 @@ func _patrol_studio_play(kind: String) -> void:
     if _role != "patrol" or not is_instance_valid(model_root):
         return
     _patrol_studio_stop()
-    if kind != "sink" and int(model_root.get_meta("patrol_damage",0)) >= 3:
+    if kind != "sink" and int(model_root.get_meta("patrol_damage",0)) >= 4:
         return
     if kind == "sink":
         _patrol_studio_view(false)

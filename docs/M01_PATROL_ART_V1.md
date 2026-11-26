@@ -14,3 +14,7 @@ Seguimiento V1.2: animación continua y reversible del humo y fuego, inspección
 ## V1.3 — reconciliación y silueta
 
 Main 01a6024eb212bb3d53c2df7a57f25927600323ec (cuatro commits paralelos A02) incorporado mediante merge de árbol. Se mantienen sus cinco capturas A02 requeridas y los archivos BastionStudioAdapter y test A02 exactos de main. Pages: ranuras de concurrencia exclusivas M01 PR/push para no desplazar otras publicaciones. Proa más fina y extendida, cubierta con alturas y ancho derivados de estaciones del casco para mantener contacto, marco de ventanas delanteras, remates de cubierta y material mate de defensas. La pose cosmética D3 no deshabilita movilidad del motor; solo D4 rechaza movimiento. Se añaden dos encuadres de proa, 18 PNG previstos. V1.2 APK y reglas aprobados, QA específica y visor pendientes al editar. Sin modificación de estadísticas.
+
+## V1.4 — revisión visual de V1.2
+
+16 capturas reales inspeccionadas, artefacto 15157664353. Los efectos redondos, mástil rectangular y hélices poco integradas requerían revisión. Se añade mástil facetado con base y radar, ejes de propulsión en contacto, detalles de servicio y pasos de cubierta; humo agrupado y llamas cónicas estilizadas, impacto temporal independiente de daño persistente. Materiales opacos y comprobaciones de geometría, estados y limpieza; 20 PNG previstos. No se modifica el destructor ni reglas de combate. QA V1.3 seguía pendiente al editar; V1.4 no validada.

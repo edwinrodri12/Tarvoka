@@ -27,7 +27,7 @@ func _run() -> void:
             check(model != null,"Factory")
             if model == null:
                 continue
-            check(model.get_meta("patrol_art_revision","") == "1.3","Correct revision")
+            check(model.get_meta("patrol_art_revision","") == "1.4","Correct revision")
             for path in ["CascoNaval","CubiertaPatrulla","CabinaPatrulla/CarcasaCabina","CabinaPatrulla/FaccionTechoCabina"]:
                 var part: MeshInstance3D = model.get_node_or_null(path) as MeshInstance3D
                 check(part != null and closed(part.mesh),"Closed "+path)
@@ -44,6 +44,13 @@ func _run() -> void:
             var hatch_rest: Transform3D = hatch.transform
             check(model.has_node("CabinaPatrulla/PuertaTrasera"),"Aft cabin service relief")
             check(model.has_node("RotorPatrulla_1/CentroRotor"),"Visible underbody rotor")
+            check(model.has_node("UnionRotor_1"),"Rotor shaft joins stern")
+            check(model.has_node("MastilPatrulla/AntenaVisual_1") == (lod >= 13),"Mast detail LOD")
+            var tongue: MeshInstance3D = model.get_node("DanoPatrulla/Fuego/FuegoLengua_0") as MeshInstance3D
+            check((tongue.mesh as CylinderMesh).top_radius < (tongue.mesh as CylinderMesh).bottom_radius,"Tapered flame, not sphere")
+            for part in model.find_children("*","MeshInstance3D",true,false):
+                var mat: StandardMaterial3D = (part as MeshInstance3D).material_override as StandardMaterial3D
+                check(mat != null and mat.transparency == BaseMaterial3D.TRANSPARENCY_DISABLED,"Opaque material")
             var origin: Vector3 = model.position
             for stage in range(5):
                 check(Art.set_patrol_damage(model,stage,0.7),"Damage")
@@ -75,6 +82,11 @@ func _run() -> void:
             check(flash.visible,"Transient visual flash")
             Art.restore_model_pose("patrol",model)
             check(not flash.visible,"Flash cleared")
+            check(Art.pose_model("patrol",model,"hit",0.12),"Impact pose dispatch")
+            var hit: Node3D = model.get_node("DanoPatrulla/ImpactoVisualPatrulla") as Node3D
+            check(hit.visible,"Transient impact")
+            Art.restore_model_pose("patrol",model)
+            check(not hit.visible,"Impact cleared")
             model.free()
     var output: String = ProjectSettings.globalize_path("res://build/qa/patrol-v1")
     check(DirAccess.make_dir_recursive_absolute(output)==OK,"Output")
@@ -102,7 +114,7 @@ func _run() -> void:
     camera.current = true
     var model: Node3D = Art.build("patrol",0,true,13)
     view.add_child(model)
-    for i in range(14):
+    for i in range(16):
         camera.position = Vector3(4,3,-5) if i<5 else Vector3(-4,3,5)
         camera.look_at(Vector3(0,0.35,0),Vector3.UP)
         Art.set_patrol_damage(model,i if i<5 else 0,0.55 if i==4 else 0.0)
@@ -113,6 +125,14 @@ func _run() -> void:
             camera.position = Vector3(2.5,1.7,3.0) if i != 11 else Vector3(2.2,-1.8,3.0)
             camera.look_at(Vector3(0,0.75,0.25) if i != 11 else Vector3(0,0.12,1.0),Vector3.UP)
             Art.set_patrol_damage(model,3 if i == 10 else 0)
+        if i == 14 or i == 15:
+            camera.size = 1.8
+            camera.position = Vector3(2.4,2.1,3.4)
+            camera.look_at(Vector3(0,0.88,0.22),Vector3.UP)
+            if i == 14:
+                Art.set_patrol_damage(model,3)
+            else:
+                Art.pose_patrol(model,"hit",0.12)
         if i == 12 or i == 13:
             camera.size = 1.7
             camera.position = Vector3(2.4,1.9,-3.5) if i == 12 else Vector3(-2.4,1.9,-3.5)
@@ -174,5 +194,5 @@ func _run() -> void:
     if issues > 0:
         quit(1)
     else:
-        print("PASS M01 PATROL V1.3: 18 variants, 18 PNGs")
+        print("PASS M01 PATROL V1.4: 18 variants, 20 PNGs")
         quit(0)
