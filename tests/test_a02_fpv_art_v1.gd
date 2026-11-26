@@ -117,6 +117,7 @@ func _run()->void:
                         check(color.a>=0.999,"opaque pigment")
                     check(tones.size()>=3,"graduated faction and neutral tones")
             check(bool(model.get_meta("tarvoka_a02_v4_surface_normals",false)),"V4 deliberate face shading")
+            check(bool(model.get_meta("tarvoka_a02_v17_surface_finish",false)),"V17 satin sculpt finish")
             if paint!=null and paint.mesh is ArrayMesh:
                 var paint_data:Array=paint.mesh.surface_get_arrays(0)
                 var paint_vertices:PackedVector3Array=paint_data[Mesh.ARRAY_VERTEX]
@@ -127,6 +128,10 @@ func _run()->void:
                 var flat_top:int=0
                 var flat_bottom:int=0
                 var wall:int=0
+                var wall_normals:Dictionary={}
+                check(paint.mesh.get_faces().size()==180,"V17 original 60-triangle sculpt topology")
+                check(is_equal_approx((paint.material_override as StandardMaterial3D).roughness,0.66),
+                    "V17 satin crown finish")
                 for j in range(paint_normals.size()):
                     var normal:Vector3=paint_normals[j]
                     check(absf(normal.length()-1.0)<0.001,"V4 unit-length normals")
@@ -138,8 +143,14 @@ func _run()->void:
                         flat_bottom+=1
                     elif absf(normal.y)<0.001:
                         wall+=1
+                        wall_normals[str(normal.snapped(Vector3.ONE*0.001))]=true
+                    if absf(normal.y)<0.999:
+                        var horizontal:=Vector3(normal.x,0,normal.z)
+                        var radial:=Vector3(paint_vertices[j].x,0,paint_vertices[j].z)
+                        check(horizontal.dot(radial)>0.0,"V17 side and bevel normals point outward")
                     check(paint_colors[j].a>=0.999,"V4 opaque crown")
                 check(flat_top>=8 and flat_bottom>=8 and wall>=8,"V4 distinct planar crown, base and side normals")
+                check(wall_normals.size()>=12,"V17 softened corner normals without changing vertices")
             check(bool(model.get_meta("tarvoka_a02_v3_surface_finish",false)),"V3 finish active")
             var casing:=model.find_child("A02_ClosedCentralShell",true,false) as MeshInstance3D
             var frame:=model.find_child("A02_VisorFrame",true,false) as MeshInstance3D
@@ -415,7 +426,7 @@ func _run()->void:
     var report:=FileAccess.open(out+"/a02-v10-workload.json",FileAccess.WRITE)
     check(report!=null,"V10 resource report created")
     if report!=null:
-        report.store_string(JSON.stringify({"revision":"V16","measurement":"visible native Godot mesh resources; not FPS or RAM","states":workload},"  "))
+        report.store_string(JSON.stringify({"revision":"V17","measurement":"visible native Godot mesh resources; not FPS or RAM","states":workload},"  "))
         report.close()
     check(Arsenal.profile("fpv")==profile,"no catalogue changes")
     vp.queue_free()
