@@ -35,7 +35,7 @@ func configure(scenario_id: int, size_id: int, seed: int,
     grid_size = next_size
     selected_seed = next_seed
     scenario_name = str(scenario_id)
-    preview_map = Scenarios.seeded_terrain(selected_seed,grid_size) if scenario_id == Scenarios.RANDOM_SCENARIO_ID else Scenarios.terrain(scenario_id,grid_size)
+    preview_map = Scenarios.selected_terrain(scenario_id,grid_size,selected_seed,visual_biome)
     queue_redraw()
 
 func _draw() -> void:
