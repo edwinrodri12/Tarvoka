@@ -35,3 +35,7 @@ Se amplía la pintura integrada del casco de dos a cuatro caras longitudinales (
 ## V1.14 — continuidad artística
 
 Refinamiento de marcos y cristales mediante volúmenes cerrados biselados exclusivamente en LOD13, con solape de contacto y pruebas de cierre. Seis bases de barandilla y pátina tonal periódica tenue; se conservan geometría táctica, pintura y animaciones V1.13. Se amplía QA a 42 PNG: cuatro vistas de referencia frontal/trasera con la misma cámara, iluminación y facción del destructor y Bastión hero V25 (se exige su metadato nativo). No se afirma igualdad visual antes de revisar los renders. V1.13 sigue en cola; esta rama es una continuación separada para no cancelar su CI. Pendiente prueba nativa, comparación y revisión del visor. No se cambia el Bastión ni reglas de juego.
+
+## V1.15 — progresión de daño y publicación reconciliada
+
+D2 conserva humo reducido y tres volúmenes visibles; D3 despliega toda la pluma y fuego existente. Animación determinista desde el mismo estado base; reparación restaura transformaciones y visibilidad. Dos capturas adicionales D2/D3 idénticas en cámara y fase (44 PNG previstos). Se recuperan las comprobaciones de publicación de #712 y se adaptan a V1.15: enlace directo, datos del modelo instanciado, Chromium escritorio/móvil y manifiesto. Sin nuevas mallas de daño ni cambios de jugabilidad. Rama sucesora aislada; no fusionar hasta validar V1.13/V1.14/V1.15 y reconciliar main. No afirmar despliegue.

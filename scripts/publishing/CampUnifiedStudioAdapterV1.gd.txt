@@ -603,11 +603,11 @@ func _destroyer_studio_create_controls() -> void:
     var idx: int = NavalArt.ROLES.find("destroyer")
     if idx < 0 or idx >= role_picker.item_count:
         return
-    role_picker.set_item_text(idx,"Destructor naval · V1.14")
+    role_picker.set_item_text(idx,"Destructor naval · V1.15")
     destroyer_controls = VBoxContainer.new()
     destroyer_controls.name = "DestructorControlesNativos"
     role_picker.get_parent().add_child(destroyer_controls)
-    _title(destroyer_controls,"DESTRUCTOR NAVAL · V1.14",14)
+    _title(destroyer_controls,"DESTRUCTOR NAVAL · V1.15",14)
     destroyer_faction_picker = OptionButton.new()
     destroyer_faction_picker.add_item("Neutral")
     for faction in CampStyle.FACTIONS:
@@ -670,6 +670,19 @@ func _destroyer_studio_select_from_url() -> void:
         _switch_category(0)
         role_picker.select(NavalArt.ROLES.find("destroyer"))
         _display_role("destroyer")
+        # Publish evidence from the instantiated native model, not the URL alone.
+        if is_instance_valid(model_root) and _role == "destroyer":
+            var info: Dictionary = {
+                "role": _role,
+                "revision": str(model_root.get_meta("destroyer_art_revision", "")),
+                "stage": int(model_root.get_meta("destroyer_damage_stage", -1)),
+                "lod": 8 if destroyer_lod_picker.selected == 0 else 13,
+                "factions": destroyer_faction_picker.item_count,
+                "damage_states": destroyer_damage_picker.item_count,
+                "controls_visible": destroyer_controls.visible,
+                "water_visible": is_instance_valid(_destroyer_water) and _destroyer_water.visible
+            }
+            JavaScriptBridge.eval("window.__tarvokaDestroyerEntry = " + JSON.stringify(info), true)
 
 func _destroyer_studio_sync_visibility() -> void:
     if destroyer_controls != null:
@@ -719,7 +732,7 @@ func _destroyer_studio_damage_changed(stage: int) -> void:
     _destroyer_fx_time = 0.0
     NavalArt.set_destroyer_damage(model_root,stage,0.45 if stage == 4 else 0.0)
     if destroyer_status != null:
-        destroyer_status.text = "Modelo nativo V1.14 · D%d" % stage
+        destroyer_status.text = "Modelo nativo V1.15 · D%d" % stage
 
 func _destroyer_studio_stop() -> void:
     if _destroyer_studio_tween != null and _destroyer_studio_tween.is_running():
@@ -783,7 +796,7 @@ func _destroyer_studio_play(kind: String) -> void:
             if kind != "sink":
                 NavalArt.restore_model_pose("destroyer",model_root)
             else:
-                destroyer_status.text = "Modelo nativo V1.14 · D4 · Hundido")
+                destroyer_status.text = "Modelo nativo V1.15 · D4 · Hundido")
 
 func _process(delta: float) -> void:
     super._process(delta)

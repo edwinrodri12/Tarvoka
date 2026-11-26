@@ -51,7 +51,7 @@ func _run() -> void:
             check(model != null, "Destroyer builds")
             if model == null:
                 continue
-            check(model.get_meta("destroyer_art_revision", "") == "1.14", "V1.14 faction and satin finish active")
+            check(model.get_meta("destroyer_art_revision", "") == "1.15", "V1.15 faction and satin finish active")
             for key in ["CascoNaval", "Cubierta", "Superestructura/ZocaloNaval", "Superestructura/CarcasaInferior", "Superestructura/Puente", "Superestructura/TechoPuente", "TorretaNavalPivot/CarcasaTorreta", "TorreMastil/CarcasaMastil", "TorreMastil/RadarPivot/Radar", "ConjuntoPopa/Helipuerto", "ConjuntoPopa/Propulsion_-1/TimonPivot/TimonVisual", "ConjuntoPopa/Propulsion_1/TimonPivot/TimonVisual"]:
                 var part: MeshInstance3D = model.get_node_or_null(key) as MeshInstance3D
                 check(part != null, "Native " + key)
@@ -230,7 +230,11 @@ func _run() -> void:
                 check((fx.get_node("Fuego_0") as Node3D).visible == (damage>=3), "Fire stage")
                 check((fx.get_node("FragmentoCubierta") as Node3D).visible == (damage>=3), "Physical deck fragment")
                 if damage in [2,3]:
+                    if lod>=13:
+                        check((fx.get_node("Humo_4") as Node3D).visible == (damage==3),"Critical smoke has larger visible plume")
                     var smoke: Node3D = fx.get_node("Humo_0") as Node3D
+                    var authored: Transform3D = smoke.get_meta("destroyer_fx_rest")
+                    check(smoke.scale.is_equal_approx(authored.basis.get_scale()*(0.78 if damage==2 else 1.0)),"Graded plume scale from authored rest")
                     var smoke_rest: Transform3D = smoke.transform
                     check(Art.animate_destroyer_damage(model,0.25), "Animated persistent smoke")
                     var animated: Transform3D = smoke.transform
@@ -252,12 +256,15 @@ func _run() -> void:
             check(hull.transform.is_equal_approx(hull_rest) and mast.transform.is_equal_approx(mast_rest), "Original geometry restored")
             check(lid.transform.is_equal_approx(lid_rest), "Deck detail restored")
             check(not Art.animate_destroyer_damage(model,0.25), "Repaired model has no damage animation")
+            var repaired_smoke: Node3D = fx.get_node("Humo_0") as Node3D
+            var authored_smoke: Transform3D = repaired_smoke.get_meta("destroyer_fx_rest")
+            check(repaired_smoke.transform.is_equal_approx(authored_smoke) and not repaired_smoke.visible,"Smoke resets exactly on repair")
             model.free()
     await _render()
     if failures != 0:
         quit(1)
         return
-    print("PASS DESTROYER HULL V1.14: 18 variants, 42 PNGs")
+    print("PASS DESTROYER HULL V1.15: 18 variants, 44 PNGs")
     quit(0)
 
 func _render() -> void:
@@ -321,7 +328,7 @@ func _render() -> void:
         var img: Image = view.get_texture().get_image()
         check(img != null and not img.is_empty(), "Real Godot image")
         if img != null and not img.is_empty():
-            check(img.save_png(output + "/destroyer_v114_%d.png" % i) == OK, "Capture saved")
+            check(img.save_png(output + "/destroyer_v115_%d.png" % i) == OK, "Capture saved")
     Art.restore_model_pose("destroyer",model)
     for d in range(5):
         Art.set_destroyer_damage(model,d,0.52 if d == 4 else 0.0)
@@ -334,7 +341,7 @@ func _render() -> void:
         var img: Image = view.get_texture().get_image()
         check(img != null and not img.is_empty(), "Damage image")
         if img != null and not img.is_empty():
-            check(img.save_png(output + "/destroyer_v114_D%d.png" % d) == OK, "Damage capture saved")
+            check(img.save_png(output + "/destroyer_v115_D%d.png" % d) == OK, "Damage capture saved")
     for d in [2,3]:
         Art.set_destroyer_damage(model,d)
         camera.position = Vector3(3.0,2.7,3.1)
@@ -346,7 +353,7 @@ func _render() -> void:
         var img: Image = view.get_texture().get_image()
         check(img != null and not img.is_empty(), "Close damage image")
         if img != null and not img.is_empty():
-            check(img.save_png(output + "/destroyer_v114_detail_D%d.png" % d) == OK, "Close damage capture")
+            check(img.save_png(output + "/destroyer_v115_detail_D%d.png" % d) == OK, "Close damage capture")
     # Fixed camera, opaque water, and a complete visual sinking sequence.
     var sea := MeshInstance3D.new()
     var plane := PlaneMesh.new()
@@ -376,7 +383,7 @@ func _render() -> void:
         var img: Image = view.get_texture().get_image()
         check(img != null and not img.is_empty(), "Fixed waterline sequence")
         if img != null and not img.is_empty():
-            check(img.save_png(output + "/destroyer_v114_sink_%d.png" % frame) == OK, "Fixed camera sink capture")
+            check(img.save_png(output + "/destroyer_v115_sink_%d.png" % frame) == OK, "Fixed camera sink capture")
             if empty_water != null and not empty_water.is_empty() and img.get_size() == empty_water.get_size():
                 var changed: int = 0
                 for y in range(0,img.get_height(),8):
@@ -411,7 +418,7 @@ func _render() -> void:
         var img: Image = view.get_texture().get_image()
         check(img != null and not img.is_empty(), "Directional relief inspection")
         if img != null and not img.is_empty():
-            check(img.save_png(output + "/destroyer_v114_light_%d.png" % side) == OK, "Relief inspection capture")
+            check(img.save_png(output + "/destroyer_v115_light_%d.png" % side) == OK, "Relief inspection capture")
     # Same lighting and angle for all eight factions plus neutral.
     model.hide()
     light.shadow_enabled = false
@@ -431,7 +438,7 @@ func _render() -> void:
         var image: Image = view.get_texture().get_image()
         check(image != null and not image.is_empty(),"Faction comparison image")
         if image != null and not image.is_empty():
-            check(image.save_png(output+"/destroyer_v114_faction_%d.png" % faction)==OK,"Faction comparison saved")
+            check(image.save_png(output+"/destroyer_v115_faction_%d.png" % faction)==OK,"Faction comparison saved")
         stage.remove_child(sample)
         sample.free()
     # Matched inspection views under identical camera orientation and lighting.
@@ -455,8 +462,24 @@ func _render() -> void:
                 var comparison: Image = view.get_texture().get_image()
                 check(comparison != null and not comparison.is_empty(),"Matched reference image")
                 if comparison != null and not comparison.is_empty():
-                    check(comparison.save_png(output+"/destroyer_v114_compare_%s_%d.png" % [role,side])==OK,"Matched reference capture")
+                    check(comparison.save_png(output+"/destroyer_v115_compare_%s_%d.png" % [role,side])==OK,"Matched reference capture")
             subject.hide()
         stage.remove_child(bastion)
         bastion.free()
+    # Matched D2/D3 evidence at the same phase and camera.
+    model.show()
+    camera.size = 3.3
+    camera.position = Vector3(5,4,-6)
+    camera.look_at(Vector3(0,1.05,0.15),Vector3.UP)
+    for damage in [2,3]:
+        Art.set_destroyer_damage(model,damage)
+        Art.animate_destroyer_damage(model,0.25)
+        await process_frame
+        await process_frame
+        await process_frame
+        var image: Image = view.get_texture().get_image()
+        check(image != null and not image.is_empty(),"Graded damage comparison")
+        if image != null and not image.is_empty():
+            check(image.save_png(output+"/destroyer_v115_graded_D%d.png" % damage)==OK,"Graded damage capture")
+    Art.set_destroyer_damage(model,0)
     view.queue_free()
