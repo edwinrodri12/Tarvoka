@@ -27,7 +27,7 @@ func _run() -> void:
             check(model != null,"Factory")
             if model == null:
                 continue
-            check(model.get_meta("patrol_art_revision","") == "1.0","Correct revision")
+            check(model.get_meta("patrol_art_revision","") == "1.1","Correct revision")
             for path in ["CascoNaval","CubiertaPatrulla","CabinaPatrulla/CarcasaCabina","CabinaPatrulla/FaccionTechoCabina"]:
                 var part: MeshInstance3D = model.get_node_or_null(path) as MeshInstance3D
                 check(part != null and closed(part.mesh),"Closed "+path)
@@ -48,7 +48,11 @@ func _run() -> void:
             Art.set_patrol_damage(model,0)
             check(hull.transform.is_equal_approx(rest),"Restore")
             check(Art.pose_model("patrol",model,"move",0.25),"Motion dispatch")
+            check(Art.pose_model("patrol",model,"attack",0.1,Vector2i(1,0)),"Action dispatch")
+            var flash: Node3D = model.get_node("ModuloVisualPatrulla/DestelloVisual") as Node3D
+            check(flash.visible,"Transient visual flash")
             Art.restore_model_pose("patrol",model)
+            check(not flash.visible,"Flash cleared")
             model.free()
     var output: String = ProjectSettings.globalize_path("res://build/qa/patrol-v1")
     check(DirAccess.make_dir_recursive_absolute(output)==OK,"Output")
@@ -75,12 +79,15 @@ func _run() -> void:
     camera.current = true
     var model: Node3D = Art.build("patrol",0,true,13)
     view.add_child(model)
-    for i in range(8):
+    for i in range(9):
         camera.position = Vector3(4,3,-5) if i<5 else Vector3(-4,3,5)
         camera.look_at(Vector3(0,0.35,0),Vector3.UP)
         Art.set_patrol_damage(model,i if i<5 else 0,0.55 if i==4 else 0.0)
         if i == 6:
             Art.pose_patrol(model,"move",0.25)
+        if i == 8:
+            Art.pose_patrol(model,"attack",0.10)
+            camera.size = 1.7
         if i == 7:
             camera.position = Vector3(3,-2,4)
             camera.look_at(Vector3.ZERO,Vector3.UP)
@@ -91,9 +98,49 @@ func _run() -> void:
         check(img != null and not img.is_empty(),"Real image")
         if img != null and not img.is_empty():
             check(img.save_png(output+"/patrol_%d.png" % i)==OK,"Saved image")
+    Art.set_patrol_damage(model,0)
+    camera.size = 2.8
+    camera.position = Vector3(4,3,-5)
+    camera.look_at(Vector3(0,0.35,0),Vector3.UP)
+    var sea := MeshInstance3D.new()
+    var plane := PlaneMesh.new()
+    plane.size = Vector2(14,14)
+    sea.mesh = plane
+    var water := StandardMaterial3D.new()
+    water.albedo_color = Color("#315D72")
+    sea.material_override = water
+    sea.position.y = 0.03
+    view.add_child(sea)
+    model.hide()
+    await process_frame
+    await process_frame
+    await process_frame
+    var empty: Image = view.get_texture().get_image()
+    model.show()
+    for i in range(4):
+        Art.set_patrol_damage(model,0 if i == 0 else 4,float(i)/3.0)
+        await process_frame
+        await process_frame
+        await process_frame
+        var frame: Image = view.get_texture().get_image()
+        check(frame != null and not frame.is_empty(),"Waterline frame")
+        if frame != null and not frame.is_empty():
+            check(frame.save_png(output+"/patrol_sink_%d.png" % i)==OK,"Waterline saved")
+            if empty != null and empty.get_size() == frame.get_size():
+                var changed: int = 0
+                for y in range(0,frame.get_height(),8):
+                    for x in range(0,frame.get_width(),8):
+                        var p: Color = empty.get_pixel(x,y)
+                        var r: Color = frame.get_pixel(x,y)
+                        if absf(p.r-r.r)+absf(p.g-r.g)+absf(p.b-r.b)>0.12:
+                            changed += 1
+                if i == 0:
+                    check(changed>50,"Visible above sea")
+                elif i == 3:
+                    check(changed<10,"Complete submersion")
     view.queue_free()
     if issues > 0:
         quit(1)
     else:
-        print("PASS M01 PATROL V1: 18 variants, 8 PNGs")
+        print("PASS M01 PATROL V1.1: 18 variants, 13 PNGs")
         quit(0)

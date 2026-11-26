@@ -1675,6 +1675,19 @@ static func _patrol(root: Node3D, detail: int) -> void:
         _box(bridge,"CristalFrontalPatrulla_%d" % i,Vector3(-0.10+float(i)*0.20,0.92,-0.45),Vector3(0.17,0.13,0.035),Color("#38596C"))
     _box(root,"RegistroPopaPatrulla",Vector3(0,0.58,0.82),Vector3(0.36,0.04,0.37),STEEL)
     _box(root,"BaseProaPatrulla",Vector3(0,0.58,-0.91),Vector3(0.30,0.06,0.32),DARK)
+    var turret := Node3D.new()
+    turret.name = "ModuloVisualPatrulla"
+    turret.position = Vector3(0,0.61,-0.91)
+    root.add_child(turret)
+    _cylinder(turret,"AsientoModulo",Vector3(0,0.035,0),0.12,0.07,STEEL)
+    _destroyer_shell(turret,"CarcasaModulo",[[-0.14,0.08,0.065,0.20],[-0.07,0.12,0.065,0.20],[0.10,0.12,0.065,0.20],[0.14,0.09,0.065,0.20]],ARMOR)
+    _box(turret,"DetalleFrontal",Vector3(0,0.145,-0.18),Vector3(0.055,0.055,0.18),DARK)
+    _sphere(turret,"DestelloVisual",Vector3(0,0.145,-0.29),Vector3(0.16,0.16,0.20),Color("#FFCA77")).hide()
+    for side in [-1,1]:
+        var sign: float = float(side)
+        _cylinder(root,"PropulsionEstilizada_%d" % side,Vector3(sign*0.22,0.19,1.07),0.08,0.24,DARK,Vector3(90,0,0))
+        _box(root,"SoportePopa_%d" % side,Vector3(sign*0.22,0.29,1.04),Vector3(0.10,0.19,0.18),STEEL)
+        _box(root,"AmarrePatrulla_%d" % side,Vector3(sign*0.26,0.59,1.01),Vector3(0.10,0.055,0.065),METAL)
     var mast := Node3D.new()
     mast.name = "MastilPatrulla"
     mast.position = Vector3(0,1.10,0.11)
@@ -1699,7 +1712,7 @@ static func _patrol(root: Node3D, detail: int) -> void:
     for child in root.get_children():
         if child is Node3D:
             child.set_meta("patrol_rest",child.transform)
-    root.set_meta("patrol_art_revision","1.0")
+    root.set_meta("patrol_art_revision","1.1")
     root.set_meta("patrol_damage",0)
 
 static func set_patrol_damage(root: Node3D, stage: int, phase: float = 0.0) -> bool:
@@ -1714,6 +1727,8 @@ static func set_patrol_damage(root: Node3D, stage: int, phase: float = 0.0) -> b
             child.transform = child.get_meta("patrol_rest")
     for foam in root.get_node("EstelaPatrulla").get_children():
         (foam as Node3D).hide()
+    (root.get_node("ModuloVisualPatrulla/DestelloVisual") as Node3D).hide()
+    (root.get_node("MastilPatrulla/RadarPatrulla") as Node3D).rotation.y = 0.0
     var effects: Node3D = root.get_node("DanoPatrulla") as Node3D
     (effects.get_node("Marca") as Node3D).visible = d >= 1
     (effects.get_node("Humo") as Node3D).visible = d >= 2
@@ -1729,10 +1744,10 @@ static func set_patrol_damage(root: Node3D, stage: int, phase: float = 0.0) -> b
                 child.transform = Transform3D(tilt*rest.basis,tilt*rest.origin+Vector3(0,-2.2*t,0))
     return true
 
-static func pose_patrol(root: Node3D, kind: String, phase: float) -> bool:
+static func pose_patrol(root: Node3D, kind: String, phase: float, heading: Vector2i = Vector2i(0,-1)) -> bool:
     if root == null or not root.has_meta("patrol_art_revision") or int(root.get_meta("patrol_damage",0)) >= 3:
         return false
-    if kind not in ["idle","move","hit","damage","damaged"]:
+    if kind not in ["idle","move","hit","damage","damaged","attack","fire","aim"]:
         return false
     var t: float = clampf(phase,0.0,1.0)
     var wave: float = sin(t*TAU)
@@ -1740,6 +1755,10 @@ static func pose_patrol(root: Node3D, kind: String, phase: float) -> bool:
     root.rotation_degrees.z = wave*(2.5 if kind == "move" else 0.7)
     var radar: Node3D = root.get_node("MastilPatrulla/RadarPatrulla") as Node3D
     radar.rotation.y = t*TAU
+    var module: Node3D = root.get_node("ModuloVisualPatrulla") as Node3D
+    var action: bool = kind in ["attack","fire","aim"]
+    module.rotation.y = atan2(-float(heading.x),-float(heading.y)) if action and heading != Vector2i.ZERO else 0.0
+    (module.get_node("DestelloVisual") as Node3D).visible = kind in ["attack","fire"] and t > 0.02 and t < 0.20
     for foam in root.get_node("EstelaPatrulla").get_children():
         (foam as Node3D).visible = kind == "move" and t > 0.0 and t < 1.0
     return true
@@ -2355,7 +2374,7 @@ static func pose_model(role: String, model: Node3D, kind: String,
         "patrol":
             if kind in ["sink","destroy"]:
                 return set_patrol_damage(model,4,progress)
-            return pose_patrol(model,kind,progress)
+            return pose_patrol(model,kind,progress,target_heading)
         "destroyer":
             if kind in ["damage","damaged","hit"]:
                 return pose_destroyer(model,"hit",progress,target_heading)

@@ -471,12 +471,20 @@ func _run() -> void:
     await _frames(4)
     var patrol: Node3D = studio.get("model_root") as Node3D
     var patrol_controls: Control = studio.get("patrol_controls") as Control
-    _check(patrol != null and patrol.get_meta("patrol_art_revision","") == "1.0","M01 model uses same factory")
+    _check(patrol != null and patrol.get_meta("patrol_art_revision","") == "1.1","M01 model uses same factory")
     _check(patrol_controls != null and patrol_controls.visible,"M01 controls in original Studio")
     _check(studio.get("preview") == original_viewport,"M01 same viewport")
     studio.call("_patrol_studio_damage",2)
     _check(patrol != null and int(patrol.get_meta("patrol_damage",-1)) == 2,"M01 damage controls")
     studio.call("_patrol_studio_damage",0)
+    _check(destroyer_water != null and destroyer_water.visible,"Shared sea visible for M01")
+    await _frames(5)
+    var patrol_dir: String = ProjectSettings.globalize_path("res://build/qa/patrol-shared-studio")
+    _check(DirAccess.make_dir_recursive_absolute(patrol_dir)==OK,"M01 output path")
+    var patrol_img: Image = original_viewport.get_texture().get_image()
+    _check(patrol_img != null and not patrol_img.is_empty(),"M01 native shared render")
+    if patrol_img != null and not patrol_img.is_empty():
+        _check(patrol_img.save_png(patrol_dir+"/patrol_v11_shared.png")==OK,"M01 shared capture")
     studio.call("_display_role","tank")
     await _frames(4)
     _check(patrol_controls == null or not patrol_controls.visible,"M01 controls isolated")
