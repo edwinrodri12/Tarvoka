@@ -43,6 +43,20 @@ func _check_framed_image(image: Image, label: String) -> void:
     check(coverage>400,label+" contains a visible model")
     check(border==0,label+" has a clear 12-pixel inspection margin")
 
+# Verify actual surface contact at the center of the accessory footprint,
+# not merely overlapping world-space bounding boxes.
+func _deck_center_contact(cover: MeshInstance3D, deck: MeshInstance3D) -> bool:
+    var cover_box: AABB = cover.get_aabb()
+    var center: Vector3 = cover_box.get_center()
+    var bottom: Vector3 = cover.transform*Vector3(center.x,cover_box.position.y,center.z)
+    var top: Vector3 = cover.transform*Vector3(center.x,cover_box.end.y,center.z)
+    var faces: PackedVector3Array = deck.mesh.get_faces()
+    var to_deck: Transform3D = deck.transform.affine_inverse()
+    for i in range(0,faces.size(),3):
+        if Geometry3D.segment_intersects_triangle(to_deck*bottom,to_deck*top,faces[i],faces[i+1],faces[i+2])!=null:
+            return true
+    return false
+
 func _closed(mesh: Mesh) -> bool:
     var edges: Dictionary = {}
     var vertices: PackedVector3Array = mesh.get_faces()
@@ -306,6 +320,11 @@ func _run() -> void:
             check(not wake is MeshInstance3D, "No rectangular solid wake")
             check(model.has_node("AcabadoNavalV18/BordeCubierta_1_0"), "Fitted deck edge")
             check(model.has_node("AcabadoNavalV18/BarandaPasillo_1") == (lod >= 13), "Deck detail LOD")
+            var contact_deck: MeshInstance3D = model.get_node("Cubierta") as MeshInstance3D
+            for side in [-1,1]:
+                for i in range(3 if lod>=13 else 1):
+                    var service: MeshInstance3D = model.get_node("AcabadoNavalV18/RegistroServicio_%d_%d" % [side,i]) as MeshInstance3D
+                    check(_deck_center_contact(service,contact_deck),"Service cover center intersects actual deck surface")
             var bow: MeshInstance3D = model.get_node("AcabadoNavalV18/RegistroProa") as MeshInstance3D
             check(bow.get_meta("destroyer_beveled_insert",false) == (lod>=13),"Bow cover detail tier")
             if lod>=13:

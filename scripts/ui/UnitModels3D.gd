@@ -1519,8 +1519,10 @@ static func _destroyer_trim(root: Node3D, art_level: int) -> void:
             rim.rotation.y = atan2(v.x,v.z)
         for i in range(3 if art_level >= 13 else 1):
             var z: float = -0.77+float(i)*0.28
+            # The service cover must penetrate the closed deck slightly.
+            # The previous lower face was at y=0.806, above the deck's 0.802.
             _box(trim,"RegistroServicio_%d_%d" % [side,i],
-                Vector3(sign*0.55,0.822,z),Vector3(0.105,0.032,0.11),STEEL)
+                Vector3(sign*0.55,0.811,z),Vector3(0.105,0.032,0.11),STEEL)
         if art_level >= 13:
             for i in range(3):
                 var z: float = 0.15+float(i)*0.22
