@@ -334,6 +334,8 @@ func _run() -> void:
                     check(str(model.get_meta(Finish.SURFACES_V19,""))==role,"V19 individual surface identity")
                     check(str(model.get_meta(Finish.MOTION_V21,""))==role,"V21 role motion identity")
                     check(str(model.get_meta(Finish.FX_V22,""))==role,"V22 role effect identity")
+                    check(str(model.get_meta("tarvoka_infantry_validation_v24",""))==role,
+                        "V25 integrated candidate exposes actual V24 pose implementation")
                     var optic_names: Array[String]=["V2_VisorOpacoPBR"]
                     if role=="infantry_commando":
                         for side in [-1,0,1]:
