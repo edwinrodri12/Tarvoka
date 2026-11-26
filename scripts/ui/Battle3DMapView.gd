@@ -512,9 +512,41 @@ func open_from_state(state: Dictionary, selected_id: String = "", viewer: int = 
             background = Color("#818d99")
         Biomes.ARCHIPELAGO:
             background = Color("#72abb9")
+    # V35: bounded static lighting profiles, reset on every battle open.
+    # No extra lights, particles, shaders or tactical visibility changes.
+    var ambient := Color("#dce8ef")
+    var sunlight := Color.WHITE
+    var ambient_energy := 0.41
+    var sun_energy := 1.06
+    match visual_biome:
+        Biomes.DESERT:
+            ambient = Color("#f2e2cc")
+            sunlight = Color("#fff0d5")
+            sun_energy = 1.12
+        Biomes.TROPICAL,Biomes.WETLAND:
+            ambient = Color("#dcebdc")
+            sunlight = Color("#f0f3df")
+            ambient_energy = 0.48
+            sun_energy = 0.95
+        Biomes.WINTER:
+            ambient = Color("#dcebf7")
+            sunlight = Color("#edf5ff")
+            ambient_energy = 0.46
+        Biomes.URBAN:
+            ambient = Color("#dbe1e8")
+            sunlight = Color("#f2f1ea")
+        Biomes.ARCHIPELAGO:
+            ambient = Color("#e2f2f2")
+            sunlight = Color("#fff3dc")
+            sun_energy = 1.10
     for child in preview.get_children():
         if child is WorldEnvironment and child.environment != null:
             child.environment.background_color = background
+            child.environment.ambient_light_color = ambient
+            child.environment.ambient_light_energy = ambient_energy
+        elif child is DirectionalLight3D:
+            child.light_color = sunlight
+            child.light_energy = sun_energy
     _state_snapshot = state.duplicate(true)
     _selected_hint_unit_id = selected_id
     _ranges_visible = true
