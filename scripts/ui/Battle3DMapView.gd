@@ -502,6 +502,8 @@ func open_from_state(state: Dictionary, selected_id: String = "", viewer: int = 
             background = Color("#8d8377")
         Biomes.COASTAL:
             background = Color("#4d7d89")
+        Biomes.DESERT:
+            background = Color("#bfa283")
     for child in preview.get_children():
         if child is WorldEnvironment and child.environment != null:
             child.environment.background_color = background
