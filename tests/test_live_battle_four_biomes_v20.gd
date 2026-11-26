@@ -214,7 +214,8 @@ func _check_extended_art() -> void:
             assert(absf(vertex.z-at.z)<Terrain.CELL*0.5)
         var cells: Dictionary = {}
         cells[cell] = {"kind":"water","details":true}
-        assert(Terrain._shared_corner_tint(cells,cell,biome)==Terrain._shore_color(biome))
+        assert(Terrain._shared_corner_tint(cells,cell,biome).is_equal_approx(
+            Terrain._shore_color(biome)))
     for kind in [Biomes.WETLAND,Biomes.URBAN]:
         var art := SurfaceTool.new()
         art.begin(Mesh.PRIMITIVE_TRIANGLES)
