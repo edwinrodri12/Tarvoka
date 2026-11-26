@@ -1469,7 +1469,7 @@ static func build(state: Dictionary, selected_id: String = "", viewer: int = 0) 
     for child in scene.get_children():
         if child.has_meta("bridge_clearance_v48"):
             var report: Dictionary = child.get_meta("bridge_clearance_v48")
-            if not bool(report.get("fits_vertical",false)):
+            if not bool(report.get("fits_vertical",false)) or not bool(report.get("fits_channel_width",true)):
                 clearance_failures += 1
     counters["bridge_clearance_failures_v48"] = clearance_failures
     scene.set_meta("bridge_inspection_only_v48",not bridge_cells.is_empty())
