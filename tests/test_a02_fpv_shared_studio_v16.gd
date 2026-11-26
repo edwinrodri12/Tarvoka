@@ -81,7 +81,7 @@ func _run()->void:
     studio.call("_studio_select_tab",0)
     await process_frame
     var model:=studio.get("model_root") as Node3D
-    check(model!=null and bool(model.get_meta("tarvoka_a02_v20_surface_atlas",false)),"native V20 geometry")
+    check(model!=null and bool(model.get_meta("tarvoka_a02_v20_surface_atlas",false)) and bool(model.get_meta("tarvoka_a02_v20_material_relief",false)),"native V20 geometry and ornamental relief")
     if model==null:
         quit(1)
         return
