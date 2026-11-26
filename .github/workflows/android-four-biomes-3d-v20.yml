@@ -52,7 +52,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          timeout --signal=TERM --kill-after=5s 200s xvfb-run -a -s "-screen 0 1280x800x24" \
+          timeout --signal=TERM --kill-after=5s 300s xvfb-run -a -s "-screen 0 1280x800x24" \
             /tmp/Godot_v4.3-stable_linux.x86_64 --path . \
             --rendering-driver opengl3 --audio-driver Dummy \
             --script res://tests/test_live_battle_four_biomes_v20.gd \
@@ -60,7 +60,7 @@ jobs:
           if grep -E 'SCRIPT ERROR:|Parse Error:|Assertion failed' /tmp/v20-gpu.log; then exit 1; fi
           grep -q 'PASS TARVOKA_3D_FOUR_BIOMES_V20:' /tmp/v20-gpu.log
           test -s artifacts/tarvoka_biomes_v20_delta_in_battle.png
-          for biome in temperate winter canyon coastal desert; do
+          for biome in temperate winter canyon coastal desert tropical; do
             test -s "artifacts/tarvoka_biomes_v20_review_v28_${biome}.png"
           done
       - name: Archive true 3D battle frame and test logs
