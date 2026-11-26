@@ -226,6 +226,7 @@ func _camp_restore_prior_controls() -> void:
         camp_controls.visible = false
 
 func _change_selected_building(index: int) -> void:
+    _destroyer_restore_generic_faction()
     _destroyer_studio_stop()
     _destroyer_studio_restore_floor()
     if is_instance_valid(_destroyer_water):
@@ -244,6 +245,7 @@ func _change_selected_building(index: int) -> void:
 
 func _switch_category(index: int) -> void:
     if index != 0:
+        _destroyer_restore_generic_faction()
         _destroyer_studio_stop()
         _destroyer_studio_restore_floor()
     super._switch_category(index)
@@ -589,6 +591,8 @@ var destroyer_faction_picker: OptionButton
 var destroyer_lod_picker: OptionButton
 var destroyer_damage_picker: OptionButton
 var destroyer_status: Label
+var _destroyer_generic_faction_hidden: bool = false
+var _destroyer_generic_faction_previous: bool = true
 var _destroyer_studio_tween: Tween
 var _destroyer_fx_time: float = 0.0
 var _destroyer_water: MeshInstance3D
@@ -606,8 +610,17 @@ func _destroyer_studio_create_controls() -> void:
     role_picker.set_item_text(idx,"Destructor naval · V1.18")
     destroyer_controls = VBoxContainer.new()
     destroyer_controls.name = "DestructorControlesNativos"
-    role_picker.get_parent().add_child(destroyer_controls)
+    # Place the actual naval controls under the shared tabs rather than
+    # below the legacy catalogue. No parallel model or viewport.
+    if studio_quick_panel != null:
+        studio_quick_panel.add_child(destroyer_controls)
+        studio_quick_panel.move_child(destroyer_controls,studio_animation_panel.get_index()+1)
+    else:
+        role_picker.get_parent().add_child(destroyer_controls)
+    destroyer_controls.add_theme_constant_override("separation",5)
     _title(destroyer_controls,"DESTRUCTOR NAVAL · V1.18",14)
+    destroyer_status = _title(destroyer_controls,"",11)
+    destroyer_status.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
     destroyer_faction_picker = OptionButton.new()
     destroyer_faction_picker.add_item("Neutral")
     for faction in CampStyle.FACTIONS:
@@ -623,7 +636,7 @@ func _destroyer_studio_create_controls() -> void:
     destroyer_controls.add_child(destroyer_lod_picker)
     destroyer_damage_picker = OptionButton.new()
     for i in range(5):
-        destroyer_damage_picker.add_item("D%d" % i)
+        destroyer_damage_picker.add_item(["D0 · Intacto","D1 · Leve","D2 · Moderado","D3 · Crítico","D4 · Destruido"][i])
     destroyer_damage_picker.select(0)
     destroyer_damage_picker.item_selected.connect(_destroyer_studio_damage_changed)
     destroyer_controls.add_child(destroyer_damage_picker)
@@ -639,7 +652,12 @@ func _destroyer_studio_create_controls() -> void:
         "LUZ NORMAL",func(): _destroyer_studio_light(false))
     _add_paired(destroyer_controls,"DETENER",_destroyer_studio_stop,
         "REPARAR",func(): _destroyer_studio_damage_changed(0))
-    destroyer_status = _title(destroyer_controls,"",11)
+    for candidate in destroyer_controls.find_children("*","Button",true,false):
+        var button: Button = candidate as Button
+        button.clip_text = true
+        button.custom_minimum_size.x = 0
+        button.custom_minimum_size.y = 44
+        button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
     _destroyer_water = MeshInstance3D.new()
     _destroyer_water.name = "DestructorAguaInspeccion"
     var sea_mesh := PlaneMesh.new()
@@ -670,6 +688,7 @@ func _destroyer_studio_select_from_url() -> void:
         _switch_category(0)
         role_picker.select(NavalArt.ROLES.find("destroyer"))
         _display_role("destroyer")
+        _studio_select_tab(0)
         # Publish evidence from the instantiated native model, not the URL alone.
         if is_instance_valid(model_root) and _role == "destroyer":
             var info: Dictionary = {
@@ -679,14 +698,40 @@ func _destroyer_studio_select_from_url() -> void:
                 "lod": 8 if destroyer_lod_picker.selected == 0 else 13,
                 "factions": destroyer_faction_picker.item_count,
                 "damage_states": destroyer_damage_picker.item_count,
-                "controls_visible": destroyer_controls.visible,
+                "controls_visible": destroyer_controls.is_visible_in_tree(),
+                "naval_controls_in_quick_panel": destroyer_controls.get_parent() == studio_quick_panel,
+                "generic_animation_hidden": not studio_animation_panel.visible,
+                "generic_faction_hidden": not faction_picker.visible,
                 "water_visible": is_instance_valid(_destroyer_water) and _destroyer_water.visible
             }
             JavaScriptBridge.eval("window.__tarvokaDestroyerEntry = " + JSON.stringify(info), true)
 
-func _destroyer_studio_sync_visibility() -> void:
+func _destroyer_restore_generic_faction() -> void:
+    if _destroyer_generic_faction_hidden and faction_picker != null:
+        faction_picker.visible = _destroyer_generic_faction_previous
+    _destroyer_generic_faction_hidden = false
+
+func _refresh_unified_studio_navigation() -> void:
+    super._refresh_unified_studio_navigation()
     if destroyer_controls != null:
-        destroyer_controls.visible = _role == "destroyer" and category_picker != null and category_picker.selected == 0
+        _destroyer_studio_sync_visibility()
+
+func _destroyer_studio_sync_visibility() -> void:
+    var active: bool = _role == "destroyer" and category_picker != null and category_picker.selected == 0
+    if destroyer_controls != null:
+        destroyer_controls.visible = active and studio_active_tab == 0
+        if active:
+            if studio_animation_panel != null:
+                studio_animation_panel.hide()
+            if studio_overview_label != null:
+                studio_overview_label.text = "Destructor naval · V1.18"
+            if faction_picker != null:
+                if not _destroyer_generic_faction_hidden:
+                    _destroyer_generic_faction_previous = faction_picker.visible
+                    _destroyer_generic_faction_hidden = true
+                faction_picker.hide()
+        else:
+            _destroyer_restore_generic_faction()
     if is_instance_valid(_destroyer_water):
         _destroyer_water.visible = _role == "destroyer" and category_picker != null and category_picker.selected == 0 and not _destroyer_underwater
     if is_instance_valid(_destroyer_inspection_light):
@@ -694,6 +739,8 @@ func _destroyer_studio_sync_visibility() -> void:
 
 func _display_role(role: String) -> void:
     _destroyer_studio_stop()
+    if role != "destroyer":
+        _destroyer_restore_generic_faction()
     if role != "destroyer" or _role != "destroyer":
         _destroyer_studio_restore_floor()
         _destroyer_underwater = false

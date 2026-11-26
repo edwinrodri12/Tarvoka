@@ -2980,7 +2980,8 @@ jobs:
                 await page.waitForFunction(()=>window.__tarvokaDestroyerEntry!==undefined,null,{timeout:180000});
                 const info=await page.evaluate(()=>window.__tarvokaDestroyerEntry);
                 if(info.role!=='destroyer'||info.revision!=='1.18'||info.lod!==13||info.stage!==0||
-                    info.factions!==9||info.damage_states!==5||!info.controls_visible||!info.water_visible)
+                    info.factions!==9||info.damage_states!==5||!info.controls_visible||!info.water_visible||
+                    !info.naval_controls_in_quick_panel||!info.generic_animation_hidden||!info.generic_faction_hidden)
                   throw Error('Incorrect native destroyer entry: '+JSON.stringify(info));
                 const menu=page.locator('#tarvoka-a02-compact-nav');
                 const summary=menu.locator('summary');
