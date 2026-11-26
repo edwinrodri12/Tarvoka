@@ -39,3 +39,7 @@ Refinamiento de marcos y cristales mediante volúmenes cerrados biselados exclus
 ## V1.15 — progresión de daño y publicación reconciliada
 
 D2 conserva humo reducido y tres volúmenes visibles; D3 despliega toda la pluma y fuego existente. Animación determinista desde el mismo estado base; reparación restaura transformaciones y visibilidad. Dos capturas adicionales D2/D3 idénticas en cámara y fase (44 PNG previstos). Se recuperan las comprobaciones de publicación de #712 y se adaptan a V1.15: enlace directo, datos del modelo instanciado, Chromium escritorio/móvil y manifiesto. Sin nuevas mallas de daño ni cambios de jugabilidad. Rama sucesora aislada; no fusionar hasta validar V1.13/V1.14/V1.15 y reconciliar main. No afirmar despliegue.
+
+## V1.16 — acabado de cubierta y auditoría orbital
+
+Tapas biseladas de proa/popa, juntas y seis bases de postes posteriores, solo LOD13. Se preserva el LOD8. QA añade contactos de postes, 12 vistas a 30 grados y dos axiales, detección de fondo vacío, 58 PNG con SHA-256, inventario de 90 estados de mallas visibles/asignadas y triángulos (comparación relativa LOD, no FPS). Se actualizan identidad y controles de publicación a V1.16. Se reconcilia main ebd41ac con sus tres archivos A02 sin modificarlos; se conservan ramas V1.13–V1.15 y sus pruebas en cola. Candidato acumulativo, pendiente CI, revisión visual y publicación; no afirmar calidad igual al Bastión ni rendimiento real.

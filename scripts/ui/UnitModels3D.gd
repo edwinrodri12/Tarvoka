@@ -1412,6 +1412,10 @@ static func _destroyer_aft(root: Node3D, art_level: int) -> void:
                     Vector3(0.035,0.18,0.035),STEEL)
             _box(aft,"PasamanosPopa_%d" % side,Vector3(sign*0.49,0.997,1.02),
                 Vector3(0.035,0.035,0.35),STEEL)
+            for i in range(3):
+                var z: float = 0.86 + float(i)*0.16
+                _cylinder(aft,"BasePostePopa_%d_%d" % [side,i],
+                    Vector3(sign*0.49,0.837,z),0.027,0.020,DARK,Vector3.ZERO,8)
         var group := Node3D.new()
         group.name = "Propulsion_%d" % side
         group.position = Vector3(sign*0.31,0.18,1.34)
@@ -1449,8 +1453,11 @@ static func _destroyer_aft(root: Node3D, art_level: int) -> void:
                 _box(aft,"AnclajeCubierta_%d_%d" % [side,i],
                     Vector3(sign*0.32,0.842,0.92+float(i)*0.17),
                     Vector3(0.034,0.014,0.034),METAL)
-            _box(aft,"RegistroPopa_%d" % side,Vector3(sign*0.20,0.826,1.51),
-                Vector3(0.14,0.035,0.10),STEEL)
+            var aft_cover: MeshInstance3D = _destroyer_insert(aft,"RegistroPopa_%d" % side,
+                Vector3(sign*0.20,0.819,1.51),Vector3(0.14,0.10,0.04),STEEL)
+            aft_cover.rotation_degrees.x = 90.0
+            _box(aft,"JuntaRegistroPopa_%d" % side,Vector3(sign*0.20,0.839,1.51),
+                Vector3(0.095,0.009,0.017),DARK)
     # Static wake is purely decorative and may be hidden for inspection.
     var wake := Node3D.new()
     wake.name = "EstelaEspuma"
@@ -1502,8 +1509,15 @@ static func _destroyer_trim(root: Node3D, art_level: int) -> void:
                 var z: float = 0.15+float(i)*0.22
                 _cylinder(trim,"BasePostePasillo_%d_%d" % [side,i],
                     Vector3(sign*0.62,0.805,z),0.025,0.019,DARK,Vector3.ZERO,8)
-    _box(trim,"RegistroProa",Vector3(0,0.819,-1.91),
-        Vector3(0.20,0.035,0.16),STEEL)
+    if art_level >= 13:
+        var bow_cover: MeshInstance3D = _destroyer_insert(trim,"RegistroProa",
+            Vector3(0,0.820,-1.91),Vector3(0.20,0.16,0.040),STEEL)
+        bow_cover.rotation_degrees.x = 90.0
+        _box(trim,"JuntaRegistroProa",Vector3(0,0.840,-1.91),
+            Vector3(0.135,0.009,0.020),DARK)
+    else:
+        _box(trim,"RegistroProa",Vector3(0,0.819,-1.91),
+            Vector3(0.20,0.035,0.16),STEEL)
     root.set_meta("destroyer_visual_review_v18",true)
     if art_level >= 13:
         # Closed chamfered cosmetic covers anchored into the existing deck.
@@ -1533,7 +1547,7 @@ static func _destroyer(root: Node3D, art_level: int = 10) -> void:
     for station in stations:
         deck_stations.append([station[0],station[1]*0.86,0.738,0.802])
     _destroyer_shell(root,"Cubierta",deck_stations,ARMOR)
-    root.set_meta("destroyer_art_revision","1.15")
+    root.set_meta("destroyer_art_revision","1.16")
     _destroyer_bridge(root,art_level)
     _destroyer_navigation(root,art_level)
     _destroyer_deck_equipment(root,art_level)

@@ -1,6 +1,23 @@
 extends SceneTree
 const Art = preload("res://scripts/ui/UnitModels3D.gd")
 var failures: int = 0
+var workload: Array[Dictionary] = []
+
+# Traverse authored visibility rather than is_visible_in_tree: models are
+# deliberately detached while their resource budgets are measured.
+func _inventory(node: Node, counts: Dictionary, ancestor_visible: bool = true) -> void:
+    var shown: bool = ancestor_visible
+    if node is Node3D:
+        shown = shown and (node as Node3D).visible
+    if node is MeshInstance3D:
+        var mesh_node: MeshInstance3D = node as MeshInstance3D
+        if mesh_node.mesh != null:
+            counts["allocated_meshes"] += 1
+            if shown:
+                counts["visible_meshes"] += 1
+                counts["visible_triangles"] += int(mesh_node.mesh.get_faces().size()/3)
+    for child in node.get_children():
+        _inventory(child,counts,shown)
 
 func _initialize() -> void:
     call_deferred("_run")
@@ -51,7 +68,7 @@ func _run() -> void:
             check(model != null, "Destroyer builds")
             if model == null:
                 continue
-            check(model.get_meta("destroyer_art_revision", "") == "1.15", "V1.15 faction and satin finish active")
+            check(model.get_meta("destroyer_art_revision", "") == "1.16", "V1.16 faction and satin finish active")
             for key in ["CascoNaval", "Cubierta", "Superestructura/ZocaloNaval", "Superestructura/CarcasaInferior", "Superestructura/Puente", "Superestructura/TechoPuente", "TorretaNavalPivot/CarcasaTorreta", "TorreMastil/CarcasaMastil", "TorreMastil/RadarPivot/Radar", "ConjuntoPopa/Helipuerto", "ConjuntoPopa/Propulsion_-1/TimonPivot/TimonVisual", "ConjuntoPopa/Propulsion_1/TimonPivot/TimonVisual"]:
                 var part: MeshInstance3D = model.get_node_or_null(key) as MeshInstance3D
                 check(part != null, "Native " + key)
@@ -200,6 +217,19 @@ func _run() -> void:
             check(not wake is MeshInstance3D, "No rectangular solid wake")
             check(model.has_node("AcabadoNavalV18/BordeCubierta_1_0"), "Fitted deck edge")
             check(model.has_node("AcabadoNavalV18/BarandaPasillo_1") == (lod >= 13), "Deck detail LOD")
+            var bow: MeshInstance3D = model.get_node("AcabadoNavalV18/RegistroProa") as MeshInstance3D
+            check(bow.get_meta("destroyer_beveled_insert",false) == (lod>=13),"Bow cover detail tier")
+            if lod>=13:
+                check(_closed(bow.mesh) and _outward(bow.mesh),"Closed bow cover")
+                for side in [-1,1]:
+                    var cover: MeshInstance3D = model.get_node("ConjuntoPopa/RegistroPopa_%d" % side) as MeshInstance3D
+                    check(_closed(cover.mesh) and _outward(cover.mesh),"Closed aft cover")
+                    for i in range(3):
+                        var foot: MeshInstance3D = model.get_node("ConjuntoPopa/BasePostePopa_%d_%d" % [side,i]) as MeshInstance3D
+                        var post: MeshInstance3D = model.get_node("ConjuntoPopa/PostePopa_%d_%d" % [side,i]) as MeshInstance3D
+                        check((foot.transform*foot.get_aabb()).intersects(post.transform*post.get_aabb()),"Aft post seated in base")
+            else:
+                check(not model.has_node("ConjuntoPopa/BasePostePopa_1_0"),"No added tactical mesh")
             check(wake.get_child_count() == (5 if lod >= 13 else 2), "Wake detail tier")
             for patch in wake.get_children():
                 check(patch.visible, "Dynamic wake visible")
@@ -225,6 +255,10 @@ func _run() -> void:
             for damage in range(5):
                 check(Art.set_destroyer_damage(model,damage,0.50), "Damage stage applied")
                 check(int(model.get_meta("destroyer_damage_stage",-1)) == damage, "Damage revision")
+                var counts: Dictionary = {"faction":faction,"lod":lod,"damage":damage,"allocated_meshes":0,"visible_meshes":0,"visible_triangles":0}
+                _inventory(model,counts)
+                check(counts["visible_meshes"]>0 and counts["visible_triangles"]>0 and counts["visible_meshes"]<=counts["allocated_meshes"],"Sane visible workload")
+                workload.append(counts)
                 check((fx.get_node("Marca_0") as Node3D).visible == (damage>=1), "Surface wear")
                 check((fx.get_node("Humo_0") as Node3D).visible == (damage>=2), "Smoke stage")
                 check((fx.get_node("Fuego_0") as Node3D).visible == (damage>=3), "Fire stage")
@@ -260,16 +294,27 @@ func _run() -> void:
             var authored_smoke: Transform3D = repaired_smoke.get_meta("destroyer_fx_rest")
             check(repaired_smoke.transform.is_equal_approx(authored_smoke) and not repaired_smoke.visible,"Smoke resets exactly on repair")
             model.free()
+    check(workload.size()==90,"Complete faction/LOD/damage workload")
+    for faction in range(-1,8):
+        for damage in range(5):
+            var low: Dictionary = workload[(faction+1)*10+damage]
+            var high: Dictionary = workload[(faction+1)*10+5+damage]
+            check(low["allocated_meshes"]<high["allocated_meshes"] and low["visible_triangles"]<high["visible_triangles"],"Tactical model lighter than hero")
     await _render()
     if failures != 0:
         quit(1)
         return
-    print("PASS DESTROYER HULL V1.15: 18 variants, 44 PNGs")
+    print("PASS DESTROYER HULL V1.16: 18 variants, 58 PNGs")
     quit(0)
 
 func _render() -> void:
     var output: String = ProjectSettings.globalize_path("res://build/qa/destroyer-v1")
     check(DirAccess.make_dir_recursive_absolute(output) == OK, "Render directory")
+    var report: FileAccess = FileAccess.open(output+"/workload.json",FileAccess.WRITE)
+    check(report!=null,"Workload report writable")
+    if report!=null:
+        report.store_string(JSON.stringify(workload,"  "))
+        report.close()
     var view := SubViewport.new()
     view.size = Vector2i(900, 650)
     view.own_world_3d = true
@@ -328,7 +373,7 @@ func _render() -> void:
         var img: Image = view.get_texture().get_image()
         check(img != null and not img.is_empty(), "Real Godot image")
         if img != null and not img.is_empty():
-            check(img.save_png(output + "/destroyer_v115_%d.png" % i) == OK, "Capture saved")
+            check(img.save_png(output + "/destroyer_v116_%d.png" % i) == OK, "Capture saved")
     Art.restore_model_pose("destroyer",model)
     for d in range(5):
         Art.set_destroyer_damage(model,d,0.52 if d == 4 else 0.0)
@@ -341,7 +386,7 @@ func _render() -> void:
         var img: Image = view.get_texture().get_image()
         check(img != null and not img.is_empty(), "Damage image")
         if img != null and not img.is_empty():
-            check(img.save_png(output + "/destroyer_v115_D%d.png" % d) == OK, "Damage capture saved")
+            check(img.save_png(output + "/destroyer_v116_D%d.png" % d) == OK, "Damage capture saved")
     for d in [2,3]:
         Art.set_destroyer_damage(model,d)
         camera.position = Vector3(3.0,2.7,3.1)
@@ -353,7 +398,7 @@ func _render() -> void:
         var img: Image = view.get_texture().get_image()
         check(img != null and not img.is_empty(), "Close damage image")
         if img != null and not img.is_empty():
-            check(img.save_png(output + "/destroyer_v115_detail_D%d.png" % d) == OK, "Close damage capture")
+            check(img.save_png(output + "/destroyer_v116_detail_D%d.png" % d) == OK, "Close damage capture")
     # Fixed camera, opaque water, and a complete visual sinking sequence.
     var sea := MeshInstance3D.new()
     var plane := PlaneMesh.new()
@@ -383,7 +428,7 @@ func _render() -> void:
         var img: Image = view.get_texture().get_image()
         check(img != null and not img.is_empty(), "Fixed waterline sequence")
         if img != null and not img.is_empty():
-            check(img.save_png(output + "/destroyer_v115_sink_%d.png" % frame) == OK, "Fixed camera sink capture")
+            check(img.save_png(output + "/destroyer_v116_sink_%d.png" % frame) == OK, "Fixed camera sink capture")
             if empty_water != null and not empty_water.is_empty() and img.get_size() == empty_water.get_size():
                 var changed: int = 0
                 for y in range(0,img.get_height(),8):
@@ -418,7 +463,7 @@ func _render() -> void:
         var img: Image = view.get_texture().get_image()
         check(img != null and not img.is_empty(), "Directional relief inspection")
         if img != null and not img.is_empty():
-            check(img.save_png(output + "/destroyer_v115_light_%d.png" % side) == OK, "Relief inspection capture")
+            check(img.save_png(output + "/destroyer_v116_light_%d.png" % side) == OK, "Relief inspection capture")
     # Same lighting and angle for all eight factions plus neutral.
     model.hide()
     light.shadow_enabled = false
@@ -438,7 +483,7 @@ func _render() -> void:
         var image: Image = view.get_texture().get_image()
         check(image != null and not image.is_empty(),"Faction comparison image")
         if image != null and not image.is_empty():
-            check(image.save_png(output+"/destroyer_v115_faction_%d.png" % faction)==OK,"Faction comparison saved")
+            check(image.save_png(output+"/destroyer_v116_faction_%d.png" % faction)==OK,"Faction comparison saved")
         stage.remove_child(sample)
         sample.free()
     # Matched inspection views under identical camera orientation and lighting.
@@ -462,7 +507,7 @@ func _render() -> void:
                 var comparison: Image = view.get_texture().get_image()
                 check(comparison != null and not comparison.is_empty(),"Matched reference image")
                 if comparison != null and not comparison.is_empty():
-                    check(comparison.save_png(output+"/destroyer_v115_compare_%s_%d.png" % [role,side])==OK,"Matched reference capture")
+                    check(comparison.save_png(output+"/destroyer_v116_compare_%s_%d.png" % [role,side])==OK,"Matched reference capture")
             subject.hide()
         stage.remove_child(bastion)
         bastion.free()
@@ -480,6 +525,33 @@ func _render() -> void:
         var image: Image = view.get_texture().get_image()
         check(image != null and not image.is_empty(),"Graded damage comparison")
         if image != null and not image.is_empty():
-            check(image.save_png(output+"/destroyer_v115_graded_D%d.png" % damage)==OK,"Graded damage capture")
+            check(image.save_png(output+"/destroyer_v116_graded_D%d.png" % damage)==OK,"Graded damage capture")
     Art.set_destroyer_damage(model,0)
+    # Exact 360-degree orbit and two axial views, unchanged lighting.
+    model.show()
+    camera.size = 4.5
+    var target := Vector3(0,0.75,0)
+    for step in range(14):
+        if step<12:
+            var angle: float = TAU*float(step)/12.0
+            camera.position = target+Vector3(sin(angle)*6.0,3.4,cos(angle)*6.0)
+            camera.look_at(target,Vector3.UP)
+        else:
+            camera.position = target+Vector3(0,6.0 if step==12 else -6.0,0)
+            camera.look_at(target,Vector3.FORWARD)
+        await process_frame
+        await process_frame
+        await process_frame
+        var image: Image = view.get_texture().get_image()
+        check(image!=null and not image.is_empty(),"Orbit image")
+        if image!=null and not image.is_empty():
+            var bg: Color = image.get_pixel(0,0)
+            var changed: int = 0
+            for y in range(0,image.get_height(),8):
+                for x in range(0,image.get_width(),8):
+                    var pixel: Color = image.get_pixel(x,y)
+                    if absf(pixel.r-bg.r)+absf(pixel.g-bg.g)+absf(pixel.b-bg.b)>0.12:
+                        changed+=1
+            check(changed>100,"Orbit render contains visible model")
+            check(image.save_png(output+"/destroyer_v116_orbit_%02d.png" % step)==OK,"Orbit image saved")
     view.queue_free()

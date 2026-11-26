@@ -6,7 +6,7 @@ on:
       - 'tests/test_destroyer_hull_v1.gd'
       - '.github/workflows/destroyer-native-qa.yml'
   push:
-    branches: [main, art/destroyer-hull-v1-20261125, art/destroyer-v114-bridge-finish-20261126]
+    branches: [main, art/destroyer-hull-v1-20261125, art/destroyer-v114-bridge-finish-20261126, art/destroyer-v116-orbit-finish-20261126]
     paths:
       - 'scripts/ui/UnitModels3D.gd'
       - 'tests/test_destroyer_hull_v1.gd'
@@ -34,15 +34,35 @@ jobs:
           fi
           /tmp/Godot_v4.3-stable_linux.x86_64 --headless --editor --path . --import --quit 2>&1 | tee /tmp/destroyer-import.log
           if grep -E 'SCRIPT ERROR:|Parse Error:|Import failed' /tmp/destroyer-import.log; then exit 1; fi
-      - name: Check 18 variants and render forty-four native images
+      - name: Check 18 variants and render fifty-eight native images
         run: |
           set -euo pipefail
           timeout 300s xvfb-run -a -s '-screen 0 1280x720x24' env LIBGL_ALWAYS_SOFTWARE=1 /tmp/Godot_v4.3-stable_linux.x86_64 --rendering-method gl_compatibility --audio-driver Dummy --path . --script res://tests/test_destroyer_hull_v1.gd 2>&1 | tee /tmp/destroyer.log
           if grep -E 'SCRIPT ERROR:|ERROR:|Parse Error:|Assertion failed' /tmp/destroyer.log; then exit 1; fi
-          grep -F 'PASS DESTROYER HULL V1.15: 18 variants, 44 PNGs' /tmp/destroyer.log
-          test "$(find build/qa/destroyer-v1 -name '*.png' | wc -l)" -eq 44
+          grep -F 'PASS DESTROYER HULL V1.16: 18 variants, 58 PNGs' /tmp/destroyer.log
+          test "$(find build/qa/destroyer-v1 -name '*.png' | wc -l)" -eq 58
+      - name: Verify full orbit and workload evidence
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import hashlib, json, struct
+          from pathlib import Path
+          root=Path('build/qa/destroyer-v1')
+          data=json.loads((root/'workload.json').read_text())
+          expected={(f,l,d) for f in range(-1,8) for l in (8,13) for d in range(5)}
+          assert len(data)==90 and {(x['faction'],x['lod'],x['damage']) for x in data}==expected
+          for i in range(14):
+              assert (root/f'destroyer_v116_orbit_{i:02}.png').is_file()
+          evidence={}
+          for path in sorted(root.glob('*.png')):
+              contents=path.read_bytes()
+              assert contents[:8]==b'\\x89PNG\\r\\n\\x1a\\n' and struct.unpack('>II',contents[16:24])==(900,650)
+              evidence[path.name]=hashlib.sha256(contents).hexdigest()
+          assert len(evidence)==58
+          (root/'evidence.json').write_text(json.dumps(evidence,indent=2))
+          PY
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: tarvoka-destroyer-v115-native
-          path: build/qa/destroyer-v1/*.png
+          name: tarvoka-destroyer-v116-native
+          path: build/qa/destroyer-v1/

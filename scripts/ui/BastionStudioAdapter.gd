@@ -228,6 +228,7 @@ var _a02_preview_tween: Tween = null
 var a02_360_panel:VBoxContainer
 var _a02_review_tween:Tween=null
 var _a02_review_focus:String="general"
+var _a02_inspection_fill:DirectionalLight3D=null
 var a01_360_panel:VBoxContainer
 var a01_lod_readout:Label=null
 var _a01_review_tween:Tween = null
@@ -1459,6 +1460,7 @@ func _studio_g11_turn_done(art: Node3D) -> void:
 # Reset the original Godot camera AND any specialized G16 close-up.
 # Otherwise the shared "Restablecer cámara" button did not exit hose view.
 func _studio_review_reset_camera() -> void:
+    _a02_hide_inspection_fill()
     _a02_review_stop()
     _a02_review_focus="general"
     if _g16_review_tween!=null and _g16_review_tween.is_running():
@@ -1474,6 +1476,25 @@ func _a02_review_stop()->void:
     if _a02_review_tween!=null and _a02_review_tween.is_running():
         _a02_review_tween.kill()
     _a02_review_tween=null
+
+# Neutral camera-only fill for the lower inspection view. Never changes
+# shared environment, other models, gameplay or the authored sculpture.
+func _a02_hide_inspection_fill()->void:
+    if is_instance_valid(_a02_inspection_fill):
+        _a02_inspection_fill.hide()
+
+func _a02_sync_inspection_fill()->void:
+    if _role!="fpv" or _a02_review_focus!="inferior" or not is_instance_valid(camera) or not is_instance_valid(model_root):
+        _a02_hide_inspection_fill()
+        return
+    if not is_instance_valid(_a02_inspection_fill):
+        _a02_inspection_fill=DirectionalLight3D.new()
+        _a02_inspection_fill.name="A02_StudioLowerInspectionFill"
+        _a02_inspection_fill.light_color=Color.WHITE
+        _a02_inspection_fill.light_energy=0.55
+        _a02_inspection_fill.shadow_enabled=false
+        camera.add_child(_a02_inspection_fill)
+    _a02_inspection_fill.show()
 
 func _a02_review_look(yaw:float,focus:String)->void:
     if _role!="fpv" or not is_instance_valid(model_root) or not bool(model_root.get_meta(A02PreviewArt.FLAG,false)):
@@ -4588,6 +4609,7 @@ func _update_camera() -> void:
             camera.position=target+Vector3(0,5.0 if top else -5.0,0)
             camera.look_at(target,Vector3(0,0,-1 if top else 1))
             camera.size=2.75/maxf(0.65,_zoom)
+    _a02_sync_inspection_fill()
     if (model_root!=null and camera!=null and InfantryV1.supports(_role) and
             infantry_review_lod==13):
         if _infantry_helmet_focus:
@@ -4739,6 +4761,7 @@ func _stage_p06() -> int:
         "tarvoka_apc_v3_damage_stage",0)),0,4)
 
 func _display_role(role: String) -> void:
+    _a02_hide_inspection_fill()
     _a02_review_stop()
     _a02_review_focus="general"
     _a02_preview_stop()
@@ -5019,6 +5042,7 @@ func _display_role(role: String) -> void:
 
 func _switch_category(index: int) -> void:
     if index!=0:
+        _a02_hide_inspection_fill()
         _a02_review_stop()
         _a02_review_focus="general"
     if index!=0:
