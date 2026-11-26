@@ -108,14 +108,8 @@ jobs:
               'frames': frames}, indent=2) + '\n')
           print('PASS A02 52 real nonempty PNGs and 80 unique resource states')
           PY
-      - name: Exercise actual unified Godot Studio A02 controls
-        shell: bash
-        run: |
-          set -euo pipefail
-          timeout 160s xvfb-run -a -s "-screen 0 1280x720x24" env LIBGL_ALWAYS_SOFTWARE=1 /tmp/Godot_v4.3-stable_linux.x86_64 --rendering-method gl_compatibility --audio-driver Dummy --path . --script res://tests/test_a02_fpv_shared_studio_v16.gd 2>&1 | tee /tmp/a02-studio.log
-          if grep -E 'SCRIPT ERROR:|Parse Error:|ERROR:|Assertion failed' /tmp/a02-studio.log; then exit 1; fi
-          grep -F 'PASS A02 V16 SHARED STUDIO:' /tmp/a02-studio.log
-          test "$(find build/qa/a02-shared-studio -name '*.png' -size +2k | wc -l)" -eq 3
+      # Shared Studio control QA runs in tarvoka-3d-pages.yml after its
+      # production scene and all pinned art dependencies have been assembled.
       - name: Archive authentic A02 captures
         if: always()
         uses: actions/upload-artifact@v4
@@ -125,4 +119,3 @@ jobs:
             build/qa/a02-v1/*.png
             build/qa/a02-v1/a02-v10-workload.json
             build/qa/a02-v1/a02-v15-evidence.json
-            build/qa/a02-shared-studio/*.png
