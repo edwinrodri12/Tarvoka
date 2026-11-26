@@ -597,6 +597,47 @@ static func _make_mountain_ridges(parent: Node3D,cells: Dictionary,
     parent.add_child(rock_instance)
     return transforms.size()
 
+# V26: a level, bounded visual foundation follows the ground underneath.
+# Approved site art remains upright and its local mesh is never modified.
+static func _foundation_top(cells: Dictionary,cell: Vector2i) -> float:
+    var top: float = height_at(cells,cell)
+    for z in [-0.98,0.0,0.98]:
+        for x in [-0.98,0.0,0.98]:
+            top = maxf(top,height_at(cells,cell,float(x),float(z)))
+    return top+0.055
+
+static func _append_site_foundation(tool: SurfaceTool,cells: Dictionary,
+        cell: Vector2i,visible: bool) -> float:
+    var kind: String = str(cells.get(cell,{}).get("kind","unknown"))
+    if kind in ["water","unknown"]:
+        return height_at(cells,cell)+0.07
+    var at: Vector3 = world_at(cell)
+    var top: float = _foundation_top(cells,cell)
+    var rim: Array[Vector2] = [Vector2(-0.98,-0.98),Vector2(0,-0.98),
+        Vector2(0.98,-0.98),Vector2(0.98,0),Vector2(0.98,0.98),
+        Vector2(0,0.98),Vector2(-0.98,0.98),Vector2(-0.98,0)]
+    var color := Color("#7e8176")
+    if not visible:
+        color = color.darkened(0.60)
+    var center: Vector3 = at+Vector3(0,top,0)
+    for i in range(rim.size()):
+        var a: Vector2 = rim[i]
+        var b: Vector2 = rim[(i+1)%rim.size()]
+        var hi_a: Vector3 = at+Vector3(a.x,top,a.y)
+        var hi_b: Vector3 = at+Vector3(b.x,top,b.y)
+        var lo_a: Vector3 = at+Vector3(a.x,height_at(cells,cell,a.x,a.y)-0.012,a.y)
+        var lo_b: Vector3 = at+Vector3(b.x,height_at(cells,cell,b.x,b.y)-0.012,b.y)
+        _tri(tool,center,hi_b,hi_a,color)
+        _tri(tool,hi_a,lo_a,hi_b,color.darkened(0.14))
+        _tri(tool,hi_b,lo_a,lo_b,color.darkened(0.14))
+    return top+0.015
+
+static func _place_land_site(model: Node3D,tool: SurfaceTool,
+        cells: Dictionary,cell: Vector2i,visible: bool) -> void:
+    var anchor: float = _append_site_foundation(tool,cells,cell,visible)
+    model.position = world_at(cell)+Vector3(0,anchor,0)
+    model.set_meta("terrain_anchor_v26",anchor)
+
 static func _make_sites(parent: Node3D,state: Dictionary,
         cells: Dictionary) -> int:
     var sites: Array = []
@@ -616,6 +657,9 @@ static func _make_sites(parent: Node3D,state: Dictionary,
         sites.append({"kind":"relay","pos":objective["pos"],
             "owner":int(objective.get("owner",-1))})
     var drawn: int = 0
+    var foundations := SurfaceTool.new()
+    foundations.begin(Mesh.PRIMITIVE_TRIANGLES)
+    var foundation_count := 0
     for site in sites:
         var cell: Vector2i = site["pos"]
         if not cells.has(cell):
@@ -642,8 +686,9 @@ static func _make_sites(parent: Node3D,state: Dictionary,
                 state,site,owner,visible)
             if command_hq!=null:
                 command_hq.name="Instalacion3D_city_%d_%d" % [cell.x,cell.y]
-                command_hq.position=world_at(cell)+Vector3(
-                    0,height_at(cells,cell)+0.07,0)
+                _place_land_site(command_hq,foundations,cells,cell,visible)
+                if str(known.get("kind","unknown")) not in ["water","unknown"]:
+                    foundation_count += 1
                 command_hq.set_meta("owner_public",owner)
                 command_hq.set_meta("kind","city")
                 command_hq.set_meta("battle_cell",cell)
@@ -653,8 +698,9 @@ static func _make_sites(parent: Node3D,state: Dictionary,
             var city: Node3D=CivilianCity.build_site(state,site,owner,2)
             if city!=null:
                 city.name="Instalacion3D_city_%d_%d" % [cell.x,cell.y]
-                city.position=world_at(cell)+Vector3(
-                    0,height_at(cells,cell)+0.07,0)
+                _place_land_site(city,foundations,cells,cell,visible)
+                if str(known.get("kind","unknown")) not in ["water","unknown"]:
+                    foundation_count += 1
                 city.set_meta("owner_public",owner)
                 city.set_meta("kind","city")
                 city.set_meta("battle_cell",cell)
@@ -668,8 +714,9 @@ static func _make_sites(parent: Node3D,state: Dictionary,
             var barracks: Node3D=InfantryBarracks.build_site(state,site,owner)
             if barracks!=null:
                 barracks.name="Instalacion3D_factory_%d_%d" % [cell.x,cell.y]
-                barracks.position=world_at(cell)+Vector3(
-                    0,height_at(cells,cell)+0.07,0)
+                _place_land_site(barracks,foundations,cells,cell,visible)
+                if str(known.get("kind","unknown")) not in ["water","unknown"]:
+                    foundation_count += 1
                 barracks.set_meta("owner_public",owner)
                 barracks.set_meta("kind","factory")
                 barracks.set_meta("battle_cell",cell)
@@ -685,8 +732,9 @@ static func _make_sites(parent: Node3D,state: Dictionary,
             if workshop!=null:
                 workshop.name="Instalacion3D_armor_plant_%d_%d" % [
                     cell.x,cell.y]
-                workshop.position=world_at(cell)+Vector3(
-                    0,height_at(cells,cell)+0.07,0)
+                _place_land_site(workshop,foundations,cells,cell,visible)
+                if str(known.get("kind","unknown")) not in ["water","unknown"]:
+                    foundation_count += 1
                 workshop.set_meta("owner_public",owner)
                 workshop.set_meta("kind","armor_plant")
                 workshop.set_meta("battle_cell",cell)
@@ -701,8 +749,9 @@ static func _make_sites(parent: Node3D,state: Dictionary,
             if airfield!=null:
                 airfield.name="Instalacion3D_airbase_%d_%d" % [
                     cell.x,cell.y]
-                airfield.position=world_at(cell)+Vector3(
-                    0,height_at(cells,cell)+0.07,0)
+                _place_land_site(airfield,foundations,cells,cell,visible)
+                if str(known.get("kind","unknown")) not in ["water","unknown"]:
+                    foundation_count += 1
                 airfield.set_meta("owner_public",owner)
                 airfield.set_meta("kind","airbase")
                 airfield.set_meta("battle_cell",cell)
@@ -732,8 +781,9 @@ static func _make_sites(parent: Node3D,state: Dictionary,
             if drone_site!=null:
                 drone_site.name="Instalacion3D_drone_center_%d_%d" % [
                     cell.x,cell.y]
-                drone_site.position=world_at(cell)+Vector3(
-                    0,height_at(cells,cell)+0.07,0)
+                _place_land_site(drone_site,foundations,cells,cell,visible)
+                if str(known.get("kind","unknown")) not in ["water","unknown"]:
+                    foundation_count += 1
                 drone_site.set_meta("owner_public",owner)
                 drone_site.set_meta("kind","drone_center")
                 drone_site.set_meta("battle_cell",cell)
@@ -770,6 +820,8 @@ static func _make_sites(parent: Node3D,state: Dictionary,
         marker.set_meta("kind",site["kind"])
         parent.add_child(marker)
         drawn += 1
+    _finish(parent,"CimentacionesTacticasV26",foundations,foundation_count,"soil")
+    parent.set_meta("terrain_foundations_v26",foundation_count)
     return drawn
 
 static func _make_units(parent: Node3D,state: Dictionary,
