@@ -114,6 +114,38 @@ func check_v19_surfaces() -> void:
             albedos.append(tex)
             normals.append(normal)
 
+# Independent reference: transform every actual vertex, including
+# duplicates, rather than using the production cached Y projection.
+func reference_sole_floor_v24(model: Node3D) -> float:
+    var soldier: Node3D=model.find_child("Infanteria_3D",true,false) as Node3D
+    var result: float=INF
+    for side in [-1,1]:
+        var sole: MeshInstance3D=model.find_child("V2_Suela_%d"%side,true,false) as MeshInstance3D
+        if sole==null or sole.mesh==null:
+            return INF
+        var relative:=Transform3D.IDENTITY
+        var node: Node3D=sole
+        while node!=null and node!=soldier:
+            relative=node.transform*relative
+            node=node.get_parent() as Node3D
+        var points: PackedVector3Array=sole.mesh.surface_get_arrays(0)[Mesh.ARRAY_VERTEX]
+        for vertex in points:
+            result=minf(result,(relative*vertex).y)
+    return result
+
+func expected_dust_v24(model: Node3D,side: int,t: float) -> Vector3:
+    var sole: MeshInstance3D=model.find_child("V2_Suela_%d"%side,true,false) as MeshInstance3D
+    if sole==null or sole.mesh==null:
+        return Vector3.INF
+    var bounds: AABB=sole.mesh.get_aabb()
+    var point:=Vector3(bounds.get_center().x,bounds.position.y,bounds.get_center().z)
+    var node: Node3D=sole
+    while node!=null and node!=model:
+        point=node.transform*point
+        node=node.get_parent() as Node3D
+    var p: float=clampf((t-0.08)/0.77,0.0,1.0)
+    return point+Vector3(float(side)*0.10*p,0.04+0.10*p,0.15*p)
+
 func _initialize() -> void:
     call_deferred("_run")
 
@@ -277,6 +309,9 @@ func _run() -> void:
                     for phase in [0.0,0.125,0.25,0.375,0.5,0.625,0.75,0.875,1.0]:
                         check(Models.pose_model(role,model,"move",phase),"articulated gait sample")
                         var lowest: float=Finish.family_sole_floor(model)
+                        var reference_floor: float=reference_sole_floor_v24(model)
+                        check(is_finite(reference_floor) and absf(lowest-reference_floor)<0.00001,
+                            "V24 optimized sole projection equals full native mesh")
                         check(body!=null and is_finite(rest_floor) and
                             absf(lowest+body.position.y-rest_floor)<0.0001,
                             "stance sole remains at original floor level")
@@ -543,10 +578,26 @@ func _run() -> void:
                                     "V22 radial explosive plume")
                             else:
                                 check(basis.y.length()<basis.x.length(),"V22 low outsole dust")
+                                for particle in range(batch.multimesh.visible_instance_count):
+                                    var dust_side: int=-1 if particle%2==0 else 1
+                                    var actual_contact: Vector3=batch.multimesh.get_instance_transform(particle).origin
+                                    check(actual_contact.distance_to(expected_dust_v24(model,dust_side,0.4))<0.0001,
+                                        "V24 cached dust anchor matches animated sole")
                     check(Infantry.set_damage(model,3) and Models.pose_model(role,model,"idle",0.4),"equipment smoke pose")
                     var smoke: MultiMeshInstance3D=model.get_node_or_null(Finish.FX_V10) as MultiMeshInstance3D
                     check(smoke!=null and smoke.visible and smoke.multimesh.visible_instance_count>0,
                         "D3 persistent equipment smoke")
+                    if smoke!=null:
+                        check(Models.pose_model(role,model,"hit_explosive",0.4) and
+                            smoke.multimesh.visible_instance_count==smoke.multimesh.instance_count,
+                            "V24 mixed D3 smoke plus explosive effects use fixed capacity")
+                        check(Infantry.set_damage(model,4) and Models.pose_model(role,model,"attack",0.4),
+                            "V24 destroyed pose remains valid")
+                        check(smoke.multimesh.visible_instance_count==(smoke.multimesh.instance_count >> 1),
+                            "V24 destroyed model shows smoke only")
+                        var destroyed_flash: Node3D=model.find_child("V2_DestelloDisparo3D",true,false) as Node3D
+                        check(destroyed_flash!=null and not destroyed_flash.visible,
+                            "V24 destroyed model cannot show attack flash")
                     Models.restore_model_pose(role,model)
                     check(smoke!=null and not smoke.visible and smoke.multimesh.visible_instance_count==0,
                         "D0 clears effect batch without resource churn")
