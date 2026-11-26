@@ -6,9 +6,10 @@ const Turns = preload("res://scripts/core/Turns.gd")
 const Domains = preload("res://scripts/core/Domains.gd")
 const Logistics = preload("res://scripts/core/Logistics.gd")
 const Weather = preload("res://scripts/core/Weather.gd")
+const Crossings = preload("res://scripts/core/LayeredCrossingsV48.gd")
 
 # Immutable movement action. Relocation is once per turn; it does NOT consume a subsequent attack.
-static func move(units: Array, unit_id: String, destination: Vector2i, faction: int, terrain: Array, weather: String = "clear") -> Dictionary:
+static func move(units: Array, unit_id: String, destination: Vector2i, faction: int, terrain: Array, weather: String = "clear",bridge_cells: Dictionary = {}) -> Dictionary:
     var rejected := {"valid": false, "units": units.duplicate(true)}
     if not Rules.inside(destination,terrain) or unit_id.is_empty():
         return rejected
@@ -30,7 +31,7 @@ static func move(units: Array, unit_id: String, destination: Vector2i, faction: 
             var position = unit.get("pos", null)
             if not (position is Vector2i) or not Rules.inside(position,terrain):
                 return rejected
-            var layer: String = Domains.layer(unit)
+            var layer: String = str(Crossings.occupancy_key(position,Domains.domain(unit),bridge_cells).z) if not bridge_cells.is_empty() else Domains.layer(unit)
             if not occupied_layers.has(layer):
                 occupied_layers[layer] = []
             if position in occupied_layers[layer]:
@@ -43,6 +44,16 @@ static func move(units: Array, unit_id: String, destination: Vector2i, faction: 
     var mover: Dictionary = result[moving_index]
     if not Turns.can_move(mover, faction) or destination == mover.get("pos"):
         return rejected
+    if not bridge_cells.is_empty():
+        var legal: Dictionary = Crossings.reachable(terrain,bridge_cells,result,
+            mover["pos"],Domains.domain(mover),faction,Logistics.movement_budget(mover),
+            Logistics.road_fast(mover),weather,Weather.traction(mover))
+        if not legal.has(destination):
+            return rejected
+        Logistics.consume_move(mover,int(legal[destination]))
+        mover["pos"] = destination
+        mover["moved"] = true
+        return {"valid":true,"units":result,"cost":legal[destination]}
     var mover_domain: String = Domains.domain(mover)
     var mover_layer: String = Domains.layer(mover)
     var blockers: Array[Vector2i] = []
