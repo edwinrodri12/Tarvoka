@@ -57,7 +57,11 @@ static func _face(t:SurfaceTool,a:Vector3,b:Vector3,c:Vector3,outward:Vector3)->
     var cross:Vector3=(b-a).cross(c-a)
     var positive:bool=cross.dot(outward)>0.0
     var normal:Vector3=cross.normalized() if positive else -cross.normalized()
-    for point in [a,c,b] if positive else [a,b,c]:
+    var ordered:Array[Vector3]=[a,b,c]
+    if positive:
+        ordered[1]=c
+        ordered[2]=b
+    for point in ordered:
         t.set_normal(_surface_normal(normal,point))
         t.add_vertex(point)
 
