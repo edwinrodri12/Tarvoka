@@ -1429,6 +1429,9 @@ func save_game(path: String = SaveStore.DEFAULT_PATH) -> bool:
 func load_game(path: String = SaveStore.DEFAULT_PATH) -> bool:
     var report: Dictionary = SaveStore.load_report(path)
     var restored: Dictionary = report["state"]
+    if restored.has("layered_crossings_v48"):
+        message = "Partida experimental de puentes: visor tactico no compatible aun."
+        return false
     if restored.is_empty():
         message = "No se pudo cargar la partida."
         return false
@@ -1480,7 +1483,7 @@ func _infer_symmetric_setup() -> bool:
 func resume_autosave() -> bool:
     var report: Dictionary = SaveStore.load_report(autosave_path)
     var restored: Dictionary = report["state"]
-    if restored.is_empty():
+    if restored.is_empty() or restored.has("layered_crossings_v48"):
         return false
     state = restored
     weather_visual_current = Weather.from_state(state)
