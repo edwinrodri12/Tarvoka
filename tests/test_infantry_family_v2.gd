@@ -269,6 +269,35 @@ func _run() -> void:
                     check(str(model.get_meta(Finish.FIT_V15,""))==role,"V15 proportion fit")
                     check(str(model.get_meta(Finish.PREMIUM_V16,""))==role,"V16 premium art identity")
                     check(str(model.get_meta(Finish.GEAR_V17,""))==role,"V17 role-specific kit")
+                    check(str(model.get_meta(Finish.OPTICS_V18,""))==role,"V18 optics identity")
+                    var optic_names: Array[String]=["V2_VisorOpacoPBR"]
+                    if role=="infantry_commando":
+                        for side in [-1,0,1]:
+                            optic_names.append("V4_CristalNV_%d"%side)
+                    elif role=="infantry_sniper":
+                        optic_names.append("V4_CristalPrecision")
+                    for optic_name in optic_names:
+                        var optic: MeshInstance3D=model.find_child(optic_name,true,false) as MeshInstance3D
+                        check(optic!=null and optic.has_meta(Finish.STAGE_MATS),"opaque staged optic "+optic_name)
+                        if optic==null or not optic.has_meta(Finish.STAGE_MATS):
+                            continue
+                        var optical_palette: Array=optic.get_meta(Finish.STAGE_MATS)
+                        check(optical_palette.size()==5,"five optical damage states")
+                        if optical_palette.size()!=5:
+                            continue
+                        var pristine: StandardMaterial3D=optical_palette[0] as StandardMaterial3D
+                        var worn: StandardMaterial3D=optical_palette[3] as StandardMaterial3D
+                        check(pristine!=null and worn!=null and pristine.roughness<0.15 and
+                            worn.roughness>0.45 and worn.clearcoat<pristine.clearcoat,
+                            "lens gradually loses gloss, not geometry")
+                        for optic_mat in optical_palette:
+                            check(optic_mat.transparency==BaseMaterial3D.TRANSPARENCY_DISABLED and
+                                optic_mat.albedo_color.a==1.0 and not optic_mat.normal_enabled,
+                                "all lens stages remain opaque and smooth")
+                        check(Infantry.set_damage(model,3) and Models.pose_model(role,model,"idle",0.0) and
+                            optic.material_override==worn,"real D3 optic material applied")
+                        Models.restore_model_pose(role,model)
+                        check(optic.material_override==pristine,"D0 exact optic material restored")
                     var is_hero: bool=bool(model.get_meta("tarvoka_infantry_v2_hero",false))
                     check(int(model.get_meta(Finish.GEAR_COUNT_V17,-1))==(3 if is_hero else 0),
                         "three premium kit meshes, zero tactical additions")
@@ -674,6 +703,17 @@ func _run() -> void:
                         await save_frame(view,"v17_%s_kit_rear"%role)
                         hero.rotation_degrees.y=25
                         await save_frame(view,"v17_%s_kit_angle"%role)
+                        # Same camera, same lighting, pristine and worn optics.
+                        camera.size=1.10
+                        camera.position=Vector3(1.4,2.45,3.2)
+                        camera.look_at(Vector3(0,1.92,0),Vector3.UP)
+                        hero.rotation_degrees.y=180
+                        Models.restore_model_pose(role,hero)
+                        await save_frame(view,"v18_%s_optic_d0"%role)
+                        check(Infantry.set_damage(hero,3) and Models.pose_model(role,hero,"idle",0.0),
+                            "V18 worn lens capture")
+                        await save_frame(view,"v18_%s_optic_d3"%role)
+                        Models.restore_model_pose(role,hero)
                         # Close views of actual extremities rather than
                         # another wide full-body screenshot.
                         hero.rotation_degrees.y=140
@@ -739,7 +779,7 @@ func _run() -> void:
     await save_frame(view,"v15_six_official_rear")
     for unit in lineup:
         unit.free()
-    check(rendered==160,"160 real 3D comparison / tactical frames")
+    check(rendered==170,"170 real 3D comparison / tactical frames")
     # Art-only variants must never enter the tactical roster.
     for role in ["infantry_urban","infantry_defense",
             "infantry_antitank","infantry_engineer",
@@ -750,5 +790,5 @@ func _run() -> void:
         push_error("FAIL INFANTRY V2 NATIVE 3D: %d failures"%failed)
         quit(1)
     else:
-        print("PASS INFANTRY V2 NATIVE 3D: 160 models (6 core + 4 legacy), 8 factions, 2 LOD, 160 true PNG")
+        print("PASS INFANTRY V2 NATIVE 3D: 160 models (6 core + 4 legacy), 8 factions, 2 LOD, 170 true PNG")
         quit(0)

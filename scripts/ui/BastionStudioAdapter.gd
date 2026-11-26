@@ -423,6 +423,7 @@ func _engineer_web_entry_report() -> void:
     evidence["premium_meshes_v16"]=int(model_root.get_meta("tarvoka_infantry_premium_mesh_count_v16",0))
     evidence["kit_v17"]=str(model_root.get_meta("tarvoka_infantry_premium_kit_v17",""))==_role
     evidence["kit_meshes_v17"]=int(model_root.get_meta("tarvoka_infantry_premium_kit_count_v17",0))
+    evidence["optics_v18"]=str(model_root.get_meta("tarvoka_infantry_optics_v18",""))==_role
     evidence["native_viewport"]=model_root.get_parent()==preview
     JavaScriptBridge.eval("window.__tarvokaInfantryEntry="+JSON.stringify(evidence),true)
     if _role=="infantry_engineer":
@@ -1686,6 +1687,8 @@ func _infantry_review_edition() -> String:
         if EngineerFinishV9.has_model(model_root):
             return "V9"
     if model_root!=null and str(model_root.get_meta("tarvoka_infantry_role_identity_v6",""))==_role:
+        if str(model_root.get_meta("tarvoka_infantry_optics_v18",""))==_role:
+            return "V18"
         if str(model_root.get_meta("tarvoka_infantry_premium_kit_v17",""))==_role:
             return "V17"
         if str(model_root.get_meta("tarvoka_infantry_premium_exterior_v16",""))==_role:

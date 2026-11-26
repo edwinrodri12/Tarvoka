@@ -228,6 +228,19 @@ static func apply(model: Node3D, role: String, faction_color: Color,
         return false
     if not Sculpt.refine_v17_kit(model,role,hero):
         return false
+    # Dedicated optic colors stay distinct from the common helmet visor.
+    # Reuse the existing closed lens meshes and their exact mount positions.
+    if role=="infantry_commando":
+        for side in [-1,0,1]:
+            var lens: MeshInstance3D=_node(model,"V4_CristalNV_%d"%side) as MeshInstance3D
+            if lens==null:
+                return false
+            lens.material_override=_mat(Color("#316a62") if side==0 else Color("#285650"),0.16,0.085)
+    elif role=="infantry_sniper":
+        var lens: MeshInstance3D=_node(model,"V4_CristalPrecision") as MeshInstance3D
+        if lens==null:
+            return false
+        lens.material_override=_mat(Color("#365e74"),0.16,0.085)
     # Base sculpt is finished before these specialist pieces exist.
     # Apply the same cached surface classes and damage palette only to
     # the newly attached parts; base material identities stay unchanged.

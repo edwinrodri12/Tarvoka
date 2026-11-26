@@ -184,6 +184,8 @@ static func _refine_core(model: Node3D, hero: bool) -> bool:
     model.set_meta(FAMILY_ANATOMY_V5,true)
     if not _refine_head_and_armor(model,hero) or not _refine_face_and_profile(model,hero):
         return false
+    if not _refine_v18_visor(model,hero):
+        return false
     if not _refine_outer_armor(model,hero) or not _refine_family_legs(model,hero):
         return false
     if not _refine_v15_fit(model,hero) or not _refine_v16_exterior(model,hero):
@@ -191,6 +193,52 @@ static func _refine_core(model: Node3D, hero: bool) -> bool:
     if str(model.get_meta("tarvoka_infantry_role",""))=="line" and not refine_v17_kit(model,"line",hero):
         return false
     return _attach_family_grips(model,hero)
+
+const OPTICS_V18 := "tarvoka_infantry_optics_v18"
+const OPTICS_TONES_V18 := {
+    "line":Color("#315b70"),
+    "infantry_commando":Color("#294f60"),
+    "infantry_sniper":Color("#395c5e"),
+    "infantry_logistic":Color("#53624f"),
+    "infantry_medic":Color("#426a72")
+}
+
+# A sealed curved lens on the existing helmet rig. No new node, fake
+# translucent overlay, or change to the head/weapon articulation.
+static func _refine_v18_visor(model: Node3D,hero: bool)->bool:
+    var role: String=str(model.get_meta("tarvoka_infantry_role",""))
+    if not OPTICS_TONES_V18.has(role):
+        return false
+    var visor: MeshInstance3D=_find(model,"V2_VisorOpacoPBR") as MeshInstance3D
+    if visor==null:
+        return false
+    var width: float=1.0
+    var height: float=1.0
+    match role:
+        "infantry_commando":
+            width=1.03
+            height=0.93
+        "infantry_sniper":
+            width=0.94
+            height=0.96
+        "infantry_logistic":
+            width=1.03
+        "infantry_medic":
+            width=0.96
+            height=1.03
+    visor.mesh=_organic_mesh([
+        Vector3(0.140*width,-0.071*height,0.031),
+        Vector3(0.171*width,-0.055*height,0.052),
+        Vector3(0.187*width,-0.026*height,0.066),
+        Vector3(0.193*width,0.018*height,0.069),
+        Vector3(0.178*width,0.048*height,0.054),
+        Vector3(0.147*width,0.069*height,0.032)],
+        24 if hero else 12,PackedFloat32Array([0.014,0.004,0.0,0.0,0.008,0.016]),0.73)
+    visor.position=Vector3(0,0.235,-0.267)
+    visor.scale=Vector3.ONE
+    visor.material_override=_coat(OPTICS_TONES_V18[role],0.16,0.085,true)
+    model.set_meta(OPTICS_V18,role)
+    return true
 
 const GEAR_V17 := "tarvoka_infantry_premium_kit_v17"
 const GEAR_COUNT_V17 := "tarvoka_infantry_premium_kit_count_v17"
@@ -870,6 +918,8 @@ static func _family_texture(kind: String) -> ImageTexture:
     return tex
 
 static func _finish_kind(label: String) -> String:
+    if label=="V2_VisorOpacoPBR" or label=="V4_CristalPrecision" or label.begins_with("V4_CristalNV_"):
+        return "optic"
     if label.begins_with("V16_Armor"):
         return "armor"
     if label.begins_with("V17_Fabric"):
@@ -910,7 +960,15 @@ static func _finish_family_materials(model: Node3D,hero: bool) -> bool:
             clean.metallic=0.09 if kind=="armor" else 0.0
             clean.roughness=0.58 if kind=="armor" else (0.92 if kind=="fabric" else 0.84)
             clean.metallic_specular=0.38 if kind=="armor" else 0.24
-            if hero:
+            if kind=="optic":
+                clean.metallic=0.16
+                clean.roughness=0.085
+                clean.metallic_specular=0.52
+                clean.clearcoat_enabled=true
+                clean.clearcoat=0.88
+                clean.clearcoat_roughness=0.09
+                clean.normal_enabled=false
+            elif hero:
                 clean.albedo_texture=_family_texture(kind)
                 clean.uv1_triplanar=true
                 clean.uv1_world_triplanar=false
@@ -927,6 +985,12 @@ static func _finish_family_materials(model: Node3D,hero: bool) -> bool:
                 c.a=1.0
                 weathered.albedo_color=c
                 weathered.roughness=minf(1.0,clean.roughness+float(stage)*0.065)
+                if kind=="optic":
+                    # A damaged opaque optical surface becomes dull, never
+                    # invisible; the original clean material is reversible.
+                    weathered.roughness=0.085+float(stage)*0.14
+                    weathered.clearcoat=maxf(0.0,0.88-float(stage)*0.21)
+                    weathered.clearcoat_roughness=0.09+float(stage)*0.14
                 stages.append(weathered)
             cache[key]=stages
         var palette: Array=cache[key]
