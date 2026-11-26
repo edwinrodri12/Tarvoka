@@ -53,6 +53,23 @@ static func _surface_normal(normal:Vector3,point:Vector3)->Vector3:
     return Vector3(softened.x*horizontal.length(),normal.y,
         softened.z*horizontal.length()).normalized()
 
+# V20: separate ornamental atlas tiles for upper, lower and side faces.
+# Use the geometric face normal (not the smoothed lighting normal) so a
+# triangle stays inside one tile, including at the decorative creases.
+static func _surface_uv(normal:Vector3,point:Vector3)->Vector2:
+    var tile:=Vector2.ZERO
+    var uv:=Vector2(point.x+0.5,point.z+0.5)
+    if normal.y < -0.999:
+        tile=Vector2(1,0)
+    elif absf(normal.y)<0.999:
+        if absf(normal.x)>=absf(normal.z):
+            tile=Vector2(0,1)
+            uv=Vector2(point.z+0.5,0.5-point.y)
+        else:
+            tile=Vector2(1,1)
+            uv=Vector2(point.x+0.5,0.5-point.y)
+    return (tile*128.0+Vector2(4,4)+uv.clamp(Vector2.ZERO,Vector2.ONE)*120.0)/256.0
+
 # Bevelled abstract game sculpture. All surfaces remain closed and clockwise.
 static func _face(t:SurfaceTool,a:Vector3,b:Vector3,c:Vector3,outward:Vector3)->void:
     var cross:Vector3=(b-a).cross(c-a)
@@ -64,7 +81,7 @@ static func _face(t:SurfaceTool,a:Vector3,b:Vector3,c:Vector3,outward:Vector3)->
         ordered[2]=b
     for point in ordered:
         t.set_normal(_surface_normal(normal,point))
-        t.set_uv(Vector2(point.x+0.5,point.z+0.5))
+        t.set_uv(_surface_uv(normal,point))
         t.add_vertex(point)
 
 static func _sculpt()->ArrayMesh:
@@ -118,7 +135,7 @@ static func _shell_finish(source:ArrayMesh,upper:Color,lower:Color)->ArrayMesh:
 static func _crown_livery()->ImageTexture:
     if is_instance_valid(_decorative_crown_texture):
         return _decorative_crown_texture
-    var image:=Image.create(128,128,false,Image.FORMAT_RGBA8)
+    var image:=Image.create(256,256,false,Image.FORMAT_RGBA8)
     image.fill(Color("#f8f8f8"))
     # Parallel decorative framed color blocks and short printed accents.
     # All graphics are flat pigment; no openings or mechanical detail.
@@ -134,6 +151,31 @@ static func _crown_livery()->ImageTexture:
     for y in [22,101]:
         image.fill_rect(Rect2i(43,y,42,3),Color("#9fa8ad"))
         image.fill_rect(Rect2i(47,y+3,34,2),Color("#ffffff"))
+    # Three additional graphic families: lower face and two side families.
+    # Opaque printed ornament, not modeled hardware, apertures or mechanisms.
+    image.fill_rect(Rect2i(128,0,128,128),Color("#e6e9eb"))
+    image.fill_rect(Rect2i(0,128,128,128),Color("#d7dde1"))
+    image.fill_rect(Rect2i(128,128,128,128),Color("#e8ecee"))
+    # Lower: stepped neutral border and broad center mark.
+    image.fill_rect(Rect2i(145,28,94,72),Color("#afb9c0"))
+    image.fill_rect(Rect2i(150,33,84,62),Color("#e2e7ea"))
+    image.fill_rect(Rect2i(158,56,68,16),Color("#c1cbd1"))
+    for x in [159,218]:
+        image.fill_rect(Rect2i(x,40,5,48),Color("#f6f7f8"))
+    # Side families: contrasting bands, short graphic strokes and layered tone.
+    for origin in [0,128]:
+        image.fill_rect(Rect2i(origin+8,146,112,10),Color("#a3aeb6"))
+        image.fill_rect(Rect2i(origin+8,157,112,4),Color("#fafafa"))
+        image.fill_rect(Rect2i(origin+17,172,94,40),Color("#b0bbc1"))
+        image.fill_rect(Rect2i(origin+20,175,88,34),Color("#e9edef"))
+        for x in [29,48,67,86]:
+            image.fill_rect(Rect2i(origin+x,183,11,3),Color("#9faab1"))
+            image.fill_rect(Rect2i(origin+x,197,11,2),Color("#ffffff"))
+        image.fill_rect(Rect2i(origin+13,223,102,5),Color("#8998a2"))
+        image.fill_rect(Rect2i(origin+21,230,86,3),Color("#ffffff"))
+    # Distinct end-face graphic identity; no extra physical pieces.
+    image.fill_rect(Rect2i(168,178,48,26),Color("#bfc9d0"))
+    image.fill_rect(Rect2i(178,184,28,14),Color("#e6edf1"))
     image.generate_mipmaps()
     _decorative_crown_texture=ImageTexture.create_from_image(image)
     return _decorative_crown_texture
@@ -167,6 +209,8 @@ static func build(root:Node3D,faction:Color,hero:bool)->bool:
     var coated_shell:=_mat(Color.WHITE,0.16,0.62)
     coated_shell.vertex_color_use_as_albedo=true
     coated_shell.vertex_color_is_srgb=true
+    coated_shell.albedo_texture=_crown_livery()
+    coated_shell.texture_filter=BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
     var shell:=_mat(Color("#697b86"),0.16,0.64)
     var coated_guard:=_mat(Color.WHITE,0.15,0.63)
     coated_guard.vertex_color_use_as_albedo=true
@@ -290,6 +334,7 @@ static func build(root:Node3D,faction:Color,hero:bool)->bool:
         if part.get_parent()!=effects:
             part.set_meta(BASE_MATERIAL,part.material_override)
     root.set_meta(DAMAGE,0)
+    root.set_meta("tarvoka_a02_v20_surface_atlas",true)
     root.set_meta("tarvoka_a02_v19_graphic_livery",true)
     root.set_meta("tarvoka_a02_v18_undershell_finish",true)
     root.set_meta("tarvoka_a02_v17_surface_finish",true)
