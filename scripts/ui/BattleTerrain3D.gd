@@ -216,6 +216,8 @@ static func _finish(parent: Node3D, label: String,
 static func _road_color(biome: String) -> Color:
     if biome == Biomes.WINTER:
         return Biomes.ROAD_DARK
+    if biome == Biomes.DESERT:
+        return Color("#8a735b")
     if biome == Biomes.CANYON:
         return Color("#777068")
     if biome == Biomes.COASTAL:
@@ -225,6 +227,8 @@ static func _road_color(biome: String) -> Color:
 static func _shore_color(biome: String) -> Color:
     if biome == Biomes.WINTER:
         return Biomes.FROZEN_SHORE
+    if biome == Biomes.DESERT:
+        return Color("#e3c28c")
     if biome == Biomes.CANYON:
         return Color("#c5a980")
     if biome == Biomes.COASTAL:
@@ -311,6 +315,17 @@ static func _cached_water_tint(cells: Dictionary,corner: Vector2i,
         cache[corner] = _water_corner_tint(cells,corner,biome)
     return cache[corner]
 
+# V29: paint wind-ripple bands directly into the existing ground surface.
+# Ground positions are sampled from the same triangle fan; not a new
+# traversable terrain type and not an obstacle to buildings or units.
+static func _append_sand_ripples(tool: SurfaceTool,at: Vector3,
+        surface: Dictionary,cell: Vector2i) -> void:
+    var offset: float = float(posmod(cell.x*13+cell.y*7,5))*0.035
+    for i in range(3):
+        var z: float = -0.60+float(i)*0.53+offset
+        RoadShore._rect(tool,at,surface,-0.83,0.83,z,z+0.055,
+            Color("#c9a16a") if i%2==0 else Color("#ecd09a"),0.016)
+
 static func _build_chunk(parent: Node3D, data: Dictionary,
         cells: Dictionary,corner_cache: Dictionary,
         biome: String = Biomes.TEMPERATE,water_cache: Dictionary = {},
@@ -395,6 +410,8 @@ static func _build_chunk(parent: Node3D, data: Dictionary,
         var surface_cell: Dictionary = {
             "x":cell.x,"z":cell.y,"top":_cell_height(tile),
             "half":half,"corners":corners}
+        if kind=="plain" and biome==Biomes.DESERT:
+            _append_sand_ripples(ground,at,surface_cell,cell)
         if kind == "road":
             _append_road_finish(road,at,surface_cell,tile,biome)
             roads_count += 1
@@ -453,7 +470,7 @@ static func _make_cone_trees(parent: Node3D,cells: Dictionary,
         var tile: Dictionary = cells[cell]
         if str(tile["kind"]) != "forest" or not bool(tile.get("details",false)):
             continue
-        for j in range(2 if biome!=Biomes.CANYON else 1):
+        for j in range(1 if biome in [Biomes.CANYON,Biomes.DESERT] else 2):
             var shift: Vector2 = Vector2(-0.38,0.26) if j==0 else Vector2(0.38,-0.28)
             var at: Vector3 = world_at(cell)+Vector3(shift.x,0,shift.y)
             var angle: float = float(posmod(
@@ -463,6 +480,9 @@ static func _make_cone_trees(parent: Node3D,cells: Dictionary,
             var scale: float = 0.82+float(posmod(cell.x*7+cell.y*13+j,5))*0.075
             var crown: float = 0.91+float(posmod(cell.x*19+cell.y*7+j*11,5))*0.04
             var height_scale: float = 0.90+float(posmod(cell.x*13+cell.y*23+j*3,5))*0.05
+            if biome==Biomes.DESERT:
+                crown *= 1.13
+                height_scale *= 0.48
             var rotated := Basis(Vector3.UP,angle).scaled(
                 Vector3(scale*crown,scale*height_scale,scale*crown))
             at.y = height_at(cells,cell,shift.x,shift.y)+0.32*scale*height_scale
@@ -471,11 +491,12 @@ static func _make_cone_trees(parent: Node3D,cells: Dictionary,
         return 0
     var foliage: Color = (
         Color("#40625b") if biome==Biomes.WINTER else
+        Color("#7e8b52") if biome==Biomes.DESERT else
         Color("#91845c") if biome==Biomes.CANYON else
         Color("#2e7665") if biome==Biomes.COASTAL else Color("#396b4c"))
     var tree_mesh := SurfaceTool.new()
     tree_mesh.begin(Mesh.PRIMITIVE_TRIANGLES)
-    for layer in range(3):
+    for layer in range(2 if biome==Biomes.DESERT else 3):
         var radius: float = 0.45-float(layer)*0.10
         var low: float = -0.32+float(layer)*0.29
         var tip: Vector3 = Vector3(0,0.63+float(layer)*0.25,0)
@@ -574,6 +595,7 @@ static func _make_mountain_ridges(parent: Node3D,cells: Dictionary,
     var light: Color = rock.lightened(0.12)
     var crest: Color = (
         Biomes.SNOW if biome==Biomes.WINTER else
+        Color("#e1ab79") if biome==Biomes.DESERT else
         Color("#c2ac89") if biome==Biomes.CANYON else
         Color("#80a69b") if biome==Biomes.COASTAL else Color("#96a9a0"))
     var nw := Vector3(-0.84,-0.37,-0.80)
@@ -582,6 +604,9 @@ static func _make_mountain_ridges(parent: Node3D,cells: Dictionary,
     var sw := Vector3(-0.81,-0.35,0.81)
     var peak_a := Vector3(-0.33,1.08,-0.18)
     var peak_b := Vector3(0.35,0.83,0.19)
+    if biome==Biomes.DESERT:
+        peak_a = Vector3(-0.34,0.91,-0.24)
+        peak_b = Vector3(0.34,0.89,0.20)
     var mesh_tool := SurfaceTool.new()
     mesh_tool.begin(Mesh.PRIMITIVE_TRIANGLES)
     _tri_tinted(mesh_tool,nw,ne,peak_a,shadow,rock,crest)
