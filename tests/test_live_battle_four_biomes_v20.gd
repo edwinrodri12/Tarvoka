@@ -197,18 +197,50 @@ func _check_foundation_and_cache() -> void:
     assert(Terrain._cached_water_tint(cells,cell,cache,Biomes.WINTER)==pigment)
     assert(cache.size()==1)
 
+func _check_extended_art() -> void:
+    var cell := Vector2i(7,3)
+    var at: Vector3 = Terrain.world_at(cell)
+    var surface: Dictionary = {"x":cell.x,"z":cell.y,"top":0.19,
+        "half":Terrain.CELL*0.5,"corners":PackedFloat32Array([0.19,0.19,0.19,0.19])}
+    for biome in [Biomes.WETLAND,Biomes.URBAN,Biomes.ARCHIPELAGO]:
+        var tool := SurfaceTool.new()
+        tool.begin(Mesh.PRIMITIVE_TRIANGLES)
+        Terrain._append_extended_ground(tool,at,surface,cell,biome)
+        var mesh: ArrayMesh = tool.commit()
+        var vertices: PackedVector3Array = mesh.surface_get_arrays(0)[Mesh.ARRAY_VERTEX]
+        assert(vertices.size()>0)
+        for vertex in vertices:
+            assert(absf(vertex.x-at.x)<Terrain.CELL*0.5)
+            assert(absf(vertex.z-at.z)<Terrain.CELL*0.5)
+        var cells: Dictionary = {}
+        cells[cell] = {"kind":"water","details":true}
+        assert(Terrain._shared_corner_tint(cells,cell,biome)==Terrain._shore_color(biome))
+    for kind in [Biomes.WETLAND,Biomes.URBAN]:
+        var art := SurfaceTool.new()
+        art.begin(Mesh.PRIMITIVE_TRIANGLES)
+        if kind==Biomes.WETLAND:
+            Terrain._append_reeds(art)
+        else:
+            Terrain._append_urban_tree(art)
+        var mesh: ArrayMesh = art.commit()
+        assert(mesh.surface_get_array_len(0)>0)
+
 func _run() -> void:
+    _check_extended_art()
     _check_water_bank_geometry()
     _check_surface_finish()
     _check_foundation_and_cache()
     root.content_scale_size = Vector2i(1280,800)
-    assert(Biomes.CHOICES.size()==6)
+    assert(Biomes.CHOICES.size()==9)
     assert(Biomes.from_index(0)==Biomes.TEMPERATE)
     assert(Biomes.from_index(1)==Biomes.WINTER)
     assert(Biomes.from_index(2)==Biomes.CANYON)
     assert(Biomes.from_index(3)==Biomes.COASTAL)
     assert(Biomes.from_index(4)==Biomes.DESERT)
     assert(Biomes.from_index(5)==Biomes.TROPICAL)
+    assert(Biomes.from_index(6)==Biomes.WETLAND)
+    assert(Biomes.from_index(7)==Biomes.URBAN)
+    assert(Biomes.from_index(8)==Biomes.ARCHIPELAGO)
     assert(Biomes.index_for({})==0)
     assert(Biomes.index_for({Biomes.FIELD:Biomes.WINTER})==1)
     assert(not Biomes.valid("unknown"))
@@ -219,7 +251,7 @@ func _run() -> void:
         var s: Color = Terrain._biome_color("plain",Vector2i(2,4),value)
         assert(c!=s)
         _check_biome(value,Vector2i(10,8))
-    assert(different_colors.size()==6)
+    assert(different_colors.size()==9)
     _check_biome(Biomes.COASTAL,Vector2i(24,18))
     _check_biome(Biomes.WINTER,Vector2i(40,30))
     _check_biome(Biomes.CANYON,Vector2i(40,30),true)
@@ -227,13 +259,16 @@ func _run() -> void:
     _check_biome(Biomes.DESERT,Vector2i(40,30),true)
     _check_biome(Biomes.TROPICAL,Vector2i(24,18))
     _check_biome(Biomes.TROPICAL,Vector2i(40,30),true)
+    _check_biome(Biomes.WETLAND,Vector2i(24,18))
+    _check_biome(Biomes.URBAN,Vector2i(40,30),true)
+    _check_biome(Biomes.ARCHIPELAGO,Vector2i(24,18))
 
     var main: Control = load("res://scenes/Main.tscn").instantiate()
     root.add_child(main)
     for i in range(7):
         await process_frame
-    assert(main.biome_picker.item_count==6)
-    assert(main.skirmish_setup.biome_picker.item_count==6)
+    assert(main.biome_picker.item_count==9)
+    assert(main.skirmish_setup.biome_picker.item_count==9)
     assert(main.battle_3d_button!=null)
     assert(main.compact_3d!=null)
     assert(main.battle_3d_view==null)
@@ -303,6 +338,15 @@ func _run() -> void:
     main._open_battle_3d()
     assert(viewer._scene.get_meta("visual_biome")==Biomes.TROPICAL)
     viewer.close_view()
+    for index in range(6,9):
+        main.biome_picker.select(index)
+        main._confirm_new_game()
+        var expected: String = Biomes.from_index(index)
+        assert(Biomes.from_state(board.state)==expected)
+        assert(Codec.decode(Codec.encode(board.state))==board.state)
+        main._open_battle_3d()
+        assert(viewer._scene.get_meta("visual_biome")==expected)
+        viewer.close_view()
     # V28: collect comparable real-battle frames, not showroom renders.
     # Same fixed map, camera defaults and clear weather for every biome.
     if DisplayServer.get_name()!="headless":
@@ -320,5 +364,5 @@ func _run() -> void:
                 "res://artifacts/tarvoka_biomes_v20_review_v28_%s.png" % biome)==OK)
             viewer.close_view()
     main.queue_free()
-    print("PASS TARVOKA_3D_FOUR_BIOMES_V20: 6 true mesh biomes, 10x8/24x18/40x30, fog secrecy, 3D mobile battle controls, main save, bounded GPU resources")
+    print("PASS TARVOKA_3D_FOUR_BIOMES_V20: 9 true mesh biomes, 10x8/24x18/40x30, fog secrecy, 3D mobile battle controls, main save, bounded GPU resources")
     quit(0)
