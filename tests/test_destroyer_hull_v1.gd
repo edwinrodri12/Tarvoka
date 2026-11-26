@@ -77,6 +77,67 @@ func _check_surface(node: Node) -> void:
     for child in node.get_children():
         _check_surface(child)
 
+# Verify finish identities and palette switching on independent instances.
+func _check_material_families(model: Node3D, lod: int) -> void:
+    var families: Dictionary = {
+        "CascoNaval":"hull", "Cubierta":"deck", "Superestructura/TechoPuente":"enamel",
+        "Superestructura/MarcoFrontal_0":"gasket", "Superestructura/CristalFrontal_0":"optics",
+        "Superestructura/TiradorPosterior":"hardware","ConjuntoPopa/Helipuerto":"deck",
+        "ConjuntoPopa/MarcaHelipuertoCentro":"marking","DanoNavalVisual/Humo_0":"smoke"
+    }
+    for path in families:
+        var node: MeshInstance3D = model.get_node_or_null(path) as MeshInstance3D
+        check(node!=null,"Material family part "+path)
+        if node==null:
+            continue
+        check(node.get_meta("destroyer_finish_family","")==families[path],"Correct material family "+path)
+    var deck: StandardMaterial3D = (model.get_node("Cubierta") as MeshInstance3D).material_override as StandardMaterial3D
+    var glass: StandardMaterial3D = (model.get_node("Superestructura/CristalFrontal_0") as MeshInstance3D).material_override as StandardMaterial3D
+    var gasket: StandardMaterial3D = (model.get_node("Superestructura/MarcoFrontal_0") as MeshInstance3D).material_override as StandardMaterial3D
+    check(deck.roughness>glass.roughness and gasket.metallic==0.0,"Non-slip deck and matte gasket contrast with optics")
+    check((deck.normal_texture!=null)==(lod>=13),"Deck microrelief inspection tier")
+    if lod>=13:
+        check(deck.normal_scale>0.40,"Deck relief differentiated from hull")
+
+func _check_palette_isolation() -> void:
+    var first: Node3D = Art.build("destroyer",0,true,13)
+    var second: Node3D = Art.build("destroyer",0,true,13)
+    check(first!=null and second!=null,"Independent palette models")
+    if first==null or second==null:
+        if first!=null:
+            first.free()
+        if second!=null:
+            second.free()
+        return
+    var panel: MeshInstance3D = first.get_node("Superestructura/TechoPuente") as MeshInstance3D
+    var other: MeshInstance3D = second.get_node("Superestructura/TechoPuente") as MeshInstance3D
+    var original: StandardMaterial3D = panel.material_override as StandardMaterial3D
+    var other_mat: StandardMaterial3D = other.material_override as StandardMaterial3D
+    var initial_color: Color = original.albedo_color
+    var initial_normal: Texture2D = original.normal_texture
+    var initial_grain: Texture2D = original.albedo_texture
+    var initial_roughness: float = original.roughness
+    var initial_metallic: float = original.metallic
+    var hull: MeshInstance3D = first.get_node("CascoNaval") as MeshInstance3D
+    var other_hull: MeshInstance3D = second.get_node("CascoNaval") as MeshInstance3D
+    var indices: PackedInt32Array = hull.get_meta("destroyer_stripe_vertices")
+    var unchanged: PackedColorArray = other_hull.mesh.surface_get_arrays(0)[Mesh.ARRAY_COLOR]
+    for faction in [1,7,0]:
+        check(Art.apply_faction_palette(first,faction)>0,"Repaint finished destroyer")
+        var current: StandardMaterial3D = panel.material_override as StandardMaterial3D
+        check(current.albedo_color.is_equal_approx(Art.faction_paint_color(faction)),"Swapped enamel")
+        check(is_equal_approx(current.roughness,initial_roughness) and is_equal_approx(current.metallic,initial_metallic),"Repaint retains naval finish")
+        check(current.normal_texture==initial_normal and current.albedo_texture==initial_grain,"Repaint shares texture resources")
+        check(other_mat.albedo_color.is_equal_approx(initial_color) and other.material_override==other_mat,"Independent enamel unchanged")
+        var colors: PackedColorArray = hull.mesh.surface_get_arrays(0)[Mesh.ARRAY_COLOR]
+        for index in indices:
+            var expected: Color = Art.faction_paint_color(faction)
+            var actual: Color = colors[index]
+            check(absf(actual.r-expected.r)<0.006 and absf(actual.g-expected.g)<0.006 and absf(actual.b-expected.b)<0.006,"Repainted hull continuous")
+        check(other_hull.mesh.surface_get_arrays(0)[Mesh.ARRAY_COLOR]==unchanged,"Other hull unchanged")
+    first.free()
+    second.free()
+
 func _run() -> void:
     for faction in range(-1, 8):
         for lod in [8, 13]:
@@ -84,7 +145,7 @@ func _run() -> void:
             check(model != null, "Destroyer builds")
             if model == null:
                 continue
-            check(model.get_meta("destroyer_art_revision", "") == "1.17", "V1.17 faction and satin finish active")
+            check(model.get_meta("destroyer_art_revision", "") == "1.18", "V1.18 faction and satin finish active")
             for key in ["CascoNaval", "Cubierta", "Superestructura/ZocaloNaval", "Superestructura/CarcasaInferior", "Superestructura/Puente", "Superestructura/TechoPuente", "TorretaNavalPivot/CarcasaTorreta", "TorreMastil/CarcasaMastil", "TorreMastil/RadarPivot/Radar", "ConjuntoPopa/Helipuerto", "ConjuntoPopa/Propulsion_-1/TimonPivot/TimonVisual", "ConjuntoPopa/Propulsion_1/TimonPivot/TimonVisual"]:
                 var part: MeshInstance3D = model.get_node_or_null(key) as MeshInstance3D
                 check(part != null, "Native " + key)
@@ -96,6 +157,7 @@ func _run() -> void:
                     var mat: StandardMaterial3D = part.material_override as StandardMaterial3D
                     check(mat != null and mat.transparency == BaseMaterial3D.TRANSPARENCY_DISABLED and mat.cull_mode == BaseMaterial3D.CULL_BACK, "Opaque outward shell")
             _check_surface(model)
+            _check_material_families(model,lod)
             var hull: MeshInstance3D = model.get_node_or_null("CascoNaval") as MeshInstance3D
             if hull != null:
                 var station_count: int = 15 if lod>=13 else 8
@@ -321,6 +383,7 @@ func _run() -> void:
             var authored_smoke: Transform3D = repaired_smoke.get_meta("destroyer_fx_rest")
             check(repaired_smoke.transform.is_equal_approx(authored_smoke) and not repaired_smoke.visible,"Smoke resets exactly on repair")
             model.free()
+    _check_palette_isolation()
     check(workload.size()==90,"Complete faction/LOD/damage workload")
     for faction in range(-1,8):
         for damage in range(5):
@@ -331,7 +394,7 @@ func _run() -> void:
     if failures != 0:
         quit(1)
         return
-    print("PASS DESTROYER HULL V1.17: 18 variants, 62 PNGs")
+    print("PASS DESTROYER HULL V1.18: 18 variants, 62 PNGs")
     quit(0)
 
 func _render() -> void:
@@ -400,7 +463,7 @@ func _render() -> void:
         var img: Image = view.get_texture().get_image()
         check(img != null and not img.is_empty(), "Real Godot image")
         if img != null and not img.is_empty():
-            check(img.save_png(output + "/destroyer_v117_%d.png" % i) == OK, "Capture saved")
+            check(img.save_png(output + "/destroyer_v118_%d.png" % i) == OK, "Capture saved")
     Art.restore_model_pose("destroyer",model)
     for d in range(5):
         Art.set_destroyer_damage(model,d,0.52 if d == 4 else 0.0)
@@ -413,7 +476,7 @@ func _render() -> void:
         var img: Image = view.get_texture().get_image()
         check(img != null and not img.is_empty(), "Damage image")
         if img != null and not img.is_empty():
-            check(img.save_png(output + "/destroyer_v117_D%d.png" % d) == OK, "Damage capture saved")
+            check(img.save_png(output + "/destroyer_v118_D%d.png" % d) == OK, "Damage capture saved")
     for d in [2,3]:
         Art.set_destroyer_damage(model,d)
         camera.position = Vector3(3.0,2.7,3.1)
@@ -425,7 +488,7 @@ func _render() -> void:
         var img: Image = view.get_texture().get_image()
         check(img != null and not img.is_empty(), "Close damage image")
         if img != null and not img.is_empty():
-            check(img.save_png(output + "/destroyer_v117_detail_D%d.png" % d) == OK, "Close damage capture")
+            check(img.save_png(output + "/destroyer_v118_detail_D%d.png" % d) == OK, "Close damage capture")
     # Fixed camera, opaque water, and a complete visual sinking sequence.
     var sea := MeshInstance3D.new()
     var plane := PlaneMesh.new()
@@ -455,7 +518,7 @@ func _render() -> void:
         var img: Image = view.get_texture().get_image()
         check(img != null and not img.is_empty(), "Fixed waterline sequence")
         if img != null and not img.is_empty():
-            check(img.save_png(output + "/destroyer_v117_sink_%d.png" % frame) == OK, "Fixed camera sink capture")
+            check(img.save_png(output + "/destroyer_v118_sink_%d.png" % frame) == OK, "Fixed camera sink capture")
             if empty_water != null and not empty_water.is_empty() and img.get_size() == empty_water.get_size():
                 var changed: int = 0
                 for y in range(0,img.get_height(),8):
@@ -490,7 +553,7 @@ func _render() -> void:
         var img: Image = view.get_texture().get_image()
         check(img != null and not img.is_empty(), "Directional relief inspection")
         if img != null and not img.is_empty():
-            check(img.save_png(output + "/destroyer_v117_light_%d.png" % side) == OK, "Relief inspection capture")
+            check(img.save_png(output + "/destroyer_v118_light_%d.png" % side) == OK, "Relief inspection capture")
     # Same lighting and angle for all eight factions plus neutral.
     model.hide()
     light.shadow_enabled = false
@@ -510,7 +573,7 @@ func _render() -> void:
         var image: Image = view.get_texture().get_image()
         check(image != null and not image.is_empty(),"Faction comparison image")
         if image != null and not image.is_empty():
-            check(image.save_png(output+"/destroyer_v117_faction_%d.png" % faction)==OK,"Faction comparison saved")
+            check(image.save_png(output+"/destroyer_v118_faction_%d.png" % faction)==OK,"Faction comparison saved")
         stage.remove_child(sample)
         sample.free()
     # Matched inspection views under identical camera orientation and lighting.
@@ -534,7 +597,7 @@ func _render() -> void:
                 var comparison: Image = view.get_texture().get_image()
                 check(comparison != null and not comparison.is_empty(),"Matched reference image")
                 if comparison != null and not comparison.is_empty():
-                    check(comparison.save_png(output+"/destroyer_v117_compare_%s_%d.png" % [role,side])==OK,"Matched reference capture")
+                    check(comparison.save_png(output+"/destroyer_v118_compare_%s_%d.png" % [role,side])==OK,"Matched reference capture")
             subject.hide()
         stage.remove_child(bastion)
         bastion.free()
@@ -552,7 +615,7 @@ func _render() -> void:
         var image: Image = view.get_texture().get_image()
         check(image != null and not image.is_empty(),"Graded damage comparison")
         if image != null and not image.is_empty():
-            check(image.save_png(output+"/destroyer_v117_graded_D%d.png" % damage)==OK,"Graded damage capture")
+            check(image.save_png(output+"/destroyer_v118_graded_D%d.png" % damage)==OK,"Graded damage capture")
     Art.set_destroyer_damage(model,0)
     # Exact 360-degree orbit and two axial views, unchanged lighting.
     model.show()
@@ -574,7 +637,7 @@ func _render() -> void:
         check(image!=null and not image.is_empty(),"Orbit image")
         if image!=null and not image.is_empty():
             _check_framed_image(image,"Orbit %02d" % step)
-            check(image.save_png(output+"/destroyer_v117_orbit_%02d.png" % step)==OK,"Orbit image saved")
+            check(image.save_png(output+"/destroyer_v118_orbit_%02d.png" % step)==OK,"Orbit image saved")
     # Matched silhouette comparison: tactical LOD8 vs inspection LOD13.
     Art.set_destroyer_damage(model,0)
     model.hide()
@@ -601,7 +664,7 @@ func _render() -> void:
                 check(image!=null and not image.is_empty(),"Matched silhouette image")
                 if image!=null and not image.is_empty():
                     _check_framed_image(image,"Silhouette LOD%d angle%d" % [lod,angle])
-                    check(image.save_png(output+"/destroyer_v117_silhouette_%d_%d.png" % [lod,angle])==OK,"Matched silhouette capture")
+                    check(image.save_png(output+"/destroyer_v118_silhouette_%d_%d.png" % [lod,angle])==OK,"Matched silhouette capture")
             subject.hide()
         stage.remove_child(tactical)
         tactical.free()

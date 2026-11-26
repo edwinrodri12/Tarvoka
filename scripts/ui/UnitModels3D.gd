@@ -628,10 +628,12 @@ static func _paint_panels(node: Node, color: Color) -> int:
         # also mark a more explicit zone using metadata in native Godot models.
         var zone: String = str(node.get_meta(TANK_PAINT_META,"dark" if node.name.contains("Franja") else "accent"))
         var original: StandardMaterial3D = shape.material_override as StandardMaterial3D
-        var material: StandardMaterial3D = original.duplicate(true) as StandardMaterial3D if original != null else StandardMaterial3D.new()
+        var naval_finish: bool = original != null and shape.get_meta("destroyer_surface_v15",false)
+        var material: StandardMaterial3D = original.duplicate(not naval_finish) as StandardMaterial3D if original != null else StandardMaterial3D.new()
         material.albedo_color = color.darkened(0.31) if zone == "dark" else color
-        material.metallic = 0.16
-        material.roughness = 0.68
+        if not naval_finish:
+            material.metallic = 0.16
+            material.roughness = 0.68
         shape.material_override = material
         count += 1
     for child in node.get_children():
@@ -1128,40 +1130,61 @@ static func _destroyer_finish(node: Node, detail: bool) -> void:
             var label: String = str(part.name)
             mat.transparency = BaseMaterial3D.TRANSPARENCY_DISABLED
             mat.cull_mode = BaseMaterial3D.CULL_BACK
+            var family: String = "steel"
             mat.metallic = 0.32
-            mat.roughness = 0.58
+            mat.roughness = 0.56
             if label.begins_with("Cristal") or label.begins_with("Lente"):
+                family = "optics"
                 mat.metallic = 0.12
                 mat.roughness = 0.24
             elif label.begins_with("Faccion") or part.has_meta(TANK_PAINT_META):
+                family = "enamel"
                 mat.metallic = 0.13
                 mat.roughness = 0.49
-            elif label.contains("Pasamanos") or label.contains("Amarre") or label.contains("Tirador"):
+            elif label.begins_with("Junta") or label.begins_with("Marco") or label.begins_with("BasePoste"):
+                family = "gasket"
+                mat.metallic = 0.0
+                mat.roughness = 0.86
+            elif label.contains("Pasamanos") or label.contains("Baranda") or label.contains("Amarre") or label.contains("Tirador") or label.begins_with("Remache"):
+                family = "hardware"
                 mat.metallic = 0.60
                 mat.roughness = 0.43
-            elif label.contains("Helipuerto") or label.contains("Estela") or label.begins_with("Espuma"):
+            elif label.begins_with("MarcaHelipuerto"):
+                family = "marking"
+                mat.metallic = 0.0
+                mat.roughness = 0.73
+            elif label == "Cubierta" or label == "Helipuerto":
+                family = "deck"
+                mat.metallic = 0.04
+                mat.roughness = 0.82
+            elif label.contains("Estela") or label.begins_with("Espuma"):
+                family = "foam"
                 mat.metallic = 0.0
                 mat.roughness = 0.88
-            elif label.contains("CascoNaval"):
+            elif label == "CascoNaval":
+                family = "hull"
                 mat.metallic = 0.28
                 mat.roughness = 0.62
             elif label.begins_with("Humo"):
+                family = "smoke"
                 mat.metallic = 0.0
                 mat.roughness = 1.0
             elif label.begins_with("Fuego") or label.begins_with("Impacto") or label == "DestelloVisual":
+                family = "effect"
                 mat.metallic = 0.0
                 mat.roughness = 0.75
                 mat.emission_enabled = true
                 mat.emission = mat.albedo_color
                 mat.emission_energy_multiplier = 0.8
-            if detail and (label in ["CascoNaval","Cubierta","CarcasaInferior","TechoPuente","CarcasaMastil","CarcasaTorreta"]):
+            if detail and (label in ["CascoNaval","Cubierta","Helipuerto","CarcasaInferior","Puente","TechoPuente","CarcasaMastil","CarcasaTorreta","RegistroProa","TapaBiselada"] or label.begins_with("RegistroPopa")):
                 mat.albedo_texture = _destroyer_grain()
                 mat.uv1_triplanar = true
                 mat.uv1_triplanar_sharpness = 4.0
-                mat.uv1_scale = Vector3(3.0,3.0,3.0)
+                mat.uv1_scale = Vector3(5.0,5.0,5.0) if family=="deck" else Vector3(3.0,3.0,3.0)
                 mat.normal_enabled = true
                 mat.normal_texture = _destroyer_relief()
-                mat.normal_scale = 0.40
+                mat.normal_scale = 0.65 if family=="deck" else (0.24 if family=="enamel" else 0.40)
+            part.set_meta("destroyer_finish_family",family)
             part.set_meta("destroyer_surface_v15",true)
     for child in node.get_children():
         _destroyer_finish(child,detail)
@@ -1574,7 +1597,7 @@ static func _destroyer(root: Node3D, art_level: int = 10) -> void:
     for station in stations:
         deck_stations.append([station[0],station[1]*0.86,0.738,0.802])
     _destroyer_shell(root,"Cubierta",deck_stations,ARMOR)
-    root.set_meta("destroyer_art_revision","1.17")
+    root.set_meta("destroyer_art_revision","1.18")
     _destroyer_bridge(root,art_level)
     _destroyer_navigation(root,art_level)
     _destroyer_deck_equipment(root,art_level)
