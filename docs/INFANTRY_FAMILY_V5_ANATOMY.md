@@ -71,3 +71,6 @@ Se incorporó main exacto 01a6024 (cámaras de A02, prueba de cinco PNG) mediant
 ## V15.2 — controlador de animaciones de Guardia en batalla
 
 Se añade controlador visual V16 en escena real, sólo para Guardia LOD8 ya visible del bando del visor. Battle3DMapView inicia marcha/ataque exclusivamente tras Orders.confirm exitoso y reconstrucción de la escena, incluyendo soldados clásicos sin clave role. El origen usa casilla autorizada y altura de suela; no se reejecuta la orden. Interpolación 0.86 s y disparo 0.95 s, ajuste a posición confirmada, orientación y pose de reposo que conserva D0-D4 (no restauración de showroom). Se rechazan objetivo inexistente, enemigo, modelo genérico, acción inválida y D4. Se amplía prueba real de cuatro imágenes, estados de daño y efectos, más prueba de dos toques/cancelación en Main.tscn. Sin cambios tácticos ni G05. V15.1 45907332073 seguía en cola al comenzar; esta revisión no afirma validación final ni FPS físico.
+
+### Sincronización V15.2
+Merge de main 8045d3e: A02 V17 acabado opaco y verificación de superficie. Se preservan las cinco capturas A02 con diagnóstico explícito y pruebas WebGL de infantería. No cambia la rama principal. Pendiente CI exacto.

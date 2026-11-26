@@ -38,20 +38,32 @@ static func _oval(parent:Node3D,tag:String,at:Vector3,size:Vector3,
     mesh.rings=6 if hero else 4
     return _part(parent,tag,mesh,at,size,paint)
 
-# Bevelled abstract game sculpture. All surfaces are closed and clockwise.
+# V17: soften the lighting along ornamental corner transitions, without
+# moving vertices or rounding the intentionally planar crown and base.
+# The interpolated horizontal component preserves the authored bevel slope.
+static func _surface_normal(normal:Vector3,point:Vector3)->Vector3:
+    if absf(normal.y)>0.999:
+        return normal
+    var radial:=Vector3(point.x,0.0,point.z)
+    var horizontal:=Vector3(normal.x,0.0,normal.z)
+    if radial.length_squared()<0.000001 or horizontal.length_squared()<0.000001:
+        return normal
+    var softened:=horizontal.normalized().lerp(radial.normalized(),0.42).normalized()
+    return Vector3(softened.x*horizontal.length(),normal.y,
+        softened.z*horizontal.length()).normalized()
+
+# Bevelled abstract game sculpture. All surfaces remain closed and clockwise.
 static func _face(t:SurfaceTool,a:Vector3,b:Vector3,c:Vector3,outward:Vector3)->void:
-    # V4: explicit outward face normals preserve planar surfaces rather
-    # than averaging the crown, bevel and walls into a pillow shape.
     var cross:Vector3=(b-a).cross(c-a)
     var positive:bool=cross.dot(outward)>0.0
-    t.set_normal(cross.normalized() if positive else -cross.normalized())
-    t.add_vertex(a)
+    var normal:Vector3=cross.normalized() if positive else -cross.normalized()
+    var ordered:Array[Vector3]=[a,b,c]
     if positive:
-        t.add_vertex(c)
-        t.add_vertex(b)
-    else:
-        t.add_vertex(b)
-        t.add_vertex(c)
+        ordered[1]=c
+        ordered[2]=b
+    for point in ordered:
+        t.set_normal(_surface_normal(normal,point))
+        t.add_vertex(point)
 
 static func _sculpt()->ArrayMesh:
     var outline:Array[Vector2]=[
@@ -118,15 +130,15 @@ static func build(root:Node3D,faction:Color,hero:bool)->bool:
     body.name=BODY
     root.add_child(body)
     var graphite:=_mat(Color("#33414a"),0.12,0.74)
-    var coated_shell:=_mat(Color.WHITE,0.12,0.74)
+    var coated_shell:=_mat(Color.WHITE,0.16,0.62)
     coated_shell.vertex_color_use_as_albedo=true
     coated_shell.vertex_color_is_srgb=true
-    var shell:=_mat(Color("#697b86"),0.14,0.73)
-    var coated_guard:=_mat(Color.WHITE,0.12,0.74)
+    var shell:=_mat(Color("#697b86"),0.16,0.64)
+    var coated_guard:=_mat(Color.WHITE,0.15,0.63)
     coated_guard.vertex_color_use_as_albedo=true
     coated_guard.vertex_color_is_srgb=true
     var sculpt:=_sculpt()
-    var enamel:=_mat(faction,0.10,0.78)
+    var enamel:=_mat(faction,0.12,0.66)
     enamel.vertex_color_use_as_albedo=true
     enamel.vertex_color_is_srgb=true
     var crown_mesh:=_shell_finish(sculpt,Color.WHITE,Color("#a0adb5"))
@@ -233,6 +245,7 @@ static func build(root:Node3D,faction:Color,hero:bool)->bool:
         if part.get_parent()!=effects:
             part.set_meta(BASE_MATERIAL,part.material_override)
     root.set_meta(DAMAGE,0)
+    root.set_meta("tarvoka_a02_v17_surface_finish",true)
     root.set_meta("tarvoka_a02_v16_damage_presentation",true)
     root.set_meta("tarvoka_a02_v12_smoke_finish",true)
     root.set_meta("tarvoka_a02_v9_damage_finish",true)

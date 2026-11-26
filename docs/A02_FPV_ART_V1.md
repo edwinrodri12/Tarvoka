@@ -57,3 +57,11 @@ QA nativa 45684237774, Android 45684238037 y cuatro campamentos 45684237874 corr
 ## V16 — refinamiento visual del deterioro (candidato)
 
 Rama independiente desde e2532da3 para no cancelar las pruebas de V15. Los tres volúmenes decorativos de humo conservan una sola malla opaca y los presupuestos de detalle. Se ajustan la asimetría, anchura, inclinación y movimiento visual; D4 conserva visibles y estáticas las piezas de presentación, sin desapariciones abruptas. D0 conserva el modelo intacto. QA amplía la verificación de inclinaciones, estados inválidos, piezas visibles y restauración exacta. Los identificadores del visor y del manifiesto se actualizan a V16. Pendientes compilación Godot, comparación real de los renders, navegador, Android y publicación. Sin cambios a estadísticas, reglas, navegación ni otras unidades.
+
+## V16.3 — inspección integrada
+
+Auditoría pública 45902899868 confirmó V16 (commit bd44a74a), paquete íntegro y WebGL en ambas resoluciones. V16.3 incorporó cámaras frontal, posterior, laterales, superior e inferior y giro 360°, conservando foco al cambiar facción. QA 45903346923, 45903346947, 45903346982 y 45903347076 correctas; cinco capturas del Studio (15157765682). Integrada en main 01a6024e. Publicación de cámaras pendiente de comprobación independiente.
+
+## V17 — acabado satinado y transición de normales (candidato)
+
+Suaviza únicamente las normales horizontales de paredes y biseles (42 % hacia la dirección radial) sin alterar vértices, silueta, triángulos, planos superior/inferior ni cierre. Ajuste moderado de rugosidad y reflectancia de pigmentos opacos. Pruebas de topología exacta, normales unitarias hacia afuera, diversidad angular, pigmento y acabado; conserva estados D0–D4 y controles. Identidad V17 en Studio y manifiesto. Pendientes compilación Godot, comparación visual y despliegue. Sin cambios de catálogo, juego ni otras unidades.
