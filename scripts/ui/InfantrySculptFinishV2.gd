@@ -609,6 +609,37 @@ const DAMAGE_V7 := "tarvoka_infantry_visual_damage_v7"
 const CLEAN_MAT := "tarvoka_infantry_v7_clean_material"
 const STAGE_MATS := "tarvoka_infantry_v7_stage_materials"
 static var _family_textures: Dictionary={}
+const RELIEF_V14 := "tarvoka_infantry_relief_v14"
+static var _family_normals: Dictionary={}
+
+# Periodic procedural microrelief. Actual normal textures, not transparent
+# overlays or additional mesh objects; one shared texture per surface class.
+static func _relief_height(kind: String,x: int,y: int) -> float:
+    var u: float=TAU*float(x)/64.0
+    var v: float=TAU*float(y)/64.0
+    var grain: float=sin(13.0*u+17.0*v)*cos(19.0*u-11.0*v)
+    match kind:
+        "fabric":
+            return 0.38*cos(8.0*u)*cos(8.0*v)+0.10*grain
+        "rubber":
+            return 0.30*cos(8.0*u+8.0*v)+0.07*grain
+        _:
+            return 0.035*grain
+
+static func _family_normal(kind: String) -> ImageTexture:
+    if _family_normals.has(kind):
+        return _family_normals[kind] as ImageTexture
+    var img: Image=Image.create(64,64,false,Image.FORMAT_RGBA8)
+    for y in range(64):
+        for x in range(64):
+            var dx: float=(_relief_height(kind,x+1,y)-_relief_height(kind,x-1,y))*0.5
+            var dy: float=(_relief_height(kind,x,y+1)-_relief_height(kind,x,y-1))*0.5
+            var n: Vector3=Vector3(-dx,-dy,1.0).normalized()
+            img.set_pixel(x,y,Color(n.x*0.5+0.5,n.y*0.5+0.5,n.z*0.5+0.5,1.0))
+    img.generate_mipmaps()
+    var tex: ImageTexture=ImageTexture.create_from_image(img)
+    _family_normals[kind]=tex
+    return tex
 
 # Small, shared procedural textures; no external resources and no
 # textures at tactical LOD8. Color is grayscale to preserve the palette.
@@ -639,6 +670,12 @@ static func _finish_kind(label: String) -> String:
         return "fabric"
     if label.begins_with("V2_BotaMoldeada_") or label.begins_with("V2_Suela_") or label.begins_with("V2_PalmaGuante_") or label.begins_with("V2_DedoGuante_") or label.begins_with("V13_Pulgar_") or label.begins_with("V13_CodoProtegido_") or label.begins_with("V13_CanaBota_") or label=="V2_BordeFrontalCasco":
         return "rubber"
+    # Finish cloth accessories, not faction paint, medical emblems, or optics.
+    if label in ["V4_CapaCamuflajePrecision","V4_BolsaSuministros","V4_KitMedicoVerde",
+            "V4_BotiquinCintura","V4_FundaInstrumentos","V9_MedicalHarness"] or label.begins_with("V2_Bolsillo") or label.begins_with("V2_CinchaPortaequipo_") or label.begins_with("V9_CargaCincha_"):
+        return "fabric"
+    if label.begins_with("V4_ModuloSuministro_") or label.begins_with("V4_HombreraEspecial_") or label=="V9_FS24_Radio":
+        return "armor"
     return ""
 
 static func _finish_family_materials(model: Node3D,hero: bool) -> bool:
@@ -648,7 +685,7 @@ static func _finish_family_materials(model: Node3D,hero: bool) -> bool:
     for item in model.find_children("*","MeshInstance3D",true,false):
         var part: MeshInstance3D=item as MeshInstance3D
         var kind: String=_finish_kind(str(part.name))
-        if kind.is_empty():
+        if kind.is_empty() or part.has_meta(STAGE_MATS):
             continue
         var src: StandardMaterial3D=part.material_override as StandardMaterial3D
         if src==null:
@@ -667,6 +704,9 @@ static func _finish_family_materials(model: Node3D,hero: bool) -> bool:
                 clean.uv1_world_triplanar=false
                 clean.uv1_scale=Vector3.ONE*4.0
                 clean.texture_filter=BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
+                clean.normal_enabled=true
+                clean.normal_texture=_family_normal(kind)
+                clean.normal_scale=0.68 if kind=="fabric" else (0.46 if kind=="rubber" else 0.28)
             var stages: Array[StandardMaterial3D]=[clean]
             for stage in range(1,5):
                 var weathered: StandardMaterial3D=clean.duplicate() as StandardMaterial3D
@@ -692,6 +732,7 @@ static func _finish_family_materials(model: Node3D,hero: bool) -> bool:
                 mark.position.y=0.14-float(stage)*0.09
     model.set_meta(SURFACE_V7,true)
     model.set_meta(DAMAGE_V7,0)
+    model.set_meta(RELIEF_V14,str(model.get_meta("tarvoka_infantry_role","")))
     return true
 
 static func sync_family_damage(model: Node3D,stage: int) -> void:

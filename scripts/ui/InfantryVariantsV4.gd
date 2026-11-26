@@ -224,6 +224,13 @@ static func apply(model: Node3D, role: String, faction_color: Color,
         _box(service,"V6_ServiceHandle",Vector3(0,-0.04,0.018),Vector3(0.13,0.035,0.04),dark)
     if not _refine_specialist(model,role,hero,accent,dark,pack,white):
         return false
+    if not _refine_v14_kit(model,role,hero):
+        return false
+    # Base sculpt is finished before these specialist pieces exist.
+    # Apply the same cached surface classes and damage palette only to
+    # the newly attached parts; base material identities stay unchanged.
+    if not Sculpt._finish_family_materials(model,hero):
+        return false
     model.set_meta(KIT_V5,true)
     model.set_meta(FLAG,role)
     model.set_meta("tarvoka_infantry_variant_visual_only",true)
@@ -366,6 +373,58 @@ static func _refine_specialist(model: Node3D,role: String,hero: bool,
         _:
             return false
     model.set_meta(KIT_V9,role)
+    return true
+
+const KIT_V14 := "tarvoka_infantry_specialist_finish_v14"
+
+# Reshape existing equipment rather than adding more draw nodes.
+static func _refine_v14_kit(model: Node3D,role: String,hero: bool) -> bool:
+    var signature: MeshInstance3D=_node(model,str(KIT_V9_MAIN[role])) as MeshInstance3D
+    if signature==null:
+        return false
+    match role:
+        "infantry_sniper":
+            var mantle: StandardMaterial3D=signature.material_override as StandardMaterial3D
+            if mantle==null:
+                return false
+            signature.material_override=mantle.duplicate() as StandardMaterial3D
+            (signature.material_override as StandardMaterial3D).albedo_color=Color("#596754")
+            for side in [-1,1]:
+                var seam: MeshInstance3D=_node(model,"V9_MantleSeam_%d"%side) as MeshInstance3D
+                if seam!=null:
+                    seam.position.z=0.385
+                    seam.scale=Vector3(0.75,0.92,0.8)
+        "infantry_logistic":
+            for side in [-1,1]:
+                var module: MeshInstance3D=_node(model,"V4_ModuloSuministro_%d"%side) as MeshInstance3D
+                if module==null:
+                    return false
+                module.mesh=Sculpt._organic_mesh([
+                    Vector3(0.078,-0.165,0.081),Vector3(0.108,-0.135,0.111),
+                    Vector3(0.11,0.10,0.114),Vector3(0.094,0.151,0.095),
+                    Vector3(0.069,0.172,0.071)],14 if hero else 10,PackedFloat32Array(),0.48)
+        "infantry_medic":
+            var bag: StandardMaterial3D=signature.material_override as StandardMaterial3D
+            if bag==null:
+                return false
+            signature.material_override=bag.duplicate() as StandardMaterial3D
+            (signature.material_override as StandardMaterial3D).albedo_color=Color("#46695b")
+            var harness: MeshInstance3D=_node(model,"V9_MedicalHarness") as MeshInstance3D
+            if harness==null:
+                return false
+            harness.mesh=Sculpt._organic_mesh([
+                Vector3(0.025,-0.24,0.012),Vector3(0.035,-0.18,0.020),
+                Vector3(0.035,0.18,0.020),Vector3(0.025,0.24,0.012)],10,PackedFloat32Array(),0.55)
+        "infantry_commando":
+            var radio: MeshInstance3D=_node(model,"V9_FS24_Radio") as MeshInstance3D
+            if radio==null:
+                return false
+            radio.mesh=Sculpt._organic_mesh([
+                Vector3(0.052,-0.124,0.040),Vector3(0.070,-0.097,0.055),
+                Vector3(0.070,0.090,0.055),Vector3(0.052,0.124,0.040)],12,PackedFloat32Array(),0.48)
+        _:
+            return false
+    model.set_meta(KIT_V14,role)
     return true
 
 static func has_model(model: Node3D, role: String) -> bool:

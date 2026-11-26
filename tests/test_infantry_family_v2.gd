@@ -265,6 +265,21 @@ func _run() -> void:
                     check(knee_motion,"independent knees really animate")
                     check(str(model.get_meta(Finish.MOTION_V12,""))==role,"V12 exact role")
                     check(str(model.get_meta(Finish.CONTACT_V13,""))==role,"V13 anatomy identity")
+                    check(str(model.get_meta(Finish.RELIEF_V14,""))==role,"V14 native material relief")
+                    var cloth: MeshInstance3D=model.find_child("V2_MusloTaper_1",true,false) as MeshInstance3D
+                    var glove: MeshInstance3D=model.find_child("V2_PalmaGuante_1",true,false) as MeshInstance3D
+                    var detailed: bool=bool(model.get_meta("tarvoka_infantry_v2_hero",false))
+                    if cloth!=null and glove!=null:
+                        var fabric_mat: StandardMaterial3D=cloth.material_override as StandardMaterial3D
+                        var rubber_mat: StandardMaterial3D=glove.material_override as StandardMaterial3D
+                        check(fabric_mat.normal_enabled==detailed and rubber_mat.normal_enabled==detailed,
+                            "normal mapping only on detailed LOD")
+                        if detailed:
+                            check(fabric_mat.normal_texture!=null and rubber_mat.normal_texture!=null and
+                                fabric_mat.normal_texture!=rubber_mat.normal_texture and
+                                fabric_mat.normal_texture.get_width()==64 and fabric_mat.normal_texture.get_height()==64 and
+                                fabric_mat.normal_texture.get_image().has_mipmaps(),
+                                "distinct cached mipmapped fabric and rubber relief")
                     for side in [-1,1]:
                         var suffix: String="_%d"%side
                         var palm: MeshInstance3D=model.find_child("V2_PalmaGuante"+suffix,true,false) as MeshInstance3D
@@ -401,6 +416,17 @@ func _run() -> void:
                             "specialist kit revision present")
                         check(str(model.get_meta(Specialist.KIT_V9,""))==role,
                             "V9 unique specialist silhouette")
+                        check(str(model.get_meta(Specialist.KIT_V14,""))==role,"V14 individual accessory finish")
+                        var surface_name: String=str(Specialist.KIT_V9_MAIN[role]) if role!="infantry_commando" else "V9_FS24_Radio"
+                        var accessory: MeshInstance3D=model.find_child(surface_name,true,false) as MeshInstance3D
+                        check(accessory!=null and accessory.has_meta(Finish.STAGE_MATS) and
+                            closed_solid(accessory.mesh),"specialist kit participates in opaque material damage")
+                        if accessory!=null and accessory.has_meta(Finish.STAGE_MATS):
+                            var original: Material=accessory.material_override
+                            check(Infantry.set_damage(model,3) and Models.pose_model(role,model,"idle",0.0) and
+                                accessory.material_override!=original,"specialist kit weathers at D3")
+                            Models.restore_model_pose(role,model)
+                            check(accessory.material_override==original,"specialist restores exact material")
                         var signature: MeshInstance3D=model.find_child(str(Specialist.KIT_V9_MAIN[role]),true,false) as MeshInstance3D
                         check(signature!=null and signature.visible and signature.mesh is ArrayMesh and closed_solid(signature.mesh),
                             "V9 true closed primary kit geometry")
@@ -560,6 +586,13 @@ func _run() -> void:
                             hero.rotation_degrees.y=120
                             await save_frame(view,"v12_%s_%s"%[role,action])
                             Models.restore_model_pose(role,hero)
+                        camera.size=1.45
+                        camera.position=Vector3(2.2,2.0,3.4)
+                        camera.look_at(Vector3(0,1.35,0),Vector3.UP)
+                        hero.rotation_degrees.y=0
+                        await save_frame(view,"v14_%s_material_rear"%role)
+                        hero.rotation_degrees.y=180
+                        await save_frame(view,"v14_%s_material_front"%role)
                         # Close views of actual extremities rather than
                         # another wide full-body screenshot.
                         hero.rotation_degrees.y=140
@@ -601,7 +634,7 @@ func _run() -> void:
                 camera.size=3.6
             hero.free()
             mobile.free()
-    check(rendered==118,"118 real 3D comparison / tactical frames")
+    check(rendered==128,"128 real 3D comparison / tactical frames")
     # Art-only variants must never enter the tactical roster.
     for role in ["infantry_urban","infantry_defense",
             "infantry_antitank","infantry_engineer",
@@ -612,5 +645,5 @@ func _run() -> void:
         push_error("FAIL INFANTRY V2 NATIVE 3D: %d failures"%failed)
         quit(1)
     else:
-        print("PASS INFANTRY V2 NATIVE 3D: 160 models (6 core + 4 legacy), 8 factions, 2 LOD, 118 true PNG")
+        print("PASS INFANTRY V2 NATIVE 3D: 160 models (6 core + 4 legacy), 8 factions, 2 LOD, 128 true PNG")
         quit(0)

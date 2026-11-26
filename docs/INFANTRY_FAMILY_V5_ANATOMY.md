@@ -50,3 +50,7 @@ V12 nativa 45772134764 y Android 45772134905 exitosas; artifact 15093994000, 25 
 ## V13 — extremos y articulaciones
 
 25 renders V12 inspeccionados: aún hace falta detalle de guantes, codos y botas. Palma cerrada con forma de guante, cuatro dedos curvados y pulgar anclado a la palma, protección cerrada de codo y caña de bota articulada. Se mantienen los centros de contacto V5 y la suela V12; seis nuevos nodos únicamente en LOD13, ningún nodo de malla nuevo en LOD8. Distintivo táctico de rodilla transferido al pivote correcto sin alterar su transform en reposo. Se exige 118 PNG (10 nuevos de manos/botas), cierre, anclaje y presupuesto. Studio y Chromium verifican edición V13. G05 intacto. Pendiente QA del nuevo HEAD y revisión visual; no fusionar.
+
+## V14 — microrelieve PBR y equipo individual
+
+V13 run 45903025953: etapa de 118 PNG exitosa; suite completa y exportación pendientes al comenzar. V14 añade mapas normales periódicos 64x64 con mipmaps y caché por clase (tejido/caucho/armadura) solo LOD13. Los accesorios de tela y equipo existentes reciben el mismo acabado y sus estados de desgaste D0-D4; se conservan insignias y ópticas. Manto del francotirador, módulos de carga, arnés médico y carcasa de radio FS-24 se refinan usando las mismas mallas/nodos; no aumenta el número de nodos en ninguno de los LOD. QA 128 capturas, 10 nuevas de materiales y prueba de restauración exacta de material del equipo. Visor identifica V14. Pendiente QA y revisión visual de HEAD exacto; no fusionar.

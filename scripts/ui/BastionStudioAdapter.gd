@@ -413,6 +413,7 @@ func _engineer_web_entry_report() -> void:
         "visible_meshes":visible_meshes,"transparent_meshes":transparent_meshes}
     evidence["motion_v12"]=str(model_root.get_meta("tarvoka_infantry_motion_uniform_v12",""))==_role
     evidence["contacts_v13"]=str(model_root.get_meta("tarvoka_infantry_gloves_boots_v13",""))==_role
+    evidence["relief_v14"]=str(model_root.get_meta("tarvoka_infantry_relief_v14",""))==_role
     evidence["native_viewport"]=model_root.get_parent()==preview
     JavaScriptBridge.eval("window.__tarvokaInfantryEntry="+JSON.stringify(evidence),true)
     if _role=="infantry_engineer":
@@ -1630,6 +1631,8 @@ func _infantry_review_edition() -> String:
         if EngineerFinishV9.has_model(model_root):
             return "V9"
     if model_root!=null and str(model_root.get_meta("tarvoka_infantry_role_identity_v6",""))==_role:
+        if str(model_root.get_meta("tarvoka_infantry_relief_v14",""))==_role:
+            return "V14"
         if str(model_root.get_meta("tarvoka_infantry_gloves_boots_v13",""))==_role:
             return "V13"
         if str(model_root.get_meta("tarvoka_infantry_motion_uniform_v12",""))==_role:
