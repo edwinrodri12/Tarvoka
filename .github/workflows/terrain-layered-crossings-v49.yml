@@ -5,6 +5,14 @@ on:
       - "scripts/core/LayeredCrossingsV48.gd"
       - "scripts/core/MixedBiomeRegionsV49.gd"
       - "scripts/ui/LayeredBridgeArtV48.gd"
+      - "scripts/ui/BattleTerrain3D.gd"
+      - "scripts/ui/Battle3DMapView.gd"
+      - "scripts/core/BattleSession.gd"
+      - "scripts/core/SaveCodec.gd"
+      - "scripts/core/MoveActions.gd"
+      - "scripts/core/BasicAI.gd"
+      - "scripts/ui/MixedBiomePreviewV49.gd"
+      - "tests/test_layered_bridge_render_v48_4.gd"
       - "tests/test_layered_crossings_mixed_biomes_v49.gd"
       - ".github/workflows/terrain-layered-crossings-v49.yml"
   workflow_dispatch:
@@ -13,7 +21,7 @@ permissions:
 jobs:
   prototype:
     runs-on: ubuntu-22.04
-    timeout-minutes: 8
+    timeout-minutes: 12
     steps:
       - uses: actions/checkout@v4
       - name: Install Godot and import checkout
@@ -33,8 +41,20 @@ jobs:
           timeout 150s /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . --script res://tests/test_layered_crossings_mixed_biomes_v49.gd 2>&1 | tee /tmp/v49-test.log
           if grep -E 'SCRIPT ERROR:|Parse Error:|Assertion failed' /tmp/v49-test.log; then exit 1; fi
           grep -q 'PASS V48_V49_EXPERIMENT:' /tmp/v49-test.log
+      - name: Render real bridge and actual unit envelopes
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts
+          timeout 180s xvfb-run -a -s "-screen 0 1280x800x24" /tmp/Godot_v4.3-stable_linux.x86_64 --path . --rendering-driver opengl3 --audio-driver Dummy --script res://tests/test_layered_bridge_render_v48_4.gd 2>&1 | tee /tmp/v49-render.log
+          if grep -E 'SCRIPT ERROR:|Parse Error:|Assertion failed' /tmp/v49-render.log; then exit 1; fi
+          grep -q 'PASS V48_4_NATIVE_BRIDGE:' /tmp/v49-render.log
+          test -s artifacts/tarvoka_bridge_v48_4_ew.png
+          test -s artifacts/tarvoka_bridge_v48_4_ns.png
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: TARVOKA-V49-experimental-logs
-          path: /tmp/v49-*.log
+          path: |
+            /tmp/v49-*.log
+            artifacts/tarvoka_bridge_v48_4_*.png
