@@ -2952,7 +2952,7 @@ jobs:
                 if(await menu.getAttribute('open')!==null||await entryLink.isVisible())
                   throw Error('A02 compact menu did not close');
                 const info=await page.evaluate(()=>window.__tarvokaA02Entry);
-                if(info.role!=='fpv'||info.edition!=='V20'||!info.native_model||!info.surface_finish||!info.undershell_finish||!info.graphic_livery||!info.surface_atlas||info.lod!==13||info.stage!==0)
+                if(info.role!=='fpv'||info.edition!=='V20'||!info.native_model||!info.surface_finish||!info.undershell_finish||!info.graphic_livery||!info.surface_atlas||!info.material_relief||info.lod!==13||info.stage!==0)
                   throw Error('Incorrect A02 shared studio entry: '+JSON.stringify(info));
                 if(info.visible_meshes!==36||info.triangles!==5808||info.transparent_meshes.length!==0||!info.faction_selector)
                   throw Error('A02 differs from native V10 evidence: '+JSON.stringify(info));
