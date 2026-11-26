@@ -226,7 +226,31 @@ func _check_extended_art() -> void:
         var mesh: ArrayMesh = art.commit()
         assert(mesh.surface_get_array_len(0)>0)
 
+func _check_crossing_parapets() -> void:
+    var cell := Vector2i(7,3)
+    var at: Vector3 = Terrain.world_at(cell)
+    var half: float = Terrain.CELL*0.5
+    var surface: Dictionary = {"x":cell.x,"z":cell.y,"top":0.14,"half":half,
+        "corners":PackedFloat32Array([0.14,0.14,0.14,0.14])}
+    var tile: Dictionary = {"roads":{"north":true,"south":true},
+        "shore":{"west":true,"east":true}}
+    var tool := SurfaceTool.new()
+    tool.begin(Mesh.PRIMITIVE_TRIANGLES)
+    assert(Terrain._append_crossing_parapets(tool,at,surface,tile)==1)
+    var mesh: ArrayMesh = tool.commit()
+    var vertices: PackedVector3Array = mesh.surface_get_arrays(0)[Mesh.ARRAY_VERTEX]
+    assert(vertices.size()>0)
+    for v in vertices:
+        assert(absf(v.x-at.x)>=0.779 and absf(v.x-at.x)<=0.881)
+        assert(absf(v.z-at.z)<=half+0.001)
+        assert(v.y>=0.219 and v.y<=0.411)
+    tile["shore"]["east"] = false
+    var no_crossing := SurfaceTool.new()
+    no_crossing.begin(Mesh.PRIMITIVE_TRIANGLES)
+    assert(Terrain._append_crossing_parapets(no_crossing,at,surface,tile)==0)
+
 func _run() -> void:
+    _check_crossing_parapets()
     _check_extended_art()
     _check_water_bank_geometry()
     _check_surface_finish()
@@ -288,6 +312,8 @@ func _run() -> void:
     assert(viewer._scene.get_meta("visual_biome")==Biomes.COASTAL)
     assert(viewer.preview.render_target_update_mode==SubViewport.UPDATE_ALWAYS)
     assert(viewer._cells.size()==80)
+    assert(viewer._scene.has_meta("water_material_v40")==false or
+        viewer._scene.get_meta("water_material_v40") is StandardMaterial3D)
     assert(viewer.tap_battle_cell(Vector2i(1,1)))
     assert(board.state==original)
     for i in range(10):
@@ -348,6 +374,27 @@ func _run() -> void:
         main._open_battle_3d()
         assert(viewer._scene.get_meta("visual_biome")==expected)
         viewer.close_view()
+    # V36/V40: a real geographic archipelago matches its preview/seed,
+    # with one scene-local animated material and no battle state mutation.
+    board.new_game(Scenarios.GEOGRAPHIC_SCENARIO_ID,true,false,false,true,true,
+        false,0,1729,Vector2i(10,8),{},"clear",false,Biomes.ARCHIPELAGO)
+    assert(board.state["terrain"]==Scenarios.geographic_terrain(
+        1729,Vector2i(10,8),Biomes.ARCHIPELAGO))
+    assert(Codec.decode(Codec.encode(board.state))==board.state)
+    main._open_battle_3d()
+    var water_material: StandardMaterial3D = viewer._scene.get_meta("water_material_v40")
+    var before_water: Vector3 = water_material.uv1_offset
+    var before_state: Dictionary = board.state.duplicate(true)
+    board.battery_saver = false
+    viewer._advance_water(0.2)
+    assert(water_material.uv1_offset!=before_water)
+    board.battery_saver = true
+    var paused_offset: Vector3 = water_material.uv1_offset
+    viewer._advance_water(0.3)
+    assert(water_material.uv1_offset==paused_offset)
+    board.battery_saver = false
+    assert(board.state==before_state)
+    viewer.close_view()
     # V28: collect comparable real-battle frames, not showroom renders.
     # Same fixed map, camera defaults and clear weather for every biome.
     if DisplayServer.get_name()!="headless":
@@ -362,7 +409,7 @@ func _run() -> void:
             for child in viewer.preview.get_children():
                 if child is DirectionalLight3D:
                     lights += 1
-                    assert(child.light_energy>=0.95 and child.light_energy<=1.12)
+                    assert(child.light_energy>=0.949 and child.light_energy<=1.121)
                     if biome==Biomes.TEMPERATE:
                         assert(child.light_color==Color.WHITE)
                 elif child is WorldEnvironment:
