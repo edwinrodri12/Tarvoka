@@ -4,6 +4,7 @@ class_name TarvokaBastionStudioAdapter
 # Published P06 presentation uses the sculpted V5 art, not the initial native
 # prototype. Other HQ / Airbase / G09 studio categories remain unchanged.
 const P06Models = preload("res://scripts/ui/UnitModels3D.gd")
+const A02PreviewArt = preload("res://scripts/ui/A02FpvArtV1.gd")
 const InfantryV1 = preload("res://scripts/ui/InfantryFamilyV1.gd")
 const EngineerFinishV6 = preload("res://scripts/ui/InfantryEngineerFinishV6.gd")
 const EngineerFinishV9 = preload("res://scripts/ui/InfantryEngineerFinishV9.gd")
@@ -223,6 +224,7 @@ var _g13_v4_tween: Tween
 var _g15_tween: Tween
 var _g16_tween: Tween
 var _a01_tween: Tween = null
+var _a02_preview_tween: Tween = null
 var a01_360_panel:VBoxContainer
 var a01_lod_readout:Label=null
 var _a01_review_tween:Tween = null
@@ -310,6 +312,11 @@ func _ready() -> void:
             role_picker.add_item(P06Models.ROLES[role_picker.item_count])
         role_picker.set_item_text(recon_index,
             "A01 · Dron de reconocimiento · V30 FINAL")
+    var fpv_index:int=P06Models.ROLES.find("fpv")
+    if fpv_index>=0 and role_picker!=null:
+        while role_picker.item_count<=fpv_index:
+            role_picker.add_item(P06Models.ROLES[role_picker.item_count])
+        role_picker.set_item_text(fpv_index,"A02 · Dron FPV · V16 EN REVISIÓN")
     # Preserve existing roles/indices; these are additional native 3D variants.
     for entry in [
         ["line","★ INFANTERÍA BÁSICA · Guardia"],
@@ -348,6 +355,40 @@ func _ready() -> void:
     _refresh_unified_studio_navigation()
     if OS.has_feature("web") and launch_role=="infantry_engineer":
         _engineer_web_entry_report.call_deferred()
+    if OS.has_feature("web") and launch_role=="fpv":
+        _a02_web_entry_report.call_deferred()
+
+# Read-only evidence from the shared viewport; no alternate art or simulation.
+func _a02_web_entry_report()->void:
+    await get_tree().process_frame
+    if _role!="fpv" or not is_instance_valid(model_root):
+        return
+    var visible_meshes:int=0
+    var triangles:int=0
+    var transparent:Array[String]=[]
+    for node in model_root.find_children("*","MeshInstance3D",true,false):
+        var piece:=node as MeshInstance3D
+        if not piece.is_visible_in_tree() or piece.mesh==null:
+            continue
+        visible_meshes+=1
+        triangles+=int(piece.mesh.get_faces().size()/3)
+        for surface in range(piece.mesh.get_surface_count()):
+            var material:Material=piece.get_active_material(surface)
+            if material is StandardMaterial3D:
+                var pbr:=material as StandardMaterial3D
+                if pbr.transparency!=BaseMaterial3D.TRANSPARENCY_DISABLED or pbr.albedo_color.a<0.999:
+                    transparent.append(str(piece.name))
+            else:
+                transparent.append(str(piece.name))
+    var actions:Array[String]=[]
+    for entry in _studio_animation_specs(_role):
+        if entry.has("action"):
+            actions.append(str(entry["action"]))
+    var report:Dictionary={"role":_role,"edition":"V16","lod":int(model_root.get_meta("tarvoka_a02_lod",0)),
+        "stage":A02PreviewArt.stage(model_root),"native_model":bool(model_root.get_meta(A02PreviewArt.FLAG,false)),
+        "visible_meshes":visible_meshes,"triangles":triangles,"transparent_meshes":transparent,
+        "actions":actions,"faction_selector":faction_picker.visible}
+    JavaScriptBridge.eval("window.__tarvokaA02Entry="+JSON.stringify(report),true)
 
 # Read-only evidence from the actual loaded Godot Web model. No external
 # input, remote callbacks, alternate geometry or scene manipulation.
@@ -379,6 +420,8 @@ func _studio_role_from_link_key(value:String) -> String:
             return "logistics_mobile"
         "a01", "uav_recon", "dron_recon":
             return "uav_recon"
+        "a02", "fpv":
+            return "fpv"
         "g05", "ingeniero", "infantry_engineer":
             return "infantry_engineer"
         _:
@@ -750,6 +793,20 @@ func _studio_animation_specs(role: String) -> Array[Dictionary]:
         ])
         return actions
     match role:
+        "fpv":
+            return [
+                {"group":"A02 V16 · ANIMACIONES VISUALES"},
+                {"title":"Movimiento", "action":"a02_move"},
+                {"title":"Suspensión visual", "action":"a02_hover"},
+                {"title":"Reacción a impacto", "action":"a02_hit"},
+                {"group":"DAÑO DE PRESENTACIÓN · SIN ALTERAR HP"},
+                {"title":"D0 · restaurar aspecto", "action":"a02_d0"},
+                {"title":"D1 · desgaste leve", "action":"a02_d1"},
+                {"title":"D2 · daño medio", "action":"a02_d2"},
+                {"title":"D3 · daño grave", "action":"a02_d3"},
+                {"title":"D4 · destrucción visual", "action":"a02_d4"},
+                {"title":"Detener pose (conservar daño)", "action":"stop"}
+            ]
         "uav_recon":
             return [
                 {"group":"A01 V30 · DRON DE RECONOCIMIENTO SIN ARMAMENTO"},
@@ -997,6 +1054,21 @@ func _studio_run_animation(action: String) -> void:
     match action:
         "stop":
             _studio_quick_stop()
+        "a02_d0","a02_d1","a02_d2","a02_d3","a02_d4":
+            if _role=="fpv":
+                _a02_preview_stop()
+                if A02PreviewArt.set_stage(model_root,int(action.right(1))):
+                    status_label.text="A02 V16 · daño visual D%d" % A02PreviewArt.stage(model_root)
+                    if A02PreviewArt.stage(model_root)==4:
+                        var wreck:Node3D=model_root
+                        A02PreviewArt.pose_wreck(wreck,0.0)
+                        _a02_preview_tween=create_tween()
+                        _a02_preview_tween.tween_method(Callable(self,"_a02_wreck_tick").bind(wreck),
+                            0.0,1.0,1.45)
+                        _a02_preview_tween.tween_callback(Callable(self,"_a02_preview_done").bind(wreck))
+        "a02_move","a02_hover","a02_hit":
+            if _role=="fpv":
+                _a02_preview_play(action.trim_prefix("a02_"))
         "a01_move","a01_scan","a01_hit":
             if _role=="uav_recon":
                 _a01_play(action.trim_prefix("a01_"))
@@ -1689,6 +1761,38 @@ func _infantry_review_spin() -> void:
 
 # A01 reconnaissance V1 preview uses the same actual Godot SubViewport.
 # No synthetic fog reveal and no attack capability are created by this rig.
+func _a02_preview_stop()->void:
+    if _a02_preview_tween!=null and _a02_preview_tween.is_running():
+        _a02_preview_tween.kill()
+    if _role=="fpv" and is_instance_valid(model_root):
+        P06Models.restore_model_pose("fpv",model_root)
+
+func _a02_preview_play(kind:String)->void:
+    if _role!="fpv" or not is_instance_valid(model_root) or kind not in ["move","hover","hit"]:
+        return
+    _a02_preview_stop()
+    if A02PreviewArt.stage(model_root)==4:
+        status_label.text="A02 V16 · restaurar D0 antes de reproducir."
+        return
+    var art:Node3D=model_root
+    _a02_preview_tween=create_tween()
+    _a02_preview_tween.tween_method(Callable(self,"_a02_preview_tick").bind(art,kind),
+        0.0,1.0,2.4 if kind=="hover" else 1.5)
+    _a02_preview_tween.tween_callback(Callable(self,"_a02_preview_done").bind(art))
+    status_label.text="A02 V16 · demostración visual: "+kind
+
+func _a02_preview_tick(progress:float,art:Node3D,kind:String)->void:
+    if is_instance_valid(art) and art==model_root and _role=="fpv":
+        P06Models.pose_model("fpv",art,kind,progress)
+
+func _a02_wreck_tick(progress:float,art:Node3D)->void:
+    if is_instance_valid(art) and art==model_root and _role=="fpv":
+        A02PreviewArt.pose_wreck(art,progress)
+
+func _a02_preview_done(art:Node3D)->void:
+    if is_instance_valid(art) and art==model_root and _role=="fpv":
+        P06Models.restore_model_pose("fpv",art)
+
 func _a01_play(kind:String)->void:
     if _role!="uav_recon" or model_root==null or not A01Recon.has_model(model_root):
         return
@@ -1841,6 +1945,11 @@ func _studio_quick_action(kind: String) -> void:
     match _role:
         "line","scout","infantry_urban","infantry_defense","infantry_antitank","infantry_engineer","infantry_sniper","infantry_logistic","infantry_medic","infantry_commando":
             _infantry_play("hit_bullet" if kind=="hit" else kind)
+        "fpv":
+            if kind in ["move","hover","hit"]:
+                _a02_preview_play(kind)
+            else:
+                status_label.text="A02 V16 · demostración visual disponible en Animaciones."
         "uav_recon":
             if kind in ["attack","attack_air","attack_ground"]:
                 status_label.text="A01 es un dron de reconocimiento SIN armamento."
@@ -1876,7 +1985,9 @@ func _studio_quick_action(kind: String) -> void:
             status_label.text="Este modelo no tiene animación propia implementada."
 
 func _studio_quick_stop() -> void:
-    if _role=="uav_recon":
+    if _role=="fpv":
+        _a02_preview_stop()
+    elif _role=="uav_recon":
         if _a01_tween!=null and _a01_tween.is_running():
             _a01_tween.kill()
         if model_root!=null:
@@ -1938,6 +2049,7 @@ func _refresh_unified_studio_navigation() -> void:
             "mlrs": label="G11 · Lanzador · V33"
             "attack_heli": label="A01 · Helicóptero HAT-29 · V14"
             "uav_recon": label="A01 · Dron de reconocimiento · V30 FINAL"
+            "fpv": label="A02 · Dron FPV · V16 EN REVISIÓN"
             "logistics_mobile": label="G16 · Logística blindada 6×6 · V6 PBR y suministros articulados"
             "ew_mobile": label="G15 · Guerra electrónica · V11 (neumáticos, óptica y electrónica 3D)"
             "aa_mobile": label="G13 · Antiaéreo · V54 caucho y rodadura 3D"
@@ -4567,6 +4679,7 @@ func _stage_p06() -> int:
         "tarvoka_apc_v3_damage_stage",0)),0,4)
 
 func _display_role(role: String) -> void:
+    _a02_preview_stop()
     _infantry_helmet_focus=false
     if _a01_tween!=null and _a01_tween.is_running():
         _a01_tween.kill()
@@ -4612,6 +4725,19 @@ func _display_role(role: String) -> void:
     if not _g13_reflection_saved_v53.is_empty():
         _g13_v53_set_reflections(false)
     super._display_role(role)
+    if role=="fpv":
+        if model_root!=null:
+            preview.remove_child(model_root)
+            model_root.queue_free()
+        model_root=P06Models.build("fpv",_faction,true,13)
+        if model_root==null:
+            push_error("A02 native model missing")
+            return
+        preview.add_child(model_root)
+        model_root.rotation_degrees.y=_yaw
+        faction_picker.visible=true
+        faction_picker.select(_faction)
+        _update_camera()
     if role=="uav_recon":
         # UnitArtStudioWeb builds neutral paint (-1) for every role other
         # than the tank. Rebuild this same viewport's A01 with _faction.
@@ -4843,6 +4969,22 @@ func _switch_category(index: int) -> void:
     _refresh_unified_studio_navigation()
 
 func _on_faction(index: int) -> void:
+    if _role=="fpv":
+        if index<0 or index>=Factions.FACTIONS.size():
+            return
+        var saved_yaw:float=_yaw
+        var saved_zoom:float=_zoom
+        var saved_damage:int=A02PreviewArt.stage(model_root)
+        _faction=index
+        _display_role("fpv")
+        if is_instance_valid(model_root):
+            A02PreviewArt.set_stage(model_root,saved_damage)
+        _yaw=saved_yaw
+        _zoom=saved_zoom
+        if model_root!=null:
+            model_root.rotation_degrees.y=_yaw
+        _update_camera()
+        return
     if InfantryV1.supports(_role):
         if index<0 or index>=Factions.FACTIONS.size():
             return

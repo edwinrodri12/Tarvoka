@@ -230,6 +230,8 @@ func _change_selected_building(index: int) -> void:
     _destroyer_studio_restore_floor()
     if is_instance_valid(_destroyer_water):
         _destroyer_water.hide()
+    if is_instance_valid(_destroyer_inspection_light):
+        _destroyer_inspection_light.hide()
     if destroyer_controls != null:
         destroyer_controls.hide()
     if _camp_selected(index) and camp_controls != null:
@@ -590,6 +592,8 @@ var destroyer_status: Label
 var _destroyer_studio_tween: Tween
 var _destroyer_fx_time: float = 0.0
 var _destroyer_water: MeshInstance3D
+var _destroyer_inspection_light: DirectionalLight3D
+var _destroyer_light_enabled: bool = false
 var _destroyer_underwater: bool = false
 var _destroyer_hidden_floor: Array[MeshInstance3D] = []
 
@@ -599,11 +603,11 @@ func _destroyer_studio_create_controls() -> void:
     var idx: int = NavalArt.ROLES.find("destroyer")
     if idx < 0 or idx >= role_picker.item_count:
         return
-    role_picker.set_item_text(idx,"Destructor naval · V1.11")
+    role_picker.set_item_text(idx,"Destructor naval · V1.12")
     destroyer_controls = VBoxContainer.new()
     destroyer_controls.name = "DestructorControlesNativos"
     role_picker.get_parent().add_child(destroyer_controls)
-    _title(destroyer_controls,"DESTRUCTOR NAVAL · V1.11",14)
+    _title(destroyer_controls,"DESTRUCTOR NAVAL · V1.12",14)
     destroyer_faction_picker = OptionButton.new()
     destroyer_faction_picker.add_item("Neutral")
     for faction in CampStyle.FACTIONS:
@@ -631,6 +635,8 @@ func _destroyer_studio_create_controls() -> void:
         "IMPACTO EXPLOSIVO",func(): _destroyer_studio_play("hit_blast"))
     _add_paired(destroyer_controls,"VISTA MAR",func(): _destroyer_studio_view(false),
         "VISTA INFERIOR",func(): _destroyer_studio_view(true))
+    _add_paired(destroyer_controls,"LUZ DE DETALLE",func(): _destroyer_studio_light(true),
+        "LUZ NORMAL",func(): _destroyer_studio_light(false))
     _add_paired(destroyer_controls,"DETENER",_destroyer_studio_stop,
         "REPARAR",func(): _destroyer_studio_damage_changed(0))
     destroyer_status = _title(destroyer_controls,"",11)
@@ -645,6 +651,13 @@ func _destroyer_studio_create_controls() -> void:
     _destroyer_water.material_override = sea_mat
     _destroyer_water.position.y = 0.035
     preview.add_child(_destroyer_water)
+    _destroyer_inspection_light = DirectionalLight3D.new()
+    _destroyer_inspection_light.name = "DestructorLuzDetalle"
+    _destroyer_inspection_light.rotation_degrees = Vector3(-42.0,125.0,0.0)
+    _destroyer_inspection_light.light_color = Color("#E5EEFF")
+    _destroyer_inspection_light.light_energy = 0.40
+    _destroyer_inspection_light.shadow_enabled = true
+    preview.add_child(_destroyer_inspection_light)
     _destroyer_studio_sync_visibility()
 
 func _destroyer_studio_select_from_url() -> void:
@@ -663,12 +676,15 @@ func _destroyer_studio_sync_visibility() -> void:
         destroyer_controls.visible = _role == "destroyer" and category_picker != null and category_picker.selected == 0
     if is_instance_valid(_destroyer_water):
         _destroyer_water.visible = _role == "destroyer" and category_picker != null and category_picker.selected == 0 and not _destroyer_underwater
+    if is_instance_valid(_destroyer_inspection_light):
+        _destroyer_inspection_light.visible = _role == "destroyer" and category_picker != null and category_picker.selected == 0 and _destroyer_light_enabled
 
 func _display_role(role: String) -> void:
     _destroyer_studio_stop()
     if role != "destroyer" or _role != "destroyer":
         _destroyer_studio_restore_floor()
         _destroyer_underwater = false
+        _destroyer_light_enabled = false
     super._display_role(role)
     if role == "destroyer" and destroyer_controls != null:
         _destroyer_studio_rebuild()
@@ -703,7 +719,7 @@ func _destroyer_studio_damage_changed(stage: int) -> void:
     _destroyer_fx_time = 0.0
     NavalArt.set_destroyer_damage(model_root,stage,0.45 if stage == 4 else 0.0)
     if destroyer_status != null:
-        destroyer_status.text = "Modelo nativo V1.11 · D%d" % stage
+        destroyer_status.text = "Modelo nativo V1.12 · D%d" % stage
 
 func _destroyer_studio_stop() -> void:
     if _destroyer_studio_tween != null and _destroyer_studio_tween.is_running():
@@ -742,6 +758,12 @@ func _destroyer_studio_view(underwater: bool) -> void:
     _destroyer_studio_sync_visibility()
     _update_camera()
 
+func _destroyer_studio_light(enabled: bool) -> void:
+    if _role != "destroyer":
+        return
+    _destroyer_light_enabled = enabled
+    _destroyer_studio_sync_visibility()
+
 func _destroyer_studio_play(kind: String) -> void:
     if _role != "destroyer" or not is_instance_valid(model_root):
         return
@@ -761,7 +783,7 @@ func _destroyer_studio_play(kind: String) -> void:
             if kind != "sink":
                 NavalArt.restore_model_pose("destroyer",model_root)
             else:
-                destroyer_status.text = "Modelo nativo V1.11 · D4 · Hundido")
+                destroyer_status.text = "Modelo nativo V1.12 · D4 · Hundido")
 
 func _process(delta: float) -> void:
     super._process(delta)

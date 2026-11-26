@@ -4,7 +4,7 @@ class_name TarvokaUnitModels3D
 # First actual editable 3D geometry for TARVOKA. These eight models are native
 # Godot MeshInstance3D trees, NOT SVG sprites or AI-rendered concept images.
 # Tuned to existing approved category silhouettes; no tactical stats live here.
-const ROLES := ["line","scout","apc","tank","mlrs","attack_heli","fighter","destroyer","aa_mobile","mobile_aa","ew_mobile","logistics_mobile","infantry_urban","infantry_defense","infantry_antitank","infantry_engineer","infantry_sniper","infantry_logistic","infantry_medic","infantry_commando","uav_recon"]
+const ROLES := ["line","scout","apc","tank","mlrs","attack_heli","fighter","destroyer","aa_mobile","mobile_aa","ew_mobile","logistics_mobile","infantry_urban","infantry_defense","infantry_antitank","infantry_engineer","infantry_sniper","infantry_logistic","infantry_medic","infantry_commando","uav_recon","fpv"]
 const VisualStyle = preload("res://scripts/ui/VisualStyle.gd")
 const TankSurface = preload("res://scripts/ui/TankSurface3D.gd")
 const TankRig = preload("res://scripts/ui/TankVisualRig3D.gd")
@@ -39,6 +39,7 @@ const G16SculptV4 = preload("res://scripts/ui/G16LogisticsSculptDamageV4.gd")
 const G16MaterialsV5 = preload("res://scripts/ui/G16PremiumMaterialsDamageV5.gd")
 const G16ServiceV6 = preload("res://scripts/ui/G16DeployableSupplyHardwareV6.gd")
 const A01Recon = preload("res://scripts/ui/A01ReconDroneV1.gd")
+const A02Art = preload("res://scripts/ui/A02FpvArtV1.gd")
 const A01Finish = preload("res://scripts/ui/A01ReconFinishV2.gd")
 const A01HardwareV3 = preload("res://scripts/ui/A01ReconFinishV3.gd")
 const A01AirfoilV4 = preload("res://scripts/ui/A01ReconAirfoilV4.gd")
@@ -197,7 +198,7 @@ const PREVIEW_FRAME := {
     "infantry_commando":3.15,"apc":3.55,"tank":3.75,
     "mlrs":4.05,"attack_heli":4.60,"fighter":4.65,"destroyer":5.10,
     "aa_mobile":3.85,"mobile_aa":3.85,"ew_mobile":4.45,
-    "logistics_mobile":5.0,"uav_recon":3.65
+    "logistics_mobile":5.0,"uav_recon":3.65,"fpv":2.85
 }
 
 # G13 art-only LOD selection. Public to studio/stress harnesses, not combat.
@@ -1011,7 +1012,28 @@ static func _destroyer_shell(root: Node3D, label: String, stations: Array,
     faces.append(front)
     faces.append(rear)
     if not painted_hull:
-        return _hull(root,label,points,faces,tint)
+        # Keep chamfered volumes closed, but separate the smoothing groups
+        # of each longitudinal panel and the end caps. The sides of the
+        # bridge, mast and deck no longer shade like inflated plastic.
+        var facets := SurfaceTool.new()
+        facets.begin(Mesh.PRIMITIVE_TRIANGLES)
+        for face_index in range(faces.size()):
+            var face: Array = faces[face_index]
+            var panel: int = face_index % count if face_index < (stations.size()-1)*count else count+face_index-(stations.size()-1)*count
+            for k in range(1,face.size()-1):
+                for index in [face[0],face[k],face[k+1]]:
+                    var point: Vector3 = points[index]
+                    facets.set_smooth_group(panel)
+                    facets.set_uv(Vector2(point.x*0.34+0.5,point.z*0.30+0.5))
+                    facets.add_vertex(point)
+        facets.generate_normals()
+        var solid := MeshInstance3D.new()
+        solid.name = label
+        solid.mesh = facets.commit()
+        solid.material_override = _material(tint,0.20)
+        solid.set_meta("destroyer_hard_panels",true)
+        root.add_child(solid)
+        return solid
     # One sealed exterior, with a color band embedded in the surface.
     # No second shell, polygon offset, intersecting stripe or detached badge.
     var surface := SurfaceTool.new()
@@ -1437,7 +1459,7 @@ static func _destroyer(root: Node3D, art_level: int = 10) -> void:
     for station in stations:
         deck_stations.append([station[0],station[1]*0.86,0.738,0.802])
     _destroyer_shell(root,"Cubierta",deck_stations,ARMOR)
-    root.set_meta("destroyer_art_revision","1.11")
+    root.set_meta("destroyer_art_revision","1.12")
     _destroyer_bridge(root,art_level)
     _destroyer_navigation(root,art_level)
     _destroyer_deck_equipment(root,art_level)
@@ -1739,6 +1761,9 @@ static func build(role: String, faction: int = -1, finish_enabled: bool = true, 
                     push_warning("A01 V13 conformal V-tail and moving EOIR guard failed")
                 elif not A01DamageFinishV14.apply(model,art_level>=13):
                     push_warning("A01 V14 sealed aircraft scars or real D4 fractured wing failed")
+        "fpv":
+            if not A02Art.build(model,faction_paint_color(faction),finish_enabled and art_level>=13):
+                return null
         "fighter":
             _fighter(model)
         "destroyer":
@@ -2229,6 +2254,8 @@ static func pose_model(role: String, model: Node3D, kind: String,
             return pose_destroyer(model,kind,progress,target_heading)
         "uav_recon":
             return A01Recon.pose(model,kind,progress)
+        "fpv":
+            return A02Art.pose(model,kind,progress)
         "logistics_mobile":
             var g16_posed:bool=G16LogisticsV1.pose(model,kind,progress,target_heading)
             if g16_posed and G16ExteriorV2.has_model(model):
@@ -2286,6 +2313,8 @@ static func restore_model_pose(role: String, model: Node3D) -> void:
             restore_destroyer_pose(model)
         "uav_recon":
             A01Recon.restore(model)
+        "fpv":
+            A02Art.restore(model)
         "logistics_mobile":
             G16LogisticsV1.restore(model)
             if G16ExteriorV2.has_model(model):
