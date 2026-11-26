@@ -33,9 +33,9 @@ func _run() -> void:
     var main: Control = load("res://scenes/Main.tscn").instantiate()
     root.add_child(main)
     await process_frame
-    assert(main.biome_picker.item_count==6)
+    assert(main.biome_picker.item_count==9)
     assert(main.biome_picker.get_item_text(1).contains("Nevado V19"))
-    assert(main.skirmish_setup.biome_picker.item_count==6)
+    assert(main.skirmish_setup.biome_picker.item_count==9)
     assert(main.skirmish_setup.options()["biome"]==0)
     main.board.autosave_enabled=false
     main.board.ai_enabled=false
