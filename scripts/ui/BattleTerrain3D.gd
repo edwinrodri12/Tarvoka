@@ -88,6 +88,21 @@ static func _corners(cells: Dictionary, cell: Vector2i) -> PackedFloat32Array:
         _vertex_height(cells,cell+Vector2i(1,1)),
         _vertex_height(cells,cell+Vector2i(0,1))])
 
+# V42: cache each shared ground vertex for the entire chunk build.
+# The same public records and exact sampler are used, including boundaries.
+static func _cached_height(cells: Dictionary,corner: Vector2i,cache: Dictionary) -> float:
+    if not cache.has(corner):
+        cache[corner] = _vertex_height(cells,corner)
+    return float(cache[corner])
+
+static func _cached_corners(cells: Dictionary,cell: Vector2i,
+        cache: Dictionary) -> PackedFloat32Array:
+    return PackedFloat32Array([
+        _cached_height(cells,cell,cache),
+        _cached_height(cells,cell+Vector2i(1,0),cache),
+        _cached_height(cells,cell+Vector2i(1,1),cache),
+        _cached_height(cells,cell+Vector2i(0,1),cache)])
+
 static func height_at(cells: Dictionary, cell: Vector2i,
         x: float = 0.0, z: float = 0.0) -> float:
     var record: Dictionary = cells.get(cell,{})
@@ -408,7 +423,7 @@ static func _append_extended_ground(tool: SurfaceTool,at: Vector3,
 static func _build_chunk(parent: Node3D, data: Dictionary,
         cells: Dictionary,corner_cache: Dictionary,
         biome: String = Biomes.TEMPERATE,water_cache: Dictionary = {},
-        materials: Dictionary = {}) -> Dictionary:
+        materials: Dictionary = {},height_cache: Dictionary = {}) -> Dictionary:
     var ground := SurfaceTool.new()
     var water := SurfaceTool.new()
     var unknown := SurfaceTool.new()
@@ -453,7 +468,7 @@ static func _build_chunk(parent: Node3D, data: Dictionary,
                 _panel(water,wn,we,ws,ww,tinted)
             water_count += 1
             continue
-        var corners: PackedFloat32Array = _corners(cells,cell)
+        var corners: PackedFloat32Array = _cached_corners(cells,cell,height_cache)
         var nw: Vector3 = at+Vector3(-half,corners[0],-half)
         var ne: Vector3 = at+Vector3(half,corners[1],-half)
         var se: Vector3 = at+Vector3(half,corners[2],half)
@@ -1158,11 +1173,15 @@ static func build(state: Dictionary, selected_id: String = "", viewer: int = 0) 
     var corner_cache: Dictionary = {}
     var water_cache: Dictionary = {}
     var materials: Dictionary = {}
+    var height_cache: Dictionary = {}
+    var terrain_start_usec: int = Time.get_ticks_usec()
     for chunk in chunks:
         var stats: Dictionary = _build_chunk(scene,chunk,cells,corner_cache,
-            biome,water_cache,materials)
+            biome,water_cache,materials,height_cache)
         for key in counters:
             counters[key] = int(counters[key])+int(stats[key])
+    counters["chunk_build_ms_v42"] = float(Time.get_ticks_usec()-terrain_start_usec)/1000.0
+    counters["height_samples_v42"] = height_cache.size()
     counters["trees"] = _make_cone_trees(scene,cells,biome)
     counters["mountain_ridges"] = _make_mountain_ridges(scene,cells,biome)
     counters["sites"] = _make_sites(scene,state,cells)
