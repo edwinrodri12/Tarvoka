@@ -39,10 +39,10 @@ jobs:
           set -euo pipefail
           timeout 300s xvfb-run -a -s '-screen 0 1280x720x24' env LIBGL_ALWAYS_SOFTWARE=1 /tmp/Godot_v4.3-stable_linux.x86_64 --rendering-method gl_compatibility --audio-driver Dummy --path . --script res://tests/test_patrol_v1.gd 2>&1 | tee /tmp/patrol.log
           if grep -E 'SCRIPT ERROR:|ERROR:|Parse Error:|Assertion failed' /tmp/patrol.log; then exit 1; fi
-          grep -F 'PASS M01 PATROL V1.4: 18 variants, 20 PNGs' /tmp/patrol.log
+          grep -F 'PASS M01 PATROL V1.5: 18 variants, 20 PNGs' /tmp/patrol.log
           test "$(find build/qa/patrol-v1 -name '*.png' | wc -l)" -eq 20
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: tarvoka-patrol-v14-native
+          name: tarvoka-patrol-v15-native
           path: build/qa/patrol-v1/*.png

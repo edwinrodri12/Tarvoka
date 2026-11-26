@@ -1688,6 +1688,16 @@ static func _patrol(root: Node3D, detail: int) -> void:
                 var rim: MeshInstance3D = _box(root,"BordePatrulla_%d_%d" % [side,i],
                     (points[i]+points[i+1])*0.5,Vector3(0.024,0.030,v.length()+0.014),STEEL)
                 rim.rotation.y = atan2(v.x,v.z)
+    if detail >= 13:
+        for side in [-1,1]:
+            var sign: float = float(side)
+            var line: Array[Vector3] = [Vector3(sign*0.44,0.478,-0.76),Vector3(sign*0.52,0.478,0.0),Vector3(sign*0.49,0.478,0.72)]
+            for i in range(line.size()-1):
+                var segment: Vector3 = line[i+1]-line[i]
+                var trim: MeshInstance3D = _box(root,"RefuerzoCasco_%d_%d" % [side,i],(line[i]+line[i+1])*0.5,Vector3(0.035,0.028,segment.length()+0.008),DARK)
+                trim.rotation.y = atan2(segment.x,segment.z)
+            _box(root,"PlacaServicio_%d" % side,Vector3(sign*0.518,0.389,0.12),Vector3(0.016,0.08,0.19),STEEL)
+            _box(bridge,"FaccionPanelCabina_%d" % side,Vector3(sign*0.323,0.713,-0.075),Vector3(0.025,0.055,0.31),ARMOR)
     _box(root,"RegistroPopaPatrulla",Vector3(0,0.58,0.82),Vector3(0.36,0.04,0.37),STEEL)
     _box(root,"BaseProaPatrulla",Vector3(0,0.58,-0.91),Vector3(0.30,0.06,0.32),DARK)
     var turret := Node3D.new()
@@ -1780,7 +1790,7 @@ static func _patrol(root: Node3D, detail: int) -> void:
     for child in root.get_children():
         if child is Node3D:
             child.set_meta("patrol_rest",child.transform)
-    root.set_meta("patrol_art_revision","1.4")
+    root.set_meta("patrol_art_revision","1.5")
     root.set_meta("patrol_damage",0)
 
 # Small closed, tapered stylized effects, never transparent billboards.
@@ -1906,7 +1916,8 @@ static func _patrol_finish(node: Node, detail: bool) -> void:
             if label.begins_with("Cristal"):
                 mat.metallic = 0.03
                 mat.roughness = 0.34
-                mat.albedo_color = Color("#597C91")
+                mat.albedo_color = Color("#41647C")
+                mat.roughness = 0.27
             elif label.begins_with("Humo") or label.begins_with("Espuma"):
                 mat.metallic = 0.0
                 mat.roughness = 1.0
@@ -1915,7 +1926,7 @@ static func _patrol_finish(node: Node, detail: bool) -> void:
                 mat.emission_enabled = true
                 mat.emission = mat.albedo_color
                 mat.emission_energy_multiplier = 0.75
-            elif label.begins_with("DefensaLateral"):
+            elif label.begins_with("RefuerzoCasco") or label.begins_with("DefensaLateral"):
                 mat.metallic = 0.0
                 mat.roughness = 0.94
             elif detail and label in ["CarcasaCabina","CubiertaPatrulla","ZocaloCabina"]:

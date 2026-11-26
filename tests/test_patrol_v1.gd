@@ -22,12 +22,14 @@ func closed(mesh: Mesh) -> bool:
     return not counts.is_empty()
 func _run() -> void:
     for faction in range(-1,8):
+        var low_meshes: int = 0
+        var low_triangles: int = 0
         for lod in [8,13]:
             var model: Node3D = Art.build("patrol",faction,true,lod)
             check(model != null,"Factory")
             if model == null:
                 continue
-            check(model.get_meta("patrol_art_revision","") == "1.4","Correct revision")
+            check(model.get_meta("patrol_art_revision","") == "1.5","Correct revision")
             for path in ["CascoNaval","CubiertaPatrulla","CabinaPatrulla/CarcasaCabina","CabinaPatrulla/FaccionTechoCabina"]:
                 var part: MeshInstance3D = model.get_node_or_null(path) as MeshInstance3D
                 check(part != null and closed(part.mesh),"Closed "+path)
@@ -40,6 +42,22 @@ func _run() -> void:
             var bounds: AABB = (hull as MeshInstance3D).mesh.get_aabb()
             check(bounds.position.z < -1.70 and bounds.end.z > 1.19,"Longer bow and unchanged stern")
             check(model.has_node("BordePatrulla_1_0") == (lod >= 13),"Deck relief LOD")
+            check(model.has_node("RefuerzoCasco_1_0") == (lod >= 13),"Hull trim LOD")
+            var cabin_panel: MeshInstance3D = model.get_node_or_null("CabinaPatrulla/FaccionPanelCabina_1") as MeshInstance3D
+            check((cabin_panel != null) == (lod >= 13),"Cabin identity LOD")
+            if cabin_panel != null and faction >= 0:
+                check((cabin_panel.material_override as StandardMaterial3D).albedo_color.is_equal_approx(Art.faction_paint_color(faction)),"Cabin panel faction")
+            var meshes: int = Art.inspect_meshes(model)
+            var triangles: int = 0
+            for piece in model.find_children("*","MeshInstance3D",true,false):
+                triangles += int(float((piece as MeshInstance3D).mesh.get_faces().size())/3.0)
+            if lod == 8:
+                low_meshes = meshes
+                low_triangles = triangles
+            else:
+                check(low_meshes < meshes and low_triangles < triangles,"Reduced geometry in LOD8")
+            if faction == 0:
+                print("M01 LOD",lod,": meshes=",meshes," triangles=",triangles)
             var hatch: Node3D = model.get_node("RegistroPopaPatrulla") as Node3D
             var hatch_rest: Transform3D = hatch.transform
             check(model.has_node("CabinaPatrulla/PuertaTrasera"),"Aft cabin service relief")
@@ -194,5 +212,5 @@ func _run() -> void:
     if issues > 0:
         quit(1)
     else:
-        print("PASS M01 PATROL V1.4: 18 variants, 20 PNGs")
+        print("PASS M01 PATROL V1.5: 18 variants, 20 PNGs")
         quit(0)

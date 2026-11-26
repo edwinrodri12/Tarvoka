@@ -18,3 +18,7 @@ Main 01a6024eb212bb3d53c2df7a57f25927600323ec (cuatro commits paralelos A02) inc
 ## V1.4 — revisión visual de V1.2
 
 16 capturas reales inspeccionadas, artefacto 15157664353. Los efectos redondos, mástil rectangular y hélices poco integradas requerían revisión. Se añade mástil facetado con base y radar, ejes de propulsión en contacto, detalles de servicio y pasos de cubierta; humo agrupado y llamas cónicas estilizadas, impacto temporal independiente de daño persistente. Materiales opacos y comprobaciones de geometría, estados y limpieza; 20 PNG previstos. No se modifica el destructor ni reglas de combate. QA V1.3 seguía pendiente al editar; V1.4 no validada.
+
+## V1.5 — contraste, identidad y coste geométrico
+
+V1.3 y V1.4 aprobadas en QA nativa (45907147272 y 45907458558; 18 y 20 PNG inspeccionados; artefactos 15159395048 y 15158303395). V1.5 añade relieves laterales, paneles de facción de cabina y contraste de ventanas sin transparencia. Se mide el número real de mallas y triángulos por LOD en todas las facciones y se exige menor geometría en LOD8. No se afirma FPS sin medición en dispositivo. Reconciliados ocho commits de main 8045d3e64ad4fd33c7f62fac32a0bd9c1fedf3fc: conservados A02 V17 y sus pruebas, sin cambios fuera del conjunto M01. Pendiente QA exacta V1.5 y visor; sin cambios tácticos.
