@@ -394,6 +394,7 @@ func _a02_web_entry_report()->void:
         "undershell_finish":bool(model_root.get_meta("tarvoka_a02_v18_undershell_finish",false)),
         "graphic_livery":bool(model_root.get_meta("tarvoka_a02_v19_graphic_livery",false)),
         "surface_atlas":bool(model_root.get_meta("tarvoka_a02_v20_surface_atlas",false)),
+        "material_relief":bool(model_root.get_meta("tarvoka_a02_v20_material_relief",false)),
         "visible_meshes":visible_meshes,"triangles":triangles,"transparent_meshes":transparent,
         "actions":actions,"faction_selector":faction_picker.visible}
     JavaScriptBridge.eval("window.__tarvokaA02Entry="+JSON.stringify(report),true)
