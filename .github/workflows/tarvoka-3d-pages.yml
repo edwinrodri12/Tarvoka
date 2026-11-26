@@ -2,7 +2,7 @@ name: Publish TARVOKA native 3D art studio
 
 on:
   push:
-    branches: [main, feat/campamentos-visor-integrado-20261123, art/camp-supply-v4-20261124, art/camp-recon-v3-20261124, art/camp-defense-v3-20261125, art/camp-medical-v3-20261125]
+    branches: [main, feat/campamentos-visor-integrado-20261123, art/camp-supply-v4-20261124, art/camp-recon-v3-20261124, art/camp-defense-v3-20261125, art/camp-medical-v3-20261125, art/destroyer-hull-v1-20261125]
     paths:
       - "scripts/ui/A01Recon*.gd"
       - "tests/test_a01_recon_*.gd"
@@ -323,7 +323,7 @@ jobs:
       - name: Retrieve the exact nine V15 sprites shipped by Android
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || (github.ref == 'refs/heads/main' && github.event_name != 'workflow_run' || github.ref == 'refs/heads/feat/campamentos-visor-integrado-20261123' || github.ref == 'refs/heads/art/camp-supply-v4-20261124' || github.ref == 'refs/heads/art/camp-recon-v3-20261124' || github.ref == 'refs/heads/art/camp-defense-v3-20261125' || github.ref == 'refs/heads/art/camp-medical-v3-20261125') && github.sha || 'main' }}
+          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || (github.ref == 'refs/heads/main' && github.event_name != 'workflow_run' || github.ref == 'refs/heads/feat/campamentos-visor-integrado-20261123' || github.ref == 'refs/heads/art/camp-supply-v4-20261124' || github.ref == 'refs/heads/art/camp-recon-v3-20261124' || github.ref == 'refs/heads/art/camp-defense-v3-20261125' || github.ref == 'refs/heads/art/camp-medical-v3-20261125' || github.ref == 'refs/heads/art/destroyer-hull-v1-20261125') && github.sha || 'main' }}
           path: hq-android-v15
           persist-credentials: false
       - name: Include V15 source PNGs in the HQ 3D showroom before import
@@ -2763,6 +2763,14 @@ jobs:
           path: build/qa/camps-shared-studio/*.png
           if-no-files-found: warn
           retention-days: 14
+
+      - name: Save destroyer screenshot from the same native shared Studio
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: tarvoka-destroyer-v112-shared-studio
+          path: build/qa/destroyer-shared-studio/*.png
+          if-no-files-found: warn
 
       - name: Downloadable shared TARVOKA Web Studio preview for camp review
         if: (github.event_name == 'pull_request' && github.event.pull_request.head.ref == 'feat/campamentos-visor-integrado-20261123') || (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/feat/campamentos-visor-integrado-20261123') || (github.event_name == 'push' && github.ref == 'refs/heads/feat/campamentos-visor-integrado-20261123') || (github.event_name == 'push' && github.ref == 'refs/heads/art/camp-supply-v4-20261124') || (github.event_name == 'pull_request' && github.event.pull_request.head.ref == 'art/camp-supply-v4-20261124')
