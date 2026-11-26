@@ -144,10 +144,10 @@ func _run() -> void:
     env.ambient_light_energy=0.75
     world.environment=env
     view.add_child(world)
-    var key := DirectionalLight3D.new()
-    key.rotation_degrees=Vector3(-48,-37,0)
-    key.light_energy=2.5
-    view.add_child(key)
+    var key_light := DirectionalLight3D.new()
+    key_light.rotation_degrees=Vector3(-48,-37,0)
+    key_light.light_energy=2.5
+    view.add_child(key_light)
     var rim := DirectionalLight3D.new()
     rim.rotation_degrees=Vector3(-24,145,0)
     rim.light_energy=1.5
