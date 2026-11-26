@@ -11,6 +11,7 @@ const SurfaceFinish = preload("res://scripts/ui/TerrainSurfaceFinish3D.gd")
 const SurfaceSampler = preload("res://scripts/ui/TerrainSurfaceSampler3D.gd")
 const RoadShore = preload("res://scripts/ui/TerrainStudioRoadShore3D.gd")
 const Models = preload("res://scripts/ui/UnitModels3D.gd")
+const InfantryFinish = preload("res://scripts/ui/InfantrySculptFinishV2.gd")
 const InfantryBarracks = preload("res://scripts/ui/InfantryBarracksBattle3D.gd")
 const ArmoredWorkshop = preload("res://scripts/ui/ArmoredWorkshopBattle3D.gd")
 const ArmoredWorkshopLOD = preload("res://scripts/ui/ArmoredWorkshopBattleLOD.gd")
@@ -657,6 +658,7 @@ static func _make_units(parent: Node3D,state: Dictionary,
     var g11_lod := 0
     var g13_visible := 0
     var g13_lod8 := 0
+    var guardia_lod8 := 0
     var hidden_enemies := 0
     var player: int = viewer
     for unit in state.get("units",[]):
@@ -703,6 +705,22 @@ static func _make_units(parent: Node3D,state: Dictionary,
             model = Models.build("mlrs",faction,false,8)
             if model!=null and bool(model.get_meta(G11Tactical.FLAG,false)):
                 g11_lod+=1
+        elif role=="line" and detailed < MAX_DETAILED_UNITS:
+            # The existing playable Guardia now shares the actual approved
+            # studio sculpt at the mobile level, not the old LOD6 prototype.
+            # Only this art mapping changes; the shared eight-slot budget,
+            # logical role, stats, fog and all other units stay unchanged.
+            var guardia_faction: int=FactionIdentity.index_for(
+                FactionIdentity.key_for(state,faction))
+            if guardia_faction<0:
+                guardia_faction=faction
+            model=Models.build("line",guardia_faction,true,8)
+            if model!=null:
+                if str(model.get_meta(InfantryFinish.FIT_V15,""))=="line":
+                    model.set_meta("tarvoka_guardia_game_role","line")
+                    model.set_meta("tarvoka_guardia_visual_faction",guardia_faction)
+                    guardia_lod8+=1
+                detailed+=1
         elif role=="engineer" and detailed < MAX_DETAILED_UNITS:
             # The playable G05 role is `engineer`; its approved 3D identity
             # in the shared art roster is `infantry_engineer`. The map
@@ -741,6 +759,12 @@ static func _make_units(parent: Node3D,state: Dictionary,
         # Air models must be visibly ABOVE ground/naval models rather than
         # clipping through another unit when both occupy the same cell.
         var altitude: float = 2.45 if Domains.layer(unit) == "air" else 0.43
+        if model.has_meta("tarvoka_guardia_game_role"):
+            # Native V15 sole geometry already defines the soldier's ground
+            # level. Avoid the legacy cylinder-center vertical offset.
+            var sole_y: float=InfantryFinish.family_sole_floor(model)
+            if is_finite(sole_y):
+                altitude=0.025-sole_y*model.scale.y
         model.position = world_at(cell)+Vector3(0,height_at(cells,cell)+altitude,0)
         if role=="apc" and APCTactical.has_model(model):
             APCTactical.rebase(model)
@@ -753,7 +777,7 @@ static func _make_units(parent: Node3D,state: Dictionary,
     return {"visible":visible_count,"detailed":detailed,
         "apc_lod":apc_lod,"g11_lod":g11_lod,
         "g13_visible":g13_visible,"g13_lod8":g13_lod8,
-        "hidden_enemies":hidden_enemies}
+        "guardia_lod8":guardia_lod8,"hidden_enemies":hidden_enemies}
 
 static func build(state: Dictionary, selected_id: String = "", viewer: int = 0) -> Node3D:
     var biome: String = Biomes.from_state(state)

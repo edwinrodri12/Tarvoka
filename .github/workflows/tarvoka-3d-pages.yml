@@ -1839,7 +1839,20 @@ jobs:
             echo '::error::A02 shared Studio selector or actions failed' >&2; exit 1
           fi
           grep -F 'PASS A02 V16 SHARED STUDIO:' /tmp/a02-studio.log
-          test "$(find build/qa/a02-shared-studio -name '*.png' -size +2k | wc -l)" -eq 3
+          # Explicit expected files and diagnostics: keep the exact three
+          # screenshot requirement; never silently accept missing evidence.
+          a02_count="$(find build/qa/a02-shared-studio -name '*.png' -size +2k | wc -l)"
+          echo "A02 shared Studio valid PNG count: $a02_count"
+          find build/qa/a02-shared-studio -name '*.png' -printf '%f %s bytes\n'
+          if [ "$a02_count" -ne 3 ]; then
+            echo "::error::Expected exactly three A02 screenshots over 2 KiB; found $a02_count" >&2
+            exit 1
+          fi
+          for a02_frame in d0 d4 return; do
+            if [ ! -s "build/qa/a02-shared-studio/a02-v16-studio-$a02_frame.png" ]; then
+              echo "::error::Missing A02 shared Studio frame $a02_frame" >&2; exit 1
+            fi
+          done
           # Web export must not publish a blank civilian-city selection.
           xvfb-run -a -s '-screen 0 1280x720x24' env LIBGL_ALWAYS_SOFTWARE=1 \
             /tmp/Godot_v4.3-stable_linux.x86_64 \
