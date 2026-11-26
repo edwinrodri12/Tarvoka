@@ -62,8 +62,12 @@ func _run()->void:
     if picker==null or index<0 or index>=picker.item_count or factions==null:
         quit(1)
         return
+    check(picker.is_visible_in_tree(),"A02 in visible unified unit selector")
+    check(picker.get_item_text(index).contains("A02") and picker.get_item_text(index).contains("V16"),
+        "A02 visibly labelled in shared unit list")
+    check(str(studio.get("_role"))=="apc","ordinary Studio homepage starts with existing default")
     picker.select(index)
-    studio.call("_display_role","fpv")
+    picker.item_selected.emit(index)
     studio.call("_studio_select_tab",0)
     await process_frame
     var model:=studio.get("model_root") as Node3D
@@ -105,7 +109,7 @@ func _run()->void:
     check(str(studio.get("_role"))=="apc" and (interrupted==null or not interrupted.is_running()),
         "switching model cancels A02 preview")
     picker.select(index)
-    studio.call("_display_role","fpv")
+    picker.item_selected.emit(index)
     await process_frame
     model=studio.get("model_root") as Node3D
     check(model!=null and Art.stage(model)==0,"return to A02 starts intact")
