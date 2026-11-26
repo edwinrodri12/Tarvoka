@@ -105,8 +105,59 @@ func _check_water_bank_geometry() -> void:
     hidden.begin(Mesh.PRIMITIVE_TRIANGLES)
     assert(Terrain._append_water_banks(hidden,cells,cell,top,Color.WHITE)==0)
 
+# V22-V25: test visual topology and mesh bounds without editing battle rules.
+func _check_surface_finish() -> void:
+    var road_edges: Dictionary = {"north":true,"south":true,"west":false,"east":false}
+    assert(Terrain._road_axis(road_edges)==1)
+    assert(Terrain._road_axis({"east":true,"west":true})==2)
+    assert(Terrain._road_axis({"north":true,"east":true})==0)
+    assert(Terrain._road_axis({"north":true,"south":true,"east":true})==0)
+    var cell := Vector2i(7,3)
+    var at: Vector3 = Terrain.world_at(cell)
+    var h: float = Terrain.CELL*0.5
+    var surface: Dictionary = {"x":cell.x,"z":cell.y,"top":0.14,"half":h,
+        "corners":PackedFloat32Array([0.14,0.14,0.14,0.14])}
+    var tile: Dictionary = {"roads":road_edges,"shore":{"west":true,"east":true}}
+    for biome in Biomes.CHOICES:
+        var tool := SurfaceTool.new()
+        tool.begin(Mesh.PRIMITIVE_TRIANGLES)
+        Terrain._append_road_finish(tool,at,surface,tile,biome)
+        var mesh: ArrayMesh = tool.commit()
+        var vertices: PackedVector3Array = mesh.surface_get_arrays(0)[Mesh.ARRAY_VERTEX]
+        assert(vertices.size()>0)
+        var north_end := false
+        var south_end := false
+        for vertex in vertices:
+            assert(absf(vertex.x-at.x)<=h+0.001)
+            assert(absf(vertex.z-at.z)<=h+0.001)
+            assert(vertex.y>=0.14 and vertex.y<=0.246)
+            north_end = north_end or is_equal_approx(vertex.z,at.z-h)
+            south_end = south_end or is_equal_approx(vertex.z,at.z+h)
+        assert(north_end and south_end)
+    var cells: Dictionary = {}
+    cells[cell] = {"kind":"mountain"}
+    cells[cell+Vector2i(1,0)] = {"kind":"mountain"}
+    assert(absf(Terrain._ridge_angle(cells,cell))<=0.12)
+    cells.erase(cell+Vector2i(1,0))
+    cells[cell+Vector2i(0,1)] = {"kind":"mountain"}
+    assert(absf(Terrain._ridge_angle(cells,cell)-PI*0.5)<=0.12)
+    cells[cell+Vector2i(1,0)] = {"kind":"unknown"}
+    var ridge: float = Terrain._ridge_angle(cells,cell)
+    cells.erase(cell+Vector2i(1,0))
+    assert(is_equal_approx(Terrain._ridge_angle(cells,cell),ridge))
+    var water_cells: Dictionary = {}
+    water_cells[cell] = {"kind":"water"}
+    for biome in Biomes.CHOICES:
+        var deep: Color = Terrain._water_corner_tint(water_cells,cell,biome)
+        water_cells[cell+Vector2i(-1,0)] = {"kind":"unknown"}
+        assert(Terrain._water_corner_tint(water_cells,cell,biome)==deep)
+        water_cells[cell+Vector2i(-1,0)] = {"kind":"plain"}
+        assert(Terrain._water_corner_tint(water_cells,cell,biome)!=deep)
+        water_cells.erase(cell+Vector2i(-1,0))
+
 func _run() -> void:
     _check_water_bank_geometry()
+    _check_surface_finish()
     root.content_scale_size = Vector2i(1280,800)
     assert(Biomes.CHOICES.size()==4)
     assert(Biomes.from_index(0)==Biomes.TEMPERATE)
