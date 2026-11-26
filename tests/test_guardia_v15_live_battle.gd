@@ -176,12 +176,41 @@ func _run()->void:
     check(ninth!=null and not ninth.has_meta(Finish.FIT_V15) and
         group.find_child("Unidad3D_Hidden",false,false)==null,"fallback and fog isolation")
     check(crowded_state==crowded_before,"crowd render leaves source state identical")
+    # Repeated motion on all eight real detailed models. Report CPU pose
+    # cost and stable resource count, not a synthetic Android FPS claim.
+    var actors: Array[Node3D]=[]
+    for i in range(Terrain.MAX_DETAILED_UNITS):
+        var actor: Node3D=group.find_child("Unidad3D_Crowd%d"%i,false,false) as Node3D
+        if actor!=null and actor.has_meta(Finish.FIT_V15):
+            actors.append(actor)
+    check(actors.size()==Terrain.MAX_DETAILED_UNITS,"V24 benchmark uses every detailed slot")
+    var samples: int=0
+    var total_pose_us: int=0
+    var max_batch_us: int=0
+    for step in range(1,33):
+        var phase: float=float(step%16)/16.0
+        var batch_start: int=Time.get_ticks_usec()
+        for actor in actors:
+            check(Models.pose_model("line",actor,"move",phase),"V24 crowd pose")
+            samples+=1
+        var elapsed: int=Time.get_ticks_usec()-batch_start
+        total_pose_us+=elapsed
+        max_batch_us=maxi(max_batch_us,elapsed)
+    for actor in actors:
+        Models.restore_model_pose("line",actor)
+        var fx: MultiMeshInstance3D=actor.get_node_or_null(Finish.FX_V10) as MultiMeshInstance3D
+        check(fx!=null and not fx.visible and fx.multimesh.instance_count==4 and
+            fx.multimesh.visible_instance_count==0,"V24 repeated crowd animation keeps one bounded pool")
+    var motion_metrics: Dictionary={"models":actors.size(),"pose_samples":samples,
+        "total_pose_us":total_pose_us,"worst_eight_model_batch_us":max_batch_us,
+        "mean_pose_us":float(total_pose_us)/float(maxi(1,samples)),
+        "measurement":"CPU pose and checks, no rendering or device FPS"}
     group.free()
     # Explicitly preserve approval boundary: no new tactical roles.
     for role in ["infantry_commando","infantry_sniper","infantry_logistic","infantry_medic"]:
         check(not Arsenal.valid(role) and not Roles.valid(role),"no accidental gameplay unlock "+role)
     var report: Dictionary={"visible_geometry":metrics,"battle_build_us":build_us,
-        "crowd_build_us":crowd_us,"crowd":limit,"renderer":"software CI; not Android FPS",
+        "crowd_build_us":crowd_us,"crowd":limit,"motion_v24":motion_metrics,"renderer":"software CI; not Android FPS",
         "state_unchanged":state==before}
     var output: FileAccess=FileAccess.open(OUT+"/metrics.json",FileAccess.WRITE)
     if output!=null:
