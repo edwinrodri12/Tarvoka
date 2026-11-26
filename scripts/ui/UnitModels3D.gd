@@ -1536,18 +1536,45 @@ static func _destroyer_trim(root: Node3D, art_level: int) -> void:
                     Vector3(0.018,0.012,0.018),METAL)
     root.set_meta("destroyer_finish_v113",true)
 
+# Refine longitudinal curvature only in the inspection mesh. Original
+# stations remain exact, midpoints stay inside their neighbouring widths
+# and vertical extents; hull and deck consume the same refined stations.
+static func _destroyer_refined_stations(stations: Array) -> Array:
+    var refined: Array = []
+    for i in range(stations.size()-1):
+        var left: Array = stations[i]
+        var right: Array = stations[i+1]
+        var before: Array = stations[maxi(0,i-1)]
+        var after: Array = stations[mini(stations.size()-1,i+2)]
+        var dz: float = float(right[0])-float(left[0])
+        var middle: Array = [0.5*(float(left[0])+float(right[0]))]
+        refined.append(left)
+        for k in range(1,4):
+            var a: float = float(left[k])
+            var b: float = float(right[k])
+            var slope_a: float = (b-float(before[k]))/(float(right[0])-float(before[0]))
+            var slope_b: float = (float(after[k])-a)/(float(after[0])-float(left[0]))
+            var midpoint: float = 0.5*(a+b)+0.125*dz*(slope_a-slope_b)
+            middle.append(clampf(midpoint,minf(a,b),maxf(a,b)))
+        refined.append(middle)
+    refined.append(stations.back())
+    return refined
+
 static func _destroyer(root: Node3D, art_level: int = 10) -> void:
     var stations: Array = [
         [-2.46,0.045,0.36,0.76],[-2.15,0.24,0.18,0.76],
         [-1.56,0.62,0.15,0.76],[-0.92,0.82,0.14,0.76],
         [0.0,0.90,0.14,0.76],[0.90,0.85,0.14,0.76],
         [1.51,0.66,0.17,0.76],[1.72,0.48,0.22,0.76]]
+    if art_level >= 13:
+        stations = _destroyer_refined_stations(stations)
+    root.set_meta("destroyer_profile_stations",stations.size())
     _destroyer_shell(root,"CascoNaval",stations,STEEL,true)
     var deck_stations: Array = []
     for station in stations:
         deck_stations.append([station[0],station[1]*0.86,0.738,0.802])
     _destroyer_shell(root,"Cubierta",deck_stations,ARMOR)
-    root.set_meta("destroyer_art_revision","1.16")
+    root.set_meta("destroyer_art_revision","1.17")
     _destroyer_bridge(root,art_level)
     _destroyer_navigation(root,art_level)
     _destroyer_deck_equipment(root,art_level)

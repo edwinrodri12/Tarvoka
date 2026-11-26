@@ -603,11 +603,11 @@ func _destroyer_studio_create_controls() -> void:
     var idx: int = NavalArt.ROLES.find("destroyer")
     if idx < 0 or idx >= role_picker.item_count:
         return
-    role_picker.set_item_text(idx,"Destructor naval · V1.16")
+    role_picker.set_item_text(idx,"Destructor naval · V1.17")
     destroyer_controls = VBoxContainer.new()
     destroyer_controls.name = "DestructorControlesNativos"
     role_picker.get_parent().add_child(destroyer_controls)
-    _title(destroyer_controls,"DESTRUCTOR NAVAL · V1.16",14)
+    _title(destroyer_controls,"DESTRUCTOR NAVAL · V1.17",14)
     destroyer_faction_picker = OptionButton.new()
     destroyer_faction_picker.add_item("Neutral")
     for faction in CampStyle.FACTIONS:
@@ -732,7 +732,7 @@ func _destroyer_studio_damage_changed(stage: int) -> void:
     _destroyer_fx_time = 0.0
     NavalArt.set_destroyer_damage(model_root,stage,0.45 if stage == 4 else 0.0)
     if destroyer_status != null:
-        destroyer_status.text = "Modelo nativo V1.16 · D%d" % stage
+        destroyer_status.text = "Modelo nativo V1.17 · D%d" % stage
 
 func _destroyer_studio_stop() -> void:
     if _destroyer_studio_tween != null and _destroyer_studio_tween.is_running():
@@ -796,7 +796,7 @@ func _destroyer_studio_play(kind: String) -> void:
             if kind != "sink":
                 NavalArt.restore_model_pose("destroyer",model_root)
             else:
-                destroyer_status.text = "Modelo nativo V1.16 · D4 · Hundido")
+                destroyer_status.text = "Modelo nativo V1.17 · D4 · Hundido")
 
 func _process(delta: float) -> void:
     super._process(delta)

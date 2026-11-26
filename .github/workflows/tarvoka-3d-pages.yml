@@ -2768,7 +2768,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: tarvoka-destroyer-v116-shared-studio
+          name: tarvoka-destroyer-v117-shared-studio
           path: build/qa/destroyer-shared-studio/*.png
           if-no-files-found: warn
 
@@ -2804,7 +2804,7 @@ jobs:
               'engineer': 'G05 V17',
               'a02': 'V18 EN REVISION',
               'a02_source_sha256': hashlib.sha256(Path('scripts/ui/A02FpvArtV1.gd').read_bytes()).hexdigest(),
-              'destroyer': 'V1.16',
+              'destroyer': 'V1.17',
               'destroyer_source_sha256': hashlib.sha256(Path('scripts/ui/UnitModels3D.gd').read_bytes()).hexdigest(),
               'source_commit': commit,
               'engineer_source_sha256': hashlib.sha256(source.read_bytes()).hexdigest(),
@@ -2979,7 +2979,7 @@ jobs:
                 await page.goto('http://127.0.0.1:8124/?unidad=destroyer',{waitUntil:'domcontentloaded',timeout:60000});
                 await page.waitForFunction(()=>window.__tarvokaDestroyerEntry!==undefined,null,{timeout:180000});
                 const info=await page.evaluate(()=>window.__tarvokaDestroyerEntry);
-                if(info.role!=='destroyer'||info.revision!=='1.16'||info.lod!==13||info.stage!==0||
+                if(info.role!=='destroyer'||info.revision!=='1.17'||info.lod!==13||info.stage!==0||
                     info.factions!==9||info.damage_states!==5||!info.controls_visible||!info.water_visible)
                   throw Error('Incorrect native destroyer entry: '+JSON.stringify(info));
                 if(!(await page.locator('#tarvoka-engineer-build a[href="?unidad=destroyer"]').isVisible()))
@@ -3019,7 +3019,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: tarvoka-destroyer-v116-webgl
+          name: tarvoka-destroyer-v117-webgl
           path: build/qa/destroyer-browser/
           if-no-files-found: warn
           retention-days: 14
@@ -3074,7 +3074,7 @@ jobs:
                       page = response.read().decode('utf-8')
                   assert source[:12] in page and 'tarvoka-engineer-build' in page
                   assert 'href="?unidad=a02"' in page, 'Missing public A02 entry link'
-                  assert manifest['destroyer'] == 'V1.16', 'Missing destroyer version'
+                  assert manifest['destroyer'] == 'V1.17', 'Missing destroyer version'
                   assert re.fullmatch('[a-f0-9]{64}', manifest['destroyer_source_sha256'])
                   assert 'href="?unidad=destroyer"' in page, 'Missing public destroyer entry link'
                   assert 'tarvoka-a02-compact-nav' in page, 'Missing compact A02 inspection menu'

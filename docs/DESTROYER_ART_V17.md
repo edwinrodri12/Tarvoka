@@ -43,3 +43,7 @@ D2 conserva humo reducido y tres volúmenes visibles; D3 despliega toda la pluma
 ## V1.16 — acabado de cubierta y auditoría orbital
 
 Tapas biseladas de proa/popa, juntas y seis bases de postes posteriores, solo LOD13. Se preserva el LOD8. QA añade contactos de postes, 12 vistas a 30 grados y dos axiales, detección de fondo vacío, 58 PNG con SHA-256, inventario de 90 estados de mallas visibles/asignadas y triángulos (comparación relativa LOD, no FPS). Se actualizan identidad y controles de publicación a V1.16. Se reconcilia main ebd41ac con sus tres archivos A02 sin modificarlos; se conservan ramas V1.13–V1.15 y sus pruebas en cola. Candidato acumulativo, pendiente CI, revisión visual y publicación; no afirmar calidad igual al Bastión ni rendimiento real.
+
+## V1.17 — perfil exterior refinado
+
+El casco y cubierta de inspección LOD13 comparten 15 estaciones (las ocho originales exactas y siete intermedias con interpolación cúbica acotada), frente a ocho en LOD8. Conserva la caja envolvente y las cuatro franjas de esmalte sin mallas duplicadas. Pruebas de cierre existentes, recuento de triángulos y vértices de pintura por LOD, extremos y contacto vertical, más cuatro vistas laterales/superiores comparativas con el modelo táctico. 62 capturas previstas, inventario SHA-256 actualizado. Se actualiza el candidato acumulativo #716 para evitar otro PR paralelo; ejecuciones anteriores seguían en cola. Sin validación visual, FPS ni publicación aún. No modifica el Bastión ni jugabilidad.
