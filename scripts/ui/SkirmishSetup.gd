@@ -147,13 +147,16 @@ func _ready() -> void:
         "Campo abierto","Bosque de las Dos Rutas","Puentes de la Cuenca",
         "Costa de las Dos Bahias","Mapa aleatorio (semilla)"
     ])
-    biome_picker = _picker(content,"Bioma · seis paisajes",[
+    biome_picker = _picker(content,"Bioma · nueve paisajes",[
         "Valle boscoso · templado",
         "Bioma nevado · pinos, nieve y hielo",
         "Canon rocoso · montanas secas",
         "Delta costero · bosque humedo y litoral",
         "Desierto de dunas · arena y oasis",
-        "Selva tropical · palmeras y vegetación densa"
+        "Selva tropical · palmeras y vegetación densa",
+        "Pantanos · barro y juncos",
+        "Urbano · plazas y calzadas",
+        "Archipiélagos · playas y litoral"
     ])
     size_picker = _picker(content,"Tamano",[
         "10 x 8 · Rapida","24 x 18 · Campana amplia","40 x 30 · Gran batalla"
