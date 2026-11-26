@@ -1645,13 +1645,14 @@ static func restore_destroyer_pose(root: Node3D) -> void:
 # M01: original fictional coastal patrol silhouette. Reuses only the
 # verified closed-shell geometry helper, not the destroyer's model or rules.
 static func _patrol(root: Node3D, detail: int) -> void:
-    var stations: Array = [[-1.55,0.035,0.26,0.53],[-1.30,0.25,0.12,0.53],
-        [-0.76,0.47,0.09,0.53],[0.0,0.55,0.08,0.53],
-        [0.72,0.52,0.09,0.53],[1.20,0.43,0.14,0.53]]
+    var stations: Array = [[-1.72,0.045,0.30,0.59],[-1.47,0.20,0.18,0.57],
+        [-1.08,0.37,0.105,0.55],[-0.76,0.47,0.09,0.53],
+        [0.0,0.55,0.08,0.53],[0.72,0.52,0.09,0.53],
+        [1.20,0.43,0.14,0.53]]
     _destroyer_shell(root,"CascoNaval",stations,STEEL,true)
     var deck: Array = []
     for p in stations:
-        deck.append([p[0],float(p[1])*0.86,0.515,0.565])
+        deck.append([p[0],float(p[1])*0.94,float(p[3])-0.015,float(p[3])+0.035])
     _destroyer_shell(root,"CubiertaPatrulla",deck,DARK)
     var bridge := Node3D.new()
     bridge.name = "CabinaPatrulla"
@@ -1672,7 +1673,21 @@ static func _patrol(root: Node3D, detail: int) -> void:
                 _box(root,"PostePatrulla_%d_%d" % [side,i],Vector3(sign*0.34,0.65,0.57+float(i)*0.17),Vector3(0.025,0.19,0.025),STEEL)
             _box(root,"BarandaPatrulla_%d" % side,Vector3(sign*0.34,0.736,0.74),Vector3(0.025,0.026,0.37),STEEL)
     for i in range(2):
-        _box(bridge,"CristalFrontalPatrulla_%d" % i,Vector3(-0.10+float(i)*0.20,0.92,-0.45),Vector3(0.17,0.13,0.035),Color("#38596C"))
+        _box(bridge,"MarcoFrontalPatrulla_%d" % i,Vector3(-0.10+float(i)*0.20,0.92,-0.448),Vector3(0.195,0.155,0.030),DARK)
+        _box(bridge,"CristalFrontalPatrulla_%d" % i,Vector3(-0.10+float(i)*0.20,0.92,-0.47),Vector3(0.16,0.12,0.020),Color("#38596C"))
+    _box(root,"AmarreProa",Vector3(0,0.603,-1.28),Vector3(0.14,0.06,0.07),METAL)
+    if detail >= 13:
+        for side in [-1,1]:
+            var sign: float = float(side)
+            var points: Array[Vector3] = [Vector3(sign*0.13,0.602,-1.47),
+                Vector3(sign*0.27,0.582,-1.08),Vector3(sign*0.35,0.566,-0.76),
+                Vector3(sign*0.43,0.566,0.0),Vector3(sign*0.40,0.566,0.72),
+                Vector3(sign*0.32,0.566,1.20)]
+            for i in range(points.size()-1):
+                var v: Vector3 = points[i+1]-points[i]
+                var rim: MeshInstance3D = _box(root,"BordePatrulla_%d_%d" % [side,i],
+                    (points[i]+points[i+1])*0.5,Vector3(0.024,0.030,v.length()+0.014),STEEL)
+                rim.rotation.y = atan2(v.x,v.z)
     _box(root,"RegistroPopaPatrulla",Vector3(0,0.58,0.82),Vector3(0.36,0.04,0.37),STEEL)
     _box(root,"BaseProaPatrulla",Vector3(0,0.58,-0.91),Vector3(0.30,0.06,0.32),DARK)
     var turret := Node3D.new()
@@ -1744,7 +1759,7 @@ static func _patrol(root: Node3D, detail: int) -> void:
     for child in root.get_children():
         if child is Node3D:
             child.set_meta("patrol_rest",child.transform)
-    root.set_meta("patrol_art_revision","1.2")
+    root.set_meta("patrol_art_revision","1.3")
     root.set_meta("patrol_damage",0)
 
 static func set_patrol_damage(root: Node3D, stage: int, phase: float = 0.0) -> bool:
@@ -1809,7 +1824,7 @@ static func animate_patrol_damage(root: Node3D, phase: float) -> bool:
     return true
 
 static func pose_patrol(root: Node3D, kind: String, phase: float, heading: Vector2i = Vector2i(0,-1)) -> bool:
-    if root == null or not root.has_meta("patrol_art_revision") or int(root.get_meta("patrol_damage",0)) >= 3:
+    if root == null or not root.has_meta("patrol_art_revision") or int(root.get_meta("patrol_damage",0)) >= 4:
         return false
     if kind not in ["idle","move","hit","damage","damaged","attack","fire","aim"]:
         return false
@@ -1851,6 +1866,9 @@ static func _patrol_finish(node: Node, detail: bool) -> void:
                 mat.emission_enabled = true
                 mat.emission = mat.albedo_color
                 mat.emission_energy_multiplier = 0.75
+            elif label.begins_with("DefensaLateral"):
+                mat.metallic = 0.0
+                mat.roughness = 0.94
             elif detail and label in ["CarcasaCabina","CubiertaPatrulla","ZocaloCabina"]:
                 mat.albedo_texture = _destroyer_grain()
                 mat.uv1_triplanar = true
