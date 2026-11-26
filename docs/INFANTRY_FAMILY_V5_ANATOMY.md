@@ -15,3 +15,7 @@ Casco cerrado con perfil, color de armadura neutro y coraza ajustados por rol; v
 ## V7 — materiales y desgaste persistente
 
 Tres texturas procedurales compartidas de 64×64 solo en detalle LOD13; LOD8 sin texturas nuevas. Materiales opacos diferenciados de tejido, cerámica y goma, sin repintar emblemas. Cinco estados D0-D4 alteran únicamente materiales existentes, con restauración exacta de D0 y reutilización de marcas físicas. D4 inhibe destellos y casquillos; recupera inclinación del modelo tras reparación. 70 capturas reales exigidas (10 nuevas D2/D4) y pruebas de materiales y restauración en cada facción/LOD. Sin modificación de reglas ni de G05 V17. Pendiente CI nativa y revisión.
+
+## V8 — correcciones derivadas de la inspección real
+
+V7 `3923a09`: 22 workflows exitosos, incluida QA nativa 45689803274 (artefacto 15061330442) y WebGL 45689803084. Se inspeccionaron 20 capturas de frente, perfil, casco y espalda, más 10 D2/D4. Hallazgos: mejillas redondas aisladas, ceja rectangular, hebillas en la puntera, Guardia descentrado por offset del antiguo proxy y D4 en el borde del encuadre. V8 reemplaza las piezas con máscara inferior y ceja continua cerradas, ajustes de orejeras y bolsillos, asentamiento de insignias, raíz de Guardia LOD8/13 a y=0 y cámara D4 centrada. Se conservan pivotes, color, pruebas, G05 y bocetos históricos. Pendiente revisión de nuevas capturas, no aprobado. Publicación G05 V17 del run 45686050361 exitosa y verificación del paquete servido exitosa.

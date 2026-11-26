@@ -1378,7 +1378,12 @@ static func build(role: String, faction: int = -1, finish_enabled: bool = true, 
                     push_warning("G13 V68 compact machined gun steel and mobile cheek finish missing on LOD8")
                 if not G13MuzzleV69.apply(model):
                     push_warning("G13 V69 performance-scaled ported twin gun barrels missing on Android LOD8")
-    if role in ["line","scout"]:
+    if role=="line" and bool(model.get_meta("tarvoka_infantry_integrated_face_v8",false)):
+        # Native infantry is already grounded in its local rig; the old
+        # proxy offset cropped the boots and helmet in the real QA camera.
+        model.scale=Vector3.ONE*0.83
+        model.position.y=0.0
+    elif role in ["line","scout"]:
         model.scale = Vector3.ONE * 0.82
         model.position.y = -0.58
     elif role in ["attack_heli","fighter","destroyer"]:

@@ -182,7 +182,7 @@ static func _refine_core(model: Node3D, hero: bool) -> bool:
         for row in range(3):
             _hide(model,"V2_PliseManga_%d_%d"%[side,row])
     model.set_meta(FAMILY_ANATOMY_V5,true)
-    if not _refine_head_and_armor(model,hero):
+    if not _refine_head_and_armor(model,hero) or not _refine_face_and_profile(model,hero):
         return false
     return _attach_family_grips(model,hero)
 
@@ -265,6 +265,89 @@ static func _refine_head_and_armor(model: Node3D, hero: bool) -> bool:
     model.set_meta(FAMILY_IDENTITY_V6,role)
     return true
 
+const SCULPT_V8 := "tarvoka_infantry_integrated_face_v8"
+
+# Native V7 renders exposed the two spherical cheeks and a rectangular
+# brow above the visor. Replace these with a continuous protective lower
+# mask and a fitted, closed brow. Reuse mesh nodes/materials, preserve rig.
+static func _refine_face_and_profile(model: Node3D,hero: bool) -> bool:
+    var role: String=str(model.get_meta("tarvoka_infantry_role",""))
+    var sides: int=20 if hero else 12
+    var mask_width: float=0.183
+    var brow_width: float=0.224
+    var mask_color: Color=Color("#45544f")
+    var mask_depth: float=0.105
+    match role:
+        "line":
+            mask_color=Color("#47564f")
+        "infantry_commando":
+            mask_width=0.198
+            brow_width=0.238
+            mask_color=Color("#303e44")
+            mask_depth=0.121
+        "infantry_sniper":
+            mask_width=0.182
+            brow_width=0.205
+            mask_color=Color("#465944")
+        "infantry_logistic":
+            mask_width=0.192
+            brow_width=0.229
+            mask_color=Color("#545d4a")
+        "infantry_medic":
+            mask_width=0.177
+            brow_width=0.214
+            mask_color=Color("#62716c")
+        _:
+            return false
+    if not _resculpt(model,"V2_ProteccionBarbilla",[
+            Vector3(mask_width*0.59,0.022,mask_depth*0.61),
+            Vector3(mask_width*0.88,0.061,mask_depth*0.91),
+            Vector3(mask_width,0.112,mask_depth),
+            Vector3(mask_width*0.98,0.167,mask_depth*0.88),
+            Vector3(mask_width*0.83,0.197,mask_depth*0.65)],
+            Vector3(0,0,-0.168),sides,PackedFloat32Array([0.04,0.012,0.0,0.0,0.018]),0.76):
+        return false
+    var mask: MeshInstance3D=_find(model,"V2_ProteccionBarbilla") as MeshInstance3D
+    mask.material_override=_coat(mask_color,0.02,0.84)
+    for side in [-1,1]:
+        _hide(model,"V2_Mejilla_%d"%side)
+        var ear: MeshInstance3D=_find(model,"V2_OrejeraMoldeada_%d"%side) as MeshInstance3D
+        if ear!=null:
+            ear.scale=Vector3(0.083,0.185,0.195)
+            ear.position=Vector3(float(side)*0.271,0.266,0.015)
+        var pin: Node3D=_find(model,"V2_OrejerasFijacion_%d"%side)
+        if pin!=null:
+            pin.position=Vector3(float(side)*0.309,0.25,0.015)
+            pin.scale=Vector3(1,0.74,0.71)
+        _hide(model,"HebillaBota_%d"%side)
+        var side_pouch: MeshInstance3D=_find(model,"BolsilloPierna_%d"%side) as MeshInstance3D
+        if side_pouch!=null:
+            side_pouch.mesh=_organic_mesh([Vector3(0.027,-0.10,0.077),
+                Vector3(0.043,-0.067,0.092),Vector3(0.043,0.065,0.092),
+                Vector3(0.027,0.10,0.077)],sides,PackedFloat32Array(),0.55)
+            side_pouch.scale=Vector3.ONE
+    # The brow follows the shell rather than projecting as a wide slab.
+    if not _resculpt(model,"V2_BordeFrontalCasco",[
+            Vector3(brow_width*0.87,-0.035,0.047),
+            Vector3(brow_width,-0.012,0.058),
+            Vector3(brow_width*0.96,0.020,0.057),
+            Vector3(brow_width*0.76,0.044,0.037)],
+            Vector3(0,0.354,-0.234),sides,PackedFloat32Array(),0.56):
+        return false
+    # Seat the chest and shoulder faction identifiers on actual surfaces.
+    # Do not alter the exact faction paint. Keep them prominent at LOD8.
+    var chest: MeshInstance3D=_find(model,"V2_CorazaPectoralHermetica") as MeshInstance3D
+    var mark: Node3D=_find(model,"V2_FaccionPechoArticulada")
+    if chest!=null and mark!=null:
+        mark.position.z=chest.position.z+chest.mesh.get_aabb().position.z*chest.scale.z-0.010
+    for side in [-1,1]:
+        var shoulder: Node3D=_find(model,"FaccionHombro_%d"%side)
+        if shoulder!=null:
+            shoulder.position=Vector3(float(side)*0.147,-0.029,-0.04)
+            shoulder.scale=Vector3(1,0.64,0.68)
+    model.set_meta(SCULPT_V8,role)
+    return true
+
 const SURFACE_V7 := "tarvoka_infantry_material_finish_v7"
 const DAMAGE_V7 := "tarvoka_infantry_visual_damage_v7"
 const CLEAN_MAT := "tarvoka_infantry_v7_clean_material"
@@ -296,9 +379,9 @@ static func _family_texture(kind: String) -> ImageTexture:
 static func _finish_kind(label: String) -> String:
     if label in ["V2_CascoEsferoideCerrado","V2_CorazaPectoralHermetica"] or label.begins_with("Hombrera_") or label.begins_with("Rodillera_"):
         return "armor"
-    if label in ["PetoBase","CinturaEquipo","V2_MochilaOrganica","CuelloProtegido"] or label.begins_with("V2_MangaCerrada_") or label.begins_with("V2_AntebrazoCerrado_") or label.begins_with("V2_MusloTaper_") or label.begins_with("V2_PantorrillaTaper_"):
+    if label in ["PetoBase","CinturaEquipo","V2_MochilaOrganica","CuelloProtegido","V2_ProteccionBarbilla"] or label.begins_with("V2_MangaCerrada_") or label.begins_with("V2_AntebrazoCerrado_") or label.begins_with("V2_MusloTaper_") or label.begins_with("V2_PantorrillaTaper_"):
         return "fabric"
-    if label.begins_with("V2_BotaMoldeada_") or label.begins_with("V2_Suela_") or label.begins_with("V2_PalmaGuante_"):
+    if label.begins_with("V2_BotaMoldeada_") or label.begins_with("V2_Suela_") or label.begins_with("V2_PalmaGuante_") or label=="V2_BordeFrontalCasco":
         return "rubber"
     return ""
 

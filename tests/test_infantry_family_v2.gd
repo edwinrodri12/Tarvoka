@@ -232,6 +232,17 @@ func _run() -> void:
                         "V6 role-specific head and chest")
                     check(bool(model.get_meta(Finish.SURFACE_V7,false)),
                         "V7 native material finish applied")
+                    check(str(model.get_meta(Finish.SCULPT_V8,""))==role,
+                        "V8 face integrated on exact role")
+                    if role=="line":
+                        check(is_zero_approx(model.position.y),"Guardia no longer inherits below-ground proxy offset")
+                    for name in ["V2_ProteccionBarbilla","V2_BordeFrontalCasco"]:
+                        var face: MeshInstance3D=model.find_child(name,true,false) as MeshInstance3D
+                        check(face!=null and face.visible and face.mesh is ArrayMesh and closed_solid(face.mesh),
+                            "V8 integrated sealed face part "+name)
+                    for side in [-1,1]:
+                        var cheek: Node3D=model.find_child("V2_Mejilla_%d"%side,true,false) as Node3D
+                        check(cheek!=null and not cheek.visible,"old floating cheek removed")
                     var helmet_surface: MeshInstance3D=model.find_child("V2_CascoEsferoideCerrado",true,false) as MeshInstance3D
                     if helmet_surface!=null:
                         var clean: StandardMaterial3D=helmet_surface.material_override as StandardMaterial3D
@@ -424,7 +435,12 @@ func _run() -> void:
                         for damage in [2,4]:
                             check(Infantry.set_damage(hero,damage) and Models.pose_model(role,hero,"idle",0.0),
                                 "V7 damage capture")
+                            if damage==4:
+                                camera.position=Vector3(3.3,1.6,4.2)
+                                camera.look_at(Vector3(0.85,0.22,0),Vector3.UP)
                             await save_frame(view,"v7_%s_damage_%d"%[role,damage])
+                            camera.position=Vector3(2.5,2.35,4.2)
+                            camera.look_at(Vector3(0,1.0,0),Vector3.UP)
                         Models.restore_model_pose(role,hero)
                 hero.get_parent().remove_child(hero)
             # Tactical camera uses the SAME real renderer with reduced
