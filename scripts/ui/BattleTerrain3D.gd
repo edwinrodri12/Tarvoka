@@ -130,12 +130,10 @@ static func _shared_corner_tint(cells: Dictionary, corner: Vector2i,
                 kind,corner+Vector2i(dx,dy),biome)
             var weight := 1.0
             if kind == "water":
-                tint = Color("#c6dce0") if biome == Biomes.WINTER else (
-                    Color("#bbaa89") if biome != Biomes.COASTAL else Color("#7aa99b"))
+                tint = _shore_color(biome)
                 weight = 0.74
             elif kind == "road":
-                tint = Color("#abbac0") if biome == Biomes.WINTER else (
-                    Color("#999481") if biome != Biomes.CANYON else Color("#b79b76"))
+                tint = Biomes.ROAD_SLUSH if biome==Biomes.WINTER else _road_color(biome).lerp(_biome_color("plain",corner,biome),0.58)
                 weight = 0.88
             total += tint*weight
             weight_sum += weight
@@ -214,6 +212,12 @@ static func _finish(parent: Node3D, label: String,
     parent.add_child(mesh)
 
 static func _road_color(biome: String) -> Color:
+    if biome == Biomes.WETLAND:
+        return Color("#786c59")
+    if biome == Biomes.URBAN:
+        return Color("#4d555c")
+    if biome == Biomes.ARCHIPELAGO:
+        return Color("#9c8d76")
     if biome == Biomes.WINTER:
         return Biomes.ROAD_DARK
     if biome == Biomes.TROPICAL:
@@ -227,6 +231,12 @@ static func _road_color(biome: String) -> Color:
     return Color("#5f6566")
 
 static func _shore_color(biome: String) -> Color:
+    if biome == Biomes.WETLAND:
+        return Color("#8a8962")
+    if biome == Biomes.URBAN:
+        return Color("#a0a6a1")
+    if biome == Biomes.ARCHIPELAGO:
+        return Color("#e9d9aa")
     if biome == Biomes.WINTER:
         return Biomes.FROZEN_SHORE
     if biome == Biomes.TROPICAL:
@@ -330,6 +340,28 @@ static func _append_sand_ripples(tool: SurfaceTool,at: Vector3,
         RoadShore._rect(tool,at,surface,-0.83,0.83,z,z+0.055,
             Color("#c9a16a") if i%2==0 else Color("#ecd09a"),0.016)
 
+# V31–V33: surface details follow the actual ground, never add sites.
+static func _append_extended_ground(tool: SurfaceTool,at: Vector3,
+        surface: Dictionary,cell: Vector2i,biome: String) -> void:
+    if biome==Biomes.WETLAND:
+        for i in range(2):
+            var x: float = -0.68+float(i)*0.82
+            var z: float = -0.45+float(posmod(cell.x+cell.y+i,4))*0.18
+            RoadShore._rect(tool,at,surface,x,x+0.43,z,z+0.25,
+                Color("#6d7358"),0.016)
+    elif biome==Biomes.URBAN:
+        for i in range(2):
+            var x: float = -0.87+float(i)*0.91
+            RoadShore._rect(tool,at,surface,x,x+0.83,-0.82,0.82,
+                Color("#a8aba4") if i==0 else Color("#969b99"),0.020)
+            RoadShore._rect(tool,at,surface,x,x+0.83,-0.018,0.018,
+                Color("#696f70"),0.028)
+    elif biome==Biomes.ARCHIPELAGO:
+        for i in range(2):
+            var z: float = -0.45+float(i)*0.65
+            RoadShore._rect(tool,at,surface,-0.72,0.72,z,z+0.04,
+                Color("#cabd92"),0.016)
+
 static func _build_chunk(parent: Node3D, data: Dictionary,
         cells: Dictionary,corner_cache: Dictionary,
         biome: String = Biomes.TEMPERATE,water_cache: Dictionary = {},
@@ -416,6 +448,8 @@ static func _build_chunk(parent: Node3D, data: Dictionary,
             "half":half,"corners":corners}
         if kind=="plain" and biome==Biomes.DESERT:
             _append_sand_ripples(ground,at,surface_cell,cell)
+        elif kind=="plain" and biome in [Biomes.WETLAND,Biomes.URBAN,Biomes.ARCHIPELAGO]:
+            _append_extended_ground(ground,at,surface_cell,cell,biome)
         if kind == "road":
             _append_road_finish(road,at,surface_cell,tile,biome)
             roads_count += 1
@@ -493,6 +527,38 @@ static func _append_tropical_palm(tool: SurfaceTool) -> void:
         _tri_tinted(tool,middle,middle+side,tip,leaf.lightened(0.20),leaf,leaf.darkened(0.18))
         _tri_tinted(tool,middle,middle-side,tip,leaf.lightened(0.20),leaf,leaf.darkened(0.18))
 
+# Wetland reeds and urban broadleaf crowns use the same instancing path.
+static func _append_reeds(tool: SurfaceTool) -> void:
+    for i in range(7):
+        var a: float = TAU*float(i)/7.0
+        var radial := Vector3(cos(a),0,sin(a))
+        var side := Vector3(-sin(a),0,cos(a))*0.045
+        var base: Vector3 = radial*0.13+Vector3(0,-0.32,0)
+        var tip: Vector3 = radial*0.29+Vector3(0,0.44+0.08*float(i%3),0)
+        _tri_tinted(tool,base-side,base+side,tip,Color("#526a3e"),
+            Color("#78834e"),Color("#a2a26a"))
+        var head: Vector3 = tip-Vector3.UP*0.08
+        _panel(tool,head-side*1.35,head+side*1.35,
+            head+side*1.35+Vector3.UP*0.15,head-side*1.35+Vector3.UP*0.15,
+            Color("#8d6d42"))
+
+static func _append_urban_tree(tool: SurfaceTool) -> void:
+    var bottom := Vector3(0,-0.32,0)
+    var top := Vector3(0,0.32,0)
+    for i in range(6):
+        var a: float = TAU*float(i)/6.0
+        var b: float = TAU*float(i+1)/6.0
+        var u := Vector3(cos(a),0,sin(a))
+        var v := Vector3(cos(b),0,sin(b))
+        _panel(tool,bottom+u*0.065,bottom+v*0.065,
+            top+v*0.04,top+u*0.04,Color("#75634e"))
+        var edge_a: Vector3 = top+u*0.42+Vector3.UP*0.18
+        var edge_b: Vector3 = top+v*0.42+Vector3.UP*0.18
+        _tri_tinted(tool,top-Vector3.UP*0.08,edge_b,edge_a,
+            Color("#48633d"),Color("#60784e"),Color("#70875c"))
+        _tri_tinted(tool,edge_a,edge_b,top+Vector3.UP*0.61,
+            Color("#6d8458"),Color("#7b9165"),Color("#a2ad79"))
+
 static func _make_cone_trees(parent: Node3D,cells: Dictionary,
         biome: String = Biomes.TEMPERATE) -> int:
     var positions: Array[Transform3D] = []
@@ -513,9 +579,13 @@ static func _make_cone_trees(parent: Node3D,cells: Dictionary,
             if biome==Biomes.DESERT:
                 crown *= 1.13
                 height_scale *= 0.48
-            elif biome==Biomes.TROPICAL:
+            elif biome in [Biomes.TROPICAL,Biomes.ARCHIPELAGO]:
                 crown *= 0.85
                 height_scale *= 1.12
+            elif biome==Biomes.WETLAND:
+                height_scale *= 0.72
+            elif biome==Biomes.URBAN:
+                crown *= 0.85
             var rotated := Basis(Vector3.UP,angle).scaled(
                 Vector3(scale*crown,scale*height_scale,scale*crown))
             at.y = height_at(cells,cell,shift.x,shift.y)+0.32*scale*height_scale
@@ -529,8 +599,12 @@ static func _make_cone_trees(parent: Node3D,cells: Dictionary,
         Color("#2e7665") if biome==Biomes.COASTAL else Color("#396b4c"))
     var tree_mesh := SurfaceTool.new()
     tree_mesh.begin(Mesh.PRIMITIVE_TRIANGLES)
-    if biome==Biomes.TROPICAL:
+    if biome in [Biomes.TROPICAL,Biomes.ARCHIPELAGO]:
         _append_tropical_palm(tree_mesh)
+    elif biome==Biomes.WETLAND:
+        _append_reeds(tree_mesh)
+    elif biome==Biomes.URBAN:
+        _append_urban_tree(tree_mesh)
     else:
         for layer in range(2 if biome==Biomes.DESERT else 3):
             var radius: float = 0.45-float(layer)*0.10
@@ -631,6 +705,9 @@ static func _make_mountain_ridges(parent: Node3D,cells: Dictionary,
     var light: Color = rock.lightened(0.12)
     var crest: Color = (
         Biomes.SNOW if biome==Biomes.WINTER else
+        Color("#96977d") if biome==Biomes.WETLAND else
+        Color("#b4b8b6") if biome==Biomes.URBAN else
+        Color("#c3b99d") if biome==Biomes.ARCHIPELAGO else
         Color("#7e9970") if biome==Biomes.TROPICAL else
         Color("#e1ab79") if biome==Biomes.DESERT else
         Color("#c2ac89") if biome==Biomes.CANYON else
