@@ -1062,6 +1062,22 @@ static func _destroyer_repaint_hull(root: Node3D, paint: Color) -> int:
 
 # Only the naval model receives this opaque surface treatment. No textures,
 # transparency, real-world systems or battle logic are introduced.
+static var _destroyer_steel_texture: ImageTexture
+
+static func _destroyer_grain() -> ImageTexture:
+    if _destroyer_steel_texture != null:
+        return _destroyer_steel_texture
+    var img: Image = Image.create(64,64,false,Image.FORMAT_RGBA8)
+    for y in range(64):
+        for x in range(64):
+            var grain: float = float((x*37+y*73+x*y*11)%31)/30.0
+            var streak: float = 0.5+0.5*sin(float(x)*1.18+float(y)*0.06)
+            var shade: float = 0.91+0.055*grain+0.035*streak
+            img.set_pixel(x,y,Color(shade,shade,shade,1.0))
+    img.generate_mipmaps()
+    _destroyer_steel_texture = ImageTexture.create_from_image(img)
+    return _destroyer_steel_texture
+
 static func _destroyer_finish(node: Node, detail: bool) -> void:
     if node is MeshInstance3D:
         var part: MeshInstance3D = node as MeshInstance3D
@@ -1096,13 +1112,16 @@ static func _destroyer_finish(node: Node, detail: bool) -> void:
                 mat.emission_enabled = true
                 mat.emission = mat.albedo_color
                 mat.emission_energy_multiplier = 0.8
+            if detail and (label in ["CascoNaval","Cubierta","CarcasaInferior","TechoPuente","CarcasaMastil","CarcasaTorreta"]):
+                mat.albedo_texture = _destroyer_grain()
+                mat.uv1_scale = Vector3(4.0,4.0,1.0)
             part.set_meta("destroyer_surface_v15",true)
     for child in node.get_children():
         _destroyer_finish(child,detail)
 
 # Native solid bridge: compact footprint between existing forward deck
 # equipment and aft landing area. Windows are opaque inserts, not planes.
-static func _destroyer_bridge(root: Node3D) -> void:
+static func _destroyer_bridge(root: Node3D, art_level: int) -> void:
     var bridge: Node3D = Node3D.new()
     bridge.name = "Superestructura"
     root.add_child(bridge)
@@ -1145,6 +1164,25 @@ static func _destroyer_bridge(root: Node3D) -> void:
             Vector3(0.021,0.055,0.025),METAL)
     _box(bridge,"ApoyoMastil",Vector3(0,1.55,0.28),
         Vector3(0.29,0.08,0.29),DARK)
+    # Aft-facing inspection and service details, attached to the existing wall.
+    _box(bridge,"MarcoPosterior",Vector3(0,1.045,0.702),
+        Vector3(0.31,0.21,0.034),DARK)
+    _box(bridge,"PuertaPosterior",Vector3(0,1.045,0.724),
+        Vector3(0.25,0.17,0.019),STEEL)
+    _box(bridge,"TiradorPosterior",Vector3(0.083,1.045,0.742),
+        Vector3(0.025,0.060,0.019),METAL)
+    if art_level >= 13:
+        for side in [-1,1]:
+            var sign: float = float(side)
+            _box(bridge,"MarcoVentilacion_%d" % side,Vector3(sign*0.385,1.035,0.32),
+                Vector3(0.036,0.115,0.16),DARK)
+            for i in range(4):
+                _box(bridge,"LamaVentilacion_%d_%d" % [side,i],
+                    Vector3(sign*0.408,0.993+float(i)*0.027,0.32),
+                    Vector3(0.020,0.012,0.13),METAL)
+        for i in range(3):
+            _box(bridge,"RefuerzoPosterior_%d" % i,Vector3(-0.18+float(i)*0.18,1.35,0.662),
+                Vector3(0.032,0.13,0.035),STEEL)
 
 # Fictional game-art deck modules; no weapon specifications or game rules.
 static func _destroyer_deck_equipment(root: Node3D, art_level: int) -> void:
@@ -1388,8 +1426,8 @@ static func _destroyer(root: Node3D, art_level: int = 10) -> void:
     for station in stations:
         deck_stations.append([station[0],station[1]*0.86,0.738,0.802])
     _destroyer_shell(root,"Cubierta",deck_stations,ARMOR)
-    root.set_meta("destroyer_art_revision","1.9")
-    _destroyer_bridge(root)
+    root.set_meta("destroyer_art_revision","1.10")
+    _destroyer_bridge(root,art_level)
     _destroyer_navigation(root,art_level)
     _destroyer_deck_equipment(root,art_level)
     _destroyer_aft(root,art_level)
@@ -1442,6 +1480,13 @@ static func _destroyer_damage_setup(root: Node3D, art_level: int) -> void:
         Vector3(0.14,0.16,0.14),Color("#FFD9A1")).hide()
     _sphere(fx,"ImpactoAmplio",Vector3(0.39,0.91,-0.72),
         Vector3(0.36,0.31,0.34),Color("#F19456")).hide()
+    # Marks on the exposed walkways, rather than underneath deck equipment.
+    for side in [-1,1]:
+        var sign: float = float(side)
+        _box(fx,"MarcaCostado_%d" % side,Vector3(sign*0.60,0.824,-0.65),
+            Vector3(0.10,0.018,0.21),Color("#30363B"),Vector3(0,side*22,0)).hide()
+        _box(fx,"Quemadura_%d" % side,Vector3(sign*0.24,0.86,1.18),
+            Vector3(0.22,0.018,0.23),Color("#393031"),Vector3(0,side*16,0)).hide()
     var lid: Node3D = root.get_node("ModuloCubierta/TapaModulo_3_2") as Node3D
     lid.set_meta("naval_rest_transform",lid.transform)
     for child in root.get_children():
@@ -1465,7 +1510,7 @@ static func set_destroyer_damage(root: Node3D, stage: int, progress: float = 0.0
         var label: String = str(child.name)
         if child.has_meta("destroyer_fx_rest"):
             (child as Node3D).transform = child.get_meta("destroyer_fx_rest")
-        (child as Node3D).visible = (label.begins_with("Marca") and d>=1) or (label.begins_with("Humo") and d>=2) or (label.begins_with("Fuego") and d>=3) or (label=="FragmentoCubierta" and d>=3)
+        (child as Node3D).visible = (label.begins_with("Marca") and d>=1) or (label.begins_with("Humo") and d>=2) or (label.begins_with("Fuego") and d>=3) or (label=="FragmentoCubierta" and d>=3) or (label.begins_with("Quemadura") and d>=3)
     var mast: Node3D = root.get_node("TorreMastil") as Node3D
     var bridge: Node3D = root.get_node("Superestructura") as Node3D
     var lid: Node3D = root.get_node("ModuloCubierta/TapaModulo_3_2") as Node3D
