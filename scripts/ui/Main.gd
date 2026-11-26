@@ -680,6 +680,7 @@ func _ready() -> void:
     for id in range(Scenarios.LABELS.size()):
         scenario_picker.add_item(Scenarios.label(id), id)
     scenario_picker.add_item(Scenarios.label(Scenarios.RANDOM_SCENARIO_ID), Scenarios.RANDOM_SCENARIO_ID)
+    scenario_picker.add_item(Scenarios.label(Scenarios.GEOGRAPHIC_SCENARIO_ID), Scenarios.GEOGRAPHIC_SCENARIO_ID)
     scenario_picker.select(board.current_scenario_id)
     panel.add_child(scenario_picker)
     var biome_heading := Label.new()
@@ -2166,7 +2167,7 @@ func _new_game() -> void:
     var map_name: String = "%s (%d × %d)" % [Scenarios.label(scenario_picker.get_selected_id()),dimensions.x,dimensions.y]
     var biome_name: String = Winter.label_for(
         Winter.from_index(biome_picker.get_selected_id()))
-    if scenario_picker.get_selected_id() == Scenarios.RANDOM_SCENARIO_ID:
+    if Scenarios.uses_seed(scenario_picker.get_selected_id()):
         map_name += " (semilla %d)" % int(map_seed_picker.value)
     new_game_dialog.dialog_text = "Iniciar %s en modo %s con %s, %s, %s, bioma %s, clima %s y objetivo %s? Comienza %s. Se reemplaza el autoguardado. La partida manual se conserva." % [map_name, mode_name, roster_name, fog_name, urban_name, biome_name, weather_name, objective_name, starter_name]
     var match_identity: Dictionary = _pending_visual_factions if Identity.is_valid(_pending_visual_factions) else Identity.from_state(board.state)
@@ -2185,7 +2186,7 @@ func _confirm_new_game() -> void:
     if economy_picker.get_selected_id() == 1 and roster_picker.get_selected_id() == 0:
         board.message = "La economia requiere formacion experimental."
         return
-    var seed: int = int(map_seed_picker.value) if scenario_picker.get_selected_id() == Scenarios.RANDOM_SCENARIO_ID else 0
+    var seed: int = int(map_seed_picker.value) if Scenarios.uses_seed(scenario_picker.get_selected_id()) else 0
     var next_identity: Dictionary = _pending_visual_factions if Identity.is_valid(_pending_visual_factions) else (Identity.from_state(board.state) if board.state.has(Identity.STATE_FIELD) else {})
     board.new_game(scenario_picker.get_selected_id(), balance_picker.get_selected_id() == 1, fog_picker.get_selected_id() == 1, relay_picker.get_selected_id() == 1, roster_picker.get_selected_id() != 0, economy_picker.get_selected_id() == 1, roster_picker.get_selected_id() == 2, first_picker.get_selected_id(), seed, _selected_map_size(), next_identity,
         str(Weather.TYPES[weather_picker.get_selected_id()]),
@@ -2211,7 +2212,8 @@ func _reroll_map_seed() -> void:
     if next == previous:
         next = (next % Scenarios.MAX_SEED) + 1
     map_seed_picker.value = next
-    scenario_picker.select(Scenarios.RANDOM_SCENARIO_ID)
+    if not Scenarios.uses_seed(scenario_picker.get_selected_id()):
+        scenario_picker.select(Scenarios.RANDOM_SCENARIO_ID)
 
 func _cancel_selection() -> void:
     board.cancel_selection()
