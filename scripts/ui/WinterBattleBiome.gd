@@ -11,9 +11,10 @@ const WINTER := "winter"
 const CANYON := "canyon"
 const COASTAL := "coastal"
 const DESERT := "desert"
+const TROPICAL := "tropical"
 # Preserve historic index 1 = winter. New schemes are appended.
-const CHOICES := [TEMPERATE, WINTER, CANYON, COASTAL, DESERT]
-const LABELS := ["Valle boscoso", "Nevado V19", "Canon rocoso", "Delta costero", "Desierto de dunas"]
+const CHOICES := [TEMPERATE, WINTER, CANYON, COASTAL, DESERT, TROPICAL]
+const LABELS := ["Valle boscoso", "Nevado V19", "Canon rocoso", "Delta costero", "Desierto de dunas", "Selva tropical"]
 
 static func from_index(index: int) -> String:
     return str(CHOICES[clampi(index,0,CHOICES.size()-1)])
@@ -48,7 +49,14 @@ static func tile_color(kind: String,x: int,y: int,
     # faction/team information is used. Existing grass/rocks stay unchanged
     # in temperate games, including every historical save.
     var grain: float = float(posmod(x*37+y*59,11))/10.0
-    if biome == DESERT:
+    if biome == TROPICAL:
+        match kind:
+            "plain": return Color("#63944f").lerp(Color("#88ab55"),0.25*grain)
+            "forest": return Color("#285a39").lerp(Color("#477d4c"),0.22*grain)
+            "mountain": return Color("#536c52").lerp(Color("#819072"),0.22*grain)
+            "road": return Color("#886f50")
+            "water": return Color("#226d6d").lerp(Color("#45958b"),0.18*grain)
+    elif biome == DESERT:
         match kind:
             "plain": return Color("#d9b679").lerp(Color("#efd39a"),0.28*grain)
             "forest": return Color("#b4aa69").lerp(Color("#bfc287"),0.22*grain)
@@ -191,6 +199,37 @@ static func _draw_desert(canvas: CanvasItem,kind: String,
                 _line(canvas,center,s,Vector2(-0.75,y),Vector2(0.45,y+0.06),
                     Color("#8cc7b1"),0.07)
 
+static func _draw_tropical(canvas: CanvasItem,kind: String,
+        center: Vector2,s: float) -> void:
+    if kind=="forest":
+        for offset in [Vector2(-0.45,0.10),Vector2(0.38,-0.04)]:
+            var at: Vector2 = center+offset*s
+            _line(canvas,at,s,Vector2(0,0.30),Vector2(0,-0.65),Color("#66533d"),0.13)
+            for j in range(5):
+                var a: float = TAU*float(j)/5.0
+                var end: Vector2 = Vector2(cos(a)*0.53,sin(a)*0.26-0.60)
+                _line(canvas,at,s,Vector2(0,-0.62),end,Color("#397846"),0.20)
+                _line(canvas,at,s,Vector2(0,-0.63),end,Color("#86a35b"),0.04)
+    elif kind=="mountain":
+        _poly(canvas,center,s,[[-0.99,0.50],[-0.37,-0.91],
+            [0.16,-0.60],[0.95,0.50]],Color("#52694f"))
+        _poly(canvas,center,s,[[-0.37,-0.91],[0.16,-0.60],[0.95,0.50],
+            [0.06,0.22]],Color("#829177"))
+    elif kind=="road":
+        _line(canvas,center,s,Vector2(-0.95,-0.18),Vector2(0.95,0.18),
+            Color("#b39a68"),0.42)
+        _line(canvas,center,s,Vector2(-0.95,-0.18),Vector2(0.95,0.18),
+            Color("#886f50"),0.27)
+    elif kind=="water":
+        for j in range(3):
+            var y: float = -0.34+float(j)*0.27
+            _line(canvas,center,s,Vector2(-0.74,y),Vector2(0.52,y+0.05),
+                Color("#7bb7a2"),0.05)
+    else:
+        for x in [-0.5,0.18,0.60]:
+            _line(canvas,center,s,Vector2(x,0.26),Vector2(x+0.10,0.02),
+                Color("#477847"),0.08)
+
 static func draw_biome_iso(canvas: CanvasItem,kind: String,
         center: Vector2,half_width: float,seed: int,biome: String) -> void:
     if biome == WINTER:
@@ -199,6 +238,9 @@ static func draw_biome_iso(canvas: CanvasItem,kind: String,
     var s: float = half_width*0.56
     if biome == DESERT:
         _draw_desert(canvas,kind,center,s)
+        return
+    if biome==TROPICAL:
+        _draw_tropical(canvas,kind,center,s)
         return
     var rock: Color = Color("#957864") if biome==CANYON else Color("#778d86")
     var foliage: Color = Color("#8e8a59") if biome==CANYON else Color("#346f63")
@@ -242,6 +284,9 @@ static func draw_biome_classic(canvas: CanvasItem,kind: String,
     var s: float = tile*0.30
     if biome == DESERT:
         _draw_desert(canvas,kind,c,s)
+        return
+    if biome==TROPICAL:
+        _draw_tropical(canvas,kind,c,s)
         return
     var rock: Color = Color("#a1876b") if biome==CANYON else Color("#708b80")
     var foliage: Color = Color("#95925d") if biome==CANYON else Color("#36735f")
