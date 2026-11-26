@@ -730,6 +730,14 @@ func _run() -> void:
                             await save_frame(view,"v9_%s_kit_rear"%role)
                             hero.rotation_degrees.y=180
                             await save_frame(view,"v9_%s_kit_front"%role)
+                            camera.size=1.65
+                            hero.rotation_degrees.y=45
+                            await save_frame(view,"v20_%s_accessory_rear_angle"%role)
+                            hero.rotation_degrees.y=135
+                            if role in ["infantry_logistic","infantry_medic"]:
+                                check(Models.pose_model(role,hero,"work",0.5),"V20 service prop capture")
+                            await save_frame(view,"v20_%s_accessory_front_angle"%role)
+                            Models.restore_model_pose(role,hero)
                         camera.size=1.25
                         camera.position=Vector3(1.35,2.6,2.1)
                         camera.look_at(Vector3(0,1.95,0),Vector3.UP)
@@ -815,6 +823,10 @@ func _run() -> void:
                             check(Models.pose_model(role,hero,action,0.4),"V10 actual impact render")
                             await save_frame(view,"v10_%s_%s"%[role,action])
                             Models.restore_model_pose(role,hero)
+                        for action in ["move","hit_explosive"]:
+                            check(Models.pose_model(role,hero,action,0.60),"V22 late effect sample")
+                            await save_frame(view,"v22_%s_%s_late"%[role,action])
+                            Models.restore_model_pose(role,hero)
                         for damage in [2,4]:
                             check(Infantry.set_damage(hero,damage) and Models.pose_model(role,hero,"idle",0.0),
                                 "V7 damage capture")
@@ -861,7 +873,7 @@ func _run() -> void:
     await save_frame(view,"v15_six_official_rear")
     for unit in lineup:
         unit.free()
-    check(rendered==170,"170 real 3D comparison / tactical frames")
+    check(rendered==188,"188 real 3D comparison / tactical frames")
     # Art-only variants must never enter the tactical roster.
     for role in ["infantry_urban","infantry_defense",
             "infantry_antitank","infantry_engineer",
@@ -872,5 +884,5 @@ func _run() -> void:
         push_error("FAIL INFANTRY V2 NATIVE 3D: %d failures"%failed)
         quit(1)
     else:
-        print("PASS INFANTRY V2 NATIVE 3D: 160 models (6 core + 4 legacy), 8 factions, 2 LOD, 170 true PNG")
+        print("PASS INFANTRY V2 NATIVE 3D: 160 models (6 core + 4 legacy), 8 factions, 2 LOD, 188 true PNG")
         quit(0)
