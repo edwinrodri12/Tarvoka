@@ -804,12 +804,16 @@ static func family_sole_floor(model: Node3D) -> float:
             relative=node.transform*relative
             node=node.get_parent() as Node3D
         var vertices: PackedVector3Array=sole.get_meta(SOLE_VERTICES_V12,PackedVector3Array())
+        # Only the vertical component is needed; project the cached
+        # vertices onto the exact Y row of the composed transform.
+        var vertical:=Vector3(relative.basis.x.y,relative.basis.y.y,relative.basis.z.y)
+        var offset: float=relative.origin.y
         if vertices.is_empty():
             for corner in range(8):
-                floor_y=minf(floor_y,(relative*bounds.get_endpoint(corner)).y)
+                floor_y=minf(floor_y,vertical.dot(bounds.get_endpoint(corner))+offset)
         else:
             for vertex in vertices:
-                floor_y=minf(floor_y,(relative*vertex).y)
+                floor_y=minf(floor_y,vertical.dot(vertex)+offset)
     return floor_y
 
 const MOTION_V21 := "tarvoka_infantry_role_motion_v21"
@@ -1616,7 +1620,9 @@ static func _family_fx_batch(model: Node3D) -> MultiMeshInstance3D:
     return batch
 
 static func _family_anchor(model: Node3D,rig: String,point: Vector3) -> Vector3:
-    var node: Node3D=_find(model,rig)
+    return _family_node_anchor(model,_find(model,rig),point)
+
+static func _family_node_anchor(model: Node3D,node: Node3D,point: Vector3) -> Vector3:
     while node!=null and node!=model:
         point=node.transform*point
         node=node.get_parent() as Node3D
@@ -1657,7 +1663,20 @@ static func _family_fx(model: Node3D,kind: String,t: float,stage: int) -> void:
         if not explosive:
             count=mini(count,pool.instance_count >> 1)
         var p: float=clampf((t-0.08)/0.77,0.0,1.0)
-        var origin: Vector3=_family_anchor(model,"TorsoRig",Vector3(0,0,-0.43))
+        var origin: Vector3=Vector3.ZERO
+        var sole_contacts: Array[Vector3]=[]
+        if dust:
+            # Resolve each sole once per frame, not once per dust instance.
+            for side in [-1,1]:
+                var sole: MeshInstance3D=_find(model,"V2_Suela_%d"%side) as MeshInstance3D
+                var contact:=Vector3(float(side)*0.21,0.04,0.13)
+                if sole!=null and sole.mesh!=null:
+                    var bounds: AABB=sole.mesh.get_aabb()
+                    contact=_family_node_anchor(model,sole,Vector3(
+                        bounds.get_center().x,bounds.position.y,bounds.get_center().z))
+                sole_contacts.append(contact)
+        else:
+            origin=_family_anchor(model,"TorsoRig",Vector3(0,0,-0.43))
         for i in range(count):
             var angle: float=float(i)*2.399963
             var radius: float=(0.36 if explosive else 0.18)*p
@@ -1672,13 +1691,7 @@ static func _family_fx(model: Node3D,kind: String,t: float,stage: int) -> void:
                 var side: float=-1.0 if i%2==0 else 1.0
                 # Dust follows the actual animated outsole instead of a
                 # fixed point at the model root.
-                var sole: MeshInstance3D=_find(model,"V2_Suela_%d"%int(side)) as MeshInstance3D
-                if sole!=null and sole.mesh!=null:
-                    var bounds: AABB=sole.mesh.get_aabb()
-                    var contact: Vector3=Vector3(bounds.get_center().x,bounds.position.y,bounds.get_center().z)
-                    at=_family_anchor(model,str(sole.name),contact)+Vector3(side*0.10*p,0.04+0.10*p,0.15*p)
-                else:
-                    at=Vector3(side*0.21,0.08,0.13)
+                at=sole_contacts[i%2]+Vector3(side*0.10*p,0.04+0.10*p,0.15*p)
                 size=0.14*(1.0-0.45*p)
                 dims=Vector3(size*1.4,size*0.65,size*1.4)
                 shade=Color("#b2a18c")
