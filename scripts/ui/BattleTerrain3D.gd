@@ -216,6 +216,8 @@ static func _finish(parent: Node3D, label: String,
 static func _road_color(biome: String) -> Color:
     if biome == Biomes.WINTER:
         return Biomes.ROAD_DARK
+    if biome == Biomes.TROPICAL:
+        return Color("#886f50")
     if biome == Biomes.DESERT:
         return Color("#8a735b")
     if biome == Biomes.CANYON:
@@ -227,6 +229,8 @@ static func _road_color(biome: String) -> Color:
 static func _shore_color(biome: String) -> Color:
     if biome == Biomes.WINTER:
         return Biomes.FROZEN_SHORE
+    if biome == Biomes.TROPICAL:
+        return Color("#91a67b")
     if biome == Biomes.DESERT:
         return Color("#e3c28c")
     if biome == Biomes.CANYON:
@@ -463,6 +467,32 @@ static func _build_chunk(parent: Node3D, data: Dictionary,
 
 # V20b: use one reusable 21-facet layered fir mesh, NOT hundreds of
 # separate trees. Snow is painted directly into the upper branches.
+# V30: closed polygonal trunk and radiating leaf meshes, instanced in the
+# existing vegetation batch. No added collision or terrain rules.
+static func _append_tropical_palm(tool: SurfaceTool) -> void:
+    var bark := Color("#76583e")
+    var leaf := Color("#387749")
+    var base := Vector3(0,-0.32,0)
+    var head := Vector3(0.10,0.83,0)
+    for i in range(6):
+        var a: float = TAU*float(i)/6.0
+        var b: float = TAU*float(i+1)/6.0
+        var u := Vector3(cos(a),0,sin(a))
+        var v := Vector3(cos(b),0,sin(b))
+        _panel(tool,base+u*0.09,base+v*0.09,head+v*0.055,head+u*0.055,bark)
+        _tri(tool,head,head+u*0.055,head+v*0.055,bark)
+        _tri(tool,base,base+v*0.09,base+u*0.09,bark)
+    for i in range(7):
+        var angle: float = TAU*float(i)/7.0
+        var radial := Vector3(cos(angle),0,sin(angle))
+        var side := Vector3(-sin(angle),0,cos(angle))*0.12
+        var middle: Vector3 = head+radial*0.32+Vector3.UP*0.19
+        var tip: Vector3 = head+radial*0.66-Vector3.UP*0.09
+        _tri_tinted(tool,head,middle+side,middle,leaf,leaf.darkened(0.14),leaf.lightened(0.20))
+        _tri_tinted(tool,head,middle,middle-side,leaf,leaf.lightened(0.20),leaf)
+        _tri_tinted(tool,middle,middle+side,tip,leaf.lightened(0.20),leaf,leaf.darkened(0.18))
+        _tri_tinted(tool,middle,middle-side,tip,leaf.lightened(0.20),leaf,leaf.darkened(0.18))
+
 static func _make_cone_trees(parent: Node3D,cells: Dictionary,
         biome: String = Biomes.TEMPERATE) -> int:
     var positions: Array[Transform3D] = []
@@ -483,6 +513,9 @@ static func _make_cone_trees(parent: Node3D,cells: Dictionary,
             if biome==Biomes.DESERT:
                 crown *= 1.13
                 height_scale *= 0.48
+            elif biome==Biomes.TROPICAL:
+                crown *= 0.85
+                height_scale *= 1.12
             var rotated := Basis(Vector3.UP,angle).scaled(
                 Vector3(scale*crown,scale*height_scale,scale*crown))
             at.y = height_at(cells,cell,shift.x,shift.y)+0.32*scale*height_scale
@@ -496,21 +529,24 @@ static func _make_cone_trees(parent: Node3D,cells: Dictionary,
         Color("#2e7665") if biome==Biomes.COASTAL else Color("#396b4c"))
     var tree_mesh := SurfaceTool.new()
     tree_mesh.begin(Mesh.PRIMITIVE_TRIANGLES)
-    for layer in range(2 if biome==Biomes.DESERT else 3):
-        var radius: float = 0.45-float(layer)*0.10
-        var low: float = -0.32+float(layer)*0.29
-        var tip: Vector3 = Vector3(0,0.63+float(layer)*0.25,0)
-        for seg in range(7):
-            var angle_a: float = TAU*float(seg)/7.0
-            var angle_b: float = TAU*float(seg+1)/7.0
-            var a := Vector3(cos(angle_a)*radius,low,sin(angle_a)*radius)
-            var b := Vector3(cos(angle_b)*radius,low,sin(angle_b)*radius)
-            var top_tint: Color = (
-                Biomes.HARDPACK if biome==Biomes.WINTER and layer>=1 else
-                foliage.lightened(0.08+0.045*float(layer)))
-            var side: Color = foliage.darkened(0.065*float(seg%3))
-            _tri_tinted(tree_mesh,a,b,tip,side,foliage.lightened(0.055),
-                top_tint)
+    if biome==Biomes.TROPICAL:
+        _append_tropical_palm(tree_mesh)
+    else:
+        for layer in range(2 if biome==Biomes.DESERT else 3):
+            var radius: float = 0.45-float(layer)*0.10
+            var low: float = -0.32+float(layer)*0.29
+            var tip: Vector3 = Vector3(0,0.63+float(layer)*0.25,0)
+            for seg in range(7):
+                var angle_a: float = TAU*float(seg)/7.0
+                var angle_b: float = TAU*float(seg+1)/7.0
+                var a := Vector3(cos(angle_a)*radius,low,sin(angle_a)*radius)
+                var b := Vector3(cos(angle_b)*radius,low,sin(angle_b)*radius)
+                var top_tint: Color = (
+                    Biomes.HARDPACK if biome==Biomes.WINTER and layer>=1 else
+                    foliage.lightened(0.08+0.045*float(layer)))
+                var side: Color = foliage.darkened(0.065*float(seg%3))
+                _tri_tinted(tree_mesh,a,b,tip,side,foliage.lightened(0.055),
+                    top_tint)
     tree_mesh.generate_normals()
     var mesh: ArrayMesh = tree_mesh.commit()
     var mat := StandardMaterial3D.new()
@@ -595,6 +631,7 @@ static func _make_mountain_ridges(parent: Node3D,cells: Dictionary,
     var light: Color = rock.lightened(0.12)
     var crest: Color = (
         Biomes.SNOW if biome==Biomes.WINTER else
+        Color("#7e9970") if biome==Biomes.TROPICAL else
         Color("#e1ab79") if biome==Biomes.DESERT else
         Color("#c2ac89") if biome==Biomes.CANYON else
         Color("#80a69b") if biome==Biomes.COASTAL else Color("#96a9a0"))
