@@ -12,9 +12,12 @@ const CANYON := "canyon"
 const COASTAL := "coastal"
 const DESERT := "desert"
 const TROPICAL := "tropical"
+const WETLAND := "wetland"
+const URBAN := "urban"
+const ARCHIPELAGO := "archipelago"
 # Preserve historic index 1 = winter. New schemes are appended.
-const CHOICES := [TEMPERATE, WINTER, CANYON, COASTAL, DESERT, TROPICAL]
-const LABELS := ["Valle boscoso", "Nevado V19", "Canon rocoso", "Delta costero", "Desierto de dunas", "Selva tropical"]
+const CHOICES := [TEMPERATE, WINTER, CANYON, COASTAL, DESERT, TROPICAL, WETLAND, URBAN, ARCHIPELAGO]
+const LABELS := ["Valle boscoso", "Nevado V19", "Canon rocoso", "Delta costero", "Desierto de dunas", "Selva tropical", "Pantanos", "Urbano", "Archipiélagos"]
 
 static func from_index(index: int) -> String:
     return str(CHOICES[clampi(index,0,CHOICES.size()-1)])
@@ -49,7 +52,28 @@ static func tile_color(kind: String,x: int,y: int,
     # faction/team information is used. Existing grass/rocks stay unchanged
     # in temperate games, including every historical save.
     var grain: float = float(posmod(x*37+y*59,11))/10.0
-    if biome == TROPICAL:
+    if biome == WETLAND:
+        match kind:
+            "plain": return Color("#858359").lerp(Color("#9a9969"),0.22*grain)
+            "forest": return Color("#495e3d").lerp(Color("#687549"),0.25*grain)
+            "mountain": return Color("#69695b").lerp(Color("#8b8973"),0.26*grain)
+            "road": return Color("#786c59")
+            "water": return Color("#485f50").lerp(Color("#77866a"),0.18*grain)
+    elif biome == URBAN:
+        match kind:
+            "plain": return Color("#8b8d87").lerp(Color("#a6aaa2"),0.20*grain)
+            "forest": return Color("#65745a").lerp(Color("#879579"),0.22*grain)
+            "mountain": return Color("#777c82").lerp(Color("#a1a5a5"),0.26*grain)
+            "road": return Color("#4d555c")
+            "water": return Color("#416b7a").lerp(Color("#64939e"),0.16*grain)
+    elif biome == ARCHIPELAGO:
+        match kind:
+            "plain": return Color("#dfd2a4").lerp(Color("#eee1b5"),0.25*grain)
+            "forest": return Color("#397755").lerp(Color("#6b9b61"),0.22*grain)
+            "mountain": return Color("#827b70").lerp(Color("#aaa28a"),0.25*grain)
+            "road": return Color("#9c8d76")
+            "water": return Color("#197f9c").lerp(Color("#36a9b7"),0.18*grain)
+    elif biome == TROPICAL:
         match kind:
             "plain": return Color("#63944f").lerp(Color("#88ab55"),0.25*grain)
             "forest": return Color("#285a39").lerp(Color("#477d4c"),0.22*grain)
@@ -230,6 +254,56 @@ static func _draw_tropical(canvas: CanvasItem,kind: String,
             _line(canvas,center,s,Vector2(x,0.26),Vector2(x+0.10,0.02),
                 Color("#477847"),0.08)
 
+# V31–V33: distinct lightweight tactical artwork. No decorative object
+# represents a new capturable city, navigable channel or movement penalty.
+static func _draw_extended(canvas: CanvasItem,kind: String,
+        center: Vector2,s: float,biome: String) -> void:
+    if biome==WETLAND and kind=="forest":
+        for x in [-0.52,0.0,0.48]:
+            var at: Vector2 = center+Vector2(x,0.10)*s
+            for j in range(3):
+                var dx: float = float(j-1)*0.15
+                _line(canvas,at,s,Vector2(0,0.25),Vector2(dx,-0.62),
+                    Color("#607347"),0.10)
+                _line(canvas,at,s,Vector2(dx,-0.62),Vector2(dx,-0.45),
+                    Color("#927148"),0.13)
+        return
+    if biome==URBAN and kind=="plain":
+        for x in [-0.52,0.30]:
+            _poly(canvas,center,s,[[x-0.25,-0.24],[x+0.28,-0.24],
+                [x+0.28,0.22],[x-0.25,0.22]],Color("#b0b3ac"))
+            _line(canvas,center,s,Vector2(x-0.25,0.25),Vector2(x+0.28,0.25),
+                Color("#666b6c"),0.045)
+        return
+    if biome==ARCHIPELAGO and kind=="plain":
+        for i in range(2):
+            var y: float = -0.24+float(i)*0.41
+            _line(canvas,center,s,Vector2(-0.73,y),Vector2(0.58,y+0.09),
+                Color("#c5b88d"),0.05)
+        return
+    if kind=="water":
+        var wave: Color = Color("#9eab80") if biome==WETLAND else (
+            Color("#81bcc9") if biome==URBAN else Color("#b4e9d9"))
+        for i in range(3):
+            var y: float = -0.33+float(i)*0.29
+            _line(canvas,center,s,Vector2(-0.74,y),Vector2(0.49,y+0.04),wave,0.06)
+        return
+    if kind=="road":
+        var asphalt: Color = Color("#786c59") if biome==WETLAND else (
+            Color("#4d555c") if biome==URBAN else Color("#9c8d76"))
+        _line(canvas,center,s,Vector2(-0.96,-0.19),Vector2(0.96,0.19),
+            asphalt.lightened(0.25),0.42)
+        _line(canvas,center,s,Vector2(-0.96,-0.19),Vector2(0.96,0.19),asphalt,0.27)
+        return
+    if kind=="forest" and biome==URBAN:
+        for x in [-0.43,0.42]:
+            var at: Vector2 = center+Vector2(x,0)*s
+            _line(canvas,at,s,Vector2(0,0.25),Vector2(0,-0.30),Color("#71624e"),0.10)
+            _poly(canvas,at,s,[[-0.35,-0.22],[-0.18,-0.65],[0.20,-0.65],
+                [0.36,-0.22],[0.0,0.02]],Color("#657b54"))
+        return
+    _draw_tropical(canvas,kind,center,s)
+
 static func draw_biome_iso(canvas: CanvasItem,kind: String,
         center: Vector2,half_width: float,seed: int,biome: String) -> void:
     if biome == WINTER:
@@ -241,6 +315,9 @@ static func draw_biome_iso(canvas: CanvasItem,kind: String,
         return
     if biome==TROPICAL:
         _draw_tropical(canvas,kind,center,s)
+        return
+    if biome in [WETLAND,URBAN,ARCHIPELAGO]:
+        _draw_extended(canvas,kind,center,s,biome)
         return
     var rock: Color = Color("#957864") if biome==CANYON else Color("#778d86")
     var foliage: Color = Color("#8e8a59") if biome==CANYON else Color("#346f63")
@@ -287,6 +364,9 @@ static func draw_biome_classic(canvas: CanvasItem,kind: String,
         return
     if biome==TROPICAL:
         _draw_tropical(canvas,kind,c,s)
+        return
+    if biome in [WETLAND,URBAN,ARCHIPELAGO]:
+        _draw_extended(canvas,kind,c,s,biome)
         return
     var rock: Color = Color("#a1876b") if biome==CANYON else Color("#708b80")
     var foliage: Color = Color("#95925d") if biome==CANYON else Color("#36735f")
