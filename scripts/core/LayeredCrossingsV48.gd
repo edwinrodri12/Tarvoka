@@ -9,6 +9,21 @@ const Rules = preload("res://scripts/core/Rules.gd")
 const Domains = preload("res://scripts/core/Domains.gd")
 const Weather = preload("res://scripts/core/Weather.gd")
 const VERSION := 1
+const FIELD := "layered_crossings_v48"
+
+# Initial integration deliberately excludes fog, sites and relays until
+# their knowledge, supply and capture systems support layered cells.
+static func state_index(state: Dictionary) -> Dictionary:
+    if not state.has(FIELD):
+        return {"valid":true,"cells":{}}
+    if state.has("fog_enabled") or state.has("economy") or state.has("control") or state.has("map_seed"):
+        return {"valid":false,"cells":{}}
+    var config = state[FIELD]
+    if not config is Dictionary or config.size()!=2 or not config.get("version") is int or config["version"]!=VERSION or not config.get("records") is Array or config["records"].is_empty():
+        return {"valid":false,"cells":{}}
+    if not state.get("terrain") is Array:
+        return {"valid":false,"cells":{}}
+    return index_records(state["terrain"],config["records"])
 
 static func index_records(terrain: Array,records: Array) -> Dictionary:
     if not Rules.valid_terrain(terrain) or records.size()>Rules.MAX_AREA:
