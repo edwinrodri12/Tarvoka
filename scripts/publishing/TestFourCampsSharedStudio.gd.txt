@@ -430,12 +430,19 @@ func _run() -> void:
         "Original naval base controls are distinct from destroyer controls")
     var destroyer_water: MeshInstance3D = studio.get("_destroyer_water") as MeshInstance3D
     _check(destroyer_water != null and destroyer_water.visible,"Destroyer water visible in shared viewport")
+    var floor_probe := MeshInstance3D.new()
+    floor_probe.name = "QA_DestroyerGround"
+    floor_probe.mesh = PlaneMesh.new()
+    original_viewport.add_child(floor_probe)
     studio.call("_destroyer_studio_view",true)
     _check(destroyer_water != null and not destroyer_water.visible and original_camera.position.y < 0.0,
         "Underbody inspection removes water and changes camera")
+    _check(not floor_probe.visible,"Original inspection floor temporarily hidden")
     studio.call("_destroyer_studio_view",false)
     _check(destroyer_water != null and destroyer_water.visible and original_camera.position.y > 0.0,
         "Surface inspection restores water and camera")
+    _check(floor_probe.visible,"Original inspection floor restored")
+    floor_probe.queue_free()
     if naval != null:
         studio.call("_destroyer_studio_frame","move",0.25)
         studio.call("_destroyer_studio_damage_changed",2)

@@ -227,6 +227,7 @@ func _camp_restore_prior_controls() -> void:
 
 func _change_selected_building(index: int) -> void:
     _destroyer_studio_stop()
+    _destroyer_studio_restore_floor()
     if is_instance_valid(_destroyer_water):
         _destroyer_water.hide()
     if destroyer_controls != null:
@@ -242,8 +243,8 @@ func _change_selected_building(index: int) -> void:
 func _switch_category(index: int) -> void:
     if index != 0:
         _destroyer_studio_stop()
+        _destroyer_studio_restore_floor()
     super._switch_category(index)
-    _destroyer_studio_sync_visibility()
     if camp_controls == null or building_picker == null:
         return
     if index == 1 and _camp_selected(building_picker.selected):
@@ -252,6 +253,7 @@ func _switch_category(index: int) -> void:
         _camp_display()
     else:
         _camp_restore_prior_controls()
+    _destroyer_studio_sync_visibility()
 
 func _camp_option_changed(_index: int) -> void:
     if _role.begins_with("camp_"):
@@ -589,6 +591,7 @@ var _destroyer_studio_tween: Tween
 var _destroyer_fx_time: float = 0.0
 var _destroyer_water: MeshInstance3D
 var _destroyer_underwater: bool = false
+var _destroyer_hidden_floor: Array[MeshInstance3D] = []
 
 func _destroyer_studio_create_controls() -> void:
     if role_picker == null:
@@ -664,6 +667,7 @@ func _destroyer_studio_sync_visibility() -> void:
 func _display_role(role: String) -> void:
     _destroyer_studio_stop()
     if role != "destroyer" or _role != "destroyer":
+        _destroyer_studio_restore_floor()
         _destroyer_underwater = false
     super._display_role(role)
     if role == "destroyer" and destroyer_controls != null:
@@ -715,10 +719,26 @@ func _destroyer_studio_frame(kind: String, phase: float) -> void:
     else:
         NavalArt.pose_model("destroyer",model_root,kind,phase)
 
+func _destroyer_studio_restore_floor() -> void:
+    for floor_mesh in _destroyer_hidden_floor:
+        if is_instance_valid(floor_mesh):
+            floor_mesh.show()
+    _destroyer_hidden_floor.clear()
+
 func _destroyer_studio_view(underwater: bool) -> void:
     if _role != "destroyer":
         return
+    _destroyer_studio_restore_floor()
     _destroyer_underwater = underwater
+    if underwater and is_instance_valid(preview) and is_instance_valid(model_root):
+        for candidate in preview.find_children("*","MeshInstance3D",true,false):
+            var floor_mesh: MeshInstance3D = candidate as MeshInstance3D
+            if floor_mesh == null or floor_mesh == _destroyer_water or model_root.is_ancestor_of(floor_mesh):
+                continue
+            var label: String = str(floor_mesh.name).to_lower()
+            if floor_mesh.visible and (floor_mesh.mesh is PlaneMesh or label.contains("suelo") or label.contains("floor") or label.contains("ground")):
+                _destroyer_hidden_floor.append(floor_mesh)
+                floor_mesh.hide()
     _destroyer_studio_sync_visibility()
     _update_camera()
 

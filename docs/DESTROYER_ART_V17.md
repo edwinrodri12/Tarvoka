@@ -21,3 +21,5 @@ V1.9 QA nativa aprobada (run 45754404385, artefacto 15086149679, 23 PNG revisado
 ## V1.11 — superficies y contexto marino del visor
 
 Proyección triplanar del grano metálico en LOD13; ajuste de rejillas de ventilación y detalles de cubierta trasera. El mismo visor incorpora una superficie de agua aislada para el destructor, cámara de superficie y vista inferior con agua oculta. Al cambiar de unidad o edificio, se oculta el agua; el hundimiento vuelve a la vista de superficie. Pruebas ampliadas de aislamiento, cámara y proyección, conservando 27 capturas previstas. Las pruebas V1.10 y exportación V1.9 aún estaban en cola al desarrollar esta revisión. No se afirma validación ni despliegue de V1.11.
+
+Seguimiento V1.11: la vista inferior oculta temporalmente las mallas de suelo preexistentes, registra solo las que estaban visibles y las restaura al salir de la inspección o cambiar de unidad/edificio. Regresión con una malla de suelo de prueba añadida al SubViewport original.
