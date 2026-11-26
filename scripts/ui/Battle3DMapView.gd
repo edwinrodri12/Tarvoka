@@ -30,6 +30,8 @@ var camera: Camera3D
 var inspection: Label
 var stats_label: Label
 var _scene: Node3D
+var _water_clock: float = 0.0
+var _water_tick: float = 0.0
 var _cursor: MeshInstance3D
 var _cells: Dictionary = {}
 var _dims := Vector2i.ZERO
@@ -452,6 +454,23 @@ func _process(_delta: float) -> void:
         return
     if preview.size.x > 1280 or preview.size.y > 800:
         holder.stretch_shrink = mini(8,holder.stretch_shrink+1)
+    _advance_water(_delta)
+
+# V40: slow, subtle texture motion on the one scene-local water material.
+# No displacement, collision, extra lights or per-cell updates.
+func _advance_water(delta: float) -> void:
+    if _scene==null or not _scene.has_meta("water_material_v40"):
+        return
+    if _live_board!=null and bool(_live_board.get("battery_saver")):
+        return
+    _water_tick += maxf(delta,0.0)
+    if _water_tick<0.1:
+        return
+    _water_clock = fposmod(_water_clock+_water_tick,100.0)
+    _water_tick = 0.0
+    var material: StandardMaterial3D = _scene.get_meta("water_material_v40") as StandardMaterial3D
+    if material!=null:
+        material.uv1_offset = Vector3(_water_clock*0.01,_water_clock*0.02,0.0)
 
 func _refresh_camera() -> void:
     if camera == null:
@@ -493,6 +512,8 @@ func open_from_state(state: Dictionary, selected_id: String = "", viewer: int = 
     if model == null:
         return false
     _scene = model
+    _water_clock = 0.0
+    _water_tick = 0.0
     var visual_biome: String = Biomes.from_state(state)
     var background: Color = Color("#394d5b")
     match visual_biome:
