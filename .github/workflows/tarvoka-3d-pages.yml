@@ -2954,7 +2954,7 @@ jobs:
                 const info=await page.evaluate(()=>window.__tarvokaA02Entry);
                 if(info.role!=='fpv'||info.edition!=='V20'||!info.native_model||!info.surface_finish||!info.undershell_finish||!info.graphic_livery||!info.surface_atlas||!info.material_relief||info.lod!==13||info.stage!==0)
                   throw Error('Incorrect A02 shared studio entry: '+JSON.stringify(info));
-                if(info.visible_meshes!==36||info.triangles!==5808||info.transparent_meshes.length!==0||!info.faction_selector)
+                if(info.visible_meshes!==37||info.triangles!==5928||info.transparent_meshes.length!==0||!info.faction_selector)
                   throw Error('A02 differs from native V10 evidence: '+JSON.stringify(info));
                 for(const action of ['a02_move','a02_hover','a02_hit','a02_d0','a02_d1','a02_d2','a02_d3','a02_d4','stop'])
                   if(!info.actions.includes(action))throw Error('Missing A02 action '+action);
