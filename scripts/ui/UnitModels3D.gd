@@ -1043,7 +1043,7 @@ static func _destroyer_shell(root: Node3D, label: String, stations: Array,
     for face_index in range(faces.size()):
         var face: Array = faces[face_index]
         var side: int = face_index % count
-        var stripe: bool = face_index < (stations.size()-1)*count and side in [4,10]
+        var stripe: bool = face_index < (stations.size()-1)*count and side in [3,4,10,11]
         var under: bool = face_index < (stations.size()-1)*count and side in [5,6,7,8,9]
         var tone: Color = ARMOR if stripe else (Color("#465966") if under else tint)
         for k in range(1,face.size()-1):
@@ -1085,6 +1085,7 @@ static func _destroyer_repaint_hull(root: Node3D, paint: Color) -> int:
 # Only the naval model receives this opaque procedural surface treatment.
 # No transparency or battle logic is introduced.
 static var _destroyer_steel_texture: ImageTexture
+static var _destroyer_normal_texture: ImageTexture
 
 static func _destroyer_grain() -> ImageTexture:
     if _destroyer_steel_texture != null:
@@ -1100,6 +1101,23 @@ static func _destroyer_grain() -> ImageTexture:
     _destroyer_steel_texture = ImageTexture.create_from_image(img)
     return _destroyer_steel_texture
 
+# Subtle satin-metal relief shared by inspection models, periodic at texture edges.
+static func _destroyer_relief() -> ImageTexture:
+    if _destroyer_normal_texture != null:
+        return _destroyer_normal_texture
+    var img := Image.create(64,64,false,Image.FORMAT_RGBA8)
+    for y in range(64):
+        for x in range(64):
+            var u: float = TAU*float(x)/64.0
+            var v: float = TAU*float(y)/64.0
+            var dx: float = 0.055*cos(u*8.0+v*2.0)+0.022*sin(u*17.0-v*3.0)
+            var dy: float = 0.018*cos(u*8.0+v*2.0)
+            var normal: Vector3 = Vector3(dx,dy,1.0).normalized()
+            img.set_pixel(x,y,Color(normal.x*0.5+0.5,normal.y*0.5+0.5,normal.z*0.5+0.5,1.0))
+    img.generate_mipmaps()
+    _destroyer_normal_texture = ImageTexture.create_from_image(img)
+    return _destroyer_normal_texture
+
 static func _destroyer_finish(node: Node, detail: bool) -> void:
     if node is MeshInstance3D:
         var part: MeshInstance3D = node as MeshInstance3D
@@ -1113,9 +1131,9 @@ static func _destroyer_finish(node: Node, detail: bool) -> void:
             if label.begins_with("Cristal") or label.begins_with("Lente"):
                 mat.metallic = 0.12
                 mat.roughness = 0.24
-            elif label.begins_with("Faccion"):
+            elif label.begins_with("Faccion") or part.has_meta(TANK_PAINT_META):
                 mat.metallic = 0.13
-                mat.roughness = 0.54
+                mat.roughness = 0.49
             elif label.contains("Pasamanos") or label.contains("Amarre") or label.contains("Tirador"):
                 mat.metallic = 0.60
                 mat.roughness = 0.43
@@ -1139,6 +1157,9 @@ static func _destroyer_finish(node: Node, detail: bool) -> void:
                 mat.uv1_triplanar = true
                 mat.uv1_triplanar_sharpness = 4.0
                 mat.uv1_scale = Vector3(3.0,3.0,3.0)
+                mat.normal_enabled = true
+                mat.normal_texture = _destroyer_relief()
+                mat.normal_scale = 0.40
             part.set_meta("destroyer_surface_v15",true)
     for child in node.get_children():
         _destroyer_finish(child,detail)
@@ -1164,7 +1185,8 @@ static func _destroyer_bridge(root: Node3D, art_level: int) -> void:
     var roof: Array = [
         [0.115,0.37,1.465,1.54],[0.21,0.49,1.465,1.54],
         [0.55,0.49,1.465,1.54],[0.68,0.37,1.465,1.54]]
-    _destroyer_shell(bridge,"TechoPuente",roof,STEEL)
+    var roof_panel: MeshInstance3D = _destroyer_shell(bridge,"TechoPuente",roof,STEEL)
+    roof_panel.set_meta(TANK_PAINT_META,"accent")
     var window_tint := Color("#38566A")
     for i in range(3):
         var x: float = float(i - 1) * 0.19
@@ -1259,9 +1281,10 @@ static func _destroyer_deck_equipment(root: Node3D, art_level: int) -> void:
         _box(root,"CajaServicioCubierta_%d" % side,
             Vector3(sign*0.45,0.879,-0.48),
             Vector3(0.15,0.16,0.31),STEEL)
-        _box(root,"TapaServicioCubierta_%d" % side,
+        var service_panel: MeshInstance3D = _box(root,"TapaServicioCubierta_%d" % side,
             Vector3(sign*0.45,0.97,-0.48),
             Vector3(0.17,0.04,0.32),ARMOR)
+        service_panel.set_meta(TANK_PAINT_META,"accent")
 
 # Fictional navigation silhouette: rigid closed meshes, independent
 # visual rotation, and detail tiers. Does not affect detection or combat.
@@ -1343,8 +1366,9 @@ static func _destroyer_aft(root: Node3D, art_level: int) -> void:
         var sign: float = float(side)
         _box(aft,"MarcaHelipuerto_%d" % side,Vector3(sign*0.15,0.842,1.11),
             Vector3(0.055,0.014,0.36),METAL)
-        _box(aft,"BordeHelipuerto_%d" % side,Vector3(sign*0.41,0.846,1.11),
+        var aft_accent: MeshInstance3D = _box(aft,"BordeHelipuerto_%d" % side,Vector3(sign*0.41,0.846,1.11),
             Vector3(0.035,0.020,0.35),ARMOR)
+        aft_accent.set_meta(TANK_PAINT_META,"accent")
         _box(aft,"BaseAmarre_%d" % side,Vector3(sign*0.32,0.824,1.49),
             Vector3(0.17,0.065,0.13),STEEL)
         _cylinder(aft,"Amarre_%d" % side,Vector3(sign*0.32,0.904,1.49),
@@ -1447,6 +1471,22 @@ static func _destroyer_trim(root: Node3D, art_level: int) -> void:
     _box(trim,"RegistroProa",Vector3(0,0.819,-1.91),
         Vector3(0.20,0.035,0.16),STEEL)
     root.set_meta("destroyer_visual_review_v18",true)
+    if art_level >= 13:
+        # Closed chamfered cosmetic covers anchored into the existing deck.
+        for side in [-1,1]:
+            var cover := Node3D.new()
+            cover.name = "RelieveServicio_%d" % side
+            cover.position = Vector3(float(side)*0.43,0.0,0.78)
+            trim.add_child(cover)
+            _destroyer_shell(cover,"TapaBiselada",
+                [[-0.075,0.065,0.79,0.845],[-0.050,0.080,0.79,0.87],
+                 [0.050,0.080,0.79,0.87],[0.075,0.065,0.79,0.845]],STEEL)
+            _box(cover,"JuntaServicio",Vector3(0,0.869,0),
+                Vector3(0.095,0.010,0.018),DARK)
+            for x in [-1,1]:
+                _box(cover,"RemacheVisual_%d" % x,Vector3(float(x)*0.043,0.869,0.037),
+                    Vector3(0.018,0.012,0.018),METAL)
+    root.set_meta("destroyer_finish_v113",true)
 
 static func _destroyer(root: Node3D, art_level: int = 10) -> void:
     var stations: Array = [
@@ -1459,7 +1499,7 @@ static func _destroyer(root: Node3D, art_level: int = 10) -> void:
     for station in stations:
         deck_stations.append([station[0],station[1]*0.86,0.738,0.802])
     _destroyer_shell(root,"Cubierta",deck_stations,ARMOR)
-    root.set_meta("destroyer_art_revision","1.12")
+    root.set_meta("destroyer_art_revision","1.13")
     _destroyer_bridge(root,art_level)
     _destroyer_navigation(root,art_level)
     _destroyer_deck_equipment(root,art_level)
