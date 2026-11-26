@@ -4,6 +4,7 @@ extends SceneTree
 # Rendered mesh geometry, chunk LOD budgets, fog secrecy, playable touch
 # orders, saved weather-independent visual biomes and Android UI entrypoints.
 const Terrain = preload("res://scripts/ui/BattleTerrain3D.gd")
+const SurfaceFinish = preload("res://scripts/ui/TerrainSurfaceFinish3D.gd")
 const Biomes = preload("res://scripts/ui/WinterBattleBiome.gd")
 const Session = preload("res://scripts/core/BattleSession.gd")
 const Scenarios = preload("res://scripts/core/Scenarios.gd")
@@ -259,7 +260,47 @@ func _check_crossing_parapets() -> void:
     no_crossing.begin(Mesh.PRIMITIVE_TRIANGLES)
     assert(Terrain._append_crossing_parapets(no_crossing,at,surface,tile)==0)
 
+func _check_art_finish_v44() -> void:
+    var fingerprints: Dictionary = {}
+    for biome in Biomes.CHOICES:
+        var texture: Texture2D = SurfaceFinish.biome_texture(biome)
+        assert(texture==SurfaceFinish.biome_texture(biome))
+        var img: Image = texture.get_image()
+        assert(img.get_width()==64 and img.get_height()==64)
+        assert(img.has_mipmaps())
+        fingerprints[hash(img.get_data())] = true
+        for p in [Vector2i(0,0),Vector2i(15,31),Vector2i(63,63)]:
+            var pixel: Color = img.get_pixel(p.x,p.y)
+            assert(is_equal_approx(pixel.r,pixel.g) and is_equal_approx(pixel.g,pixel.b))
+            assert(pixel.r>=0.83 and pixel.r<=1.0 and pixel.a==1.0)
+    assert(fingerprints.size()==9)
+    # Closed conifer components: each quantized undirected edge appears
+    # twice (triangulated trunk and foliage shells, including undersides).
+    for biome in [Biomes.TEMPERATE,Biomes.WINTER,Biomes.CANYON,Biomes.DESERT]:
+        var tree := SurfaceTool.new()
+        tree.begin(Mesh.PRIMITIVE_TRIANGLES)
+        Terrain._append_conifer(tree,biome,Color("#396b4c"))
+        var mesh: ArrayMesh = tree.commit()
+        var verts: PackedVector3Array = mesh.surface_get_arrays(0)[Mesh.ARRAY_VERTEX]
+        assert(verts.size()<=216 and verts.size()>0)
+        var edges: Dictionary = {}
+        for i in range(0,verts.size(),3):
+            for e in range(3):
+                var a: Vector3 = verts[i+e]*10000.0
+                var b: Vector3 = verts[i+(e+1)%3]*10000.0
+                var ka: String = str(Vector3i(roundi(a.x),roundi(a.y),roundi(a.z)))
+                var kb: String = str(Vector3i(roundi(b.x),roundi(b.y),roundi(b.z)))
+                assert(ka!=kb)
+                var key: String = ka+"|"+kb
+                var reverse: String = kb+"|"+ka
+                if edges.has(reverse):
+                    key = reverse
+                edges[key] = int(edges.get(key,0))+1
+        for key in edges:
+            assert(edges[key]==2)
+
 func _run() -> void:
+    _check_art_finish_v44()
     _check_crossing_parapets()
     _check_extended_art()
     _check_water_bank_geometry()
@@ -465,6 +506,18 @@ func _run() -> void:
             assert(review_image!=null and not review_image.is_empty())
             assert(review_image.save_png(
                 "res://artifacts/tarvoka_biomes_v20_review_v28_%s.png" % biome)==OK)
+            # Close orbit on the same public forest/road/mountain sector;
+            # this reveals underside gaps that an overview can conceal.
+            viewer._look_at = Terrain.world_at(Vector2i(3,2))
+            viewer._camera_size = 9.0
+            viewer._yaw = PI*0.70
+            viewer._refresh_camera()
+            for frame in range(8):
+                await process_frame
+            var detail_image: Image = viewer.preview.get_texture().get_image()
+            assert(detail_image!=null and not detail_image.is_empty())
+            assert(detail_image.save_png(
+                "res://artifacts/tarvoka_biomes_v20_detail_v44_%s.png" % biome)==OK)
             viewer.close_view()
             # V43: compare native biome geography at the same reproducible seed.
             board.new_game(Scenarios.GEOGRAPHIC_SCENARIO_ID,true,false,false,true,true,
