@@ -4,7 +4,7 @@ class_name TarvokaUnitModels3D
 # First actual editable 3D geometry for TARVOKA. These eight models are native
 # Godot MeshInstance3D trees, NOT SVG sprites or AI-rendered concept images.
 # Tuned to existing approved category silhouettes; no tactical stats live here.
-const ROLES := ["line","scout","apc","tank","mlrs","attack_heli","fighter","destroyer","aa_mobile","mobile_aa","ew_mobile","logistics_mobile","infantry_urban","infantry_defense","infantry_antitank","infantry_engineer","infantry_sniper","infantry_logistic","infantry_medic","infantry_commando","uav_recon","fpv"]
+const ROLES := ["line","scout","apc","tank","mlrs","attack_heli","fighter","destroyer","aa_mobile","mobile_aa","ew_mobile","logistics_mobile","infantry_urban","infantry_defense","infantry_antitank","infantry_engineer","infantry_sniper","infantry_logistic","infantry_medic","infantry_commando","uav_recon","fpv","patrol"]
 const VisualStyle = preload("res://scripts/ui/VisualStyle.gd")
 const TankSurface = preload("res://scripts/ui/TankSurface3D.gd")
 const TankRig = preload("res://scripts/ui/TankVisualRig3D.gd")
@@ -650,7 +650,7 @@ static func apply_faction_palette(model: Node3D, faction: int) -> int:
     if model == null or faction < 0 or faction >= VisualStyle.FACTIONS.size():
         return 0
     var painted: int = _paint_panels(model,faction_paint_color(faction))
-    if model.has_meta("destroyer_art_revision"):
+    if model.has_meta("destroyer_art_revision") or model.has_meta("patrol_art_revision"):
         painted += _destroyer_repaint_hull(model,faction_paint_color(faction))
     return painted
 
@@ -1642,6 +1642,307 @@ static func restore_destroyer_pose(root: Node3D) -> void:
         pose_destroyer(root,"idle",0.0)
 
 
+# M01: original fictional coastal patrol silhouette. Reuses only the
+# verified closed-shell geometry helper, not the destroyer's model or rules.
+static func _patrol(root: Node3D, detail: int) -> void:
+    var stations: Array = [[-1.72,0.045,0.30,0.59],[-1.47,0.20,0.18,0.57],
+        [-1.08,0.37,0.105,0.55],[-0.76,0.47,0.09,0.53],
+        [0.0,0.55,0.08,0.53],[0.72,0.52,0.09,0.53],
+        [1.20,0.43,0.14,0.53]]
+    _destroyer_shell(root,"CascoNaval",stations,STEEL,true)
+    var deck: Array = []
+    for p in stations:
+        deck.append([p[0],float(p[1])*0.94,float(p[3])-0.015,float(p[3])+0.035])
+    _destroyer_shell(root,"CubiertaPatrulla",deck,DARK)
+    var bridge := Node3D.new()
+    bridge.name = "CabinaPatrulla"
+    root.add_child(bridge)
+    _destroyer_shell(bridge,"ZocaloCabina",[[-0.56,0.24,0.55,0.68],[-0.39,0.36,0.55,0.68],[0.35,0.36,0.55,0.68],[0.49,0.27,0.55,0.68]],STEEL)
+    _destroyer_shell(bridge,"CarcasaCabina",[[-0.44,0.24,0.66,1.05],[-0.29,0.33,0.66,1.05],[0.27,0.33,0.66,1.05],[0.40,0.26,0.66,1.05]],STEEL)
+    _destroyer_shell(bridge,"FaccionTechoCabina",[[-0.46,0.25,1.03,1.10],[-0.28,0.36,1.03,1.10],[0.28,0.36,1.03,1.10],[0.43,0.27,1.03,1.10]],ARMOR)
+    for side in [-1,1]:
+        var sign: float = float(side)
+        for i in range(2):
+            _box(bridge,"MarcoPatrulla_%d_%d" % [side,i],Vector3(sign*0.307,0.91,-0.13+float(i)*0.22),Vector3(0.048,0.16,0.19),DARK)
+            _box(bridge,"CristalPatrulla_%d_%d" % [side,i],Vector3(sign*0.335,0.91,-0.13+float(i)*0.22),Vector3(0.020,0.124,0.15),Color("#38596C"))
+        _box(bridge,"PuertaPatrulla_%d" % side,Vector3(sign*0.295,0.77,0.29),Vector3(0.040,0.18,0.13),DARK)
+        _box(root,"FaccionBandaCubierta_%d" % side,Vector3(sign*0.32,0.571,0.74),Vector3(0.08,0.022,0.35),ARMOR)
+        _box(root,"DefensaLateral_%d" % side,Vector3(sign*0.46,0.47,0.47),Vector3(0.11,0.11,0.39),RUBBER)
+        if detail >= 13:
+            for i in range(3):
+                _box(root,"PostePatrulla_%d_%d" % [side,i],Vector3(sign*0.34,0.65,0.57+float(i)*0.17),Vector3(0.025,0.19,0.025),STEEL)
+            _box(root,"BarandaPatrulla_%d" % side,Vector3(sign*0.34,0.736,0.74),Vector3(0.025,0.026,0.37),STEEL)
+    for i in range(2):
+        _box(bridge,"MarcoFrontalPatrulla_%d" % i,Vector3(-0.10+float(i)*0.20,0.92,-0.448),Vector3(0.195,0.155,0.030),DARK)
+        _box(bridge,"CristalFrontalPatrulla_%d" % i,Vector3(-0.10+float(i)*0.20,0.92,-0.47),Vector3(0.16,0.12,0.020),Color("#38596C"))
+    _box(root,"AmarreProa",Vector3(0,0.603,-1.28),Vector3(0.14,0.06,0.07),METAL)
+    if detail >= 13:
+        for side in [-1,1]:
+            var sign: float = float(side)
+            var points: Array[Vector3] = [Vector3(sign*0.13,0.602,-1.47),
+                Vector3(sign*0.27,0.582,-1.08),Vector3(sign*0.35,0.566,-0.76),
+                Vector3(sign*0.43,0.566,0.0),Vector3(sign*0.40,0.566,0.72),
+                Vector3(sign*0.32,0.566,1.20)]
+            for i in range(points.size()-1):
+                var v: Vector3 = points[i+1]-points[i]
+                var rim: MeshInstance3D = _box(root,"BordePatrulla_%d_%d" % [side,i],
+                    (points[i]+points[i+1])*0.5,Vector3(0.024,0.030,v.length()+0.014),STEEL)
+                rim.rotation.y = atan2(v.x,v.z)
+    if detail >= 13:
+        for side in [-1,1]:
+            var sign: float = float(side)
+            var line: Array[Vector3] = [Vector3(sign*0.44,0.478,-0.76),Vector3(sign*0.52,0.478,0.0),Vector3(sign*0.49,0.478,0.72)]
+            for i in range(line.size()-1):
+                var segment: Vector3 = line[i+1]-line[i]
+                var trim: MeshInstance3D = _box(root,"RefuerzoCasco_%d_%d" % [side,i],(line[i]+line[i+1])*0.5,Vector3(0.035,0.028,segment.length()+0.008),DARK)
+                trim.rotation.y = atan2(segment.x,segment.z)
+            _box(root,"PlacaServicio_%d" % side,Vector3(sign*0.518,0.389,0.12),Vector3(0.016,0.08,0.19),STEEL)
+            _box(bridge,"FaccionPanelCabina_%d" % side,Vector3(sign*0.323,0.713,-0.075),Vector3(0.025,0.055,0.31),ARMOR)
+    _box(root,"RegistroPopaPatrulla",Vector3(0,0.58,0.82),Vector3(0.36,0.04,0.37),STEEL)
+    _box(root,"BaseProaPatrulla",Vector3(0,0.58,-0.91),Vector3(0.30,0.06,0.32),DARK)
+    var turret := Node3D.new()
+    turret.name = "ModuloVisualPatrulla"
+    turret.position = Vector3(0,0.61,-0.91)
+    root.add_child(turret)
+    _cylinder(turret,"AsientoModulo",Vector3(0,0.035,0),0.12,0.07,STEEL)
+    _destroyer_shell(turret,"CarcasaModulo",[[-0.14,0.08,0.065,0.20],[-0.07,0.12,0.065,0.20],[0.10,0.12,0.065,0.20],[0.14,0.09,0.065,0.20]],ARMOR)
+    _box(turret,"DetalleFrontal",Vector3(0,0.145,-0.18),Vector3(0.055,0.055,0.18),DARK)
+    _sphere(turret,"DestelloVisual",Vector3(0,0.145,-0.29),Vector3(0.16,0.16,0.20),Color("#FFCA77")).hide()
+    for side in [-1,1]:
+        var sign: float = float(side)
+        _cylinder(root,"PropulsionEstilizada_%d" % side,Vector3(sign*0.22,0.19,1.07),0.08,0.24,DARK,Vector3(90,0,0))
+        _box(root,"SoportePopa_%d" % side,Vector3(sign*0.22,0.29,1.04),Vector3(0.10,0.19,0.18),STEEL)
+        _box(root,"AmarrePatrulla_%d" % side,Vector3(sign*0.26,0.59,1.01),Vector3(0.10,0.055,0.065),METAL)
+    var mast := Node3D.new()
+    mast.name = "MastilPatrulla"
+    mast.position = Vector3(0,1.10,0.11)
+    root.add_child(mast)
+    _box(mast,"PlacaMastil",Vector3(0,0.025,0),Vector3(0.20,0.055,0.22),DARK)
+    _destroyer_shell(mast,"SoporteMastil",[[-0.075,0.065,0.04,0.28],[-0.035,0.075,0.04,0.34],[0.05,0.065,0.04,0.34],[0.09,0.045,0.04,0.25]],STEEL)
+    _box(mast,"RefuerzoMastil",Vector3(0,0.13,0.10),Vector3(0.07,0.21,0.035),DARK,Vector3(-28,0,0))
+    _cylinder(mast,"EjeSensor",Vector3(0,0.318,0),0.055,0.07,METAL)
+    if detail >= 13:
+        _box(mast,"TravesanoMastil",Vector3(0,0.235,0.015),Vector3(0.22,0.045,0.06),STEEL)
+        for side in [-1,1]:
+            _cylinder(mast,"AntenaVisual_%d" % side,Vector3(float(side)*0.09,0.30,0.015),0.012,0.14,DARK,Vector3(0,0,float(side)*14),8)
+    var radar := Node3D.new()
+    radar.name = "RadarPatrulla"
+    radar.position.y = 0.34
+    mast.add_child(radar)
+    _destroyer_shell(radar,"SensorOpaco",[[-0.06,0.14,0.01,0.095],[-0.035,0.17,0.01,0.095],[0.035,0.17,0.01,0.095],[0.06,0.14,0.01,0.095]],DARK)
+    _box(radar,"CaraSensor",Vector3(0,0.052,-0.065),Vector3(0.25,0.055,0.018),STEEL)
+    # Independent sealed relief pieces, with a recognizable cabin and deck.
+    _box(bridge,"MarcoTrasero",Vector3(0,0.85,0.407),Vector3(0.24,0.29,0.032),DARK)
+    _box(bridge,"PuertaTrasera",Vector3(0,0.85,0.430),Vector3(0.19,0.23,0.022),STEEL)
+    _box(bridge,"TiradorTrasero",Vector3(0.065,0.84,0.446),Vector3(0.022,0.058,0.025),METAL)
+    _box(bridge,"ViseraFrontal",Vector3(0,1.025,-0.46),Vector3(0.46,0.045,0.16),DARK)
+    _box(mast,"FaccionPanelMastil",Vector3(0,0.19,0.065),Vector3(0.085,0.20,0.025),ARMOR)
+    for side in [-1,1]:
+        var sign: float = float(side)
+        _box(bridge,"LuzNavegacion_%d" % side,Vector3(sign*0.32,1.105,0.12),Vector3(0.075,0.056,0.075),Color("#E87D49") if side < 0 else Color("#58C5A4"))
+        _box(root,"EscalonPopa_%d" % side,Vector3(sign*0.27,0.575,0.49),Vector3(0.12,0.045,0.16),STEEL)
+        var rotor := Node3D.new()
+        rotor.name = "RotorPatrulla_%d" % side
+        # Visual shaft joins the existing stern fairing and the rotor hub.
+        _cylinder(root,"UnionRotor_%d" % side,Vector3(sign*0.22,0.13,1.13),0.043,0.23,DARK,Vector3(90,0,0),10)
+        rotor.position = Vector3(sign*0.22,0.13,1.25)
+        root.add_child(rotor)
+        _cylinder(rotor,"CentroRotor",Vector3.ZERO,0.045,0.09,STEEL,Vector3(90,0,0))
+        for blade in range(3):
+            var pivot := Node3D.new()
+            pivot.rotation.z = float(blade)*TAU/3.0
+            rotor.add_child(pivot)
+            var blade_mesh: MeshInstance3D = _sphere(pivot,"PalaVisual",Vector3(0,0.063,0),Vector3(0.070,0.13,0.027),METAL)
+            blade_mesh.rotation_degrees.z = 18.0
+        _cylinder(root,"RematePopa_%d" % side,Vector3(sign*0.34,0.23,1.12),0.04,0.10,STEEL,Vector3(90,0,0),8)
+        if detail >= 13:
+            for i in range(3):
+                _box(bridge,"RelieveVentilacion_%d_%d" % [side,i],Vector3(sign*0.351,0.73+float(i)*0.034,0.17),Vector3(0.025,0.015,0.10),METAL)
+            for i in range(3):
+                _box(root,"RegistroPasillo_%d_%d" % [side,i],Vector3(sign*0.36,0.574,-0.35+float(i)*0.25),Vector3(0.08,0.018,0.12),STEEL)
+    var wake := Node3D.new()
+    wake.name = "EstelaPatrulla"
+    root.add_child(wake)
+    for i in range(4 if detail >= 13 else 2):
+        _sphere(wake,"Espuma_%d" % i,Vector3(0,0.14,1.28+float(i)*0.13),Vector3(0.25+float(i)*0.12,0.025,0.18),Color("#C5E3E4")).hide()
+    # Service markings and rails contact the deck without changing silhouette.
+    for side in [-1,1]:
+        var sign: float = float(side)
+        _box(root,"PasoAntideslizante_%d" % side,Vector3(sign*0.385,0.569,0.19),Vector3(0.09,0.012,0.45),DARK)
+        if detail >= 13:
+            for i in range(4):
+                _box(root,"RelievePaso_%d_%d" % [side,i],Vector3(sign*0.385,0.580,0.03+float(i)*0.10),Vector3(0.075,0.012,0.019),STEEL)
+            _box(bridge,"PasamanosPuerta_%d" % side,Vector3(sign*0.31,0.85,0.35),Vector3(0.025,0.16,0.026),METAL)
+    var fx := Node3D.new()
+    fx.name = "DanoPatrulla"
+    root.add_child(fx)
+    _box(fx,"Marca",Vector3(0.25,0.602,-0.73),Vector3(0.19,0.022,0.19),Color("#25292D"),Vector3(0,18,0)).hide()
+    _patrol_smoke(fx,"Humo",Vector3(0.21,1.10,0.40),0.23,detail)
+    _patrol_smoke(fx,"HumoSuperior",Vector3(0.29,1.37,0.45),0.29,detail)
+    _patrol_flame(fx,"Fuego",Vector3(-0.25,0.76,0.48),0.39,detail)
+    _patrol_flame(fx,"FuegoSecundario",Vector3(0.20,0.59,0.61),0.31,detail)
+    _box(fx,"MarcaPasillo",Vector3(0.37,0.593,-0.22),Vector3(0.14,0.022,0.19),Color("#252B30"),Vector3(0,-18,0)).hide()
+    _sphere(fx,"ImpactoVisualPatrulla",Vector3(0.34,0.92,-0.12),Vector3(0.18,0.18,0.18),Color("#EFC18B")).hide()
+    _box(fx,"Fragmento",Vector3(0.21,0.66,0.82),Vector3(0.18,0.055,0.18),STEEL,Vector3(15,22,30)).hide()
+    for child in fx.get_children():
+        if child is Node3D and (str(child.name).begins_with("Humo") or str(child.name).begins_with("Fuego")):
+            child.set_meta("patrol_effect_rest",child.transform)
+    if detail <= 6:
+        for piece in root.find_children("*","MeshInstance3D",true,false):
+            var part: MeshInstance3D = piece as MeshInstance3D
+            if part.mesh is SphereMesh:
+                var sphere_mesh: SphereMesh = part.mesh as SphereMesh
+                sphere_mesh.radial_segments = 8
+                sphere_mesh.rings = 4
+    for child in root.get_children():
+        if child is Node3D:
+            child.set_meta("patrol_rest",child.transform)
+    root.set_meta("patrol_art_revision","1.6")
+    root.set_meta("patrol_lod",detail)
+    root.set_meta("patrol_damage",0)
+
+# Small closed, tapered stylized effects, never transparent billboards.
+static func _patrol_flame(parent: Node3D, label: String, pos: Vector3, height: float, detail: int) -> void:
+    var group := Node3D.new()
+    group.name = label
+    group.position = pos
+    parent.add_child(group)
+    var count: int = 3 if detail >= 13 else 2
+    for i in range(count):
+        var h: float = height*(1.0-float(i)*0.19)
+        var flame: MeshInstance3D = _cylinder(group,"FuegoLengua_%d" % i,Vector3((float(i)-0.7)*0.065,h*0.48,0),h*0.24,h,Color("#E96D29") if i == 0 else Color("#FFBE57"),Vector3(5,0,-12.0+float(i)*15.0),8)
+        var tapered: CylinderMesh = flame.mesh as CylinderMesh
+        tapered.top_radius = 0.008
+        tapered.bottom_radius = h*0.24
+    group.hide()
+
+static func _patrol_smoke(parent: Node3D, label: String, pos: Vector3, extent: float, detail: int) -> void:
+    var group := Node3D.new()
+    group.name = label
+    group.position = pos
+    parent.add_child(group)
+    for i in range(3 if detail >= 13 else 2):
+        var f: float = float(i)
+        _sphere(group,"HumoNube_%d" % i,Vector3(f*0.040-0.03,f*0.055,f*0.025),Vector3(extent*(1.0+0.12*f),extent*1.08,extent*0.92),Color("#3D4449").lerp(Color("#7A858C"),f/3.0))
+    group.hide()
+
+static func set_patrol_damage(root: Node3D, stage: int, phase: float = 0.0) -> bool:
+    if root == null or not root.has_meta("patrol_art_revision"):
+        return false
+    var d: int = clampi(stage,0,4)
+    root.set_meta("patrol_damage",d)
+    root.rotation_degrees.x = 0.0
+    root.rotation_degrees.z = 0.0
+    for child in root.get_children():
+        if child is Node3D and child.has_meta("patrol_rest"):
+            child.transform = child.get_meta("patrol_rest")
+    for foam in root.get_node("EstelaPatrulla").get_children():
+        (foam as Node3D).hide()
+    (root.get_node("ModuloVisualPatrulla/DestelloVisual") as Node3D).hide()
+    (root.get_node("MastilPatrulla/RadarPatrulla") as Node3D).rotation.y = 0.0
+    var effects: Node3D = root.get_node("DanoPatrulla") as Node3D
+    for child in effects.get_children():
+        if child is Node3D and child.has_meta("patrol_effect_rest"):
+            child.transform = child.get_meta("patrol_effect_rest")
+    (effects.get_node("ImpactoVisualPatrulla") as Node3D).hide()
+    (effects.get_node("Marca") as Node3D).visible = d >= 1
+    (effects.get_node("Humo") as Node3D).visible = d >= 2
+    (effects.get_node("Fuego") as Node3D).visible = d >= 3
+    (effects.get_node("HumoSuperior") as Node3D).visible = d >= 2
+    (effects.get_node("FuegoSecundario") as Node3D).visible = d >= 3
+    (effects.get_node("MarcaPasillo") as Node3D).visible = d >= 1
+    (effects.get_node("Fragmento") as Node3D).visible = d >= 3
+    var hatch: Node3D = root.get_node("RegistroPopaPatrulla") as Node3D
+    if d >= 2:
+        hatch.rotation_degrees.z = -14.0 if d == 2 else -28.0
+        hatch.position.y += 0.025 if d == 2 else 0.055
+    var mast: Node3D = root.get_node("MastilPatrulla") as Node3D
+    mast.rotation_degrees.z = 0.0 if d < 2 else (13.0 if d == 2 else 30.0)
+    if d == 4:
+        var t: float = clampf(phase,0.0,1.0)
+        var tilt := Basis(Vector3.BACK,deg_to_rad(25.0*t))
+        for child in root.get_children():
+            if child is Node3D:
+                var rest: Transform3D = child.transform
+                child.transform = Transform3D(tilt*rest.basis,tilt*rest.origin+Vector3(0,-2.2*t,0))
+    return true
+
+static func animate_patrol_damage(root: Node3D, phase: float) -> bool:
+    if root == null or not root.has_meta("patrol_art_revision"):
+        return false
+    var stage: int = int(root.get_meta("patrol_damage",0))
+    if stage < 2 or stage >= 4:
+        return false
+    var effects: Node3D = root.get_node("DanoPatrulla") as Node3D
+    var i: int = 0
+    for child in effects.get_children():
+        if child is Node3D and child.has_meta("patrol_effect_rest"):
+            var effect: Node3D = child as Node3D
+            effect.transform = effect.get_meta("patrol_effect_rest")
+            var wave: float = sin(phase*TAU+float(i)*0.9)
+            if str(effect.name).begins_with("Humo"):
+                effect.position += Vector3(0.035*wave,0.05*wave,0.02*cos(phase*TAU))
+                effect.scale *= 1.0+0.08*wave
+            else:
+                effect.scale *= Vector3(1.0,1.0+0.16*wave,1.0)
+            i += 1
+    return true
+
+static func pose_patrol(root: Node3D, kind: String, phase: float, heading: Vector2i = Vector2i(0,-1)) -> bool:
+    if root == null or not root.has_meta("patrol_art_revision") or int(root.get_meta("patrol_damage",0)) >= 4:
+        return false
+    if kind not in ["idle","move","hit","damage","damaged","attack","fire","aim"]:
+        return false
+    var t: float = clampf(phase,0.0,1.0)
+    var wave: float = sin(t*TAU)
+    var impact: Node3D = root.get_node("DanoPatrulla/ImpactoVisualPatrulla") as Node3D
+    impact.visible = kind in ["hit","damage","damaged"] and t > 0.02 and t < 0.27
+    root.rotation_degrees.x = wave*(1.8 if kind == "move" else 0.5)
+    root.rotation_degrees.z = wave*(2.5 if kind == "move" else 0.7)
+    var radar: Node3D = root.get_node("MastilPatrulla/RadarPatrulla") as Node3D
+    radar.rotation.y = t*TAU
+    for side in [-1,1]:
+        var rotor: Node3D = root.get_node("RotorPatrulla_%d" % side) as Node3D
+        rotor.rotation.z = float(side)*t*TAU if kind == "move" else 0.0
+    var module: Node3D = root.get_node("ModuloVisualPatrulla") as Node3D
+    var action: bool = kind in ["attack","fire","aim"]
+    module.rotation.y = atan2(-float(heading.x),-float(heading.y)) if action and heading != Vector2i.ZERO else 0.0
+    (module.get_node("DestelloVisual") as Node3D).visible = kind in ["attack","fire"] and t > 0.02 and t < 0.20
+    for foam in root.get_node("EstelaPatrulla").get_children():
+        (foam as Node3D).visible = kind == "move" and t > 0.0 and t < 1.0
+    return true
+
+# Patrol-only opaque material finish. The validated destroyer stays untouched.
+static func _patrol_finish(node: Node, detail: bool) -> void:
+    if node is MeshInstance3D:
+        var part: MeshInstance3D = node as MeshInstance3D
+        var mat: StandardMaterial3D = part.material_override as StandardMaterial3D
+        if mat != null:
+            var label: String = str(part.name)
+            mat.metallic = 0.12
+            mat.roughness = 0.65
+            if label.begins_with("Cristal"):
+                mat.metallic = 0.03
+                mat.albedo_color = Color("#41647C")
+                mat.roughness = 0.27
+            elif label.begins_with("Humo") or label.begins_with("Espuma"):
+                mat.metallic = 0.0
+                mat.roughness = 1.0
+            elif label.begins_with("Fuego") or label.begins_with("Impacto") or label == "DestelloVisual" or label.begins_with("LuzNavegacion"):
+                mat.metallic = 0.0
+                mat.emission_enabled = true
+                mat.emission = mat.albedo_color
+                mat.emission_energy_multiplier = 0.75
+            elif label.begins_with("RefuerzoCasco") or label.begins_with("DefensaLateral"):
+                mat.metallic = 0.0
+                mat.roughness = 0.94
+            elif detail and label in ["CarcasaCabina","CubiertaPatrulla","ZocaloCabina"]:
+                mat.albedo_texture = _destroyer_grain()
+                mat.uv1_triplanar = true
+                mat.uv1_scale = Vector3(3,3,3)
+    for child in node.get_children():
+        _patrol_finish(child,detail)
+
 static func build(role: String, faction: int = -1, finish_enabled: bool = true, art_level: int = 10) -> Node3D:
     if not supports(role):
         return null
@@ -1766,6 +2067,11 @@ static func build(role: String, faction: int = -1, finish_enabled: bool = true, 
                 return null
         "fighter":
             _fighter(model)
+        "patrol":
+            _patrol(model,art_level)
+            apply_faction_palette(model,faction)
+            _destroyer_finish(model,art_level >= 13)
+            _patrol_finish(model,art_level >= 13)
         "destroyer":
             _destroyer(model,art_level)
             apply_faction_palette(model,faction)
@@ -2017,7 +2323,7 @@ static func build(role: String, faction: int = -1, finish_enabled: bool = true, 
     if role in ["line","scout"]:
         model.scale = Vector3.ONE * 0.82
         model.position.y = -0.58
-    elif role in ["attack_heli","fighter","destroyer"]:
+    elif role in ["attack_heli","fighter","destroyer","patrol"]:
         model.scale = Vector3.ONE * 0.77
         model.position.y = -0.11
     elif InfantryFamily.supports(role):
@@ -2246,6 +2552,10 @@ static func pose_model(role: String, model: Node3D, kind: String,
             return G11Rig.pose(model,kind,progress,target_heading)
         "attack_heli":
             return AttackHelicopterV1.pose(model,kind,progress,target_heading)
+        "patrol":
+            if kind in ["sink","destroy"]:
+                return set_patrol_damage(model,4,progress)
+            return pose_patrol(model,kind,progress,target_heading)
         "destroyer":
             if kind in ["damage","damaged","hit"]:
                 return pose_destroyer(model,"hit",progress,target_heading)
@@ -2309,6 +2619,8 @@ static func restore_model_pose(role: String, model: Node3D) -> void:
                 G11Rig.restore(model)
         "attack_heli":
             AttackHelicopterV1.restore(model)
+        "patrol":
+            pose_patrol(model,"idle",0.0)
         "destroyer":
             restore_destroyer_pose(model)
         "uav_recon":

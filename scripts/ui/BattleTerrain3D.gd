@@ -657,6 +657,8 @@ static func _make_units(parent: Node3D,state: Dictionary,
     var g11_lod := 0
     var g13_visible := 0
     var g13_lod8 := 0
+    var patrol_visible := 0
+    var patrol_lod8 := 0
     var hidden_enemies := 0
     var player: int = viewer
     for unit in state.get("units",[]):
@@ -679,6 +681,25 @@ static func _make_units(parent: Node3D,state: Dictionary,
             model = Models.build("apc",faction,false,8)
             if model!=null:
                 apc_lod+=1
+        elif role=="patrol":
+            # Keep the authentic silhouette beyond the shared detailed-unit budget.
+            # All selection, fog and logical coordinates remain authoritative.
+            var patrol_faction: int = FactionIdentity.index_for(
+                FactionIdentity.key_for(state,faction))
+            if patrol_faction < 0:
+                patrol_faction = faction
+            var patrol_level: int = 8 if patrol_lod8 < MAX_DETAILED_UNITS else 6
+            model = Models.build("patrol",patrol_faction,true,patrol_level)
+            if model != null:
+                patrol_visible += 1
+                if patrol_level == 8:
+                    patrol_lod8 += 1
+                model.set_meta("tarvoka_patrol_visual_faction",patrol_faction)
+                model.scale = Vector3.ONE*0.64
+                # HP mapping is cosmetic only. Living units never enter D4.
+                var hp: int = int(unit.get("hp",0))
+                var visual_stage: int = 0 if hp >= 8 else (1 if hp >= 5 else (2 if hp >= 3 else 3))
+                Models.set_patrol_damage(model,visual_stage)
         elif role=="mobile_aa":
             # The playable G13 shares the approved V69 studio sculpt.
             # Convert the logical team to one of eight selected art factions.
@@ -740,7 +761,7 @@ static func _make_units(parent: Node3D,state: Dictionary,
         # Distinct layers may share exactly one logical grid coordinate.
         # Air models must be visibly ABOVE ground/naval models rather than
         # clipping through another unit when both occupy the same cell.
-        var altitude: float = 2.45 if Domains.layer(unit) == "air" else 0.43
+        var altitude: float = 2.45 if Domains.layer(unit) == "air" else (-0.07 if role == "patrol" and model.has_meta("patrol_art_revision") else 0.43)
         model.position = world_at(cell)+Vector3(0,height_at(cells,cell)+altitude,0)
         if role=="apc" and APCTactical.has_model(model):
             APCTactical.rebase(model)
@@ -753,6 +774,7 @@ static func _make_units(parent: Node3D,state: Dictionary,
     return {"visible":visible_count,"detailed":detailed,
         "apc_lod":apc_lod,"g11_lod":g11_lod,
         "g13_visible":g13_visible,"g13_lod8":g13_lod8,
+        "patrol_visible":patrol_visible,"patrol_lod8":patrol_lod8,
         "hidden_enemies":hidden_enemies}
 
 static func build(state: Dictionary, selected_id: String = "", viewer: int = 0) -> Node3D:
