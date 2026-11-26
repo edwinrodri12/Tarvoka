@@ -17,3 +17,7 @@ Seguimiento V1.9: animación periódica y reversible de humo/fuego; comprobació
 ## V1.10 — revisión de capturas V1.9
 
 V1.9 QA nativa aprobada (run 45754404385, artefacto 15086149679, 23 PNG revisados). Se añade grano metálico procedural compartido con mipmaps en LOD13, detalles de servicio de popa y ventilación, marcas visibles en pasillos y quemaduras D3. Se amplía QA a 27 imágenes, con cuatro etapas de hundimiento sobre una superficie de agua opaca y cámara fija. V1.10 aún requiere ejecución de Godot y exportación web; no se afirma validación ni publicación. El G13 no se altera.
+
+## V1.11 — superficies y contexto marino del visor
+
+Proyección triplanar del grano metálico en LOD13; ajuste de rejillas de ventilación y detalles de cubierta trasera. El mismo visor incorpora una superficie de agua aislada para el destructor, cámara de superficie y vista inferior con agua oculta. Al cambiar de unidad o edificio, se oculta el agua; el hundimiento vuelve a la vista de superficie. Pruebas ampliadas de aislamiento, cámara y proyección, conservando 27 capturas previstas. Las pruebas V1.10 y exportación V1.9 aún estaban en cola al desarrollar esta revisión. No se afirma validación ni despliegue de V1.11.

@@ -51,7 +51,7 @@ func _run() -> void:
             check(model != null, "Destroyer builds")
             if model == null:
                 continue
-            check(model.get_meta("destroyer_art_revision", "") == "1.10", "V1.10 surface detail active")
+            check(model.get_meta("destroyer_art_revision", "") == "1.11", "V1.11 surface detail active")
             for key in ["CascoNaval", "Cubierta", "Superestructura/ZocaloNaval", "Superestructura/CarcasaInferior", "Superestructura/Puente", "Superestructura/TechoPuente", "TorretaNavalPivot/CarcasaTorreta", "TorreMastil/CarcasaMastil", "TorreMastil/RadarPivot/Radar", "ConjuntoPopa/Helipuerto", "ConjuntoPopa/Propulsion_-1/TimonPivot/TimonVisual", "ConjuntoPopa/Propulsion_1/TimonPivot/TimonVisual"]:
                 var part: MeshInstance3D = model.get_node_or_null(key) as MeshInstance3D
                 check(part != null, "Native " + key)
@@ -69,6 +69,8 @@ func _run() -> void:
                 var hull_mat: StandardMaterial3D = hull.material_override as StandardMaterial3D
                 check(hull_mat.vertex_color_use_as_albedo, "Paint integrated into one hull")
                 check((hull_mat.albedo_texture != null) == (lod >= 13), "Surface grain detail tier")
+                check(hull_mat.uv1_triplanar == (lod >= 13), "Non-stretched side texture projection")
+                check(model.has_node("ConjuntoPopa/AnclajeCubierta_1_0") == (lod >= 13), "Aft deck relief detail tier")
                 var indices: PackedInt32Array = hull.get_meta("destroyer_stripe_vertices")
                 var colors: PackedColorArray = hull.mesh.surface_get_arrays(0)[Mesh.ARRAY_COLOR]
                 check(indices.size() == 84, "Two continuous painted bevels")
@@ -221,7 +223,7 @@ func _run() -> void:
     if failures != 0:
         quit(1)
         return
-    print("PASS DESTROYER HULL V1.10: 18 variants, 27 PNGs")
+    print("PASS DESTROYER HULL V1.11: 18 variants, 27 PNGs")
     quit(0)
 
 func _render() -> void:
@@ -285,7 +287,7 @@ func _render() -> void:
         var img: Image = view.get_texture().get_image()
         check(img != null and not img.is_empty(), "Real Godot image")
         if img != null and not img.is_empty():
-            check(img.save_png(output + "/destroyer_v110_%d.png" % i) == OK, "Capture saved")
+            check(img.save_png(output + "/destroyer_v111_%d.png" % i) == OK, "Capture saved")
     Art.restore_model_pose("destroyer",model)
     for d in range(5):
         Art.set_destroyer_damage(model,d,0.52 if d == 4 else 0.0)
@@ -298,7 +300,7 @@ func _render() -> void:
         var img: Image = view.get_texture().get_image()
         check(img != null and not img.is_empty(), "Damage image")
         if img != null and not img.is_empty():
-            check(img.save_png(output + "/destroyer_v110_D%d.png" % d) == OK, "Damage capture saved")
+            check(img.save_png(output + "/destroyer_v111_D%d.png" % d) == OK, "Damage capture saved")
     for d in [2,3]:
         Art.set_destroyer_damage(model,d)
         camera.position = Vector3(3.0,2.7,3.1)
@@ -310,7 +312,7 @@ func _render() -> void:
         var img: Image = view.get_texture().get_image()
         check(img != null and not img.is_empty(), "Close damage image")
         if img != null and not img.is_empty():
-            check(img.save_png(output + "/destroyer_v110_detail_D%d.png" % d) == OK, "Close damage capture")
+            check(img.save_png(output + "/destroyer_v111_detail_D%d.png" % d) == OK, "Close damage capture")
     # Fixed camera, opaque water, and a complete visual sinking sequence.
     var sea := MeshInstance3D.new()
     var plane := PlaneMesh.new()
@@ -340,7 +342,7 @@ func _render() -> void:
         var img: Image = view.get_texture().get_image()
         check(img != null and not img.is_empty(), "Fixed waterline sequence")
         if img != null and not img.is_empty():
-            check(img.save_png(output + "/destroyer_v110_sink_%d.png" % frame) == OK, "Fixed camera sink capture")
+            check(img.save_png(output + "/destroyer_v111_sink_%d.png" % frame) == OK, "Fixed camera sink capture")
             if empty_water != null and not empty_water.is_empty() and img.get_size() == empty_water.get_size():
                 var changed: int = 0
                 for y in range(0,img.get_height(),8):

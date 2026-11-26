@@ -1060,8 +1060,8 @@ static func _destroyer_repaint_hull(root: Node3D, paint: Color) -> int:
     hull.mesh = fresh
     return 1
 
-# Only the naval model receives this opaque surface treatment. No textures,
-# transparency, real-world systems or battle logic are introduced.
+# Only the naval model receives this opaque procedural surface treatment.
+# No transparency or battle logic is introduced.
 static var _destroyer_steel_texture: ImageTexture
 
 static func _destroyer_grain() -> ImageTexture:
@@ -1114,7 +1114,9 @@ static func _destroyer_finish(node: Node, detail: bool) -> void:
                 mat.emission_energy_multiplier = 0.8
             if detail and (label in ["CascoNaval","Cubierta","CarcasaInferior","TechoPuente","CarcasaMastil","CarcasaTorreta"]):
                 mat.albedo_texture = _destroyer_grain()
-                mat.uv1_scale = Vector3(4.0,4.0,1.0)
+                mat.uv1_triplanar = true
+                mat.uv1_triplanar_sharpness = 4.0
+                mat.uv1_scale = Vector3(3.0,3.0,3.0)
             part.set_meta("destroyer_surface_v15",true)
     for child in node.get_children():
         _destroyer_finish(child,detail)
@@ -1174,11 +1176,11 @@ static func _destroyer_bridge(root: Node3D, art_level: int) -> void:
     if art_level >= 13:
         for side in [-1,1]:
             var sign: float = float(side)
-            _box(bridge,"MarcoVentilacion_%d" % side,Vector3(sign*0.385,1.035,0.32),
+            _box(bridge,"MarcoVentilacion_%d" % side,Vector3(sign*0.424,1.035,0.32),
                 Vector3(0.036,0.115,0.16),DARK)
             for i in range(4):
                 _box(bridge,"LamaVentilacion_%d_%d" % [side,i],
-                    Vector3(sign*0.408,0.993+float(i)*0.027,0.32),
+                    Vector3(sign*0.447,0.993+float(i)*0.027,0.32),
                     Vector3(0.020,0.012,0.13),METAL)
         for i in range(3):
             _box(bridge,"RefuerzoPosterior_%d" % i,Vector3(-0.18+float(i)*0.18,1.35,0.662),
@@ -1364,6 +1366,15 @@ static func _destroyer_aft(root: Node3D, art_level: int) -> void:
              [0.16,0.032,-0.08,0.11]],DARK)
     _box(aft,"MarcaHelipuertoCentro",Vector3(0,0.842,1.11),
         Vector3(0.30,0.014,0.06),METAL)
+    if detail:
+        for side in [-1,1]:
+            var sign: float = float(side)
+            for i in range(3):
+                _box(aft,"AnclajeCubierta_%d_%d" % [side,i],
+                    Vector3(sign*0.32,0.842,0.92+float(i)*0.17),
+                    Vector3(0.034,0.014,0.034),METAL)
+            _box(aft,"RegistroPopa_%d" % side,Vector3(sign*0.20,0.826,1.51),
+                Vector3(0.14,0.035,0.10),STEEL)
     # Static wake is purely decorative and may be hidden for inspection.
     var wake := Node3D.new()
     wake.name = "EstelaEspuma"
@@ -1426,7 +1437,7 @@ static func _destroyer(root: Node3D, art_level: int = 10) -> void:
     for station in stations:
         deck_stations.append([station[0],station[1]*0.86,0.738,0.802])
     _destroyer_shell(root,"Cubierta",deck_stations,ARMOR)
-    root.set_meta("destroyer_art_revision","1.10")
+    root.set_meta("destroyer_art_revision","1.11")
     _destroyer_bridge(root,art_level)
     _destroyer_navigation(root,art_level)
     _destroyer_deck_equipment(root,art_level)
