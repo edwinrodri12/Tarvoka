@@ -4,6 +4,11 @@ on:
     paths:
       - '.github/workflows/tarvoka-a02-live-release-audit.yml'
   workflow_dispatch:
+    inputs:
+      minimum_source_commit:
+        description: 'Full SHA of the integrated main revision required on Pages'
+        required: true
+        default: '8045d3e64ad4fd33c7f62fac32a0bd9c1fedf3fc'
 
 permissions:
   contents: read
@@ -22,17 +27,18 @@ jobs:
           fetch-depth: 0
       - name: Verify public manifest, source ancestry and served package hash
         shell: bash
+        env:
+          MINIMUM_SOURCE_COMMIT: ${{ inputs.minimum_source_commit || '8045d3e64ad4fd33c7f62fac32a0bd9c1fedf3fc' }}
         run: |
           set -euo pipefail
           mkdir -p build/qa/a02-live
           python3 - <<'PY'
-          import hashlib, json, pathlib, re, subprocess, urllib.request
+          import hashlib, json, os, pathlib, re, subprocess, urllib.request
           out = pathlib.Path('build/qa/a02-live')
           base = 'https://edwinrodri12.github.io/Tarvoka/'
-          merged = 'bd44a74a9c124362882f3c865465eea994198102'
-          expected = hashlib.sha256(subprocess.check_output(
-              ['git','show',merged+':scripts/ui/A02FpvArtV1.gd'])).hexdigest()
-          report = {'url':base,'integrated_commit':merged,'expected_a02_sha256':expected}
+          merged = os.environ['MINIMUM_SOURCE_COMMIT']
+          report = {'url':base,'minimum_integrated_commit':merged}
+          expected_counts = {'V16':(34,5688), 'V17':(34,5688), 'V18':(36,5808)}
           def fetch(path):
               req = urllib.request.Request(base + path + '?a02-audit=' + merged[:12],
                   headers={'Cache-Control':'no-cache','User-Agent':'TARVOKA-release-audit'})
@@ -44,11 +50,21 @@ jobs:
               (out/'served-manifest.json').write_text(json.dumps(manifest,indent=2))
               source = manifest['source_commit']
               assert re.fullmatch('[0-9a-f]{40}', source), 'Invalid source commit'
+              assert re.fullmatch('[0-9a-f]{40}', merged), 'Minimum revision must be a full SHA'
               subprocess.run(['git','fetch','origin','main'],check=True)
-              assert subprocess.run(['git','merge-base','--is-ancestor',merged,source]).returncode == 0, 'Served source predates A02 integration or is not its descendant'
+              assert subprocess.run(['git','merge-base','--is-ancestor',merged,'origin/main']).returncode == 0, 'Requested revision not integrated on main'
+              assert subprocess.run(['git','merge-base','--is-ancestor',merged,source]).returncode == 0, 'Served source predates required integration'
               assert subprocess.run(['git','merge-base','--is-ancestor',source,'origin/main']).returncode == 0, 'Served revision is not on main'
-              assert manifest['a02'] == 'V16 EN REVISION', 'Wrong A02 revision'
+              art = subprocess.check_output(['git','show',source+':scripts/ui/A02FpvArtV1.gd'])
+              expected = hashlib.sha256(art).hexdigest()
+              edition = 'V18' if b'tarvoka_a02_v18_undershell_finish' in art else (
+                  'V17' if b'tarvoka_a02_v17_surface_finish' in art else 'V16')
+              assert b'tarvoka_a02_v16_damage_presentation' in art, 'Unrecognized A02 source'
+              assert manifest['a02'] == edition+' EN REVISION', 'Manifest edition differs from source'
               assert manifest['a02_source_sha256'] == expected, 'Wrong A02 art content'
+              report['expected_a02_sha256'] = expected
+              report['expected_edition'] = edition
+              report['expected_meshes'],report['expected_triangles'] = expected_counts[edition]
               digest = hashlib.sha256()
               with fetch('index.pck') as r:
                   for chunk in iter(lambda:r.read(1024*1024),b''):
@@ -74,6 +90,7 @@ jobs:
           const {PNG}=require(process.cwd()+'/node_modules/pngjs');
           const fs=require('node:fs');
           const out='build/qa/a02-live';
+          const expected=JSON.parse(fs.readFileSync(out+'/release-audit.json','utf8'));
           (async()=>{
             const browser=await chromium.launch({headless:true,executablePath:'/usr/bin/google-chrome',
               args:['--no-sandbox','--disable-dev-shm-usage','--enable-webgl','--use-gl=angle','--use-angle=swiftshader','--enable-unsafe-swiftshader']});
@@ -87,11 +104,13 @@ jobs:
                 page.on('pageerror',e=>errors.push(String(e)));
                 page.on('console',m=>{if(/SCRIPT ERROR:|Parse Error:|Could not create render/.test(m.text())) errors.push(m.text());});
                 try {
-                  await page.goto('https://edwinrodri12.github.io/Tarvoka/?unidad='+alias,{waitUntil:'domcontentloaded',timeout:60000});
+                  await page.goto('https://edwinrodri12.github.io/Tarvoka/?unidad='+alias+'&audit='+expected.manifest.source_commit,{waitUntil:'domcontentloaded',timeout:60000});
                   await page.waitForFunction(()=>window.__tarvokaA02Entry!==undefined,null,{timeout:180000});
                   const info=await page.evaluate(()=>window.__tarvokaA02Entry);
                   report.info=info;
-                  if(info.role!=='fpv'||info.edition!=='V16'||!info.native_model||info.lod!==13||info.stage!==0||info.visible_meshes!==34||info.triangles!==5688||info.transparent_meshes.length!==0||!info.faction_selector)throw Error('Unexpected live native model: '+JSON.stringify(info));
+                  if(info.role!=='fpv'||info.edition!==expected.expected_edition||!info.native_model||info.lod!==13||info.stage!==0||info.visible_meshes!==expected.expected_meshes||info.triangles!==expected.expected_triangles||info.transparent_meshes.length!==0||!info.faction_selector)throw Error('Unexpected live native model: '+JSON.stringify(info));
+                  if(expected.expected_edition!=='V16'&&!info.surface_finish)throw Error('Missing native satin finish');
+                  if(expected.expected_edition==='V18'&&!info.undershell_finish)throw Error('Missing native lower finish');
                   for(const action of ['a02_move','a02_hover','a02_hit','a02_d0','a02_d1','a02_d2','a02_d3','a02_d4','stop'])
                     if(!info.actions.includes(action))throw Error('Missing '+action);
                   const menu=page.locator('#tarvoka-a02-compact-nav');
@@ -103,6 +122,10 @@ jobs:
                   await page.waitForTimeout(1200);
                   const png=PNG.sync.read(await page.screenshot({path:out+'/public-'+alias+'.png'}));
                   if(png.width!==width||png.height!==height||errors.length)throw Error('Unexpected screenshot or browser errors '+errors.join('; '));
+                  const response=await page.request.get('https://edwinrodri12.github.io/Tarvoka/studio-version.json?audit='+expected.manifest.source_commit,{headers:{'Cache-Control':'no-cache'}});
+                  if(!response.ok())throw Error('Cannot verify manifest after rendering');
+                  const finalManifest=await response.json();
+                  if(finalManifest.source_commit!==expected.manifest.source_commit||finalManifest.bundle_sha256!==expected.manifest.bundle_sha256)throw Error('Publication changed during audit; retry against a stable revision');
                   report.passed=true;
                 } catch(e) {
                   report.passed=false; report.error=String(e);
