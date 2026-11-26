@@ -2768,7 +2768,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: tarvoka-destroyer-v114-shared-studio
+          name: tarvoka-destroyer-v115-shared-studio
           path: build/qa/destroyer-shared-studio/*.png
           if-no-files-found: warn
 
@@ -2804,6 +2804,8 @@ jobs:
               'engineer': 'G05 V17',
               'a02': 'V18 EN REVISION',
               'a02_source_sha256': hashlib.sha256(Path('scripts/ui/A02FpvArtV1.gd').read_bytes()).hexdigest(),
+              'destroyer': 'V1.15',
+              'destroyer_source_sha256': hashlib.sha256(Path('scripts/ui/UnitModels3D.gd').read_bytes()).hexdigest(),
               'source_commit': commit,
               'engineer_source_sha256': hashlib.sha256(source.read_bytes()).hexdigest(),
               'bundle_sha256': hashlib.sha256((root / 'index.pck').read_bytes()).hexdigest(),
@@ -2819,6 +2821,7 @@ jobs:
               'font:600 11px system-ui,Arial,sans-serif">'
               'Estudio · G05 V17 incluido · ' + html.escape(commit[:12])
               + ' · <a style="color:inherit" href="?unidad=a02" aria-label="Revisar A02 FPV en el mismo visor">A02 FPV</a>'
+              + ' · <a style="color:inherit" href="?unidad=destroyer" aria-label="Revisar destructor naval en el mismo visor">Destructor</a>'
               + ' · <a style="color:inherit" href="studio-version.json">versión</a></div>'
           )
           # On A02 inspection URLs the original floating navigation obscures
@@ -2966,6 +2969,29 @@ jobs:
                 await page.close();
               }
               fs.writeFileSync('build/qa/a02-browser/report.json',JSON.stringify(reports,null,2));
+              fs.mkdirSync('build/qa/destroyer-browser',{recursive:true});
+              const navalReports=[];
+              for(const [width,height] of [[1280,720],[844,390]]){
+                const page=await browser.newPage({viewport:{width,height},deviceScaleFactor:1});
+                const errors=[];
+                page.on('pageerror',e=>errors.push(String(e)));
+                page.on('console',m=>{if(/SCRIPT ERROR:|Parse Error:|Could not create render/.test(m.text())) errors.push(m.text());});
+                await page.goto('http://127.0.0.1:8124/?unidad=destroyer',{waitUntil:'domcontentloaded',timeout:60000});
+                await page.waitForFunction(()=>window.__tarvokaDestroyerEntry!==undefined,null,{timeout:180000});
+                const info=await page.evaluate(()=>window.__tarvokaDestroyerEntry);
+                if(info.role!=='destroyer'||info.revision!=='1.15'||info.lod!==13||info.stage!==0||
+                    info.factions!==9||info.damage_states!==5||!info.controls_visible||!info.water_visible)
+                  throw Error('Incorrect native destroyer entry: '+JSON.stringify(info));
+                if(!(await page.locator('#tarvoka-engineer-build a[href="?unidad=destroyer"]').isVisible()))
+                  throw Error('Missing public destroyer navigation link');
+                await page.waitForTimeout(1200);
+                const png=PNG.sync.read(await page.screenshot({path:'build/qa/destroyer-browser/destroyer-'+width+'.png'}));
+                if(png.width!==width||png.height!==height)throw Error('Wrong destroyer screenshot size');
+                if(errors.length)throw Error(errors.join('\n'));
+                navalReports.push({width,height,info,errors});
+                await page.close();
+              }
+              fs.writeFileSync('build/qa/destroyer-browser/report.json',JSON.stringify(navalReports,null,2));
             } finally {await browser.close();}
           })().catch(e=>{console.error(e);process.exitCode=1;});
           JS
@@ -2986,6 +3012,15 @@ jobs:
         with:
           name: tarvoka-a02-v18-shared-studio-browser
           path: build/qa/a02-browser/
+          if-no-files-found: warn
+          retention-days: 14
+
+      - name: Archive native destroyer WebGL evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: tarvoka-destroyer-v115-webgl
+          path: build/qa/destroyer-browser/
           if-no-files-found: warn
           retention-days: 14
 
@@ -3039,6 +3074,9 @@ jobs:
                       page = response.read().decode('utf-8')
                   assert source[:12] in page and 'tarvoka-engineer-build' in page
                   assert 'href="?unidad=a02"' in page, 'Missing public A02 entry link'
+                  assert manifest['destroyer'] == 'V1.15', 'Missing destroyer version'
+                  assert re.fullmatch('[a-f0-9]{64}', manifest['destroyer_source_sha256'])
+                  assert 'href="?unidad=destroyer"' in page, 'Missing public destroyer entry link'
                   assert 'tarvoka-a02-compact-nav' in page, 'Missing compact A02 inspection menu'
                   with fetch('index.pck', attempt) as response:
                       actual = hashlib.sha256()

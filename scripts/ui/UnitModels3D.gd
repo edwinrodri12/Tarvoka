@@ -1533,7 +1533,7 @@ static func _destroyer(root: Node3D, art_level: int = 10) -> void:
     for station in stations:
         deck_stations.append([station[0],station[1]*0.86,0.738,0.802])
     _destroyer_shell(root,"Cubierta",deck_stations,ARMOR)
-    root.set_meta("destroyer_art_revision","1.14")
+    root.set_meta("destroyer_art_revision","1.15")
     _destroyer_bridge(root,art_level)
     _destroyer_navigation(root,art_level)
     _destroyer_deck_equipment(root,art_level)
@@ -1618,6 +1618,13 @@ static func set_destroyer_damage(root: Node3D, stage: int, progress: float = 0.0
         if child.has_meta("destroyer_fx_rest"):
             (child as Node3D).transform = child.get_meta("destroyer_fx_rest")
         (child as Node3D).visible = (label.begins_with("Marca") and d>=1) or (label.begins_with("Humo") and d>=2) or (label.begins_with("Fuego") and d>=3) or (label=="FragmentoCubierta" and d>=3) or (label.begins_with("Quemadura") and d>=3)
+        if label.begins_with("Humo"):
+            var index: int = int(label.get_slice("_",1))
+            var plume: Node3D = child as Node3D
+            plume.visible = d>=3 or (d==2 and index<3)
+            if d==2:
+                plume.scale *= 0.78
+                plume.position.y -= float(index)*0.035
     var mast: Node3D = root.get_node("TorreMastil") as Node3D
     var bridge: Node3D = root.get_node("Superestructura") as Node3D
     var lid: Node3D = root.get_node("ModuloCubierta/TapaModulo_3_2") as Node3D
@@ -1662,8 +1669,12 @@ static func animate_destroyer_damage(root: Node3D, phase: float) -> bool:
         var wave: float = sin(phase*TAU+i*0.82)
         item.transform = rest
         if label.begins_with("Humo"):
-            item.position += Vector3(0.032*wave,0.045*wave,0.024*cos(phase*TAU+i))
-            item.scale *= 1.0+0.085*wave
+            if stage==2:
+                item.scale *= 0.78
+                item.position.y -= i*0.035
+            var amplitude: float = 0.65 if stage==2 else 1.0
+            item.position += Vector3(0.032*wave,0.045*wave,0.024*cos(phase*TAU+i))*amplitude
+            item.scale *= 1.0+0.085*wave*amplitude
         elif label.begins_with("Fuego"):
             item.scale *= Vector3(1.0-0.06*wave,1.0+0.18*wave,1.0-0.06*wave)
     return true
