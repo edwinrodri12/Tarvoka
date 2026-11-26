@@ -1705,14 +1705,24 @@ static func _family_fx(model: Node3D,kind: String,t: float,stage: int) -> void:
 static func has_model(model: Node3D) -> bool:
     return model!=null and bool(model.get_meta(FLAG,false))
 
-static func pose(model: Node3D, kind: String, t: float) -> bool:
+static func pose(model: Node3D, requested_kind: String, t: float) -> bool:
     if not has_model(model):
         return false
     var role: String=str(model.get_meta("tarvoka_infantry_role","line"))
     var rifle: Node3D=_find(model,"ArmamentoRig")
     if rifle==null:
         return false
-    var phase: float=clampf(t,0.0,1.0)
+    var stage: int=int(model.get_meta("tarvoka_infantry_damage",0))
+    var collapsed: bool=stage>=4 and role in FAMILY_ANATOMY_ROLES
+    var kind: String="idle" if collapsed else requested_kind
+    var effect_phase: float=clampf(t,0.0,1.0)
+    var phase: float=0.0 if collapsed else effect_phase
+    # A destroyed model must not aim, walk or service equipment on a
+    # later preview request. Retain only its independent smoke clock.
+    if collapsed:
+        var wreck_torso: Node3D=_find(model,"TorsoRig")
+        if wreck_torso!=null:
+            wreck_torso.rotation_degrees=Vector3.ZERO
     var pulse: float=sin(phase*PI)
     var walk: float=sin(phase*TAU*2.0)
     # Rifle points forward, not horizontally across the preview screenshot.
@@ -1779,7 +1789,6 @@ static func pose(model: Node3D, kind: String, t: float) -> bool:
         case_mesh.visible=kind=="attack" and phase>0.26 and phase<0.74
         case_mesh.position=Vector3(0.09,0.10+0.09*pulse,0.21+0.13*pulse)
     # Damage remains owned by V1 and survives pose changes. Never amend HP.
-    var stage: int=int(model.get_meta("tarvoka_infantry_damage",0))
     if bool(model.get_meta(SURFACE_V7,false)):
         sync_family_damage(model,stage)
         var body: Node3D=_find(model,"Infanteria_3D")
@@ -1799,7 +1808,7 @@ static func pose(model: Node3D, kind: String, t: float) -> bool:
     if bool(model.get_meta(FAMILY_GRIPS_V5,false)):
         if not _pose_family_legs(model,kind,phase,stage):
             return false
-        _family_fx(model,kind,phase,stage)
+        _family_fx(model,kind,effect_phase,stage)
         return _service_pose(model,kind,phase) and _sync_family_grips(model)
     return true
 
