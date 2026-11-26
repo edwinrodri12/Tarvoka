@@ -16,6 +16,7 @@ const Economy = preload("res://scripts/core/UrbanEconomy.gd")
 const Logistics = preload("res://scripts/core/Logistics.gd")
 const Opening = preload("res://scripts/core/OpeningBalance.gd")
 const Weather = preload("res://scripts/core/Weather.gd")
+const Crossings = preload("res://scripts/core/LayeredCrossingsV48.gd")
 const Winter = preload("res://scripts/ui/WinterBattleBiome.gd")
 const Identity = preload("res://scripts/ui/FactionIdentity.gd")
 const MAX_UNITS := 256
@@ -50,6 +51,8 @@ static func encode(state: Dictionary) -> String:
         snapshot["map_seed"] = int(state["map_seed"])
     if state.has(Scenarios.GEOGRAPHY_FIELD):
         snapshot[Scenarios.GEOGRAPHY_FIELD] = state[Scenarios.GEOGRAPHY_FIELD]
+    if state.has(Crossings.FIELD):
+        snapshot[Crossings.FIELD] = state[Crossings.FIELD].duplicate(true)
     if state.has("opening"):
         snapshot["opening"] = state["opening"].duplicate(true)
     if state.has("control"):
@@ -97,6 +100,18 @@ static func decode(raw: String) -> Dictionary:
     var dimensions: Vector2i = Rules.map_size(data["terrain"])
     var state: Dictionary = data.duplicate(true)
     state.erase("version")
+    if state.has(Crossings.FIELD):
+        var config = state[Crossings.FIELD]
+        if not config is Dictionary or not _whole(config.get("version")) or not config.get("records") is Array:
+            return {}
+        config["version"] = int(config["version"])
+        for record in config["records"]:
+            if not record is Dictionary or not _whole(record.get("x")) or not _whole(record.get("y")):
+                return {}
+            if absf(float(record["x"]))>Rules.MAX_AREA or absf(float(record["y"]))>Rules.MAX_AREA:
+                return {}
+            record["x"] = int(record["x"])
+            record["y"] = int(record["y"])
     for unit in state["units"]:
         if not unit is Dictionary or not unit.get("pos") is Array:
             return {}
@@ -287,6 +302,10 @@ static func _valid_state(state: Dictionary) -> bool:
             return false
     if not state.get("winner") is int or state["winner"] not in [-1, 0, 1]:
         return false
+    var crossing_index: Dictionary = Crossings.state_index(state)
+    if not crossing_index["valid"]:
+        return false
+    var bridge_cells: Dictionary = crossing_index["cells"]
     var ids: Dictionary = {}
     var positions: Dictionary = {}
     for unit in state["units"]:
@@ -336,9 +355,11 @@ static func _valid_state(state: Dictionary) -> bool:
         if unit["hp"] > 0:
             var plane: int = 1 if Domains.layer(unit) == Domains.AIR else 0
             var occupied_key := Vector3i(pos.x, pos.y, plane)
+            if state.has(Crossings.FIELD):
+                occupied_key = Crossings.occupancy_key(pos,Domains.domain(unit),bridge_cells)
             if positions.has(occupied_key):
                 return false
-            if Rules.movement_cost_for(str(state["terrain"][pos.y][pos.x]), Domains.domain(unit)) < 0:
+            if Crossings.tile_cost(state["terrain"],bridge_cells,pos,Domains.domain(unit)) < 0:
                 return false
             positions[occupied_key] = true
     if state.has("economy"):
