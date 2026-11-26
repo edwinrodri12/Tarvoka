@@ -1,7 +1,7 @@
 extends RefCounted
 class_name TarvokaLayeredCrossingsV48
 
-# Experimental, not called by the production battle engine.
+# Experimental opt-in BattleSession entrypoint; ordinary maps omit FIELD.
 # Canonical JSON-compatible records: {"x": int, "y": int, "axis": "ew"|"ns"}.
 # Base terrain remains a road. Ground crosses along the deck; ships cross
 # perpendicular to it. Air continues to use its existing unrestricted plane.
@@ -34,7 +34,9 @@ static func index_records(terrain: Array,records: Array) -> Dictionary:
             return {"valid":false,"cells":{}}
         if not record.get("x") is int or not record.get("y") is int:
             return {"valid":false,"cells":{}}
-        var axis: String = str(record.get("axis",""))
+        if not record.get("axis") is String or absi(record["x"])>Rules.MAX_AREA or absi(record["y"])>Rules.MAX_AREA:
+            return {"valid":false,"cells":{}}
+        var axis: String = record["axis"]
         var cell := Vector2i(record["x"],record["y"])
         if axis not in ["ew","ns"] or not Rules.inside(cell,terrain) or cells.has(cell):
             return {"valid":false,"cells":{}}
@@ -147,4 +149,24 @@ static func public_cells(cells: Dictionary,observed: Dictionary) -> Dictionary:
     for cell in cells:
         if observed.has(cell):
             result[cell] = cells[cell]
+    return result
+
+# Explicit layer choices for the future inspection UI. No auto-selection
+# by array order, and no disclosure of units outside the caller's visibility.
+static func selectable_units(state: Dictionary,cell: Vector2i,viewer: int,
+        observed: Dictionary) -> Array:
+    if viewer not in [0,1] or not observed.has(cell):
+        return []
+    var index: Dictionary = state_index(state)
+    if not index["valid"] or not state.get("units") is Array:
+        return []
+    var result: Array = []
+    for unit in state["units"]:
+        if int(unit.get("hp",0))<=0 or unit.get("pos")!=cell:
+            continue
+        var domain: String = Domains.domain(unit)
+        var key: Vector3i = occupancy_key(cell,domain,index["cells"])
+        result.append({"id":unit["id"],"domain":domain,"layer":key.z,
+            "friendly":int(unit["faction"])==viewer})
+    result.sort_custom(func(a,b): return int(a["layer"])<int(b["layer"]))
     return result
