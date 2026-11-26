@@ -65,3 +65,7 @@ Auditoría pública 45902899868 confirmó V16 (commit bd44a74a), paquete íntegr
 ## V17 — acabado satinado y transición de normales (candidato)
 
 Suaviza únicamente las normales horizontales de paredes y biseles (42 % hacia la dirección radial) sin alterar vértices, silueta, triángulos, planos superior/inferior ni cierre. Ajuste moderado de rugosidad y reflectancia de pigmentos opacos. Pruebas de topología exacta, normales unitarias hacia afuera, diversidad angular, pigmento y acabado; conserva estados D0–D4 y controles. Identidad V17 en Studio y manifiesto. Pendientes compilación Godot, comparación visual y despliegue. Sin cambios de catálogo, juego ni otras unidades.
+
+## V18 — revisión del acabado inferior (candidato separado)
+
+V17 nativa 45906266524 y APK 45906266416 correctas; comparación visual de los 52 renders y 80 estados confirma suavizado discreto, inventario idéntico a V16. La V18 conserva la geometría de la carcasa inferior, diferencia su pigmento, recupera contraste de la insignia y añade dos relieves ornamentales cerrados e integrados, solo LOD13. LOD8 intacto en triángulos e instancias. D0 LOD13 previsto: 36 mallas/5808 triángulos; D4 máximo previsto 39/6672. Estos conteos son expectativas a comprobar en Godot, no mediciones. QA y manifiesto preparados; rama separada para preservar CI de V17. Sin cambios de reglas ni otras unidades.
