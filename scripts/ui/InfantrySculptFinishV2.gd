@@ -184,6 +184,8 @@ static func _refine_core(model: Node3D, hero: bool) -> bool:
     model.set_meta(FAMILY_ANATOMY_V5,true)
     if not _refine_head_and_armor(model,hero) or not _refine_face_and_profile(model,hero):
         return false
+    if not _refine_outer_armor(model,hero):
+        return false
     return _attach_family_grips(model,hero)
 
 const FAMILY_IDENTITY_V6 := "tarvoka_infantry_role_identity_v6"
@@ -348,6 +350,79 @@ static func _refine_face_and_profile(model: Node3D,hero: bool) -> bool:
     model.set_meta(SCULPT_V8,role)
     return true
 
+const ARMOR_V10 := "tarvoka_infantry_armor_anatomy_v10"
+
+# Keep the anatomical arm and hand endpoints. Shape a slimmer fitted
+# forearm, a curved chest and role-specific shoulder mass instead of
+# adding disconnected decoration or changing rig pivots.
+static func _refine_outer_armor(model: Node3D,hero: bool) -> bool:
+    var role: String=str(model.get_meta("tarvoka_infantry_role",""))
+    var sides: int=20 if hero else 12
+    var shoulder_width: float=1.0
+    var shoulder_depth: float=1.0
+    var chest_width: float=1.0
+    var chest_depth: float=1.0
+    match role:
+        "line":
+            pass
+        "infantry_commando":
+            shoulder_width=1.06
+            shoulder_depth=1.08
+            chest_width=1.04
+            chest_depth=1.12
+        "infantry_sniper":
+            shoulder_width=0.87
+            shoulder_depth=0.91
+            chest_width=0.94
+            chest_depth=0.88
+        "infantry_logistic":
+            shoulder_width=0.96
+            chest_depth=0.91
+        "infantry_medic":
+            shoulder_width=0.92
+            shoulder_depth=0.94
+            chest_width=0.96
+            chest_depth=0.91
+        _:
+            return false
+    for side in [-1,1]:
+        var suffix: String="_%d"%side
+        var shoulder_profile: Array[Vector3]=[]
+        for ring in [Vector3(0.105,-0.145,0.108),Vector3(0.139,-0.095,0.139),
+                Vector3(0.154,-0.02,0.147),Vector3(0.136,0.05,0.124),
+                Vector3(0.091,0.091,0.087),Vector3(0.052,0.113,0.054)]:
+            shoulder_profile.append(Vector3(ring.x*shoulder_width,ring.y,ring.z*shoulder_depth))
+        if not _resculpt(model,"Hombrera"+suffix,shoulder_profile,Vector3(0,0,-0.035),sides):
+            return false
+        var shoulder: Node3D=_find(model,"FaccionHombro"+suffix)
+        if shoulder!=null:
+            shoulder.position.x=float(side)*(0.147*shoulder_width)
+        if not _resculpt(model,"V2_MangaCerrada"+suffix,[
+                Vector3(0.103,-0.52,0.112),Vector3(0.118,-0.43,0.127),
+                Vector3(0.129,-0.30,0.135),Vector3(0.139,-0.15,0.143),
+                Vector3(0.143,-0.025,0.14),Vector3(0.119,0.06,0.12)],
+                Vector3(0,0,0.005),sides):
+            return false
+    var chest: MeshInstance3D=_find(model,"V2_CorazaPectoralHermetica") as MeshInstance3D
+    if chest==null:
+        return false
+    # Superelliptic closed shell with a tapered waist. Use the original
+    # chest center and keep all exact faction-colored pieces separate.
+    chest.mesh=_organic_mesh([
+        Vector3(0.235*chest_width,-0.265,0.045*chest_depth),
+        Vector3(0.282*chest_width,-0.205,0.063*chest_depth),
+        Vector3(0.319*chest_width,-0.055,0.079*chest_depth),
+        Vector3(0.337*chest_width,0.10,0.083*chest_depth),
+        Vector3(0.295*chest_width,0.207,0.060*chest_depth),
+        Vector3(0.205*chest_width,0.266,0.038*chest_depth)],
+        sides,PackedFloat32Array([0.012,0.002,-0.006,-0.006,0.0,0.018]),0.55)
+    chest.scale=Vector3.ONE
+    var mark: Node3D=_find(model,"V2_FaccionPechoArticulada")
+    if mark!=null:
+        mark.position.z=chest.position.z-0.069*chest_depth
+    model.set_meta(ARMOR_V10,role)
+    return true
+
 const SURFACE_V7 := "tarvoka_infantry_material_finish_v7"
 const DAMAGE_V7 := "tarvoka_infantry_visual_damage_v7"
 const CLEAN_MAT := "tarvoka_infantry_v7_clean_material"
@@ -487,9 +562,9 @@ static func _attach_family_grips(model: Node3D, hero: bool) -> bool:
             digit.rotation_degrees=Vector3(12,0,0)
             digit.scale=Vector3(0.85,0.76,0.85)
         link.mesh=_organic_mesh([
-            Vector3(0.095,-0.5,0.108),Vector3(0.118,-0.31,0.126),
-            Vector3(0.112,-0.05,0.118),Vector3(0.091,0.24,0.096),
-            Vector3(0.066,0.5,0.072)],16 if hero else 10)
+            Vector3(0.091,-0.5,0.104),Vector3(0.102,-0.35,0.110),
+            Vector3(0.098,-0.12,0.105),Vector3(0.083,0.10,0.090),
+            Vector3(0.073,0.29,0.079),Vector3(0.061,0.5,0.066)],16 if hero else 10)
     model.set_meta(FAMILY_GRIPS_V5,true)
     return _sync_family_grips(model)
 
@@ -888,6 +963,100 @@ static func _service_pose(model: Node3D, kind: String, t: float) -> bool:
     model.set_meta(SERVICE_FLAG,active)
     return true
 
+const FX_V10 := "V10_InfantryVisualFX"
+static var _family_fx_shape: SphereMesh
+static var _family_fx_material: StandardMaterial3D
+
+# One lazily created MultiMesh batch, not a particle node per soldier
+# effect. Root-space effects stay upright when the visual body falls.
+static func _family_fx_batch(model: Node3D) -> MultiMeshInstance3D:
+    var batch: MultiMeshInstance3D=model.get_node_or_null(FX_V10) as MultiMeshInstance3D
+    if batch!=null:
+        return batch
+    if _family_fx_shape==null:
+        _family_fx_shape=SphereMesh.new()
+        _family_fx_shape.radius=0.5
+        _family_fx_shape.height=1.0
+        _family_fx_shape.radial_segments=8
+        _family_fx_shape.rings=4
+        _family_fx_material=StandardMaterial3D.new()
+        _family_fx_material.vertex_color_use_as_albedo=true
+        _family_fx_material.roughness=1.0
+        _family_fx_material.transparency=BaseMaterial3D.TRANSPARENCY_DISABLED
+    batch=MultiMeshInstance3D.new()
+    batch.name=FX_V10
+    batch.cast_shadow=GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+    batch.material_override=_family_fx_material
+    var pool:=MultiMesh.new()
+    pool.transform_format=MultiMesh.TRANSFORM_3D
+    pool.use_colors=true
+    pool.mesh=_family_fx_shape
+    pool.instance_count=8 if bool(model.get_meta("tarvoka_infantry_v2_hero",false)) else 4
+    pool.visible_instance_count=0
+    batch.multimesh=pool
+    batch.visible=false
+    model.add_child(batch)
+    return batch
+
+static func _family_anchor(model: Node3D,rig: String,point: Vector3) -> Vector3:
+    var node: Node3D=_find(model,rig)
+    while node!=null and node!=model:
+        point=node.transform*point
+        node=node.get_parent() as Node3D
+    return point
+
+static func _family_fx(model: Node3D,kind: String,t: float,stage: int) -> void:
+    if str(model.get_meta(ARMOR_V10,"")) not in FAMILY_ANATOMY_ROLES:
+        return
+    var impact: bool=stage<4 and kind in ["hit_bullet","hit_explosive"] and t>0.08 and t<0.85
+    var dust: bool=stage<4 and kind=="move" and t>0.08 and t<0.92
+    # Equipment smoke is a stylized visual effect at D3/D4, no HP change.
+    var smoke: bool=stage>=3
+    var batch: MultiMeshInstance3D=model.get_node_or_null(FX_V10) as MultiMeshInstance3D
+    if not (impact or dust or smoke):
+        if batch!=null:
+            batch.visible=false
+            batch.multimesh.visible_instance_count=0
+        return
+    if batch==null:
+        batch=_family_fx_batch(model)
+    var pool: MultiMesh=batch.multimesh
+    var used: int=0
+    if smoke:
+        var count: int=pool.instance_count >> 1
+        var origin: Vector3=_family_anchor(model,"TorsoRig",Vector3(-0.32,0.22,0.40))
+        for i in range(count):
+            var p: float=fposmod(t+float(i)/float(count),1.0)
+            var at: Vector3=origin+Vector3(-0.08-0.12*p+0.065*sin(i*2.4),
+                0.20+0.70*p,0.06*cos(i*2.4))
+            var size: float=0.11+0.18*p
+            pool.set_instance_transform(used,Transform3D(Basis.from_scale(Vector3(size,size*1.22,size)),at))
+            pool.set_instance_color(used,Color("#52595a").lerp(Color("#a0a19b"),p))
+            used+=1
+    if impact or dust:
+        var explosive: bool=kind=="hit_explosive"
+        var count: int=pool.instance_count-used
+        if not explosive:
+            count=mini(count,pool.instance_count >> 1)
+        var p: float=clampf((t-0.08)/0.77,0.0,1.0)
+        var origin: Vector3=_family_anchor(model,"TorsoRig",Vector3(0,0,-0.43))
+        for i in range(count):
+            var angle: float=float(i)*2.399963
+            var radius: float=(0.36 if explosive else 0.18)*p
+            var at: Vector3=origin+Vector3(cos(angle)*radius,sin(angle)*radius,-0.07-0.20*p)
+            var size: float=(0.15 if explosive else 0.075)*(1.0-0.5*p)
+            var shade: Color=Color("#efac63").lerp(Color("#777d7c"),p) if explosive else Color("#e8d5ae")
+            if dust:
+                var side: float=-1.0 if i%2==0 else 1.0
+                at=Vector3(side*(0.21+0.20*p),0.08+0.10*p,0.13+0.25*p)
+                size=0.14*(1.0-0.45*p)
+                shade=Color("#b2a18c")
+            pool.set_instance_transform(used,Transform3D(Basis.from_scale(Vector3.ONE*size),at))
+            pool.set_instance_color(used,shade)
+            used+=1
+    pool.visible_instance_count=used
+    batch.visible=used>0
+
 static func has_model(model: Node3D) -> bool:
     return model!=null and bool(model.get_meta(FLAG,false))
 
@@ -959,6 +1128,7 @@ static func pose(model: Node3D, kind: String, t: float) -> bool:
     if scar!=null:
         scar.visible=stage>=3
     if bool(model.get_meta(FAMILY_GRIPS_V5,false)):
+        _family_fx(model,kind,phase,stage)
         return _service_pose(model,kind,phase) and _sync_family_grips(model)
     return true
 

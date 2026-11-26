@@ -27,3 +27,7 @@ FS-24: montaje curvo de ópticas, radio y protecciones especiales ancladas al br
 ### Corrección de ejecución V9.1
 
 Run V8 45754268783, job 139689068458: Godot 4.3 reportó `Invalid call. Nonexistent 'bool' constructor` en UnitModels3D.gd:1381 al convertir el metadato de identidad (String) a bool. Esto abortó Guardia y originó errores secundarios de recursos al salir. La condición ahora compara el rol String exacto; no se desactiva ninguna prueba. QA pendiente del nuevo HEAD.
+
+## V10 — brazo afinado, coraza individual y efectos nativos
+
+Cinco perfiles de hombro y pecho cerrados, conservando pivotes, contacto de manos y pinturas. Antebrazo de menor volumen con transición hacia muñeca; reutiliza la geometría y nodos. Efectos visuales únicamente: polvo de marcha, impacto de bala/explosión y humo estilizado del equipamiento en D3/D4 con un MultiMesh perezoso de 8 instancias LOD13 o 4 LOD8; se oculta al restaurar D0. Sin cambios de HP/daño real ni de G05. QA exige 88 PNG, 10 capturas nuevas de impactos, verificación de límite de instancias y limpieza reversible. V8 había fallado por conversión de String a bool, corregida en dd49b93. V9 y V10 todavía requieren CI y revisión visual; no fusionar.

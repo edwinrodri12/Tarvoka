@@ -234,6 +234,8 @@ func _run() -> void:
                         "V7 native material finish applied")
                     check(str(model.get_meta(Finish.SCULPT_V8,""))==role,
                         "V8 face integrated on exact role")
+                    check(str(model.get_meta(Finish.ARMOR_V10,""))==role,
+                        "V10 role-specific closed armor and fitted arms")
                     if role=="line":
                         check(is_zero_approx(model.position.y) and
                             str(model.get_meta(Finish.SCULPT_V8,""))=="line",
@@ -304,6 +306,20 @@ func _run() -> void:
                     Models.restore_model_pose(role,model)
                     check(family_grip_contact(model,-1) and family_grip_contact(model,1),
                         "restore retains physical grips")
+                    for action in ["move","hit_bullet","hit_explosive"]:
+                        check(Models.pose_model(role,model,action,0.4),"V10 effect pose "+action)
+                        var batch: MultiMeshInstance3D=model.get_node_or_null(Finish.FX_V10) as MultiMeshInstance3D
+                        var budget: int=8 if bool(model.get_meta("tarvoka_infantry_v2_hero",false)) else 4
+                        check(batch!=null and batch.visible and batch.multimesh.instance_count==budget and
+                            batch.multimesh.visible_instance_count>0 and batch.multimesh.visible_instance_count<=budget,
+                            "one bounded native effect batch "+action)
+                    check(Infantry.set_damage(model,3) and Models.pose_model(role,model,"idle",0.4),"equipment smoke pose")
+                    var smoke: MultiMeshInstance3D=model.get_node_or_null(Finish.FX_V10) as MultiMeshInstance3D
+                    check(smoke!=null and smoke.visible and smoke.multimesh.visible_instance_count>0,
+                        "D3 persistent equipment smoke")
+                    Models.restore_model_pose(role,model)
+                    check(smoke!=null and not smoke.visible and smoke.multimesh.visible_instance_count==0,
+                        "D0 clears effect batch without resource churn")
                     if Specialist.supports(role):
                         check(bool(model.get_meta(Specialist.KIT_V5,false)),
                             "specialist kit revision present")
@@ -458,6 +474,10 @@ func _run() -> void:
                             check(Models.pose_model(role,hero,"work",0.5),"specialist service animation")
                             await save_frame(view,"v6_%s_service"%role)
                             Models.restore_model_pose(role,hero)
+                        for action in ["hit_bullet","hit_explosive"]:
+                            check(Models.pose_model(role,hero,action,0.4),"V10 actual impact render")
+                            await save_frame(view,"v10_%s_%s"%[role,action])
+                            Models.restore_model_pose(role,hero)
                         for damage in [2,4]:
                             check(Infantry.set_damage(hero,damage) and Models.pose_model(role,hero,"idle",0.0),
                                 "V7 damage capture")
@@ -480,7 +500,7 @@ func _run() -> void:
                 camera.size=3.6
             hero.free()
             mobile.free()
-    check(rendered==78,"78 real 3D comparison / tactical frames")
+    check(rendered==88,"88 real 3D comparison / tactical frames")
     # Art-only variants must never enter the tactical roster.
     for role in ["infantry_urban","infantry_defense",
             "infantry_antitank","infantry_engineer",
@@ -491,5 +511,5 @@ func _run() -> void:
         push_error("FAIL INFANTRY V2 NATIVE 3D: %d failures"%failed)
         quit(1)
     else:
-        print("PASS INFANTRY V2 NATIVE 3D: 160 models (6 core + 4 legacy), 8 factions, 2 LOD, 78 true PNG")
+        print("PASS INFANTRY V2 NATIVE 3D: 160 models (6 core + 4 legacy), 8 factions, 2 LOD, 88 true PNG")
         quit(0)
