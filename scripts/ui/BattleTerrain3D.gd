@@ -469,6 +469,52 @@ static func _append_natural_ground(tool: SurfaceTool,at: Vector3,
         count += 1
     return count
 
+# V47: shore bands follow the existing land fan. Only exposed public
+# shore directions are used. Coastal sand, wet mud and rock use distinct
+# widths; no added cells, collisions or navigation routes.
+static func _append_shore_bands(tool: SurfaceTool,at: Vector3,
+        surface: Dictionary,key: String,biome: String) -> void:
+    var half: float = float(surface["half"])
+    var width: float = 0.36 if biome in [Biomes.COASTAL,Biomes.ARCHIPELAGO] else 0.22
+    var color: Color = _shore_color(biome)
+    for band in range(2):
+        var inner: float = half-width+float(band)*width*0.50
+        var outer: float = half-width+float(band+1)*width*0.50-0.015
+        var tint: Color = color.lightened(0.09) if band==0 else color.darkened(0.13)
+        var margin: float = 0.12
+        if key=="north":
+            RoadShore._rect(tool,at,surface,-half+margin,half-margin,-outer,-inner,tint,0.033)
+        elif key=="south":
+            RoadShore._rect(tool,at,surface,-half+margin,half-margin,inner,outer,tint,0.033)
+        elif key=="west":
+            RoadShore._rect(tool,at,surface,-outer,-inner,-half+margin,half-margin,tint,0.033)
+        elif key=="east":
+            RoadShore._rect(tool,at,surface,inner,outer,-half+margin,half-margin,tint,0.033)
+
+static func _append_coastal_foam(tool: SurfaceTool,cells: Dictionary,
+        cell: Vector2i,biome: String) -> int:
+    if biome not in [Biomes.COASTAL,Biomes.ARCHIPELAGO]:
+        return 0
+    var at: Vector3 = world_at(cell)+Vector3(0,WATER_LEVEL+0.006,0)
+    var half: float = CELL*0.5
+    var count := 0
+    for direction in [Vector2i.UP,Vector2i.RIGHT,Vector2i.DOWN,Vector2i.LEFT]:
+        var neighbor: Dictionary = cells.get(cell+direction,{})
+        if not bool(neighbor.get("details",false)) or str(neighbor.get("kind","unknown")) in ["water","unknown"]:
+            continue
+        var normal := Vector3(direction.x,0,direction.y)
+        var tangent := Vector3(-direction.y,0,direction.x)
+        var color: Color = _biome_color("water",cell,biome).lightened(0.41)
+        for i in range(3):
+            var along: float = -0.65+float(i)*0.65
+            var a: Vector3 = at+normal*(half-0.05)+tangent*(along-0.24)
+            var b: Vector3 = at+normal*(half-0.05)+tangent*(along+0.24)
+            var d: Vector3 = at+normal*(half-0.11)+tangent*(along-0.24)
+            var e: Vector3 = at+normal*(half-0.11)+tangent*(along+0.24)
+            _panel(tool,a,b,e,d,color)
+        count += 1
+    return count
+
 static func _build_chunk(parent: Node3D, data: Dictionary,
         cells: Dictionary,corner_cache: Dictionary,
         biome: String = Biomes.TEMPERATE,water_cache: Dictionary = {},
@@ -513,6 +559,7 @@ static func _build_chunk(parent: Node3D, data: Dictionary,
                 var cw: Color = _cached_water_tint(cells,cell+Vector2i(0,1),water_cache,biome)
                 _tri_tinted(water,wn,ww,we,cn,cw,ce)
                 _tri_tinted(water,we,ww,ws,ce,cw,cs)
+                _append_coastal_foam(water,cells,cell,biome)
             else:
                 _panel(water,wn,we,ws,ww,tinted)
             water_count += 1
@@ -569,19 +616,7 @@ static func _build_chunk(parent: Node3D, data: Dictionary,
             for key in ["north","south","west","east"]:
                 if not bool(shore_edges.get(key,false)):
                     continue
-                var off: float = half-0.22
-                if key=="north":
-                    RoadShore._rect(shore,at,surface_cell,-half+0.12,half-0.12,
-                        -half+0.04,-off,_shore_color(biome),0.033)
-                elif key=="south":
-                    RoadShore._rect(shore,at,surface_cell,-half+0.12,half-0.12,
-                        off,half-0.04,_shore_color(biome),0.033)
-                elif key=="west":
-                    RoadShore._rect(shore,at,surface_cell,-half+0.04,-off,
-                        -half+0.12,half-0.12,_shore_color(biome),0.033)
-                else:
-                    RoadShore._rect(shore,at,surface_cell,off,half-0.04,
-                        -half+0.12,half-0.12,_shore_color(biome),0.033)
+                _append_shore_bands(shore,at,surface_cell,key,biome)
                 shores_count += 1
     var chunk := Node3D.new()
     chunk.name = "Sector3D_%d_%d" % [data["origin"].x,data["origin"].y]
@@ -633,10 +668,16 @@ static func _append_tropical_palm(tool: SurfaceTool) -> void:
         var side := Vector3(-sin(angle),0,cos(angle))*0.12
         var middle: Vector3 = head+radial*0.32+Vector3.UP*0.19
         var tip: Vector3 = head+radial*0.66-Vector3.UP*0.09
-        _tri_tinted(tool,head,middle+side,middle,leaf,leaf.darkened(0.14),leaf.lightened(0.20))
-        _tri_tinted(tool,head,middle,middle-side,leaf,leaf.lightened(0.20),leaf)
-        _tri_tinted(tool,middle,middle+side,tip,leaf.lightened(0.20),leaf,leaf.darkened(0.18))
-        _tri_tinted(tool,middle,middle-side,tip,leaf.lightened(0.20),leaf,leaf.darkened(0.18))
+        # V46: a closed, creased leaf volume with four perimeter vertices.
+        # The underside is darker but opaque, not an alpha cutout.
+        var rim: Array[Vector3] = [head,middle+side,tip,middle-side]
+        var upper: Vector3 = middle+Vector3.UP*0.026
+        var lower: Vector3 = middle-Vector3.UP*0.035
+        for edge in range(4):
+            var a: Vector3 = rim[edge]
+            var b: Vector3 = rim[(edge+1)%4]
+            _tri_tinted(tool,a,b,upper,leaf,leaf.darkened(0.12),leaf.lightened(0.22))
+            _tri(tool,b,a,lower,leaf.darkened(0.26))
 
 # Wetland reeds and urban broadleaf crowns use the same instancing path.
 static func _append_reeds(tool: SurfaceTool) -> void:
@@ -649,9 +690,17 @@ static func _append_reeds(tool: SurfaceTool) -> void:
         _tri_tinted(tool,base-side,base+side,tip,Color("#526a3e"),
             Color("#78834e"),Color("#a2a26a"))
         var head: Vector3 = tip-Vector3.UP*0.08
-        _panel(tool,head-side*1.35,head+side*1.35,
-            head+side*1.35+Vector3.UP*0.15,head-side*1.35+Vector3.UP*0.15,
-            Color("#8d6d42"))
+        var cap: Vector3 = head+Vector3.UP*0.15
+        # Closed seed heads, while grass blades remain thin solid foliage.
+        var seed_color := Color("#8d6d42")
+        for edge in range(4):
+            var u: float = TAU*float(edge)/4.0
+            var v: float = TAU*float(edge+1)/4.0
+            var p := Vector3(cos(u)*0.040,0,sin(u)*0.040)
+            var q := Vector3(cos(v)*0.040,0,sin(v)*0.040)
+            _panel(tool,head+p,head+q,cap+q*0.75,cap+p*0.75,seed_color)
+            _tri(tool,head,head+q,head+p,seed_color.darkened(0.18))
+            _tri(tool,cap,cap+p*0.75,cap+q*0.75,seed_color.lightened(0.12))
 
 static func _append_urban_tree(tool: SurfaceTool,
         foliage: Color = Color("#657b54")) -> void:
