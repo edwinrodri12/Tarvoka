@@ -423,6 +423,34 @@ static func _append_extended_ground(tool: SurfaceTool,at: Vector3,
             RoadShore._rect(tool,at,surface,-0.72,0.72,z,z+0.04,
                 Color("#cabd92"),0.016)
 
+# V44: restrained ground-edge detail on public plain cells, using the
+# exact tactical height sampler. Keep the center clear for unit silhouettes.
+static func _append_natural_ground(tool: SurfaceTool,at: Vector3,
+        surface: Dictionary,cell: Vector2i,biome: String) -> int:
+    var tint: Color
+    match biome:
+        Biomes.TEMPERATE: tint = Color("#84956a")
+        Biomes.WINTER: tint = Color("#c9d8df")
+        Biomes.CANYON: tint = Color("#ae8a64")
+        Biomes.COASTAL: tint = Color("#9bb894")
+        Biomes.TROPICAL: tint = Color("#477a41")
+        _: return 0
+    var count := 0
+    for i in range(2):
+        var side: float = -1.0 if i==0 else 1.0
+        var jitter: float = float(posmod(cell.x*17+cell.y*31+i*7,7))*0.035
+        var x: float = side*(0.73+jitter)
+        var z: float = -0.56+float(posmod(cell.x*11+cell.y*13+i*3,6))*0.21
+        var length: float = 0.24+jitter
+        var a: Vector3 = RoadShore._point(at,surface,x-0.13,z-0.09,0.022)
+        var b: Vector3 = RoadShore._point(at,surface,x+0.13,z-0.07,0.022)
+        var d: Vector3 = RoadShore._point(at,surface,x+0.08,z+length,0.022)
+        var e: Vector3 = RoadShore._point(at,surface,x-0.10,z+length*0.60,0.022)
+        _tri_tinted(tool,a,e,b,tint.darkened(0.07),tint,tint.lightened(0.08))
+        _tri_tinted(tool,b,e,d,tint.lightened(0.08),tint,tint.darkened(0.05))
+        count += 1
+    return count
+
 static func _build_chunk(parent: Node3D, data: Dictionary,
         cells: Dictionary,corner_cache: Dictionary,
         biome: String = Biomes.TEMPERATE,water_cache: Dictionary = {},
@@ -512,6 +540,8 @@ static func _build_chunk(parent: Node3D, data: Dictionary,
             _append_sand_ripples(ground,at,surface_cell,cell)
         elif kind=="plain" and biome in [Biomes.WETLAND,Biomes.URBAN,Biomes.ARCHIPELAGO]:
             _append_extended_ground(ground,at,surface_cell,cell,biome)
+        elif kind=="plain":
+            _append_natural_ground(ground,at,surface_cell,cell,biome)
         if kind == "road":
             _append_road_finish(road,at,surface_cell,tile,biome)
             crossings_count += _append_crossing_parapets(road,at,surface_cell,tile)
@@ -605,7 +635,8 @@ static func _append_reeds(tool: SurfaceTool) -> void:
             head+side*1.35+Vector3.UP*0.15,head-side*1.35+Vector3.UP*0.15,
             Color("#8d6d42"))
 
-static func _append_urban_tree(tool: SurfaceTool) -> void:
+static func _append_urban_tree(tool: SurfaceTool,
+        foliage: Color = Color("#657b54")) -> void:
     var bottom := Vector3(0,-0.32,0)
     var top := Vector3(0,0.32,0)
     for i in range(6):
@@ -615,12 +646,14 @@ static func _append_urban_tree(tool: SurfaceTool) -> void:
         var v := Vector3(cos(b),0,sin(b))
         _panel(tool,bottom+u*0.065,bottom+v*0.065,
             top+v*0.04,top+u*0.04,Color("#75634e"))
+        _tri(tool,bottom,bottom+v*0.065,bottom+u*0.065,Color("#594a39"))
+        _tri(tool,top,top+u*0.04,top+v*0.04,Color("#75634e"))
         var edge_a: Vector3 = top+u*0.42+Vector3.UP*0.18
         var edge_b: Vector3 = top+v*0.42+Vector3.UP*0.18
         _tri_tinted(tool,top-Vector3.UP*0.08,edge_b,edge_a,
-            Color("#48633d"),Color("#60784e"),Color("#70875c"))
+            foliage.darkened(0.28),foliage.darkened(0.06),foliage.lightened(0.10))
         _tri_tinted(tool,edge_a,edge_b,top+Vector3.UP*0.61,
-            Color("#6d8458"),Color("#7b9165"),Color("#a2ad79"))
+            foliage.lightened(0.06),foliage.lightened(0.16),foliage.lightened(0.29))
 
 # V44/V45: closed foliage skirts and tapered bark, reused in the same
 # forest MultiMesh. Ground contact stays at local y=-0.32.
@@ -699,6 +732,10 @@ static func _make_cone_trees(parent: Node3D,cells: Dictionary,
         _append_reeds(tree_mesh)
     elif biome==Biomes.URBAN:
         _append_urban_tree(tree_mesh)
+    elif biome==Biomes.DESERT:
+        _append_urban_tree(tree_mesh,Color("#7e8b52"))
+    elif biome==Biomes.COASTAL:
+        _append_urban_tree(tree_mesh,Color("#2e7665"))
     else:
         _append_conifer(tree_mesh,biome,foliage)
     tree_mesh.generate_normals()
