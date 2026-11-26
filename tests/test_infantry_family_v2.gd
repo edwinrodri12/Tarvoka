@@ -263,6 +263,23 @@ func _run() -> void:
                                     absf(ankle.rotation_degrees.x)<=20.01,
                                     "bounded knee flex and ankle compensation")
                     check(knee_motion,"independent knees really animate")
+                    check(str(model.get_meta(Finish.MOTION_V12,""))==role,"V12 exact role")
+                    var helmet_badge: MeshInstance3D=model.find_child("V2_FaccionCasco",true,false) as MeshInstance3D
+                    check(helmet_badge!=null and helmet_badge.mesh is ArrayMesh and
+                        closed_solid(helmet_badge.mesh) and helmet_badge.mesh.get_aabb().size.y<0.060,
+                        "shallow closed faction helmet badge")
+                    var run_flex: float=0.0
+                    for action in ["run","aim","attack"]:
+                        for phase in [0.0,0.17,0.34,0.5,0.67,0.83,1.0]:
+                            check(Models.pose_model(role,model,action,phase),"V12 distinct visual pose "+action)
+                            check(absf(Finish.family_sole_floor(model)+body.position.y-rest_floor)<0.0001,
+                                "actual outsole vertices preserve floor "+action)
+                            for side in [-1,1]:
+                                check(family_grip_contact(model,side),"hand contact during "+action)
+                                var knee: Node3D=model.find_child("V11_RodillaRig_%d"%side,true,false) as Node3D
+                                if action=="run" and knee!=null:
+                                    run_flex=maxf(run_flex,absf(knee.rotation_degrees.x))
+                    check(run_flex>33.0 and run_flex<=52.01,"run differs from march")
                     Models.restore_model_pose(role,model)
                     for side in [-1,1]:
                         var knee: Node3D=model.find_child("V11_RodillaRig_%d"%side,true,false) as Node3D
@@ -512,6 +529,11 @@ func _run() -> void:
                             hero.rotation_degrees.y=90
                             await save_frame(view,"v11_%s_gait_%d"%[role,roundi(phase*100)])
                             Models.restore_model_pose(role,hero)
+                        for action in ["run","aim"]:
+                            check(Models.pose_model(role,hero,action,0.5),"V12 action capture")
+                            hero.rotation_degrees.y=120
+                            await save_frame(view,"v12_%s_%s"%[role,action])
+                            Models.restore_model_pose(role,hero)
                         hero.rotation_degrees.y=180
                         for action in ["hit_bullet","hit_explosive"]:
                             check(Models.pose_model(role,hero,action,0.4),"V10 actual impact render")
@@ -539,7 +561,7 @@ func _run() -> void:
                 camera.size=3.6
             hero.free()
             mobile.free()
-    check(rendered==98,"98 real 3D comparison / tactical frames")
+    check(rendered==108,"108 real 3D comparison / tactical frames")
     # Art-only variants must never enter the tactical roster.
     for role in ["infantry_urban","infantry_defense",
             "infantry_antitank","infantry_engineer",
@@ -550,5 +572,5 @@ func _run() -> void:
         push_error("FAIL INFANTRY V2 NATIVE 3D: %d failures"%failed)
         quit(1)
     else:
-        print("PASS INFANTRY V2 NATIVE 3D: 160 models (6 core + 4 legacy), 8 factions, 2 LOD, 98 true PNG")
+        print("PASS INFANTRY V2 NATIVE 3D: 160 models (6 core + 4 legacy), 8 factions, 2 LOD, 108 true PNG")
         quit(0)

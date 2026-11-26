@@ -473,10 +473,68 @@ static func _refine_family_legs(model: Node3D,hero: bool) -> bool:
         for name in ["V2_BotaMoldeada","V2_Suela"]:
             _move_to_joint(_find(model,name+suffix),ankle,Vector3(0,-0.78,0))
     model.set_meta(GAIT_V11,true)
+    if not _refine_v12_uniform(model,hero):
+        return false
     model.set_meta(GROUND_V11,family_sole_floor(model))
     return true
 
-# Lowest sole corner in the soldier's local frame. Works in the same
+const MOTION_V12 := "tarvoka_infantry_motion_uniform_v12"
+const SOLE_VERTICES_V12 := "tarvoka_infantry_sole_vertices_v12"
+
+# V11 images showed raised blue bars on the forehead. Use a shallow
+# curved closed emblem instead; retain the exact faction material.
+# Cloth pouches and chest pockets reuse their original node/material.
+static func _refine_v12_uniform(model: Node3D,hero: bool) -> bool:
+    var role: String=str(model.get_meta("tarvoka_infantry_role",""))
+    var helmet: MeshInstance3D=_find(model,"V2_CascoEsferoideCerrado") as MeshInstance3D
+    var badge: MeshInstance3D=_find(model,"V2_FaccionCasco") as MeshInstance3D
+    if helmet==null or badge==null:
+        return false
+    var bounds: AABB=helmet.mesh.get_aabb()
+    var width: float=bounds.size.x*0.255
+    var y: float=bounds.position.y+bounds.size.y*0.73
+    badge.mesh=_organic_mesh([
+        Vector3(width*0.74,-0.027,0.022),Vector3(width,-0.013,0.033),
+        Vector3(width,0.014,0.032),Vector3(width*0.73,0.027,0.021)],
+        16 if hero else 10,PackedFloat32Array(),0.75)
+    badge.position=Vector3(0,y,helmet.position.z+bounds.position.z+0.045)
+    badge.rotation_degrees=Vector3(-23,0,0)
+    badge.scale=Vector3.ONE
+    for side in [-1,1]:
+        var suffix: String="_%d"%side
+        var pocket: MeshInstance3D=_find(model,"V2_BolsilloPeitoral"+suffix) as MeshInstance3D
+        if pocket!=null:
+            pocket.mesh=_organic_mesh([
+                Vector3(0.054,-0.076,0.016),Vector3(0.073,-0.053,0.027),
+                Vector3(0.073,0.048,0.027),Vector3(0.054,0.075,0.016)],
+                12,PackedFloat32Array(),0.55)
+            pocket.scale=Vector3.ONE
+            pocket.position.z=-0.349
+        var strap: MeshInstance3D=_find(model,"V2_CinchaPortaequipo"+suffix) as MeshInstance3D
+        if strap!=null:
+            strap.mesh=_organic_mesh([
+                Vector3(0.031,-0.29,0.017),Vector3(0.038,-0.20,0.023),
+                Vector3(0.038,0.18,0.023),Vector3(0.029,0.29,0.017)],
+                10,PackedFloat32Array([0.0,0.008,0.008,0.0]),0.6)
+            strap.scale=Vector3.ONE
+        var sole: MeshInstance3D=_find(model,"V2_Suela"+suffix) as MeshInstance3D
+        if sole==null or not sole.mesh is ArrayMesh:
+            return false
+        # Cache unique mesh vertices once. The ground contact comes from
+        # the actual curved outsole, not an imaginary box corner.
+        var arrays: Array=sole.mesh.surface_get_arrays(0)
+        var source: PackedVector3Array=arrays[Mesh.ARRAY_VERTEX]
+        var unique: Dictionary={}
+        var points:=PackedVector3Array()
+        for vertex in source:
+            if not unique.has(vertex):
+                unique[vertex]=true
+                points.append(vertex)
+        sole.set_meta(SOLE_VERTICES_V12,points)
+    model.set_meta(MOTION_V12,role)
+    return true
+
+# Lowest actual sole vertex in the soldier's local frame. Works in a
 # detached native QA model, without relying on global transforms.
 static func family_sole_floor(model: Node3D) -> float:
     var soldier: Node3D=_find(model,"Infanteria_3D")
@@ -491,8 +549,13 @@ static func family_sole_floor(model: Node3D) -> float:
         while node!=null and node!=soldier:
             relative=node.transform*relative
             node=node.get_parent() as Node3D
-        for corner in range(8):
-            floor_y=minf(floor_y,(relative*bounds.get_endpoint(corner)).y)
+        var vertices: PackedVector3Array=sole.get_meta(SOLE_VERTICES_V12,PackedVector3Array())
+        if vertices.is_empty():
+            for corner in range(8):
+                floor_y=minf(floor_y,(relative*bounds.get_endpoint(corner)).y)
+        else:
+            for vertex in vertices:
+                floor_y=minf(floor_y,(relative*vertex).y)
     return floor_y
 
 static func _pose_family_legs(model: Node3D,kind: String,t: float,stage: int) -> bool:
@@ -518,11 +581,22 @@ static func _pose_family_legs(model: Node3D,kind: String,t: float,stage: int) ->
             leg.rotation_degrees.x=20.0*wave
             knee.rotation_degrees.x=-33.0*maxf(0.0,wave)
             ankle.rotation_degrees.x=-(leg.rotation_degrees.x+knee.rotation_degrees.x)*0.90
+        elif kind=="run":
+            var wave: float=sin(t*TAU*3.0+float(side)*PI*0.5)*pulse
+            leg.rotation_degrees.x=32.0*wave
+            knee.rotation_degrees.x=-52.0*maxf(0.0,wave)
+            ankle.rotation_degrees.x=-(leg.rotation_degrees.x+knee.rotation_degrees.x)*0.85
+        elif kind in ["aim","attack"]:
+            var role: String=str(model.get_meta("tarvoka_infantry_role",""))
+            var crouch: float=1.0 if role=="infantry_sniper" else 0.55
+            leg.rotation_degrees.x=(17.0 if side<0 else -8.0)*pulse*crouch
+            knee.rotation_degrees.x=(-27.0 if side<0 else -13.0)*pulse*crouch
+            ankle.rotation_degrees.x=-(leg.rotation_degrees.x+knee.rotation_degrees.x)
         elif kind in ["capture","work","repair"]:
             leg.rotation_degrees.x=(24.0 if side<0 else -9.0)*pulse
             knee.rotation_degrees.x=(-34.0 if side<0 else -12.0)*pulse
             ankle.rotation_degrees.x=-(leg.rotation_degrees.x+knee.rotation_degrees.x)
-    if stage<4 and kind in ["move","capture","work","repair","idle"]:
+    if stage<4 and kind in ["move","run","aim","attack","capture","work","repair","idle"]:
         var floor_y: float=family_sole_floor(model)
         var rest: float=float(model.get_meta(GROUND_V11,floor_y))
         if not is_finite(floor_y):
@@ -1116,7 +1190,7 @@ static func _family_fx(model: Node3D,kind: String,t: float,stage: int) -> void:
     if str(model.get_meta(ARMOR_V10,"")) not in FAMILY_ANATOMY_ROLES:
         return
     var impact: bool=stage<4 and kind in ["hit_bullet","hit_explosive"] and t>0.08 and t<0.85
-    var dust: bool=stage<4 and kind=="move" and t>0.08 and t<0.92
+    var dust: bool=stage<4 and kind in ["move","run"] and t>0.08 and t<0.92
     # Equipment smoke is a stylized visual effect at D3/D4, no HP change.
     var smoke: bool=stage>=3
     var batch: MultiMeshInstance3D=model.get_node_or_null(FX_V10) as MultiMeshInstance3D
@@ -1191,12 +1265,21 @@ static func pose(model: Node3D, kind: String, t: float) -> bool:
         if kind=="move":
             arm.rotation_degrees.x+=3.5*sin(phase*TAU*2.0+float(side)*PI*0.5)
             arm.rotation_degrees.z+=3.0*walk*float(side)
+        elif kind=="run":
+            arm.rotation_degrees.x+=6.0*pulse*sin(phase*TAU*3.0+float(side)*PI*0.5)
+            arm.rotation_degrees.z+=4.0*pulse*sin(phase*TAU*3.0)*float(side)
         elif kind in ["attack","aim"]:
             arm.rotation_degrees.x+=5.0
             arm.rotation_degrees.z+=(-3.0 if side<0 else 2.0)*pulse
         elif kind in ["work","repair","capture"]:
             arm.rotation_degrees.x=38.0+14.0*pulse
             arm.rotation_degrees.z=18.0 if side<0 else -14.0
+    if kind=="run":
+        var torso: Node3D=_find(model,"TorsoRig")
+        if torso!=null:
+            torso.rotation_degrees.x=-12.0*pulse
+            torso.rotation_degrees.y=5.0*sin(phase*TAU*3.0)*pulse
+        rifle.rotation_degrees.x+=8.0*pulse
     if kind=="attack":
         rifle.rotation_degrees.x-=6.5*pulse
         rifle.position.z-=0.045*pulse

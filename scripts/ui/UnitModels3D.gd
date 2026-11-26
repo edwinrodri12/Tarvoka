@@ -1580,9 +1580,16 @@ static func build(role: String, faction: int = -1, finish_enabled: bool = true, 
 static func pose_model(role: String, model: Node3D, kind: String,
         progress: float, target_heading: Vector2i = Vector2i(0,-1)) -> bool:
     if InfantryFamily.supports(role) and InfantryFamily.has_model(model):
-        var posed: bool=InfantryFamily.pose(model,kind,progress,target_heading)
+        # Run is an optional visual preview on the five revised models.
+        # Original G05, legacy infantry and tactical rules remain untouched.
+        var base_kind: String=kind
+        if kind=="run" and str(model.get_meta("tarvoka_infantry_motion_uniform_v12",""))==role:
+            base_kind="move"
+        var posed: bool=InfantryFamily.pose(model,base_kind,progress,target_heading)
         if posed and InfantryFinishV2.has_model(model):
-            InfantryFinishV2.pose(model,kind,progress)
+            var finished: bool=InfantryFinishV2.pose(model,kind,progress)
+            if model.has_meta("tarvoka_infantry_motion_uniform_v12") and not finished:
+                return false
         if posed and role=="infantry_engineer" and InfantryEngineerV6.has_model(model):
             var engineer_v17: bool=InfantryEngineerV17.has_model(model) and bool(
                 model.get_meta("tarvoka_engineer_v17_visible",true))

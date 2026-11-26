@@ -728,10 +728,12 @@ func _studio_jump_details() -> void:
 func _studio_animation_specs(role: String) -> Array[Dictionary]:
     if InfantryV1.supports(role):
         var actions: Array[Dictionary] = [
-            {"group":"INFANTERÍA V2 · MOVIMIENTO Y POSTURAS"},
+            {"group":"INFANTERÍA · MOVIMIENTO Y POSTURAS"},
             {"title":"Marcha con equipo","action":"move"},
             {"title":"Orientar y apuntar","action":"aim"}
         ]
+        if role in ["line","infantry_commando","infantry_sniper","infantry_logistic","infantry_medic"]:
+            actions.insert(2,{"title":"Carrera con equipo (visual)","action":"run"})
         if role in ["infantry_engineer","infantry_logistic","infantry_medic"]:
             var task_name:String="Trabajo y herramientas"
             if role=="infantry_logistic":
@@ -1551,6 +1553,8 @@ func _infantry_review_edition() -> String:
         if EngineerFinishV9.has_model(model_root):
             return "V9"
     if model_root!=null and str(model_root.get_meta("tarvoka_infantry_role_identity_v6",""))==_role:
+        if str(model_root.get_meta("tarvoka_infantry_motion_uniform_v12",""))==_role:
+            return "V12"
         if bool(model_root.get_meta("tarvoka_infantry_articulated_gait_v11",false)):
             return "V11"
         if str(model_root.get_meta("tarvoka_infantry_armor_anatomy_v10",""))==_role:
@@ -1851,7 +1855,7 @@ func _infantry_play(kind: String) -> void:
         _infantry_tween.kill()
     _infantry_tween=create_tween()
     _infantry_tween.tween_method(Callable(self,"_infantry_pose_tick").bind(kind),
-        0.0,1.0,1.15)
+        0.0,1.0,0.85 if kind=="run" else 1.15)
     status_label.text="Infantería · animación %s · modelo %s" % [kind,
         "3D "+_infantry_review_edition()]
 
