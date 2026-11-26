@@ -274,6 +274,22 @@ func _check_art_finish_v44() -> void:
             assert(is_equal_approx(pixel.r,pixel.g) and is_equal_approx(pixel.g,pixel.b))
             assert(pixel.r>=0.83 and pixel.r<=1.0 and pixel.a==1.0)
     assert(fingerprints.size()==9)
+    var cell := Vector2i(7,3)
+    var at: Vector3 = Terrain.world_at(cell)
+    var half: float = Terrain.CELL*0.5
+    var surface: Dictionary = {"x":cell.x,"z":cell.y,"top":0.19,"half":half,
+        "corners":PackedFloat32Array([0.19,0.19,0.19,0.19])}
+    for biome in [Biomes.TEMPERATE,Biomes.WINTER,Biomes.CANYON,Biomes.COASTAL,Biomes.TROPICAL]:
+        var patch := SurfaceTool.new()
+        patch.begin(Mesh.PRIMITIVE_TRIANGLES)
+        assert(Terrain._append_natural_ground(patch,at,surface,cell,biome)==2)
+        var patch_mesh: ArrayMesh = patch.commit()
+        var points: PackedVector3Array = patch_mesh.surface_get_arrays(0)[Mesh.ARRAY_VERTEX]
+        assert(points.size()==12)
+        for point in points:
+            assert(absf(point.x-at.x)<half and absf(point.z-at.z)<half)
+            assert(absf(point.x-at.x)>0.55)
+            assert(is_equal_approx(point.y,0.212))
     # Closed conifer components: each quantized undirected edge appears
     # twice (triangulated trunk and foliage shells, including undersides).
     for biome in [Biomes.TEMPERATE,Biomes.WINTER,Biomes.CANYON,Biomes.DESERT]:
