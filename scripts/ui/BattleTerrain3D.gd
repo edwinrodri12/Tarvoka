@@ -395,11 +395,29 @@ static func _cached_water_tint(cells: Dictionary,corner: Vector2i,
 # traversable terrain type and not an obstacle to buildings or units.
 static func _append_sand_ripples(tool: SurfaceTool,at: Vector3,
         surface: Dictionary,cell: Vector2i) -> void:
+    # V45: curved, low-relief dune crests instead of straight painted bars.
+    # Each short strip tapers into the ground; the authoritative ground fan
+    # and model anchors are untouched. Leave the tile center clear.
     var offset: float = float(posmod(cell.x*13+cell.y*7,5))*0.035
-    for i in range(3):
-        var z: float = -0.60+float(i)*0.53+offset
-        RoadShore._rect(tool,at,surface,-0.83,0.83,z,z+0.055,
-            Color("#c9a16a") if i%2==0 else Color("#ecd09a"),0.016)
+    for side in [-1.0,1.0]:
+        var base_z: float = float(side)*(0.70+offset*0.5)
+        for i in range(4):
+            var x0: float = -0.88+float(i)*0.44
+            var x1: float = x0+0.44
+            var z0: float = base_z+sin(x0*2.8+offset)*0.075
+            var z1: float = base_z+sin(x1*2.8+offset)*0.075
+            var h0: float = 0.018+0.065*(1.0-absf(x0)/0.88)
+            var h1: float = 0.018+0.065*(1.0-absf(x1)/0.88)
+            var a: Vector3 = RoadShore._point(at,surface,x0,z0-0.14,0.012)
+            var b: Vector3 = RoadShore._point(at,surface,x1,z1-0.14,0.012)
+            var p: Vector3 = RoadShore._point(at,surface,x0,z0,h0)
+            var q: Vector3 = RoadShore._point(at,surface,x1,z1,h1)
+            var d: Vector3 = RoadShore._point(at,surface,x0,z0+0.14,0.012)
+            var e: Vector3 = RoadShore._point(at,surface,x1,z1+0.14,0.012)
+            _tri_tinted(tool,a,p,b,Color("#d4af76"),Color("#ebcf98"),Color("#d4af76"))
+            _tri_tinted(tool,b,p,q,Color("#d4af76"),Color("#ebcf98"),Color("#ebcf98"))
+            _tri_tinted(tool,p,d,q,Color("#ebcf98"),Color("#c29a65"),Color("#ebcf98"))
+            _tri_tinted(tool,q,d,e,Color("#ebcf98"),Color("#c29a65"),Color("#c29a65"))
 
 # V31–V33: surface details follow the actual ground, never add sites.
 static func _append_extended_ground(tool: SurfaceTool,at: Vector3,
@@ -802,6 +820,17 @@ static func _ridge_angle(cells: Dictionary,cell: Vector2i) -> float:
         return PI*0.5+(jitter-0.5)*0.24
     return jitter*TAU
 
+# Split facets around a slightly recessed center to create real rock planes
+# without changing any shared edge or opening a seam between triangles.
+static func _ridge_face(tool: SurfaceTool,a: Vector3,b: Vector3,c: Vector3,
+        ca: Color,cb: Color,cc: Color) -> void:
+    var mid: Vector3 = (a+b+c)/3.0
+    mid.y -= 0.035
+    var tint: Color = ((ca+cb+cc)/3.0).darkened(0.08)
+    _tri_tinted(tool,a,b,mid,ca,cb,tint)
+    _tri_tinted(tool,b,c,mid,cb,cc,tint)
+    _tri_tinted(tool,c,a,mid,cc,ca,tint)
+
 static func _make_mountain_ridges(parent: Node3D,cells: Dictionary,
         biome: String) -> int:
     var transforms: Array[Transform3D] = []
@@ -835,17 +864,30 @@ static func _make_mountain_ridges(parent: Node3D,cells: Dictionary,
     var sw := Vector3(-0.81,-0.35,0.81)
     var peak_a := Vector3(-0.33,1.08,-0.18)
     var peak_b := Vector3(0.35,0.83,0.19)
-    if biome==Biomes.DESERT:
-        peak_a = Vector3(-0.34,0.91,-0.24)
-        peak_b = Vector3(0.34,0.89,0.20)
+    match biome:
+        Biomes.DESERT:
+            peak_a = Vector3(-0.34,0.91,-0.24)
+            peak_b = Vector3(0.34,0.89,0.20)
+        Biomes.CANYON:
+            peak_a = Vector3(-0.37,1.02,-0.27)
+            peak_b = Vector3(0.38,1.00,0.21)
+        Biomes.WINTER:
+            peak_a = Vector3(-0.31,1.20,-0.18)
+            peak_b = Vector3(0.35,0.92,0.19)
+        Biomes.WETLAND, Biomes.URBAN:
+            peak_a.y = 0.72
+            peak_b.y = 0.62
+        Biomes.COASTAL, Biomes.ARCHIPELAGO:
+            peak_a = Vector3(-0.47,0.98,-0.18)
+            peak_b = Vector3(0.29,0.70,0.21)
     var mesh_tool := SurfaceTool.new()
     mesh_tool.begin(Mesh.PRIMITIVE_TRIANGLES)
-    _tri_tinted(mesh_tool,nw,ne,peak_a,shadow,rock,crest)
-    _tri_tinted(mesh_tool,ne,peak_b,peak_a,rock,light,crest)
-    _tri_tinted(mesh_tool,ne,se,peak_b,light,rock,light)
-    _tri_tinted(mesh_tool,se,sw,peak_b,shadow,rock,crest)
-    _tri_tinted(mesh_tool,sw,peak_a,peak_b,shadow,crest,light)
-    _tri_tinted(mesh_tool,sw,nw,peak_a,rock,shadow,crest)
+    _ridge_face(mesh_tool,nw,ne,peak_a,shadow,rock,crest)
+    _ridge_face(mesh_tool,ne,peak_b,peak_a,rock,light,crest)
+    _ridge_face(mesh_tool,ne,se,peak_b,light,rock,light)
+    _ridge_face(mesh_tool,se,sw,peak_b,shadow,rock,crest)
+    _ridge_face(mesh_tool,sw,peak_a,peak_b,shadow,crest,light)
+    _ridge_face(mesh_tool,sw,nw,peak_a,rock,shadow,crest)
     # Close the underside and add a center seam for close orbit inspection.
     _tri(mesh_tool,nw,sw,ne,shadow)
     _tri(mesh_tool,ne,sw,se,shadow)
