@@ -195,17 +195,22 @@ static func _append_water_banks(tool: SurfaceTool,cells: Dictionary,
     return count
 
 static func _finish(parent: Node3D, label: String,
-        tool: SurfaceTool, count: int, kind: String) -> void:
+        tool: SurfaceTool, count: int, kind: String,
+        materials: Dictionary = {}) -> void:
     if count == 0:
         return
     tool.generate_normals()
     var mesh := MeshInstance3D.new()
     mesh.name = label
     mesh.mesh = tool.commit()
-    var mat := StandardMaterial3D.new()
-    SurfaceFinish.apply(mat,kind)
-    mat.cull_mode = BaseMaterial3D.CULL_DISABLED
-    mesh.material_override = mat
+    # V27: share immutable terrain materials within this scene build.
+    # Geometry and vertex pigments remain independent per chunk.
+    if not materials.has(kind):
+        var mat := StandardMaterial3D.new()
+        SurfaceFinish.apply(mat,kind)
+        mat.cull_mode = BaseMaterial3D.CULL_DISABLED
+        materials[kind] = mat
+    mesh.material_override = materials[kind]
     parent.add_child(mesh)
 
 static func _road_color(biome: String) -> Color:
@@ -300,9 +305,16 @@ static func _water_corner_tint(cells: Dictionary,corner: Vector2i,
     var shallow: Color = deep.lightened(0.23)
     return deep.lerp(shallow,clampf(float(known_land)*0.34,0.0,1.0))
 
+static func _cached_water_tint(cells: Dictionary,corner: Vector2i,
+        cache: Dictionary,biome: String) -> Color:
+    if not cache.has(corner):
+        cache[corner] = _water_corner_tint(cells,corner,biome)
+    return cache[corner]
+
 static func _build_chunk(parent: Node3D, data: Dictionary,
         cells: Dictionary,corner_cache: Dictionary,
-        biome: String = Biomes.TEMPERATE) -> Dictionary:
+        biome: String = Biomes.TEMPERATE,water_cache: Dictionary = {},
+        materials: Dictionary = {}) -> Dictionary:
     var ground := SurfaceTool.new()
     var water := SurfaceTool.new()
     var unknown := SurfaceTool.new()
@@ -336,10 +348,10 @@ static func _build_chunk(parent: Node3D, data: Dictionary,
             var ws: Vector3 = sea+Vector3(half,0,half)
             var ww: Vector3 = sea+Vector3(-half,0,half)
             if bool(tile.get("details",false)):
-                var cn: Color = _water_corner_tint(cells,cell,biome)
-                var ce: Color = _water_corner_tint(cells,cell+Vector2i(1,0),biome)
-                var cs: Color = _water_corner_tint(cells,cell+Vector2i(1,1),biome)
-                var cw: Color = _water_corner_tint(cells,cell+Vector2i(0,1),biome)
+                var cn: Color = _cached_water_tint(cells,cell,water_cache,biome)
+                var ce: Color = _cached_water_tint(cells,cell+Vector2i(1,0),water_cache,biome)
+                var cs: Color = _cached_water_tint(cells,cell+Vector2i(1,1),water_cache,biome)
+                var cw: Color = _cached_water_tint(cells,cell+Vector2i(0,1),water_cache,biome)
                 _tri_tinted(water,wn,ww,we,cn,cw,ce)
                 _tri_tinted(water,we,ww,ws,ce,cw,cs)
             else:
@@ -408,22 +420,24 @@ static func _build_chunk(parent: Node3D, data: Dictionary,
     var chunk := Node3D.new()
     chunk.name = "Sector3D_%d_%d" % [data["origin"].x,data["origin"].y]
     parent.add_child(chunk)
-    _finish(chunk,"SueloVisible",ground,land_count,"soil")
-    _finish(chunk,"AguaVisible",water,water_count,"water")
+    _finish(chunk,"SueloVisible",ground,land_count,"soil",materials)
+    _finish(chunk,"AguaVisible",water,water_count,"water",materials)
     # Unknown terrain stays an opaque, untextured solid dark surface.
     if hidden_count > 0:
         unknown.generate_normals()
         var mesh := MeshInstance3D.new()
         mesh.name = "NieblaNoExplorada"
         mesh.mesh = unknown.commit()
-        var mat := StandardMaterial3D.new()
-        mat.vertex_color_use_as_albedo = true
-        mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-        mat.cull_mode = BaseMaterial3D.CULL_DISABLED
-        mesh.material_override = mat
+        if not materials.has("fog"):
+            var mat := StandardMaterial3D.new()
+            mat.vertex_color_use_as_albedo = true
+            mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+            mat.cull_mode = BaseMaterial3D.CULL_DISABLED
+            materials["fog"] = mat
+        mesh.material_override = materials["fog"]
         chunk.add_child(mesh)
-    _finish(chunk,"CaminosVisibles",road,roads_count,"soil")
-    _finish(chunk,"OrillasVisibles",shore,shores_count,"soil")
+    _finish(chunk,"CaminosVisibles",road,roads_count,"soil",materials)
+    _finish(chunk,"OrillasVisibles",shore,shores_count,"soil",materials)
     chunk.set_meta("origin",data["origin"])
     chunk.set_meta("tiles",data["tile_count"])
     return {"land":land_count,"water":water_count,"unknown":hidden_count,
@@ -442,7 +456,6 @@ static func _make_cone_trees(parent: Node3D,cells: Dictionary,
         for j in range(2 if biome!=Biomes.CANYON else 1):
             var shift: Vector2 = Vector2(-0.38,0.26) if j==0 else Vector2(0.38,-0.28)
             var at: Vector3 = world_at(cell)+Vector3(shift.x,0,shift.y)
-            at.y = height_at(cells,cell,shift.x,shift.y)+0.41
             var angle: float = float(posmod(
                 cell.x*37+cell.y*83+j*19,16))/16.0*TAU
             # V24: deterministic crown/height variation without extra trees
@@ -959,8 +972,11 @@ static func build(state: Dictionary, selected_id: String = "", viewer: int = 0) 
     # One palette sample per global grid corner, reused by up to four
     # tiles and across 8x8 sectors. Cache only for this render build.
     var corner_cache: Dictionary = {}
+    var water_cache: Dictionary = {}
+    var materials: Dictionary = {}
     for chunk in chunks:
-        var stats: Dictionary = _build_chunk(scene,chunk,cells,corner_cache,biome)
+        var stats: Dictionary = _build_chunk(scene,chunk,cells,corner_cache,
+            biome,water_cache,materials)
         for key in counters:
             counters[key] = int(counters[key])+int(stats[key])
     counters["trees"] = _make_cone_trees(scene,cells,biome)
@@ -1085,6 +1101,9 @@ static func build(state: Dictionary, selected_id: String = "", viewer: int = 0) 
         1 if counters["mountain_ridges"]>0 else 0) + (
         1 if biome==Biomes.WINTER and counters["trees"]>0 else 0)
     counters["terrain_blend_palette_samples"] = corner_cache.size()
+    counters["water_palette_samples_v27"] = water_cache.size()
+    counters["shared_chunk_materials_v27"] = materials.size()
+    counters["site_foundations_v26"] = int(scene.get_meta("terrain_foundations_v26",0))
     scene.set_meta("board_size",dims)
     scene.set_meta("viewer",viewer)
     scene.set_meta("visual_only",true)
