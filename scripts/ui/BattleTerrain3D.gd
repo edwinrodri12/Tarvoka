@@ -209,7 +209,7 @@ static func _append_water_banks(tool: SurfaceTool,cells: Dictionary,
 
 static func _finish(parent: Node3D, label: String,
         tool: SurfaceTool, count: int, kind: String,
-        materials: Dictionary = {}) -> void:
+        materials: Dictionary = {},biome: String = Biomes.TEMPERATE) -> void:
     if count == 0:
         return
     tool.generate_normals()
@@ -220,7 +220,10 @@ static func _finish(parent: Node3D, label: String,
     # Geometry and vertex pigments remain independent per chunk.
     if not materials.has(kind):
         var mat := StandardMaterial3D.new()
-        SurfaceFinish.apply(mat,kind)
+        if kind=="soil":
+            SurfaceFinish.apply_biome_soil(mat,biome)
+        else:
+            SurfaceFinish.apply(mat,kind)
         mat.cull_mode = BaseMaterial3D.CULL_DISABLED
         materials[kind] = mat
     mesh.material_override = materials[kind]
@@ -535,7 +538,7 @@ static func _build_chunk(parent: Node3D, data: Dictionary,
     var chunk := Node3D.new()
     chunk.name = "Sector3D_%d_%d" % [data["origin"].x,data["origin"].y]
     parent.add_child(chunk)
-    _finish(chunk,"SueloVisible",ground,land_count,"soil",materials)
+    _finish(chunk,"SueloVisible",ground,land_count,"soil",materials,biome)
     _finish(chunk,"AguaVisible",water,water_count,"water",materials)
     # Unknown terrain stays an opaque, untextured solid dark surface.
     if hidden_count > 0:
@@ -551,8 +554,8 @@ static func _build_chunk(parent: Node3D, data: Dictionary,
             materials["fog"] = mat
         mesh.material_override = materials["fog"]
         chunk.add_child(mesh)
-    _finish(chunk,"CaminosVisibles",road,roads_count,"soil",materials)
-    _finish(chunk,"OrillasVisibles",shore,shores_count,"soil",materials)
+    _finish(chunk,"CaminosVisibles",road,roads_count,"soil",materials,biome)
+    _finish(chunk,"OrillasVisibles",shore,shores_count,"soil",materials,biome)
     chunk.set_meta("origin",data["origin"])
     chunk.set_meta("tiles",data["tile_count"])
     return {"land":land_count,"water":water_count,"unknown":hidden_count,
@@ -619,6 +622,37 @@ static func _append_urban_tree(tool: SurfaceTool) -> void:
         _tri_tinted(tool,edge_a,edge_b,top+Vector3.UP*0.61,
             Color("#6d8458"),Color("#7b9165"),Color("#a2ad79"))
 
+# V44/V45: closed foliage skirts and tapered bark, reused in the same
+# forest MultiMesh. Ground contact stays at local y=-0.32.
+static func _append_conifer(tool: SurfaceTool,biome: String,foliage: Color) -> void:
+    var bark := Color("#69513d")
+    var foot := Vector3(0,-0.32,0)
+    var neck := Vector3(0,0.62,0)
+    for seg in range(6):
+        var a: float = TAU*float(seg)/6.0
+        var b: float = TAU*float(seg+1)/6.0
+        var u := Vector3(cos(a),0,sin(a))
+        var v := Vector3(cos(b),0,sin(b))
+        _panel(tool,foot+u*0.065,foot+v*0.065,neck+v*0.035,neck+u*0.035,bark)
+        _tri(tool,foot,foot+v*0.065,foot+u*0.065,bark.darkened(0.2))
+        _tri(tool,neck,neck+u*0.035,neck+v*0.035,bark)
+    var layers: int = 2 if biome in [Biomes.DESERT,Biomes.CANYON] else 3
+    for layer in range(layers):
+        var radius: float = 0.42-float(layer)*0.085
+        var low: float = -0.15+float(layer)*0.27
+        var tip := Vector3(0,0.53+float(layer)*0.26,0)
+        var shade: Color = foliage.darkened(0.23)
+        for seg in range(8):
+            var a: float = TAU*float(seg)/8.0
+            var b: float = TAU*float(seg+1)/8.0
+            var ra: float = radius*(1.0 if seg%2==0 else 0.81)
+            var rb: float = radius*(1.0 if (seg+1)%2==0 else 0.81)
+            var p := Vector3(cos(a)*ra,low,sin(a)*ra)
+            var q := Vector3(cos(b)*rb,low,sin(b)*rb)
+            var apex: Color = Biomes.HARDPACK if biome==Biomes.WINTER and layer>=1 else foliage.lightened(0.13)
+            _tri_tinted(tool,p,q,tip,foliage.darkened(0.08),foliage.lightened(0.06),apex)
+            _tri(tool,Vector3(0,low,0),q,p,shade)
+
 static func _make_cone_trees(parent: Node3D,cells: Dictionary,
         biome: String = Biomes.TEMPERATE) -> int:
     var positions: Array[Transform3D] = []
@@ -666,21 +700,7 @@ static func _make_cone_trees(parent: Node3D,cells: Dictionary,
     elif biome==Biomes.URBAN:
         _append_urban_tree(tree_mesh)
     else:
-        for layer in range(2 if biome==Biomes.DESERT else 3):
-            var radius: float = 0.45-float(layer)*0.10
-            var low: float = -0.32+float(layer)*0.29
-            var tip: Vector3 = Vector3(0,0.63+float(layer)*0.25,0)
-            for seg in range(7):
-                var angle_a: float = TAU*float(seg)/7.0
-                var angle_b: float = TAU*float(seg+1)/7.0
-                var a := Vector3(cos(angle_a)*radius,low,sin(angle_a)*radius)
-                var b := Vector3(cos(angle_b)*radius,low,sin(angle_b)*radius)
-                var top_tint: Color = (
-                    Biomes.HARDPACK if biome==Biomes.WINTER and layer>=1 else
-                    foliage.lightened(0.08+0.045*float(layer)))
-                var side: Color = foliage.darkened(0.065*float(seg%3))
-                _tri_tinted(tree_mesh,a,b,tip,side,foliage.lightened(0.055),
-                    top_tint)
+        _append_conifer(tree_mesh,biome,foliage)
     tree_mesh.generate_normals()
     var mesh: ArrayMesh = tree_mesh.commit()
     var mat := StandardMaterial3D.new()
@@ -789,11 +809,13 @@ static func _make_mountain_ridges(parent: Node3D,cells: Dictionary,
     _tri_tinted(mesh_tool,se,sw,peak_b,shadow,rock,crest)
     _tri_tinted(mesh_tool,sw,peak_a,peak_b,shadow,crest,light)
     _tri_tinted(mesh_tool,sw,nw,peak_a,rock,shadow,crest)
+    # Close the underside and add a center seam for close orbit inspection.
+    _tri(mesh_tool,nw,sw,ne,shadow)
+    _tri(mesh_tool,ne,sw,se,shadow)
     mesh_tool.generate_normals()
     var peaks: ArrayMesh = mesh_tool.commit()
     var material := StandardMaterial3D.new()
-    material.vertex_color_use_as_albedo = true
-    material.albedo_color = Color.WHITE
+    SurfaceFinish.apply(material,"rock")
     material.roughness = 0.97
     material.cull_mode = BaseMaterial3D.CULL_DISABLED
     peaks.surface_set_material(0,material)
