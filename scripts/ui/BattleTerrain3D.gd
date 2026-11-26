@@ -31,6 +31,8 @@ const G11ActionsV29 = preload("res://scripts/ui/G11BattleActionsV29.gd")
 const G13ActionsV70 = preload("res://scripts/ui/G13BattleActionsV70.gd")
 const FactionIdentity = preload("res://scripts/ui/FactionIdentity.gd")
 const Domains = preload("res://scripts/core/Domains.gd")
+const Crossings = preload("res://scripts/core/LayeredCrossingsV48.gd")
+const BridgeArt = preload("res://scripts/ui/LayeredBridgeArtV48.gd")
 const Biomes = preload("res://scripts/ui/WinterBattleBiome.gd")
 const CELL := 2.40
 const MAX_DETAILED_UNITS := 8
@@ -1187,7 +1189,8 @@ static func _make_sites(parent: Node3D,state: Dictionary,
     return drawn
 
 static func _make_units(parent: Node3D,state: Dictionary,
-        cells: Dictionary, selected_id: String, viewer: int = 0) -> Dictionary:
+        cells: Dictionary, selected_id: String, viewer: int = 0,
+        bridge_cells: Dictionary = {}) -> Dictionary:
     var visible_count := 0
     var detailed := 0
     var apc_lod := 0
@@ -1281,6 +1284,26 @@ static func _make_units(parent: Node3D,state: Dictionary,
         model.position = world_at(cell)+Vector3(0,height_at(cells,cell)+altitude,0)
         if role=="apc" and APCTactical.has_model(model):
             APCTactical.rebase(model)
+        if bridge_cells.has(cell):
+            var domain: String = Domains.domain(unit)
+            model.position = Vector3.ZERO
+            # Determine the real visible bounds with the model's existing
+            # scale. Do not rescale or modify any approved unit mesh.
+            var measurement: Dictionary = BridgeArt.model_bounds(model)
+            var base_y: float = BridgeArt.ROAD_TOP if domain==Domains.GROUND else (
+                WATER_LEVEL if domain==Domains.NAVAL else BridgeArt.ROAD_TOP+1.75)
+            if measurement["valid"]:
+                var box: AABB = measurement["bounds"]
+                # The original art convention varies; put the visual
+                # envelope's bottom on the selected layer for inspection.
+                model.position = world_at(cell)+Vector3.UP*(base_y-box.position.y)
+                if domain in [Domains.GROUND,Domains.NAVAL]:
+                    var adjusted := AABB(box.position+Vector3.UP*(base_y-box.position.y),box.size)
+                    model.set_meta("bridge_clearance_v48",BridgeArt.clearance_report(adjusted,domain))
+            else:
+                model.position = world_at(cell)+Vector3.UP*(base_y+altitude)
+                model.set_meta("bridge_clearance_v48",{"fits_vertical":false,"unmeasured":true})
+            model.set_meta("bridge_domain_v48",domain)
         model.set_meta("visual_layer",Domains.layer(unit))
         model.set_meta("cell",cell)
         model.set_meta("faction",faction)
@@ -1297,6 +1320,17 @@ static func build(state: Dictionary, selected_id: String = "", viewer: int = 0) 
     var terrain: Array = state.get("terrain",[])
     if not Rules.valid_terrain(terrain):
         return null
+    var bridge_index: Dictionary = Crossings.state_index(state)
+    if not bridge_index["valid"]:
+        return null
+    var bridge_cells: Dictionary = bridge_index["cells"]
+    # Render WATER under each elevated deck, not a solid road embankment.
+    # This local map is visual only and cannot alter the authoritative road.
+    var render_terrain: Array = terrain
+    if not bridge_cells.is_empty():
+        render_terrain = terrain.duplicate(true)
+        for cell in bridge_cells:
+            render_terrain[cell.y][cell.x] = "water"
     var scene := Node3D.new()
     scene.name = "MapaTactico3DReal"
     var dims: Vector2i = Rules.map_size(terrain)
@@ -1307,7 +1341,7 @@ static func build(state: Dictionary, selected_id: String = "", viewer: int = 0) 
     var chunks: Array[Dictionary] = []
     for y in range(0,dims.y,Adapter.CHUNK_SIDE):
         for x in range(0,dims.x,Adapter.CHUNK_SIDE):
-            var chunk: Dictionary = Adapter.collect(terrain,Vector2i(x,y),
+            var chunk: Dictionary = Adapter.collect(render_terrain,Vector2i(x,y),
                 Vector2i(Adapter.CHUNK_SIDE,Adapter.CHUNK_SIDE),
                 explored,visible,use_fog)
             if chunk.is_empty():
@@ -1391,7 +1425,43 @@ static func build(state: Dictionary, selected_id: String = "", viewer: int = 0) 
     else:
         drone_lod.free()
     counters["drone_center_lod_models"]=drone_count
-    counters["units"] = _make_units(scene,state,cells,selected_id,viewer)
+    var bridge_count := 0
+    var ramp_count := 0
+    var skipped_ramps := 0
+    for cell in bridge_cells:
+        var axis: String = bridge_cells[cell]
+        var bridge: Node3D = BridgeArt.build(axis)
+        bridge.name = "PuenteElevado_%d_%d" % [cell.x,cell.y]
+        bridge.position = world_at(cell)
+        scene.add_child(bridge)
+        cells[cell]["bridge_axis_v48"] = axis
+        bridge_count += 1
+        for side in [-1,1]:
+            var direction := Vector2i(side,0) if axis=="ew" else Vector2i(0,-side)
+            var approach: Vector2i = cell+direction
+            if bridge_cells.has(approach):
+                continue
+            if str(cells[approach]["kind"]) not in ["plain","road"]:
+                skipped_ramps += 1
+                continue
+            var ramp: Node3D = BridgeArt.build_ramp(axis,side,height_at(cells,approach)+0.04)
+            if ramp!=null:
+                ramp.position = world_at(cell)
+                ramp.name = "Rampa_%d_%d_%d" % [cell.x,cell.y,side]
+                scene.add_child(ramp)
+                ramp_count += 1
+    counters["bridge_spans_v48"] = bridge_count
+    counters["bridge_ramps_v48"] = ramp_count
+    counters["bridge_skipped_ramps_v48"] = skipped_ramps
+    counters["units"] = _make_units(scene,state,cells,selected_id,viewer,bridge_cells)
+    var clearance_failures := 0
+    for child in scene.get_children():
+        if child.has_meta("bridge_clearance_v48"):
+            var report: Dictionary = child.get_meta("bridge_clearance_v48")
+            if not bool(report.get("fits_vertical",false)):
+                clearance_failures += 1
+    counters["bridge_clearance_failures_v48"] = clearance_failures
+    scene.set_meta("bridge_inspection_only_v48",not bridge_cells.is_empty())
     # Android-safe, 4 Hz dynamic LOD: only cities already visible to the
     # public viewer are registered. Model roots and selection cells persist.
     var city_lod: Node=CityDistance.new()
