@@ -51,7 +51,7 @@ func _run() -> void:
             check(model != null, "Destroyer builds")
             if model == null:
                 continue
-            check(model.get_meta("destroyer_art_revision", "") == "1.12", "V1.12 hard panel finish active")
+            check(model.get_meta("destroyer_art_revision", "") == "1.13", "V1.13 faction and satin finish active")
             for key in ["CascoNaval", "Cubierta", "Superestructura/ZocaloNaval", "Superestructura/CarcasaInferior", "Superestructura/Puente", "Superestructura/TechoPuente", "TorretaNavalPivot/CarcasaTorreta", "TorreMastil/CarcasaMastil", "TorreMastil/RadarPivot/Radar", "ConjuntoPopa/Helipuerto", "ConjuntoPopa/Propulsion_-1/TimonPivot/TimonVisual", "ConjuntoPopa/Propulsion_1/TimonPivot/TimonVisual"]:
                 var part: MeshInstance3D = model.get_node_or_null(key) as MeshInstance3D
                 check(part != null, "Native " + key)
@@ -72,10 +72,26 @@ func _run() -> void:
                 check(hull_mat.vertex_color_use_as_albedo, "Paint integrated into one hull")
                 check((hull_mat.albedo_texture != null) == (lod >= 13), "Surface grain detail tier")
                 check(hull_mat.uv1_triplanar == (lod >= 13), "Non-stretched side texture projection")
+                check(hull_mat.normal_enabled == (lod >= 13), "Satin relief inspection tier")
+                check((hull_mat.normal_texture != null) == (lod >= 13), "Satin relief texture")
+                check(model.get_meta("destroyer_finish_v113",false), "Refined finish active")
+                for side in [-1,1]:
+                    var cover_path: String = "AcabadoNavalV18/RelieveServicio_%d/TapaBiselada" % side
+                    var cover: MeshInstance3D = model.get_node_or_null(cover_path) as MeshInstance3D
+                    check((cover != null) == (lod >= 13), "Closed service covers inspection only")
+                    if cover != null:
+                        check(_closed(cover.mesh) and _outward(cover.mesh), "Service cover closed and outward")
+                if faction >= 0:
+                    for panel_path in ["Superestructura/TechoPuente","TapaServicioCubierta_-1","TapaServicioCubierta_1","ConjuntoPopa/BordeHelipuerto_-1","ConjuntoPopa/BordeHelipuerto_1"]:
+                        var panel: MeshInstance3D = model.get_node_or_null(panel_path) as MeshInstance3D
+                        check(panel != null, "Expanded faction panel " + panel_path)
+                        if panel != null:
+                            var panel_mat: StandardMaterial3D = panel.material_override as StandardMaterial3D
+                            check(panel_mat.albedo_color.is_equal_approx(Art.faction_paint_color(faction)), "Official enamel on " + panel_path)
                 check(model.has_node("ConjuntoPopa/AnclajeCubierta_1_0") == (lod >= 13), "Aft deck relief detail tier")
                 var indices: PackedInt32Array = hull.get_meta("destroyer_stripe_vertices")
                 var colors: PackedColorArray = hull.mesh.surface_get_arrays(0)[Mesh.ARRAY_COLOR]
-                check(indices.size() == 84, "Two continuous painted bevels")
+                check(indices.size() == 168, "Four continuous painted upper hull faces")
                 for index in indices:
                     var expected: Color = Art.faction_paint_color(faction)
                     var actual: Color = colors[index]
@@ -225,7 +241,7 @@ func _run() -> void:
     if failures != 0:
         quit(1)
         return
-    print("PASS DESTROYER HULL V1.12: 18 variants, 29 PNGs")
+    print("PASS DESTROYER HULL V1.13: 18 variants, 38 PNGs")
     quit(0)
 
 func _render() -> void:
@@ -289,7 +305,7 @@ func _render() -> void:
         var img: Image = view.get_texture().get_image()
         check(img != null and not img.is_empty(), "Real Godot image")
         if img != null and not img.is_empty():
-            check(img.save_png(output + "/destroyer_v112_%d.png" % i) == OK, "Capture saved")
+            check(img.save_png(output + "/destroyer_v113_%d.png" % i) == OK, "Capture saved")
     Art.restore_model_pose("destroyer",model)
     for d in range(5):
         Art.set_destroyer_damage(model,d,0.52 if d == 4 else 0.0)
@@ -302,7 +318,7 @@ func _render() -> void:
         var img: Image = view.get_texture().get_image()
         check(img != null and not img.is_empty(), "Damage image")
         if img != null and not img.is_empty():
-            check(img.save_png(output + "/destroyer_v112_D%d.png" % d) == OK, "Damage capture saved")
+            check(img.save_png(output + "/destroyer_v113_D%d.png" % d) == OK, "Damage capture saved")
     for d in [2,3]:
         Art.set_destroyer_damage(model,d)
         camera.position = Vector3(3.0,2.7,3.1)
@@ -314,7 +330,7 @@ func _render() -> void:
         var img: Image = view.get_texture().get_image()
         check(img != null and not img.is_empty(), "Close damage image")
         if img != null and not img.is_empty():
-            check(img.save_png(output + "/destroyer_v112_detail_D%d.png" % d) == OK, "Close damage capture")
+            check(img.save_png(output + "/destroyer_v113_detail_D%d.png" % d) == OK, "Close damage capture")
     # Fixed camera, opaque water, and a complete visual sinking sequence.
     var sea := MeshInstance3D.new()
     var plane := PlaneMesh.new()
@@ -344,7 +360,7 @@ func _render() -> void:
         var img: Image = view.get_texture().get_image()
         check(img != null and not img.is_empty(), "Fixed waterline sequence")
         if img != null and not img.is_empty():
-            check(img.save_png(output + "/destroyer_v112_sink_%d.png" % frame) == OK, "Fixed camera sink capture")
+            check(img.save_png(output + "/destroyer_v113_sink_%d.png" % frame) == OK, "Fixed camera sink capture")
             if empty_water != null and not empty_water.is_empty() and img.get_size() == empty_water.get_size():
                 var changed: int = 0
                 for y in range(0,img.get_height(),8):
@@ -379,5 +395,27 @@ func _render() -> void:
         var img: Image = view.get_texture().get_image()
         check(img != null and not img.is_empty(), "Directional relief inspection")
         if img != null and not img.is_empty():
-            check(img.save_png(output + "/destroyer_v112_light_%d.png" % side) == OK, "Relief inspection capture")
+            check(img.save_png(output + "/destroyer_v113_light_%d.png" % side) == OK, "Relief inspection capture")
+    # Same lighting and angle for all eight factions plus neutral.
+    model.hide()
+    light.shadow_enabled = false
+    fill.hide()
+    camera.size = 3.8
+    camera.position = Vector3(5,4,-6)
+    camera.look_at(Vector3(0,0.7,0.15),Vector3.UP)
+    for faction in range(-1,8):
+        var sample: Node3D = Art.build("destroyer",faction,true,13)
+        check(sample != null,"Faction comparison model")
+        if sample == null:
+            continue
+        stage.add_child(sample)
+        await process_frame
+        await process_frame
+        await process_frame
+        var image: Image = view.get_texture().get_image()
+        check(image != null and not image.is_empty(),"Faction comparison image")
+        if image != null and not image.is_empty():
+            check(image.save_png(output+"/destroyer_v113_faction_%d.png" % faction)==OK,"Faction comparison saved")
+        stage.remove_child(sample)
+        sample.free()
     view.queue_free()

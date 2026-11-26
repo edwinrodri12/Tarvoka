@@ -34,15 +34,15 @@ jobs:
           fi
           /tmp/Godot_v4.3-stable_linux.x86_64 --headless --editor --path . --import --quit 2>&1 | tee /tmp/destroyer-import.log
           if grep -E 'SCRIPT ERROR:|Parse Error:|Import failed' /tmp/destroyer-import.log; then exit 1; fi
-      - name: Check 18 variants and render twenty-nine native images
+      - name: Check 18 variants and render thirty-eight native images
         run: |
           set -euo pipefail
           timeout 300s xvfb-run -a -s '-screen 0 1280x720x24' env LIBGL_ALWAYS_SOFTWARE=1 /tmp/Godot_v4.3-stable_linux.x86_64 --rendering-method gl_compatibility --audio-driver Dummy --path . --script res://tests/test_destroyer_hull_v1.gd 2>&1 | tee /tmp/destroyer.log
           if grep -E 'SCRIPT ERROR:|ERROR:|Parse Error:|Assertion failed' /tmp/destroyer.log; then exit 1; fi
-          grep -F 'PASS DESTROYER HULL V1.12: 18 variants, 29 PNGs' /tmp/destroyer.log
-          test "$(find build/qa/destroyer-v1 -name '*.png' | wc -l)" -eq 29
+          grep -F 'PASS DESTROYER HULL V1.13: 18 variants, 38 PNGs' /tmp/destroyer.log
+          test "$(find build/qa/destroyer-v1 -name '*.png' | wc -l)" -eq 38
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: tarvoka-destroyer-v112-native
+          name: tarvoka-destroyer-v113-native
           path: build/qa/destroyer-v1/*.png
