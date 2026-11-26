@@ -42,6 +42,9 @@ func _check_biome(value: String,dims: Vector2i,
     assert(int(stats["terrain_blend_extra_batches"])==0)
     assert(int(stats["biome_extra_batches"])<=2)
     assert(int(stats["terrain_blend_palette_samples"])<=(dims.x+1)*(dims.y+1))
+    assert(int(stats["water_palette_samples_v27"])<=(dims.x+1)*(dims.y+1))
+    assert(int(stats["shared_chunk_materials_v27"])<=3)
+    assert(int(stats["site_foundations_v26"])>=0)
     assert(model.get_meta("public_cells").size()==dims.x*dims.y)
     assert(model.find_child("Unidad3D_F",true,false)!=null)
     if fog:
@@ -155,9 +158,49 @@ func _check_surface_finish() -> void:
         assert(Terrain._water_corner_tint(water_cells,cell,biome)!=deep)
         water_cells.erase(cell+Vector2i(-1,0))
 
+func _check_foundation_and_cache() -> void:
+    var cell := Vector2i(7,3)
+    var cells: Dictionary = {}
+    cells[cell] = {"kind":"plain","seen":true,"details":true}
+    cells[cell+Vector2i(1,0)] = {"kind":"mountain","seen":true,"details":true}
+    var at: Vector3 = Terrain.world_at(cell)
+    var tool := SurfaceTool.new()
+    tool.begin(Mesh.PRIMITIVE_TRIANGLES)
+    var anchor: float = Terrain._append_site_foundation(tool,cells,cell,true)
+    var top: float = Terrain._foundation_top(cells,cell)
+    assert(is_equal_approx(anchor,top+0.015))
+    assert(top>Terrain.height_at(cells,cell,0.98,0.98))
+    var mesh: ArrayMesh = tool.commit()
+    var vertices: PackedVector3Array = mesh.surface_get_arrays(0)[Mesh.ARRAY_VERTEX]
+    assert(vertices.size()==72)
+    var roof_vertices := 0
+    for v in vertices:
+        assert(absf(v.x-at.x)<=0.981 and absf(v.z-at.z)<=0.981)
+        assert(v.y<=top+0.001)
+        if is_equal_approx(v.y,top):
+            roof_vertices += 1
+    assert(roof_vertices==48)
+    var model := Node3D.new()
+    var foundation := SurfaceTool.new()
+    foundation.begin(Mesh.PRIMITIVE_TRIANGLES)
+    Terrain._place_land_site(model,foundation,cells,cell,true)
+    assert(is_equal_approx(model.position.y,anchor))
+    assert(model.rotation==Vector3.ZERO)
+    model.free()
+    cells[cell] = {"kind":"water"}
+    var naval := SurfaceTool.new()
+    naval.begin(Mesh.PRIMITIVE_TRIANGLES)
+    assert(is_equal_approx(Terrain._append_site_foundation(naval,cells,cell,true),
+        Terrain.WATER_LEVEL+0.07))
+    var cache: Dictionary = {}
+    var pigment: Color = Terrain._cached_water_tint(cells,cell,cache,Biomes.WINTER)
+    assert(Terrain._cached_water_tint(cells,cell,cache,Biomes.WINTER)==pigment)
+    assert(cache.size()==1)
+
 func _run() -> void:
     _check_water_bank_geometry()
     _check_surface_finish()
+    _check_foundation_and_cache()
     root.content_scale_size = Vector2i(1280,800)
     assert(Biomes.CHOICES.size()==4)
     assert(Biomes.from_index(0)==Biomes.TEMPERATE)
