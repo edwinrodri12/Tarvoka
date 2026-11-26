@@ -1835,7 +1835,7 @@ jobs:
             echo '::error::A02 shared Studio selector or actions failed' >&2; exit 1
           fi
           grep -F 'PASS A02 V16 SHARED STUDIO:' /tmp/a02-studio.log
-          test "$(find build/qa/a02-shared-studio -name '*.png' -size +2k | wc -l)" -eq 3
+          test "$(find build/qa/a02-shared-studio -name '*.png' -size +2k | wc -l)" -eq 5
           # Web export must not publish a blank civilian-city selection.
           xvfb-run -a -s '-screen 0 1280x720x24' env LIBGL_ALWAYS_SOFTWARE=1 \
             /tmp/Godot_v4.3-stable_linux.x86_64 \
