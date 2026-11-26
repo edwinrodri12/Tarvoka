@@ -670,6 +670,19 @@ func _destroyer_studio_select_from_url() -> void:
         _switch_category(0)
         role_picker.select(NavalArt.ROLES.find("destroyer"))
         _display_role("destroyer")
+        # Publish evidence from the instantiated native model, not the URL alone.
+        if is_instance_valid(model_root) and _role == "destroyer":
+            var info: Dictionary = {
+                "role": _role,
+                "revision": str(model_root.get_meta("destroyer_art_revision", "")),
+                "stage": int(model_root.get_meta("destroyer_damage_stage", -1)),
+                "lod": 8 if destroyer_lod_picker.selected == 0 else 13,
+                "factions": destroyer_faction_picker.item_count,
+                "damage_states": destroyer_damage_picker.item_count,
+                "controls_visible": destroyer_controls.visible,
+                "water_visible": is_instance_valid(_destroyer_water) and _destroyer_water.visible
+            }
+            JavaScriptBridge.eval("window.__tarvokaDestroyerEntry = " + JSON.stringify(info), true)
 
 func _destroyer_studio_sync_visibility() -> void:
     if destroyer_controls != null:
