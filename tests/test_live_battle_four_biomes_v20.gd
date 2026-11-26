@@ -315,7 +315,70 @@ func _check_art_finish_v44() -> void:
         for key in edges:
             assert(edges[key]==2)
 
+func _check_relief_v47() -> void:
+    var cell := Vector2i(7,3)
+    var at: Vector3 = Terrain.world_at(cell)
+    var half: float = Terrain.CELL*0.5
+    var surface: Dictionary = {"x":cell.x,"z":cell.y,"top":0.19,"half":half,
+        "corners":PackedFloat32Array([0.19,0.19,0.19,0.19])}
+    var dunes := SurfaceTool.new()
+    dunes.begin(Mesh.PRIMITIVE_TRIANGLES)
+    Terrain._append_sand_ripples(dunes,at,surface,cell)
+    var dune_mesh: ArrayMesh = dunes.commit()
+    var vertices: PackedVector3Array = dune_mesh.surface_get_arrays(0)[Mesh.ARRAY_VERTEX]
+    assert(vertices.size()==96)
+    var maximum := 0.0
+    for vertex in vertices:
+        assert(absf(vertex.x-at.x)<half and absf(vertex.z-at.z)<half)
+        assert(absf(vertex.z-at.z)>0.45)
+        assert(vertex.y>=0.201 and vertex.y<=0.274)
+        maximum = maxf(maximum,vertex.y)
+    assert(maximum>0.25)
+    var facet := SurfaceTool.new()
+    facet.begin(Mesh.PRIMITIVE_TRIANGLES)
+    Terrain._ridge_face(facet,Vector3.ZERO,Vector3.RIGHT,Vector3.FORWARD,
+        Color.WHITE,Color.WHITE,Color.WHITE)
+    var rock: ArrayMesh = facet.commit()
+    assert(rock.surface_get_array_len(0)==9)
+    for biome in [Biomes.COASTAL,Biomes.ARCHIPELAGO,Biomes.WETLAND]:
+        for direction in ["north","east","south","west"]:
+            var shore := SurfaceTool.new()
+            shore.begin(Mesh.PRIMITIVE_TRIANGLES)
+            Terrain._append_shore_bands(shore,at,surface,direction,biome)
+            var sand: ArrayMesh = shore.commit()
+            var points: PackedVector3Array = sand.surface_get_arrays(0)[Mesh.ARRAY_VERTEX]
+            assert(points.size()==48)
+            for p in points:
+                assert(absf(p.x-at.x)<half and absf(p.z-at.z)<half)
+                assert(is_equal_approx(p.y,0.223))
+    var cells: Dictionary = {}
+    cells[cell] = {"kind":"water","details":true}
+    cells[cell+Vector2i.RIGHT] = {"kind":"plain","details":true}
+    cells[cell+Vector2i.LEFT] = {"kind":"unknown","details":false}
+    cells[cell+Vector2i.UP] = {"kind":"plain","details":false}
+    var foam := SurfaceTool.new()
+    foam.begin(Mesh.PRIMITIVE_TRIANGLES)
+    assert(Terrain._append_coastal_foam(foam,cells,cell,Biomes.COASTAL)==1)
+    var foam_mesh: ArrayMesh = foam.commit()
+    var foam_points: PackedVector3Array = foam_mesh.surface_get_arrays(0)[Mesh.ARRAY_VERTEX]
+    assert(foam_points.size()==18)
+    for p in foam_points:
+        assert(p.x-at.x>half-0.12 and p.x-at.x<half)
+        assert(absf(p.z-at.z)<half)
+        assert(is_equal_approx(p.y,Terrain.WATER_LEVEL+0.006))
+    var palms := SurfaceTool.new()
+    palms.begin(Mesh.PRIMITIVE_TRIANGLES)
+    Terrain._append_tropical_palm(palms)
+    var palm_mesh: ArrayMesh = palms.commit()
+    assert(palm_mesh.surface_get_array_len(0)==240)
+    var reeds := SurfaceTool.new()
+    reeds.begin(Mesh.PRIMITIVE_TRIANGLES)
+    Terrain._append_reeds(reeds)
+    var reed_mesh: ArrayMesh = reeds.commit()
+    assert(reed_mesh.surface_get_array_len(0)==357)
+
 func _run() -> void:
+    _check_relief_v47()
     _check_art_finish_v44()
     _check_crossing_parapets()
     _check_extended_art()
