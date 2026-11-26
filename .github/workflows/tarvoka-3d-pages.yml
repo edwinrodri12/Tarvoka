@@ -1834,7 +1834,7 @@ jobs:
           if grep -E 'SCRIPT ERROR:|ERROR:|Parse Error:|Assertion failed' /tmp/a02-studio.log; then
             echo '::error::A02 shared Studio selector or actions failed' >&2; exit 1
           fi
-          grep -F 'PASS A02 V19 SHARED STUDIO:' /tmp/a02-studio.log
+          grep -F 'PASS A02 V20 SHARED STUDIO:' /tmp/a02-studio.log
           test "$(find build/qa/a02-shared-studio -name '*.png' -size +2k | wc -l)" -eq 5
           # Web export must not publish a blank civilian-city selection.
           xvfb-run -a -s '-screen 0 1280x720x24' env LIBGL_ALWAYS_SOFTWARE=1 \
@@ -2802,7 +2802,7 @@ jobs:
           commit = os.environ['STUDIO_SOURCE_SHA']
           info = {
               'engineer': 'G05 V17',
-              'a02': 'V19 EN REVISION',
+              'a02': 'V20 EN REVISION',
               'a02_source_sha256': hashlib.sha256(Path('scripts/ui/A02FpvArtV1.gd').read_bytes()).hexdigest(),
               'source_commit': commit,
               'engineer_source_sha256': hashlib.sha256(source.read_bytes()).hexdigest(),
@@ -2952,7 +2952,7 @@ jobs:
                 if(await menu.getAttribute('open')!==null||await entryLink.isVisible())
                   throw Error('A02 compact menu did not close');
                 const info=await page.evaluate(()=>window.__tarvokaA02Entry);
-                if(info.role!=='fpv'||info.edition!=='V19'||!info.native_model||!info.surface_finish||!info.undershell_finish||!info.graphic_livery||info.lod!==13||info.stage!==0)
+                if(info.role!=='fpv'||info.edition!=='V20'||!info.native_model||!info.surface_finish||!info.undershell_finish||!info.graphic_livery||!info.surface_atlas||info.lod!==13||info.stage!==0)
                   throw Error('Incorrect A02 shared studio entry: '+JSON.stringify(info));
                 if(info.visible_meshes!==36||info.triangles!==5808||info.transparent_meshes.length!==0||!info.faction_selector)
                   throw Error('A02 differs from native V10 evidence: '+JSON.stringify(info));
@@ -2974,7 +2974,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: tarvoka-a02-v19-shared-native-controls
+          name: tarvoka-a02-v20-shared-native-controls
           path: |
             build/qa/a02-shared-studio/*.png
             /tmp/a02-studio.log
@@ -2984,7 +2984,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: tarvoka-a02-v19-shared-studio-browser
+          name: tarvoka-a02-v20-shared-studio-browser
           path: build/qa/a02-browser/
           if-no-files-found: warn
           retention-days: 14
