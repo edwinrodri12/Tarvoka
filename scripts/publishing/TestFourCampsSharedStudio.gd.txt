@@ -416,6 +416,75 @@ func _run() -> void:
     await _frames(5)
     _check(units != null and units.visible,
         "Original seven-building additions never hide units permanently")
+    # Verify the native destroyer in the same viewport, not a second studio.
+    studio.call("_display_role","destroyer")
+    await _frames(6)
+    var naval: Node3D = studio.get("model_root") as Node3D
+    var destroyer_controls: Control = studio.get("destroyer_controls") as Control
+    _check(naval != null and naval.get_meta("destroyer_art_revision","") == "1.12",
+        "Destroyer V1.12 uses the shared factory")
+    _check(destroyer_controls != null and destroyer_controls.visible,
+        "Destroyer controls visible")
+    var base_controls: Control = studio.get("naval_controls") as Control
+    _check(base_controls != null and base_controls != destroyer_controls,
+        "Original naval base controls are distinct from destroyer controls")
+    var destroyer_water: MeshInstance3D = studio.get("_destroyer_water") as MeshInstance3D
+    _check(destroyer_water != null and destroyer_water.visible,"Destroyer water visible in shared viewport")
+    var floor_probe := MeshInstance3D.new()
+    floor_probe.name = "QA_DestroyerGround"
+    floor_probe.mesh = PlaneMesh.new()
+    original_viewport.add_child(floor_probe)
+    studio.call("_destroyer_studio_view",true)
+    _check(destroyer_water != null and not destroyer_water.visible and original_camera.position.y < 0.0,
+        "Underbody inspection removes water and changes camera")
+    _check(not floor_probe.visible,"Original inspection floor temporarily hidden")
+    studio.call("_destroyer_studio_view",false)
+    _check(destroyer_water != null and destroyer_water.visible and original_camera.position.y > 0.0,
+        "Surface inspection restores water and camera")
+    _check(floor_probe.visible,"Original inspection floor restored")
+    var inspection_light: DirectionalLight3D = studio.get("_destroyer_inspection_light") as DirectionalLight3D
+    studio.call("_destroyer_studio_light",true)
+    _check(inspection_light != null and inspection_light.visible and inspection_light.shadow_enabled,"Dedicated detail lighting enabled")
+    studio.call("_destroyer_studio_light",false)
+    _check(inspection_light != null and not inspection_light.visible,"Normal lighting restored")
+    floor_probe.queue_free()
+    if naval != null:
+        studio.call("_destroyer_studio_frame","move",0.25)
+        studio.call("_destroyer_studio_damage_changed",2)
+        _check(int(naval.get_meta("destroyer_damage_stage",-1)) == 2,
+            "Shared destroyer damage")
+        studio.call("_destroyer_studio_frame","sink",0.5)
+        _check(int(naval.get_meta("destroyer_damage_stage",-1)) == 4,
+            "Shared destroyer sinking")
+        studio.call("_destroyer_studio_damage_changed",0)
+        await _frames(5)
+        _check(studio.get("preview") == original_viewport
+            and studio.get("camera") == original_camera,
+            "Destroyer shares original camera and viewport")
+        var naval_dir: String = ProjectSettings.globalize_path("res://build/qa/destroyer-shared-studio")
+        _check(DirAccess.make_dir_recursive_absolute(naval_dir) == OK,"Destroyer output path")
+        var naval_image: Image = original_viewport.get_texture().get_image()
+        _check(naval_image != null and not naval_image.is_empty(),"Destroyer real viewport image")
+        if naval_image != null and not naval_image.is_empty():
+            _check(naval_image.save_png(naval_dir+"/destroyer_v112_shared.png") == OK,"Destroyer shared capture")
+    studio.call("_display_role","tank")
+    await _frames(4)
+    _check(destroyer_controls == null or not destroyer_controls.visible,"Destroyer controls hidden for tank")
+    _check(destroyer_water == null or not destroyer_water.visible,"Water never leaks into tank inspection")
+    _check(inspection_light == null or not inspection_light.visible,"Detail light never leaks into tank inspection")
+    category.select(1)
+    category.item_selected.emit(1)
+    buildings.select(2)
+    buildings.item_selected.emit(2)
+    await _frames(5)
+    _check(base_controls != null and base_controls.visible,
+        "Original naval base controls still available")
+    _check(destroyer_controls == null or not destroyer_controls.visible,
+        "Destroyer controls stay hidden for naval base")
+    _check(destroyer_water == null or not destroyer_water.visible,"Destroyer inspection water stays hidden for naval base")
+    category.select(0)
+    category.item_selected.emit(0)
+    await _frames(3)
     _check(snapshots == 7,
         "Four intact + Android + D2 + packed = seven visual snapshots")
     studio.queue_free()

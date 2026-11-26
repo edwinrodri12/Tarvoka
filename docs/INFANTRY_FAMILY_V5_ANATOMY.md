@@ -43,3 +43,6 @@ V11 2fafe73: QA nativa 45755830353 exitosa, Android 45755830187 exitoso, Studio 
 ### V12 — verificación del visor y controles
 
 La prueba de inventario de animaciones ahora exige la nueva carrera solo en cinco roles, conservando el inventario de G05 y diseños históricos. Comparación V1 muestra aviso de seleccionar Ver última si se intenta ejecutar carrera. QA nativa del mismo Studio verifica que el botón de carrera mueve rodillas reales. La exportación Chromium añade cinco cargas por URL, comprobando identidad V12, mismo SubViewport, mallas visibles, opacidad y ausencia de errores, y archiva cinco PNG y JSON; preserva prueba y evidencia G05. Esta verificación se ejecutará con el código actualizado, no implica publicación. 
+
+### Sincronización de base antes de V13
+V12 nativa 45772134764 y Android 45772134905 exitosas; artifact 15093994000, 25 renders inspeccionados. Pages 45772134748 falló antes de importar por ausencia de A02FpvArtV1.gd al preparar la rama antigua. Se integra el árbol principal exacto 101073b6 con A02 y los cambios de infantería mediante resolución explícita en tres archivos compartidos; no se fusiona infantería hacia main. Se mantiene la regresión histórica G13 separada.

@@ -4,7 +4,7 @@ class_name TarvokaUnitModels3D
 # First actual editable 3D geometry for TARVOKA. These eight models are native
 # Godot MeshInstance3D trees, NOT SVG sprites or AI-rendered concept images.
 # Tuned to existing approved category silhouettes; no tactical stats live here.
-const ROLES := ["line","scout","apc","tank","mlrs","attack_heli","fighter","destroyer","aa_mobile","mobile_aa","ew_mobile","logistics_mobile","infantry_urban","infantry_defense","infantry_antitank","infantry_engineer","infantry_sniper","infantry_logistic","infantry_medic","infantry_commando","uav_recon"]
+const ROLES := ["line","scout","apc","tank","mlrs","attack_heli","fighter","destroyer","aa_mobile","mobile_aa","ew_mobile","logistics_mobile","infantry_urban","infantry_defense","infantry_antitank","infantry_engineer","infantry_sniper","infantry_logistic","infantry_medic","infantry_commando","uav_recon","fpv"]
 const VisualStyle = preload("res://scripts/ui/VisualStyle.gd")
 const TankSurface = preload("res://scripts/ui/TankSurface3D.gd")
 const TankRig = preload("res://scripts/ui/TankVisualRig3D.gd")
@@ -39,6 +39,7 @@ const G16SculptV4 = preload("res://scripts/ui/G16LogisticsSculptDamageV4.gd")
 const G16MaterialsV5 = preload("res://scripts/ui/G16PremiumMaterialsDamageV5.gd")
 const G16ServiceV6 = preload("res://scripts/ui/G16DeployableSupplyHardwareV6.gd")
 const A01Recon = preload("res://scripts/ui/A01ReconDroneV1.gd")
+const A02Art = preload("res://scripts/ui/A02FpvArtV1.gd")
 const A01Finish = preload("res://scripts/ui/A01ReconFinishV2.gd")
 const A01HardwareV3 = preload("res://scripts/ui/A01ReconFinishV3.gd")
 const A01AirfoilV4 = preload("res://scripts/ui/A01ReconAirfoilV4.gd")
@@ -197,7 +198,7 @@ const PREVIEW_FRAME := {
     "infantry_commando":3.15,"apc":3.55,"tank":3.75,
     "mlrs":4.05,"attack_heli":4.60,"fighter":4.65,"destroyer":5.10,
     "aa_mobile":3.85,"mobile_aa":3.85,"ew_mobile":4.45,
-    "logistics_mobile":5.0,"uav_recon":3.65
+    "logistics_mobile":5.0,"uav_recon":3.65,"fpv":2.85
 }
 
 # G13 art-only LOD selection. Public to studio/stress harnesses, not combat.
@@ -648,12 +649,15 @@ static func apply_faction_palette(model: Node3D, faction: int) -> int:
     # instances; recoloring a tank cannot modify any other unit.
     if model == null or faction < 0 or faction >= VisualStyle.FACTIONS.size():
         return 0
-    return _paint_panels(model,faction_paint_color(faction))
+    var painted: int = _paint_panels(model,faction_paint_color(faction))
+    if model.has_meta("destroyer_art_revision"):
+        painted += _destroyer_repaint_hull(model,faction_paint_color(faction))
+    return painted
 
 static func paintable_count(model: Node) -> int:
     if model == null:
         return 0
-    var total := 1 if model is MeshInstance3D and (model.has_meta(TANK_PAINT_META) or model.name.begins_with("Faccion")) else 0
+    var total := 1 if model is MeshInstance3D and (model.has_meta(TANK_PAINT_META) or model.name.begins_with("Faccion") or model.has_meta("destroyer_stripe_vertices")) else 0
     for child in model.get_children():
         total += paintable_count(child)
     return total
@@ -971,45 +975,672 @@ static func _fighter(root: Node3D) -> void:
     _cylinder(root,"Tobera",Vector3(0,0.62,1.62),
         0.24,0.23,BLACK,Vector3(90,0,0),16)
 
-static func _destroyer(root: Node3D) -> void:
-    var outline: Array = [
-        Vector3(-0.75,0.18,-1.35),Vector3(0.75,0.18,-1.35),
-        Vector3(0.91,0.18,1.20),Vector3(-0.91,0.18,1.20),
-        Vector3(0,0.22,-2.26),Vector3(-0.67,0.74,-1.20),
-        Vector3(0.67,0.74,-1.20),Vector3(0.70,0.72,1.20),
-        Vector3(-0.70,0.72,1.20)
-    ]
-    _hull(root,"CascoNaval",outline,[
-        [0,3,2,1],[0,1,4],[0,5,8,3],[1,2,7,6],
-        [3,8,7,2],[4,1,6],[4,6,5],[0,4,5],[5,6,7,8]],STEEL)
-    _box(root,"Cubierta",Vector3(0,0.75,0.23),
-        Vector3(1.30,0.09,2.69),ARMOR)
-    _body(root,"Superestructura",0.43,0.25,0.50,0.80,1.36,METAL)
-    _box(root,"Puente",Vector3(0,1.30,0),
-        Vector3(0.79,0.26,0.50),GLASS)
-    _box(root,"TorreMastil",Vector3(0,1.74,0.28),
-        Vector3(0.17,0.81,0.18),DARK)
-    _box(root,"Radar",Vector3(0,2.16,0.28),
-        Vector3(0.82,0.20,0.13),ARMOR)
-    _cylinder(root,"BaseTorreProa",Vector3(0,0.91,-1.14),
-        0.25,0.20,DARK,Vector3.ZERO,10)
-    _cylinder(root,"CanonNaval",Vector3(0,0.96,-1.48),
-        0.07,0.95,METAL,Vector3(90,0,0),10)
-    for x in [-0.25,-0.08,0.08,0.25]:
-        for n in range(3):
-            _box(root,"VLS%.2f_%d" % [x,n],
-                Vector3(x,0.83,-0.27+float(n)*0.17),
-                Vector3(0.13,0.06,0.12),BLACK)
+# V1 naval silhouette: joined closed transverse stations, with a separate
+# conformal deck and opaque faction markings. Presentation only.
+static func _destroyer_shell(root: Node3D, label: String, stations: Array,
+        tint: Color, painted_hull: bool = false) -> MeshInstance3D:
+    var points: Array = []
+    var faces: Array = []
+    # Chamfer all transverse corners with a pair of nearby points.
+    # Interpolation preserves the established silhouette and contact heights.
+    for station in stations:
+        var z: float = station[0]
+        var w: float = station[1]
+        var bottom: float = station[2]
+        var top: float = station[3]
+        var ring: Array[Vector3] = [
+            Vector3(-w*0.86,top,z),Vector3(w*0.86,top,z),
+            Vector3(w,lerpf(bottom,top,0.64),z),
+            Vector3(w*0.67,bottom,z),Vector3(-w*0.67,bottom,z),
+            Vector3(-w,lerpf(bottom,top,0.64),z)]
+        for i in range(6):
+            points.append(ring[i].lerp(ring[(i+5)%6],0.10))
+            points.append(ring[i].lerp(ring[(i+1)%6],0.10))
+    var count: int = 12
+    for ring in range(stations.size()-1):
+        for i in range(count):
+            var j: int = (i+1)%count
+            var a: int = ring*count
+            var b: int = a+count
+            faces.append([a+i,a+j,b+j,b+i])
+    var front: Array = []
+    var rear: Array = []
+    var last: int = (stations.size()-1)*count
+    for i in range(count):
+        front.append(count-1-i)
+        rear.append(last+i)
+    faces.append(front)
+    faces.append(rear)
+    if not painted_hull:
+        # Keep chamfered volumes closed, but separate the smoothing groups
+        # of each longitudinal panel and the end caps. The sides of the
+        # bridge, mast and deck no longer shade like inflated plastic.
+        var facets := SurfaceTool.new()
+        facets.begin(Mesh.PRIMITIVE_TRIANGLES)
+        for face_index in range(faces.size()):
+            var face: Array = faces[face_index]
+            var panel: int = face_index % count if face_index < (stations.size()-1)*count else count+face_index-(stations.size()-1)*count
+            for k in range(1,face.size()-1):
+                for index in [face[0],face[k],face[k+1]]:
+                    var point: Vector3 = points[index]
+                    facets.set_smooth_group(panel)
+                    facets.set_uv(Vector2(point.x*0.34+0.5,point.z*0.30+0.5))
+                    facets.add_vertex(point)
+        facets.generate_normals()
+        var solid := MeshInstance3D.new()
+        solid.name = label
+        solid.mesh = facets.commit()
+        solid.material_override = _material(tint,0.20)
+        solid.set_meta("destroyer_hard_panels",true)
+        root.add_child(solid)
+        return solid
+    # One sealed exterior, with a color band embedded in the surface.
+    # No second shell, polygon offset, intersecting stripe or detached badge.
+    var surface := SurfaceTool.new()
+    surface.begin(Mesh.PRIMITIVE_TRIANGLES)
+    var stripe_vertices := PackedInt32Array()
+    var vertex_index: int = 0
+    for face_index in range(faces.size()):
+        var face: Array = faces[face_index]
+        var side: int = face_index % count
+        var stripe: bool = face_index < (stations.size()-1)*count and side in [4,10]
+        var under: bool = face_index < (stations.size()-1)*count and side in [5,6,7,8,9]
+        var tone: Color = ARMOR if stripe else (Color("#465966") if under else tint)
+        for k in range(1,face.size()-1):
+            for index in [face[0],face[k],face[k+1]]:
+                var point: Vector3 = points[index]
+                surface.set_uv(Vector2(point.x*0.34+0.5,point.z*0.30+0.5))
+                surface.set_color(tone)
+                surface.add_vertex(point)
+                if stripe:
+                    stripe_vertices.append(vertex_index)
+                vertex_index += 1
+    surface.generate_normals()
+    var item := MeshInstance3D.new()
+    item.name = label
+    item.mesh = surface.commit()
+    var material: StandardMaterial3D = _material(Color.WHITE,0.20)
+    material.vertex_color_use_as_albedo = true
+    material.vertex_color_is_srgb = true
+    item.material_override = material
+    item.set_meta("destroyer_stripe_vertices",stripe_vertices)
+    root.add_child(item)
+    return item
+
+static func _destroyer_repaint_hull(root: Node3D, paint: Color) -> int:
+    var hull: MeshInstance3D = root.get_node_or_null("CascoNaval") as MeshInstance3D
+    if hull == null or not hull.has_meta("destroyer_stripe_vertices"):
+        return 0
+    var arrays: Array = hull.mesh.surface_get_arrays(0)
+    var colors: PackedColorArray = arrays[Mesh.ARRAY_COLOR]
+    var indices: PackedInt32Array = hull.get_meta("destroyer_stripe_vertices")
+    for index in indices:
+        colors[index] = paint
+    arrays[Mesh.ARRAY_COLOR] = colors
+    var fresh := ArrayMesh.new()
+    fresh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES,arrays)
+    hull.mesh = fresh
+    return 1
+
+# Only the naval model receives this opaque procedural surface treatment.
+# No transparency or battle logic is introduced.
+static var _destroyer_steel_texture: ImageTexture
+
+static func _destroyer_grain() -> ImageTexture:
+    if _destroyer_steel_texture != null:
+        return _destroyer_steel_texture
+    var img: Image = Image.create(64,64,false,Image.FORMAT_RGBA8)
+    for y in range(64):
+        for x in range(64):
+            var grain: float = float((x*37+y*73+x*y*11)%31)/30.0
+            var streak: float = 0.5+0.5*sin(float(x)*1.18+float(y)*0.06)
+            var shade: float = 0.91+0.055*grain+0.035*streak
+            img.set_pixel(x,y,Color(shade,shade,shade,1.0))
+    img.generate_mipmaps()
+    _destroyer_steel_texture = ImageTexture.create_from_image(img)
+    return _destroyer_steel_texture
+
+static func _destroyer_finish(node: Node, detail: bool) -> void:
+    if node is MeshInstance3D:
+        var part: MeshInstance3D = node as MeshInstance3D
+        var mat: StandardMaterial3D = part.material_override as StandardMaterial3D
+        if mat != null:
+            var label: String = str(part.name)
+            mat.transparency = BaseMaterial3D.TRANSPARENCY_DISABLED
+            mat.cull_mode = BaseMaterial3D.CULL_BACK
+            mat.metallic = 0.32
+            mat.roughness = 0.58
+            if label.begins_with("Cristal") or label.begins_with("Lente"):
+                mat.metallic = 0.12
+                mat.roughness = 0.24
+            elif label.begins_with("Faccion"):
+                mat.metallic = 0.13
+                mat.roughness = 0.54
+            elif label.contains("Pasamanos") or label.contains("Amarre") or label.contains("Tirador"):
+                mat.metallic = 0.60
+                mat.roughness = 0.43
+            elif label.contains("Helipuerto") or label.contains("Estela") or label.begins_with("Espuma"):
+                mat.metallic = 0.0
+                mat.roughness = 0.88
+            elif label.contains("CascoNaval"):
+                mat.metallic = 0.28
+                mat.roughness = 0.62
+            elif label.begins_with("Humo"):
+                mat.metallic = 0.0
+                mat.roughness = 1.0
+            elif label.begins_with("Fuego") or label.begins_with("Impacto") or label == "DestelloVisual":
+                mat.metallic = 0.0
+                mat.roughness = 0.75
+                mat.emission_enabled = true
+                mat.emission = mat.albedo_color
+                mat.emission_energy_multiplier = 0.8
+            if detail and (label in ["CascoNaval","Cubierta","CarcasaInferior","TechoPuente","CarcasaMastil","CarcasaTorreta"]):
+                mat.albedo_texture = _destroyer_grain()
+                mat.uv1_triplanar = true
+                mat.uv1_triplanar_sharpness = 4.0
+                mat.uv1_scale = Vector3(3.0,3.0,3.0)
+            part.set_meta("destroyer_surface_v15",true)
+    for child in node.get_children():
+        _destroyer_finish(child,detail)
+
+# Native solid bridge: compact footprint between existing forward deck
+# equipment and aft landing area. Windows are opaque inserts, not planes.
+static func _destroyer_bridge(root: Node3D, art_level: int) -> void:
+    var bridge: Node3D = Node3D.new()
+    bridge.name = "Superestructura"
+    root.add_child(bridge)
+    var foundation: Array = [
+        [0.13,0.39,0.785,0.94],[0.22,0.49,0.785,0.94],
+        [0.63,0.49,0.785,0.94],[0.75,0.38,0.785,0.94]]
+    _destroyer_shell(bridge,"ZocaloNaval",foundation,DARK)
+    var lower: Array = [
+        [0.16,0.35,0.92,1.19],[0.23,0.46,0.92,1.19],
+        [0.59,0.46,0.92,1.19],[0.70,0.35,0.92,1.19]]
+    _destroyer_shell(bridge,"CarcasaInferior",lower,STEEL)
+    var upper: Array = [
+        [0.13,0.36,1.16,1.48],[0.23,0.47,1.16,1.48],
+        [0.54,0.47,1.16,1.48],[0.66,0.36,1.16,1.48]]
+    _destroyer_shell(bridge,"Puente",upper,ARMOR)
+    var roof: Array = [
+        [0.115,0.37,1.465,1.54],[0.21,0.49,1.465,1.54],
+        [0.55,0.49,1.465,1.54],[0.68,0.37,1.465,1.54]]
+    _destroyer_shell(bridge,"TechoPuente",roof,STEEL)
+    var window_tint := Color("#38566A")
+    for i in range(3):
+        var x: float = float(i - 1) * 0.19
+        _box(bridge,"MarcoFrontal_%d" % i,Vector3(x,1.375,0.119),
+            Vector3(0.181,0.145,0.035),DARK)
+        _box(bridge,"CristalFrontal_%d" % i,Vector3(x,1.375,0.099),
+            Vector3(0.147,0.111,0.023),window_tint)
     for side in [-1,1]:
-        _antenna(root,"RadarRadio%s" % side,
-            Vector3(float(side)*0.29,1.45,0.50),0.47)
-    _box(root,"Helipuerto",Vector3(0,0.82,0.93),
-        Vector3(1.06,0.08,0.58),DARK)
-    _box(root,"MarcaHelipuerto",Vector3(0,0.87,0.92),
-        Vector3(0.06,0.02,0.38),ACCENT)
-    # Static white wake is part of the ship model, not map-water mechanics.
-    _box(root,"EstelaEspuma",Vector3(0,0.07,1.71),
-        Vector3(1.43,0.04,0.37),WATER)
+        var sign: float = float(side)
+        for i in range(2):
+            var z: float = 0.30 + float(i) * 0.16
+            _box(bridge,"MarcoLateral_%d_%d" % [side,i],Vector3(sign*0.445,1.37,z),
+                Vector3(0.045,0.14,0.145),DARK)
+            _box(bridge,"CristalLateral_%d_%d" % [side,i],Vector3(sign*0.470,1.37,z),
+                Vector3(0.026,0.107,0.113),window_tint)
+        _box(bridge,"FaccionPuente_%d" % side,Vector3(sign*0.43,1.11,0.41),
+            Vector3(0.07,0.085,0.29),ARMOR)
+        _box(bridge,"PuertaServicio_%d" % side,Vector3(sign*0.425,1.045,0.55),
+            Vector3(0.047,0.19,0.15),DARK)
+        _box(bridge,"TiradorServicio_%d" % side,Vector3(sign*0.455,1.055,0.56),
+            Vector3(0.021,0.055,0.025),METAL)
+    _box(bridge,"ApoyoMastil",Vector3(0,1.55,0.28),
+        Vector3(0.29,0.08,0.29),DARK)
+    # Aft-facing inspection and service details, attached to the existing wall.
+    _box(bridge,"MarcoPosterior",Vector3(0,1.045,0.702),
+        Vector3(0.31,0.21,0.034),DARK)
+    _box(bridge,"PuertaPosterior",Vector3(0,1.045,0.724),
+        Vector3(0.25,0.17,0.019),STEEL)
+    _box(bridge,"TiradorPosterior",Vector3(0.083,1.045,0.742),
+        Vector3(0.025,0.060,0.019),METAL)
+    if art_level >= 13:
+        for side in [-1,1]:
+            var sign: float = float(side)
+            _box(bridge,"MarcoVentilacion_%d" % side,Vector3(sign*0.424,1.035,0.32),
+                Vector3(0.036,0.115,0.16),DARK)
+            for i in range(4):
+                _box(bridge,"LamaVentilacion_%d_%d" % [side,i],
+                    Vector3(sign*0.447,0.993+float(i)*0.027,0.32),
+                    Vector3(0.020,0.012,0.13),METAL)
+        for i in range(3):
+            _box(bridge,"RefuerzoPosterior_%d" % i,Vector3(-0.18+float(i)*0.18,1.35,0.662),
+                Vector3(0.032,0.13,0.035),STEEL)
+
+# Fictional game-art deck modules; no weapon specifications or game rules.
+static func _destroyer_deck_equipment(root: Node3D, art_level: int) -> void:
+    var detail: bool = art_level >= 13
+    var sides: int = 20 if detail else 12
+    _cylinder(root,"BaseTorreProa",Vector3(0,0.845,-1.14),
+        0.30,0.10,DARK,Vector3.ZERO,sides)
+    _cylinder(root,"AnilloTorreProa",Vector3(0,0.916,-1.14),
+        0.27,0.065,STEEL,Vector3.ZERO,sides)
+    var turret := Node3D.new()
+    turret.name = "TorretaNavalPivot"
+    turret.position = Vector3(0,0.936,-1.14)
+    root.add_child(turret)
+    var shell: Array = [
+        [-0.24,0.16,-0.008,0.24],[-0.14,0.255,-0.008,0.34],
+        [0.15,0.255,-0.008,0.34],[0.23,0.16,-0.008,0.24]]
+    _destroyer_shell(turret,"CarcasaTorreta",shell,STEEL)
+    _box(turret,"FaccionTorreta",Vector3(0,0.342,0.055),
+        Vector3(0.28,0.038,0.19),ARMOR)
+    var pivot := Node3D.new()
+    pivot.name = "CanonNavalPivot"
+    pivot.position = Vector3(0,0.155,-0.21)
+    turret.add_child(pivot)
+    _box(pivot,"UnionVisual",Vector3(0,0,-0.025),
+        Vector3(0.19,0.17,0.16),DARK)
+    _cylinder(pivot,"CanonNaval",Vector3(0,0,-0.30),
+        0.068,0.52,METAL,Vector3(90,0,0),sides)
+    if detail:
+        for side in [-1,1]:
+            _box(turret,"PanelServicio_%d" % side,
+                Vector3(float(side)*0.219,0.16,0.055),
+                Vector3(0.038,0.13,0.18),ARMOR)
+    var deck := Node3D.new()
+    deck.name = "ModuloCubierta"
+    root.add_child(deck)
+    _box(deck,"ZocaloModulo",Vector3(0,0.825,-0.34),
+        Vector3(0.73,0.09,0.70),DARK)
+    _box(deck,"MarcoModulo",Vector3(0,0.887,-0.34),
+        Vector3(0.69,0.08,0.65),STEEL)
+    for x in range(4):
+        for z in range(3):
+            var pos := Vector3(-0.255+float(x)*0.17,0.937,-0.55+float(z)*0.20)
+            _box(deck,"TapaModulo_%d_%d" % [x,z],pos,
+                Vector3(0.145,0.035,0.175),DARK)
+            if detail:
+                _box(deck,"BisagraTapa_%d_%d" % [x,z],pos+Vector3(0,0.024,0.061),
+                    Vector3(0.10,0.027,0.035),ARMOR)
+    for side in [-1,1]:
+        var sign: float = float(side)
+        _box(root,"CajaServicioCubierta_%d" % side,
+            Vector3(sign*0.45,0.879,-0.48),
+            Vector3(0.15,0.16,0.31),STEEL)
+        _box(root,"TapaServicioCubierta_%d" % side,
+            Vector3(sign*0.45,0.97,-0.48),
+            Vector3(0.17,0.04,0.32),ARMOR)
+
+# Fictional navigation silhouette: rigid closed meshes, independent
+# visual rotation, and detail tiers. Does not affect detection or combat.
+static func _destroyer_navigation(root: Node3D, art_level: int) -> void:
+    var detail: bool = art_level >= 13
+    var sides: int = 20 if detail else 10
+    var mast := Node3D.new()
+    mast.name = "TorreMastil"
+    mast.position = Vector3(0,1.585,0.28)
+    root.add_child(mast)
+    var sections: Array = [
+        [-0.13,0.125,-0.015,0.22],[-0.075,0.14,-0.015,0.43],
+        [0.075,0.14,-0.015,0.43],[0.13,0.125,-0.015,0.22]]
+    _destroyer_shell(mast,"CarcasaMastil",sections,STEEL)
+    _box(mast,"PlataformaSuperior",Vector3(0,0.425,0),
+        Vector3(0.31,0.07,0.29),DARK)
+    _cylinder(mast,"BaseSensor",Vector3(0,0.48,0),
+        0.10,0.07,STEEL,Vector3.ZERO,sides)
+    var rotor := Node3D.new()
+    rotor.name = "RadarPivot"
+    rotor.position = Vector3(0,0.52,0)
+    mast.add_child(rotor)
+    _box(rotor,"SoporteRadar",Vector3(0,0.04,0),
+        Vector3(0.16,0.10,0.15),DARK)
+    var panel: Array = [
+        [-0.07,0.32,0.06,0.17],[-0.035,0.39,0.06,0.24],
+        [0.035,0.39,0.06,0.24],[0.07,0.32,0.06,0.17]]
+    _destroyer_shell(rotor,"Radar",panel,ARMOR)
+    _box(rotor,"FrenteSensor",Vector3(0,0.148,-0.077),
+        Vector3(0.56,0.105,0.024),DARK)
+    if detail:
+        for i in range(5):
+            _box(rotor,"DetalleSensor_%d" % i,
+                Vector3(-0.22+float(i)*0.11,0.148,-0.094),
+                Vector3(0.068,0.074,0.014),STEEL)
+    for side in [-1,1]:
+        var sign: float = float(side)
+        _box(mast,"SoporteLateral_%d" % side,Vector3(sign*0.16,0.24,0.04),
+            Vector3(0.15,0.065,0.15),STEEL)
+        _box(mast,"SensorLateral_%d" % side,Vector3(sign*0.195,0.30,0.04),
+            Vector3(0.13,0.095,0.13),DARK)
+        _box(root,"BaseAntena_%d" % side,Vector3(sign*0.26,1.56,0.49),
+            Vector3(0.13,0.07,0.12),STEEL)
+        _antenna(root,"RadarRadio%s" % side,Vector3(sign*0.26,1.59,0.49),0.35)
+        _box(root,"LuzNavegacion_%d" % side,Vector3(sign*0.37,1.53,0.30),
+            Vector3(0.10,0.09,0.13),DARK)
+        _box(root,"LenteNavegacion_%d" % side,Vector3(sign*0.42,1.54,0.30),
+            Vector3(0.025,0.055,0.085),Color("#C94B47") if side < 0 else Color("#48AD85"))
+        if detail:
+            for i in range(3):
+                _box(mast,"Peldano_%d_%d" % [side,i],
+                    Vector3(sign*0.14,0.075+float(i)*0.09,0.09),
+                    Vector3(0.07,0.022,0.09),METAL)
+    root.set_meta("destroyer_navigation_revision","1.3")
+
+# Studio-only pose; rotation is independent of the mast and all game data.
+static func pose_destroyer_radar(root: Node3D, progress: float) -> bool:
+    if root == null or root.get_meta("destroyer_navigation_revision","") != "1.3":
+        return false
+    var pivot: Node3D = root.get_node_or_null("TorreMastil/RadarPivot") as Node3D
+    if pivot == null:
+        return false
+    pivot.rotation_degrees.y = fposmod(progress,1.0)*360.0
+    return true
+
+# Aft deck and stylized propulsion silhouettes for the fictional game model.
+# Dimensions below are artistic scene units, not real ship specifications.
+static func _destroyer_aft(root: Node3D, art_level: int) -> void:
+    var detail: bool = art_level >= 13
+    var sides: int = 20 if detail else 10
+    var aft := Node3D.new()
+    aft.name = "ConjuntoPopa"
+    root.add_child(aft)
+    var landing: Array = [
+        [0.79,0.49,0.784,0.836],[0.86,0.63,0.784,0.836],
+        [1.32,0.57,0.784,0.836],[1.44,0.46,0.784,0.836]]
+    _destroyer_shell(aft,"Helipuerto",landing,DARK)
+    for side in [-1,1]:
+        var sign: float = float(side)
+        _box(aft,"MarcaHelipuerto_%d" % side,Vector3(sign*0.15,0.842,1.11),
+            Vector3(0.055,0.014,0.36),METAL)
+        _box(aft,"BordeHelipuerto_%d" % side,Vector3(sign*0.41,0.846,1.11),
+            Vector3(0.035,0.020,0.35),ARMOR)
+        _box(aft,"BaseAmarre_%d" % side,Vector3(sign*0.32,0.824,1.49),
+            Vector3(0.17,0.065,0.13),STEEL)
+        _cylinder(aft,"Amarre_%d" % side,Vector3(sign*0.32,0.904,1.49),
+            0.048,0.105,DARK,Vector3.ZERO,sides)
+        _box(aft,"LuzPopa_%d" % side,Vector3(sign*0.38,0.855,1.40),
+            Vector3(0.07,0.055,0.075),METAL)
+        if detail:
+            for i in range(3):
+                var z: float = 0.86 + float(i)*0.16
+                _box(aft,"PostePopa_%d_%d" % [side,i],Vector3(sign*0.49,0.914,z),
+                    Vector3(0.035,0.18,0.035),STEEL)
+            _box(aft,"PasamanosPopa_%d" % side,Vector3(sign*0.49,0.997,1.02),
+                Vector3(0.035,0.035,0.35),STEEL)
+        var group := Node3D.new()
+        group.name = "Propulsion_%d" % side
+        group.position = Vector3(sign*0.31,0.18,1.34)
+        aft.add_child(group)
+        _cylinder(group,"CarcasaVisual",Vector3(0,0.04,-0.09),
+            0.105,0.30,STEEL,Vector3(90,0,0),sides)
+        var rotor := Node3D.new()
+        rotor.name = "HelicePivot"
+        rotor.position = Vector3(0,0.02,0.10)
+        group.add_child(rotor)
+        _cylinder(rotor,"Cubo",Vector3.ZERO,0.061,0.12,METAL,Vector3(90,0,0),sides)
+        # Three abstract rounded lobes; only a visible rotation effect.
+        for i in range(3):
+            var blade := Node3D.new()
+            blade.name = "Lobulo_%d" % i
+            blade.rotation.z = float(i)*TAU/3.0
+            rotor.add_child(blade)
+            _sphere(blade,"PalaVisual",Vector3(0,0.081,0),
+                Vector3(0.085,0.16,0.045),ARMOR)
+        _box(group,"SoporteInferior",Vector3(0,0.07,-0.18),
+            Vector3(0.14,0.19,0.14),STEEL)
+        var rudder := Node3D.new()
+        rudder.name = "TimonPivot"
+        rudder.position = Vector3(0,0.09,0.23)
+        group.add_child(rudder)
+        _destroyer_shell(rudder,"TimonVisual",
+            [[-0.02,0.048,-0.13,0.15],[0.07,0.052,-0.14,0.15],
+             [0.16,0.032,-0.08,0.11]],DARK)
+    _box(aft,"MarcaHelipuertoCentro",Vector3(0,0.842,1.11),
+        Vector3(0.30,0.014,0.06),METAL)
+    if detail:
+        for side in [-1,1]:
+            var sign: float = float(side)
+            for i in range(3):
+                _box(aft,"AnclajeCubierta_%d_%d" % [side,i],
+                    Vector3(sign*0.32,0.842,0.92+float(i)*0.17),
+                    Vector3(0.034,0.014,0.034),METAL)
+            _box(aft,"RegistroPopa_%d" % side,Vector3(sign*0.20,0.826,1.51),
+                Vector3(0.14,0.035,0.10),STEEL)
+    # Static wake is purely decorative and may be hidden for inspection.
+    var wake := Node3D.new()
+    wake.name = "EstelaEspuma"
+    wake.position = Vector3(0,0.07,1.66)
+    root.add_child(wake)
+    root.set_meta("destroyer_aft_revision","1.4")
+
+static func pose_destroyer_aft(root: Node3D, progress: float, steering: float = 0.0) -> bool:
+    if root == null or root.get_meta("destroyer_aft_revision","") != "1.4":
+        return false
+    for side in [-1,1]:
+        var group: Node3D = root.get_node_or_null("ConjuntoPopa/Propulsion_%d" % side) as Node3D
+        if group == null:
+            return false
+        var rotor: Node3D = group.get_node("HelicePivot") as Node3D
+        var rudder: Node3D = group.get_node("TimonPivot") as Node3D
+        rotor.rotation.z = float(side)*fposmod(progress,1.0)*TAU
+        rudder.rotation_degrees.y = clampf(steering,-1.0,1.0)*25.0
+    return true
+
+# Extra closed cosmetic deck surfaces, readably attached at both detail tiers.
+static func _destroyer_trim(root: Node3D, art_level: int) -> void:
+    var trim := Node3D.new()
+    trim.name = "AcabadoNavalV18"
+    root.add_child(trim)
+    for side in [-1,1]:
+        var sign: float = float(side)
+        var points: Array[Vector3] = [
+            Vector3(sign*0.19,0.812,-2.10),Vector3(sign*0.43,0.812,-1.54),
+            Vector3(sign*0.59,0.812,-0.91),Vector3(sign*0.65,0.812,0.0),
+            Vector3(sign*0.61,0.812,0.89),Vector3(sign*0.44,0.812,1.48)]
+        for i in range(points.size()-1):
+            var v: Vector3 = points[i+1]-points[i]
+            var rim: MeshInstance3D = _box(trim,"BordeCubierta_%d_%d" % [side,i],
+                (points[i]+points[i+1])*0.5,Vector3(0.026,0.037,v.length()+0.025),DARK)
+            rim.rotation.y = atan2(v.x,v.z)
+        for i in range(3 if art_level >= 13 else 1):
+            var z: float = -0.77+float(i)*0.28
+            _box(trim,"RegistroServicio_%d_%d" % [side,i],
+                Vector3(sign*0.55,0.822,z),Vector3(0.105,0.032,0.11),STEEL)
+        if art_level >= 13:
+            for i in range(3):
+                var z: float = 0.15+float(i)*0.22
+                _box(trim,"PostePasillo_%d_%d" % [side,i],
+                    Vector3(sign*0.62,0.887,z),Vector3(0.026,0.17,0.026),STEEL)
+            _box(trim,"BarandaPasillo_%d" % side,Vector3(sign*0.62,0.963,0.37),
+                Vector3(0.023,0.027,0.47),STEEL)
+    _box(trim,"RegistroProa",Vector3(0,0.819,-1.91),
+        Vector3(0.20,0.035,0.16),STEEL)
+    root.set_meta("destroyer_visual_review_v18",true)
+
+static func _destroyer(root: Node3D, art_level: int = 10) -> void:
+    var stations: Array = [
+        [-2.46,0.045,0.36,0.76],[-2.15,0.24,0.18,0.76],
+        [-1.56,0.62,0.15,0.76],[-0.92,0.82,0.14,0.76],
+        [0.0,0.90,0.14,0.76],[0.90,0.85,0.14,0.76],
+        [1.51,0.66,0.17,0.76],[1.72,0.48,0.22,0.76]]
+    _destroyer_shell(root,"CascoNaval",stations,STEEL,true)
+    var deck_stations: Array = []
+    for station in stations:
+        deck_stations.append([station[0],station[1]*0.86,0.738,0.802])
+    _destroyer_shell(root,"Cubierta",deck_stations,ARMOR)
+    root.set_meta("destroyer_art_revision","1.12")
+    _destroyer_bridge(root,art_level)
+    _destroyer_navigation(root,art_level)
+    _destroyer_deck_equipment(root,art_level)
+    _destroyer_aft(root,art_level)
+    _destroyer_trim(root,art_level)
+    _destroyer_motion_setup(root,art_level)
+    _destroyer_damage_setup(root,art_level)
+
+# Purely cosmetic game animation, independent of tactical simulation.
+static func _destroyer_motion_setup(root: Node3D, art_level: int) -> void:
+    var pivot: Node3D = root.get_node("TorretaNavalPivot/CanonNavalPivot") as Node3D
+    var flash: MeshInstance3D = _sphere(pivot,"DestelloVisual",Vector3(0,0,-0.60),
+        Vector3(0.19,0.19,0.23),Color("#FFD18A"))
+    flash.hide()
+    var wake: Node3D = root.get_node("EstelaEspuma") as Node3D
+    var count: int = 5 if art_level >= 13 else 2
+    for i in range(count):
+        var patch: MeshInstance3D = _sphere(wake,"EspumaVisual_%d" % i,
+            Vector3(0,0.015,0.13+float(i)*0.12),
+            Vector3(0.27+float(i)*0.15,0.022,0.17),Color("#C6E1DF"))
+        patch.hide()
+    root.set_meta("destroyer_motion_v16",true)
+
+# Reversible stylized game damage. All effects are preallocated, opaque,
+# and independent of the simulation. Root transforms remain caller-owned.
+static func _destroyer_damage_setup(root: Node3D, art_level: int) -> void:
+    var fx := Node3D.new()
+    fx.name = "DanoNavalVisual"
+    root.add_child(fx)
+    for i in range(5):
+        _box(fx,"Marca_%d" % i,Vector3(-0.34+float(i)*0.17,0.817,-0.83+float(i%2)*0.15),
+            Vector3(0.14,0.028,0.18),BLACK,Vector3(0,float(i)*17,0)).hide()
+    for i in range(5 if art_level >= 13 else 3):
+        var step: float = float(i)
+        var smoke: MeshInstance3D = _sphere(fx,"Humo_%d" % i,
+            Vector3(0.23+0.085*step,1.36+0.23*step,0.50+0.045*step),
+            Vector3(0.27+0.095*step,0.31+0.075*step,0.29+0.075*step),
+            Color("#303840").lerp(Color("#737A7E"),step/5.0))
+        smoke.set_meta("destroyer_fx_rest",smoke.transform)
+        smoke.hide()
+    for i in range(4 if art_level >= 13 else 2):
+        var flame: MeshInstance3D = _sphere(fx,"Fuego_%d" % i,
+            Vector3(-0.24+float(i%2)*0.17,1.10+float(i/2)*0.14,0.72),
+            Vector3(0.17,0.34+float(i%2)*0.11,0.18),Color("#FF9435"))
+        flame.rotation_degrees.z = -16.0+float(i)*9.0
+        flame.set_meta("destroyer_fx_rest",flame.transform)
+        flame.hide()
+    _box(fx,"FragmentoCubierta",Vector3(0.35,0.87,0.84),
+        Vector3(0.22,0.06,0.25),STEEL,Vector3(15,20,18)).hide()
+    _sphere(fx,"ImpactoBreve",Vector3(0.42,0.86,-0.72),
+        Vector3(0.14,0.16,0.14),Color("#FFD9A1")).hide()
+    _sphere(fx,"ImpactoAmplio",Vector3(0.39,0.91,-0.72),
+        Vector3(0.36,0.31,0.34),Color("#F19456")).hide()
+    # Marks on the exposed walkways, rather than underneath deck equipment.
+    for side in [-1,1]:
+        var sign: float = float(side)
+        _box(fx,"MarcaCostado_%d" % side,Vector3(sign*0.60,0.824,-0.65),
+            Vector3(0.10,0.018,0.21),Color("#30363B"),Vector3(0,side*22,0)).hide()
+        _box(fx,"Quemadura_%d" % side,Vector3(sign*0.24,0.86,1.18),
+            Vector3(0.22,0.018,0.23),Color("#393031"),Vector3(0,side*16,0)).hide()
+    var lid: Node3D = root.get_node("ModuloCubierta/TapaModulo_3_2") as Node3D
+    lid.set_meta("naval_rest_transform",lid.transform)
+    for child in root.get_children():
+        if child is Node3D:
+            child.set_meta("naval_rest_transform",child.transform)
+    root.set_meta("destroyer_damage_stage",0)
+
+static func set_destroyer_damage(root: Node3D, stage: int, progress: float = 0.0) -> bool:
+    if root == null or not root.has_node("DanoNavalVisual"):
+        return false
+    var d: int = clampi(stage,0,4)
+    var t: float = clampf(progress,0.0,1.0)
+    # Reset from stored transforms rather than accumulating offsets.
+    root.set_meta("destroyer_damage_stage",0)
+    restore_destroyer_pose(root)
+    var fx: Node3D = root.get_node("DanoNavalVisual") as Node3D
+    for child in root.get_children():
+        if child is Node3D and child.has_meta("naval_rest_transform"):
+            child.transform = child.get_meta("naval_rest_transform")
+    for child in fx.get_children():
+        var label: String = str(child.name)
+        if child.has_meta("destroyer_fx_rest"):
+            (child as Node3D).transform = child.get_meta("destroyer_fx_rest")
+        (child as Node3D).visible = (label.begins_with("Marca") and d>=1) or (label.begins_with("Humo") and d>=2) or (label.begins_with("Fuego") and d>=3) or (label=="FragmentoCubierta" and d>=3) or (label.begins_with("Quemadura") and d>=3)
+    var mast: Node3D = root.get_node("TorreMastil") as Node3D
+    var bridge: Node3D = root.get_node("Superestructura") as Node3D
+    var lid: Node3D = root.get_node("ModuloCubierta/TapaModulo_3_2") as Node3D
+    lid.transform = lid.get_meta("naval_rest_transform")
+    if d >= 2:
+        mast.rotation_degrees.z = 12.0
+        lid.rotation_degrees.z = -12.0
+        lid.position.y += 0.015
+    if d >= 3:
+        mast.rotation_degrees.z = 28.0
+        var hinge := Vector3(0,0.80,0.41)
+        var lean := Basis(Vector3.BACK,deg_to_rad(-5.0))
+        bridge.transform = Transform3D(lean,hinge-lean*hinge)
+        lid.rotation_degrees.z = -28.0
+        lid.position += Vector3(0.025,0.025,0.0)
+    if d == 4:
+        var tilt := Basis(Vector3.BACK,deg_to_rad(22.0*t))
+        for child in root.get_children():
+            if child is Node3D:
+                var initial: Transform3D = child.transform
+                child.transform = Transform3D(tilt*initial.basis,tilt*initial.origin+Vector3(0,-2.85*t,0))
+    var wake: Node3D = root.get_node("EstelaEspuma") as Node3D
+    wake.visible = d < 3
+    root.set_meta("destroyer_damage_stage",d)
+    return true
+
+# Periodic cosmetic motion: deterministic from rest, never affects combat.
+static func animate_destroyer_damage(root: Node3D, phase: float) -> bool:
+    if root == null or not root.has_node("DanoNavalVisual"):
+        return false
+    var stage: int = int(root.get_meta("destroyer_damage_stage",0))
+    if stage < 2 or stage >= 4:
+        return false
+    var fx: Node3D = root.get_node("DanoNavalVisual") as Node3D
+    for child in fx.get_children():
+        if not child is Node3D or not child.has_meta("destroyer_fx_rest"):
+            continue
+        var item: Node3D = child as Node3D
+        var label: String = str(item.name)
+        var i: float = float(int(label.get_slice("_",1)))
+        var rest: Transform3D = item.get_meta("destroyer_fx_rest")
+        var wave: float = sin(phase*TAU+i*0.82)
+        item.transform = rest
+        if label.begins_with("Humo"):
+            item.position += Vector3(0.032*wave,0.045*wave,0.024*cos(phase*TAU+i))
+            item.scale *= 1.0+0.085*wave
+        elif label.begins_with("Fuego"):
+            item.scale *= Vector3(1.0-0.06*wave,1.0+0.18*wave,1.0-0.06*wave)
+    return true
+
+static func pose_destroyer(root: Node3D, kind: String, progress: float,
+        target_heading: Vector2i = Vector2i(0,-1)) -> bool:
+    if root == null or not root.get_meta("destroyer_motion_v16",false):
+        return false
+    if kind not in ["idle","move","attack","fire","aim","hit","hit_bullet","hit_blast"]:
+        return false
+    if int(root.get_meta("destroyer_damage_stage",0)) >= 3:
+        return false
+    var t: float = clampf(progress,0.0,1.0)
+    var turret: Node3D = root.get_node("TorretaNavalPivot") as Node3D
+    var pivot: Node3D = turret.get_node("CanonNavalPivot") as Node3D
+    var barrel: Node3D = pivot.get_node("CanonNaval") as Node3D
+    var flash: Node3D = pivot.get_node("DestelloVisual") as Node3D
+    var wake: Node3D = root.get_node("EstelaEspuma") as Node3D
+    var moving: bool = kind == "move"
+    var firing: bool = kind in ["attack","fire"]
+    var aiming: bool = firing or kind == "aim"
+    var pulse: float = sin(t*TAU)
+    var impact: float = sin(t*PI) if kind in ["hit","hit_bullet","hit_blast"] else 0.0
+    var recoil: float = sin(clampf(t/0.38,0.0,1.0)*PI) if firing else 0.0
+    turret.rotation.y = atan2(-float(target_heading.x),-float(target_heading.y)) if aiming and target_heading != Vector2i.ZERO else 0.0
+    pivot.rotation_degrees.x = -4.0*recoil
+    barrel.position.z = -0.30+0.065*recoil
+    flash.visible = firing and t > 0.01 and t < 0.18
+    var small_hit: Node3D = root.get_node("DanoNavalVisual/ImpactoBreve") as Node3D
+    var big_hit: Node3D = root.get_node("DanoNavalVisual/ImpactoAmplio") as Node3D
+    small_hit.visible = kind in ["hit","hit_bullet"] and t > 0.0 and t < 0.27
+    big_hit.visible = kind == "hit_blast" and t > 0.0 and t < 0.42
+    pose_destroyer_radar(root,t)
+    pose_destroyer_aft(root,t*2.0 if moving else t*0.25,0.4*pulse if moving else 0.0)
+    # Preserve the map heading, scale and position owned by the caller.
+    root.rotation_degrees.x = (1.8 if moving else 0.7)*pulse
+    root.rotation_degrees.z = (2.0 if moving else 0.8)*sin(t*TAU) + 2.0*impact
+    for child in wake.get_children():
+        if child is MeshInstance3D:
+            var patch: MeshInstance3D = child as MeshInstance3D
+            var index: int = int(str(patch.name).get_slice("_",1))
+            patch.visible = moving and t > 0.0 and t < 1.0
+            patch.position.z = 0.13+float(index)*0.12+0.08*pulse
+    return true
+
+static func restore_destroyer_pose(root: Node3D) -> void:
+    if root == null or not root.get_meta("destroyer_motion_v16",false):
+        return
+    if int(root.get_meta("destroyer_damage_stage",0)) < 3:
+        pose_destroyer(root,"idle",0.0)
+
 
 static func build(role: String, faction: int = -1, finish_enabled: bool = true, art_level: int = 10) -> Node3D:
     if not supports(role):
@@ -1130,10 +1761,15 @@ static func build(role: String, faction: int = -1, finish_enabled: bool = true, 
                     push_warning("A01 V13 conformal V-tail and moving EOIR guard failed")
                 elif not A01DamageFinishV14.apply(model,art_level>=13):
                     push_warning("A01 V14 sealed aircraft scars or real D4 fractured wing failed")
+        "fpv":
+            if not A02Art.build(model,faction_paint_color(faction),finish_enabled and art_level>=13):
+                return null
         "fighter":
             _fighter(model)
         "destroyer":
-            _destroyer(model)
+            _destroyer(model,art_level)
+            apply_faction_palette(model,faction)
+            _destroyer_finish(model,art_level >= 13)
         "logistics_mobile":
             # G16 remains Studio visual-only. Tactical role logistics is
             # unchanged; V2 is genuine Godot mesh detail on the same V1 rig.
@@ -1622,8 +2258,16 @@ static func pose_model(role: String, model: Node3D, kind: String,
             return G11Rig.pose(model,kind,progress,target_heading)
         "attack_heli":
             return AttackHelicopterV1.pose(model,kind,progress,target_heading)
+        "destroyer":
+            if kind in ["damage","damaged","hit"]:
+                return pose_destroyer(model,"hit",progress,target_heading)
+            if kind == "sink" or kind == "destroy":
+                return set_destroyer_damage(model,4,progress)
+            return pose_destroyer(model,kind,progress,target_heading)
         "uav_recon":
             return A01Recon.pose(model,kind,progress)
+        "fpv":
+            return A02Art.pose(model,kind,progress)
         "logistics_mobile":
             var g16_posed:bool=G16LogisticsV1.pose(model,kind,progress,target_heading)
             if g16_posed and G16ExteriorV2.has_model(model):
@@ -1677,8 +2321,12 @@ static func restore_model_pose(role: String, model: Node3D) -> void:
                 G11Rig.restore(model)
         "attack_heli":
             AttackHelicopterV1.restore(model)
+        "destroyer":
+            restore_destroyer_pose(model)
         "uav_recon":
             A01Recon.restore(model)
+        "fpv":
+            A02Art.restore(model)
         "logistics_mobile":
             G16LogisticsV1.restore(model)
             if G16ExteriorV2.has_model(model):
