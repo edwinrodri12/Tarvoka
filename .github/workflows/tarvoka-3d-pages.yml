@@ -110,6 +110,7 @@ on:
       - "scripts/ui/InfantryEngineerOuterArmorV17.gd"
       - "tests/test_infantry_family_v2.gd"
       - "scripts/ui/InfantrySculptFinishV2.gd"
+      - "scripts/ui/GuardiaBattleActionsV16.gd"
       - "scripts/ui/InfantryVariantsV4.gd"
       - "tests/test_bastion_v16_joint_finish.gd"
       - "tests/test_bastion_v17_contours.gd"
@@ -252,6 +253,7 @@ on:
       - "scripts/ui/CampMedicalFinishV2.gd"
       - "scripts/ui/CampMedicalSculptV3.gd"
       - "scripts/ui/InfantrySculptFinishV2.gd"
+      - "scripts/ui/GuardiaBattleActionsV16.gd"
       - "scripts/ui/InfantryVariantsV4.gd"
       - "tests/test_infantry_family_v2.gd"
       # Independently validate the Engineer's original shared Godot Studio.
@@ -351,6 +353,20 @@ jobs:
             if [ ! -s "hq-android-v15/scripts/ui/${item}" ]; then echo "::error::Missing combined Studio file: ${item}"; exit 1; fi
             cp "hq-android-v15/scripts/ui/${item}" "scripts/ui/${item}"
           done
+          # Guardia V16 is a new preload of the current battle renderer.
+          # Older Studio snapshots do not require it; current snapshots must
+          # use the matching source file, never a dummy or a stale old branch.
+          if grep -Fq 'res://scripts/ui/GuardiaBattleActionsV16.gd' scripts/ui/BattleTerrain3D.gd; then
+            test -s hq-android-v15/scripts/ui/GuardiaBattleActionsV16.gd
+            cp hq-android-v15/scripts/ui/GuardiaBattleActionsV16.gd scripts/ui/GuardiaBattleActionsV16.gd
+            cmp -s hq-android-v15/scripts/ui/GuardiaBattleActionsV16.gd scripts/ui/GuardiaBattleActionsV16.gd
+            # This driver imports only these three matching native modules.
+            for guardia_dep in UnitModels3D.gd InfantryFamilyV1.gd InfantrySculptFinishV2.gd; do
+              test -s "scripts/ui/$guardia_dep"
+              cmp -s "hq-android-v15/scripts/ui/$guardia_dep" "scripts/ui/$guardia_dep"
+            done
+            echo "Guardia native battle dependency closure verified before Godot import"
+          fi
           # The pinned HQ 3D release scene predates the Workshop battle
           # integration. Its Studio adapter now preloads these two real
           # mainline battle/LOD scripts. Ship them from the SAME tested main
