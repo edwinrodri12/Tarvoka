@@ -635,17 +635,17 @@ func _run() -> void:
                         check(int(model.get_meta(Specialist.KIT_COUNT_V20,-1))==(accessory_names.size() if premium else 0),
                             "V20 same accessory nodes, tactical untouched")
                         for label in accessory_names:
-                            var refined: MeshInstance3D=model.find_child(str(label),true,false) as MeshInstance3D
+                            var sculpted_accessory: MeshInstance3D=model.find_child(str(label),true,false) as MeshInstance3D
                             if not premium:
-                                check(refined==null or not refined.has_meta(Specialist.KIT_V20),
+                                check(sculpted_accessory==null or not sculpted_accessory.has_meta(Specialist.KIT_V20),
                                     "V20 tactical mesh unchanged")
                             else:
-                                check(refined!=null and refined.has_meta(Specialist.KIT_V20) and
-                                    closed_solid(refined.mesh) and refined.has_meta(Finish.STAGE_MATS),
+                                check(sculpted_accessory!=null and sculpted_accessory.has_meta(Specialist.KIT_V20) and
+                                    closed_solid(sculpted_accessory.mesh) and sculpted_accessory.has_meta(Finish.STAGE_MATS),
                                     "V20 closed staged specialist accessory "+str(label))
-                                if refined!=null and refined.has_meta("tarvoka_v20_original_bounds"):
-                                    var original_bounds: AABB=refined.get_meta("tarvoka_v20_original_bounds")
-                                    var actual_bounds: AABB=refined.mesh.get_aabb()
+                                if sculpted_accessory!=null and sculpted_accessory.has_meta("tarvoka_v20_original_bounds"):
+                                    var original_bounds: AABB=sculpted_accessory.get_meta("tarvoka_v20_original_bounds")
+                                    var actual_bounds: AABB=sculpted_accessory.mesh.get_aabb()
                                     check(actual_bounds.size.is_equal_approx(original_bounds.size) and
                                         actual_bounds.get_center().is_equal_approx(original_bounds.get_center()),
                                         "V20 exact accessory envelope")
