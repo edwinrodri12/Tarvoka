@@ -43,6 +43,10 @@ func _check_biome(value: String,dims: Vector2i,
     assert(int(stats["biome_extra_batches"])<=2)
     assert(int(stats["terrain_blend_palette_samples"])<=(dims.x+1)*(dims.y+1))
     assert(int(stats["water_palette_samples_v27"])<=(dims.x+1)*(dims.y+1))
+    assert(int(stats["height_samples_v42"])<=(dims.x+1)*(dims.y+1))
+    assert(float(stats["chunk_build_ms_v42"])>=0.0)
+    print("V42_TERRAIN_COST biome=%s size=%s corners=%d chunk_ms=%.2f" % [
+        value,str(dims),int(stats["height_samples_v42"]),float(stats["chunk_build_ms_v42"])])
     assert(int(stats["shared_chunk_materials_v27"])<=3)
     assert(int(stats["site_foundations_v26"])>=0)
     assert(model.get_meta("public_cells").size()==dims.x*dims.y)
@@ -196,6 +200,12 @@ func _check_foundation_and_cache() -> void:
     var pigment: Color = Terrain._cached_water_tint(cells,cell,cache,Biomes.WINTER)
     assert(Terrain._cached_water_tint(cells,cell,cache,Biomes.WINTER)==pigment)
     assert(cache.size()==1)
+    var heights: Dictionary = {}
+    assert(Terrain._cached_corners(cells,cell,heights)==Terrain._corners(cells,cell))
+    assert(heights.size()==4)
+    var adjacent: Vector2i = cell+Vector2i(1,0)
+    assert(Terrain._cached_corners(cells,adjacent,heights)==Terrain._corners(cells,adjacent))
+    assert(heights.size()==6)
 
 func _check_extended_art() -> void:
     var cell := Vector2i(7,3)
@@ -395,6 +405,38 @@ func _run() -> void:
     board.battery_saver = false
     assert(board.state==before_state)
     viewer.close_view()
+    # V41–V42: actual public weather, touch passthrough and battery state.
+    for mode in ["rain","snow","dust"]:
+        var climate: String = "clear" if mode=="dust" else mode
+        var landscape: String = Biomes.DESERT if mode=="dust" else Biomes.TEMPERATE
+        board.new_game(2,true,false,false,true,true,false,0,0,
+            Vector2i(10,8),{},climate,false,landscape)
+        main._open_battle_3d()
+        var effect: Control = viewer._weather_overlay
+        assert(effect.mode==mode and effect.visible)
+        assert(effect.mouse_filter==Control.MOUSE_FILTER_IGNORE)
+        var climate_state: Dictionary = board.state.duplicate(true)
+        viewer._update_weather_effects(0.25)
+        assert(effect.phase>0.0)
+        for frame in range(8):
+            await process_frame
+        assert(effect.active_count>0 and effect.active_count<=64)
+        if mode=="dust":
+            assert(effect.active_count<=32)
+        if DisplayServer.get_name()!="headless":
+            var climate_image: Image = viewer.preview.get_texture().get_image()
+            assert(climate_image!=null and not climate_image.is_empty())
+            assert(climate_image.save_png(
+                "res://artifacts/tarvoka_biomes_v20_weather_v41_%s.png" % mode)==OK)
+        board.battery_saver = true
+        viewer._update_weather_effects(0.25)
+        assert(not effect.visible and not viewer._battle_sun.shadow_enabled)
+        board.battery_saver = false
+        viewer._update_weather_effects(0.25)
+        assert(effect.visible and viewer._battle_sun.shadow_enabled)
+        assert(board.state==climate_state)
+        viewer.close_view()
+        assert(not effect.visible)
     # V28: collect comparable real-battle frames, not showroom renders.
     # Same fixed map, camera defaults and clear weather for every biome.
     if DisplayServer.get_name()!="headless":
@@ -423,6 +465,18 @@ func _run() -> void:
             assert(review_image!=null and not review_image.is_empty())
             assert(review_image.save_png(
                 "res://artifacts/tarvoka_biomes_v20_review_v28_%s.png" % biome)==OK)
+            viewer.close_view()
+            # V43: compare native biome geography at the same reproducible seed.
+            board.new_game(Scenarios.GEOGRAPHIC_SCENARIO_ID,true,false,false,true,true,
+                false,0,1729,Vector2i(24,18),{},"clear",false,biome)
+            main._open_battle_3d()
+            assert(viewer._scene.get_meta("visual_biome")==biome)
+            for frame in range(8):
+                await process_frame
+            var geography_image: Image = viewer.preview.get_texture().get_image()
+            assert(geography_image!=null and not geography_image.is_empty())
+            assert(geography_image.save_png(
+                "res://artifacts/tarvoka_biomes_v20_geography_v43_%s.png" % biome)==OK)
             viewer.close_view()
     main.queue_free()
     print("PASS TARVOKA_3D_FOUR_BIOMES_V20: 9 true mesh biomes, 10x8/24x18/40x30, fog secrecy, 3D mobile battle controls, main save, bounded GPU resources")
