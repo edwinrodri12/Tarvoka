@@ -27,6 +27,22 @@ func check(value: bool, label: String) -> void:
         failures += 1
         push_error(label)
 
+# Solid background is deliberately used in the dry studio orbit. Check
+# both model coverage and a clear margin, not just a non-empty PNG.
+func _check_framed_image(image: Image, label: String) -> void:
+    var bg: Color = image.get_pixel(0,0)
+    var coverage: int = 0
+    var border: int = 0
+    for y in range(0,image.get_height(),4):
+        for x in range(0,image.get_width(),4):
+            var pixel: Color = image.get_pixel(x,y)
+            if absf(pixel.r-bg.r)+absf(pixel.g-bg.g)+absf(pixel.b-bg.b)>0.12:
+                coverage+=1
+                if x<12 or y<12 or x>=image.get_width()-12 or y>=image.get_height()-12:
+                    border+=1
+    check(coverage>400,label+" contains a visible model")
+    check(border==0,label+" has a clear 12-pixel inspection margin")
+
 func _closed(mesh: Mesh) -> bool:
     var edges: Dictionary = {}
     var vertices: PackedVector3Array = mesh.get_faces()
@@ -540,8 +556,9 @@ func _render() -> void:
     Art.set_destroyer_damage(model,0)
     # Exact 360-degree orbit and two axial views, unchanged lighting.
     model.show()
-    camera.size = 4.5
-    var target := Vector3(0,0.75,0)
+    # Centre on the actual asymmetric hull length, not the origin.
+    camera.size = 4.8
+    var target := Vector3(0,0.75,-0.37)
     for step in range(14):
         if step<12:
             var angle: float = TAU*float(step)/12.0
@@ -556,14 +573,7 @@ func _render() -> void:
         var image: Image = view.get_texture().get_image()
         check(image!=null and not image.is_empty(),"Orbit image")
         if image!=null and not image.is_empty():
-            var bg: Color = image.get_pixel(0,0)
-            var changed: int = 0
-            for y in range(0,image.get_height(),8):
-                for x in range(0,image.get_width(),8):
-                    var pixel: Color = image.get_pixel(x,y)
-                    if absf(pixel.r-bg.r)+absf(pixel.g-bg.g)+absf(pixel.b-bg.b)>0.12:
-                        changed+=1
-            check(changed>100,"Orbit render contains visible model")
+            _check_framed_image(image,"Orbit %02d" % step)
             check(image.save_png(output+"/destroyer_v117_orbit_%02d.png" % step)==OK,"Orbit image saved")
     # Matched silhouette comparison: tactical LOD8 vs inspection LOD13.
     Art.set_destroyer_damage(model,0)
@@ -580,15 +590,17 @@ func _render() -> void:
             var subject: Node3D = tactical if lod==8 else model
             subject.show()
             for angle in range(2):
-                camera.size = 4.5
-                camera.position = Vector3(6,0.75,0) if angle==0 else Vector3(0,6.75,0)
-                camera.look_at(Vector3(0,0.75,0),Vector3.UP if angle==0 else Vector3.FORWARD)
+                camera.size = 4.8
+                var center := Vector3(0,0.75,-0.37)
+                camera.position = center+(Vector3(6,0,0) if angle==0 else Vector3(0,6,0))
+                camera.look_at(center,Vector3.UP if angle==0 else Vector3.FORWARD)
                 await process_frame
                 await process_frame
                 await process_frame
                 var image: Image = view.get_texture().get_image()
                 check(image!=null and not image.is_empty(),"Matched silhouette image")
                 if image!=null and not image.is_empty():
+                    _check_framed_image(image,"Silhouette LOD%d angle%d" % [lod,angle])
                     check(image.save_png(output+"/destroyer_v117_silhouette_%d_%d.png" % [lod,angle])==OK,"Matched silhouette capture")
             subject.hide()
         stage.remove_child(tactical)

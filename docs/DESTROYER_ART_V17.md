@@ -47,3 +47,7 @@ Tapas biseladas de proa/popa, juntas y seis bases de postes posteriores, solo LO
 ## V1.17 — perfil exterior refinado
 
 El casco y cubierta de inspección LOD13 comparten 15 estaciones (las ocho originales exactas y siete intermedias con interpolación cúbica acotada), frente a ocho en LOD8. Conserva la caja envolvente y las cuatro franjas de esmalte sin mallas duplicadas. Pruebas de cierre existentes, recuento de triángulos y vértices de pintura por LOD, extremos y contacto vertical, más cuatro vistas laterales/superiores comparativas con el modelo táctico. 62 capturas previstas, inventario SHA-256 actualizado. Se actualiza el candidato acumulativo #716 para evitar otro PR paralelo; ejecuciones anteriores seguían en cola. Sin validación visual, FPS ni publicación aún. No modifica el Bastión ni jugabilidad.
+
+### Verificación estática adicional V1.17
+
+Reconstrucción matemática independiente de los anillos y triangulación (no es ejecución Godot): LOD8 188 triángulos, volumen orientado -3.069637; LOD13 356 triángulos, -3.115515; todas las aristas tienen dos incidencias, estaciones originales intactas y la misma AABB [-0.8874,0.14,-2.46] a [0.8874,0.76,1.72] en unidades artísticas. Se centra la cámara de inspección sobre z=-0.37, ampliando el marco a 4.8; se añade detección de recorte por margen de 12 píxeles en las 14 vistas orbitales y cuatro comparativas. La prueba de margen aún debe ejecutarse en Godot. No se certifican renders reales ni FPS.
