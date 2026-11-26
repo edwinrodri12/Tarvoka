@@ -1580,6 +1580,7 @@ static func _service_pose(model: Node3D, kind: String, t: float) -> bool:
     return true
 
 const FX_V10 := "V10_InfantryVisualFX"
+const FX_V22 := "tarvoka_infantry_impact_fx_v22"
 static var _family_fx_shape: SphereMesh
 static var _family_fx_material: StandardMaterial3D
 
@@ -1624,6 +1625,7 @@ static func _family_anchor(model: Node3D,rig: String,point: Vector3) -> Vector3:
 static func _family_fx(model: Node3D,kind: String,t: float,stage: int) -> void:
     if str(model.get_meta(ARMOR_V10,"")) not in FAMILY_ANATOMY_ROLES:
         return
+    model.set_meta(FX_V22,str(model.get_meta("tarvoka_infantry_role","line")))
     var impact: bool=stage<4 and kind in ["hit_bullet","hit_explosive"] and t>0.08 and t<0.85
     var dust: bool=stage<4 and kind in ["move","run"] and t>0.08 and t<0.92
     # Equipment smoke is a stylized visual effect at D3/D4, no HP change.
@@ -1662,12 +1664,25 @@ static func _family_fx(model: Node3D,kind: String,t: float,stage: int) -> void:
             var at: Vector3=origin+Vector3(cos(angle)*radius,sin(angle)*radius,-0.07-0.20*p)
             var size: float=(0.15 if explosive else 0.075)*(1.0-0.5*p)
             var shade: Color=Color("#efac63").lerp(Color("#777d7c"),p) if explosive else Color("#e8d5ae")
+            var dims: Vector3=Vector3.ONE*size if explosive else Vector3(size*0.55,size*0.55,size*2.3)
+            if explosive:
+                dims=Vector3(size,size*(0.75+0.55*p),size)
+                at.y+=0.19*p*p
             if dust:
                 var side: float=-1.0 if i%2==0 else 1.0
-                at=Vector3(side*(0.21+0.20*p),0.08+0.10*p,0.13+0.25*p)
+                # Dust follows the actual animated outsole instead of a
+                # fixed point at the model root.
+                var sole: MeshInstance3D=_find(model,"V2_Suela_%d"%int(side)) as MeshInstance3D
+                if sole!=null and sole.mesh!=null:
+                    var bounds: AABB=sole.mesh.get_aabb()
+                    var contact: Vector3=Vector3(bounds.get_center().x,bounds.position.y,bounds.get_center().z)
+                    at=_family_anchor(model,str(sole.name),contact)+Vector3(side*0.10*p,0.04+0.10*p,0.15*p)
+                else:
+                    at=Vector3(side*0.21,0.08,0.13)
                 size=0.14*(1.0-0.45*p)
+                dims=Vector3(size*1.4,size*0.65,size*1.4)
                 shade=Color("#b2a18c")
-            pool.set_instance_transform(used,Transform3D(Basis.from_scale(Vector3.ONE*size),at))
+            pool.set_instance_transform(used,Transform3D(Basis.from_scale(dims),at))
             pool.set_instance_color(used,shade)
             used+=1
     pool.visible_instance_count=used
