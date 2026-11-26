@@ -27,7 +27,7 @@ func _run() -> void:
             check(model != null,"Factory")
             if model == null:
                 continue
-            check(model.get_meta("patrol_art_revision","") == "1.1","Correct revision")
+            check(model.get_meta("patrol_art_revision","") == "1.2","Correct revision")
             for path in ["CascoNaval","CubiertaPatrulla","CabinaPatrulla/CarcasaCabina","CabinaPatrulla/FaccionTechoCabina"]:
                 var part: MeshInstance3D = model.get_node_or_null(path) as MeshInstance3D
                 check(part != null and closed(part.mesh),"Closed "+path)
@@ -37,17 +37,25 @@ func _run() -> void:
             check(model.has_node("BarandaPatrulla_1") == (lod >= 13),"LOD")
             var hull: Node3D = model.get_node("CascoNaval") as Node3D
             var rest: Transform3D = hull.transform
+            var hatch: Node3D = model.get_node("RegistroPopaPatrulla") as Node3D
+            var hatch_rest: Transform3D = hatch.transform
+            check(model.has_node("CabinaPatrulla/PuertaTrasera"),"Aft cabin service relief")
+            check(model.has_node("RotorPatrulla_1/CentroRotor"),"Visible underbody rotor")
             var origin: Vector3 = model.position
             for stage in range(5):
                 check(Art.set_patrol_damage(model,stage,0.7),"Damage")
                 check(model.position == origin,"Tactical origin unchanged")
                 check(int(model.get_meta("patrol_damage",-1)) == stage,"Damage state")
+                if stage in [2,3]:
+                    check(absf(hatch.rotation_degrees.z)>10,"Physical hatch damage")
                 if stage == 4:
                     check(hull.position.y < -1.0,"Sinking")
                     check(not Art.pose_patrol(model,"move",0.25),"No resurrection")
             Art.set_patrol_damage(model,0)
             check(hull.transform.is_equal_approx(rest),"Restore")
+            check(hatch.transform.is_equal_approx(hatch_rest),"Hatch restored")
             check(Art.pose_model("patrol",model,"move",0.25),"Motion dispatch")
+            check(absf((model.get_node("RotorPatrulla_1") as Node3D).rotation.z)>0.5,"Rotor movement")
             check(Art.pose_model("patrol",model,"attack",0.1,Vector2i(1,0)),"Action dispatch")
             var flash: Node3D = model.get_node("ModuloVisualPatrulla/DestelloVisual") as Node3D
             check(flash.visible,"Transient visual flash")
@@ -66,7 +74,8 @@ func _run() -> void:
     env.environment.background_mode = Environment.BG_COLOR
     env.environment.background_color = Color("#263A48")
     env.environment.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
-    env.environment.ambient_light_energy = 0.8
+    env.environment.ambient_light_color = Color("#C8D9E4")
+    env.environment.ambient_light_energy = 0.85
     view.add_child(env)
     var light := DirectionalLight3D.new()
     light.rotation_degrees = Vector3(-55,-35,0)
@@ -74,17 +83,22 @@ func _run() -> void:
     view.add_child(light)
     var camera := Camera3D.new()
     camera.projection = Camera3D.PROJECTION_ORTHOGONAL
-    camera.size = 2.8
+    camera.size = 2.3
     view.add_child(camera)
     camera.current = true
     var model: Node3D = Art.build("patrol",0,true,13)
     view.add_child(model)
-    for i in range(9):
+    for i in range(12):
         camera.position = Vector3(4,3,-5) if i<5 else Vector3(-4,3,5)
         camera.look_at(Vector3(0,0.35,0),Vector3.UP)
         Art.set_patrol_damage(model,i if i<5 else 0,0.55 if i==4 else 0.0)
         if i == 6:
             Art.pose_patrol(model,"move",0.25)
+        if i >= 9:
+            camera.size = 1.6
+            camera.position = Vector3(2.5,1.7,3.0) if i != 11 else Vector3(2.2,-1.8,3.0)
+            camera.look_at(Vector3(0,0.75,0.25) if i != 11 else Vector3(0,0.12,1.0),Vector3.UP)
+            Art.set_patrol_damage(model,3 if i == 10 else 0)
         if i == 8:
             Art.pose_patrol(model,"attack",0.10)
             camera.size = 1.7
@@ -142,5 +156,5 @@ func _run() -> void:
     if issues > 0:
         quit(1)
     else:
-        print("PASS M01 PATROL V1.1: 18 variants, 13 PNGs")
+        print("PASS M01 PATROL V1.2: 18 variants, 16 PNGs")
         quit(0)

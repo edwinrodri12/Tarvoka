@@ -1698,6 +1698,31 @@ static func _patrol(root: Node3D, detail: int) -> void:
     radar.position.y = 0.34
     mast.add_child(radar)
     _box(radar,"SensorOpaco",Vector3(0,0.046,0),Vector3(0.34,0.09,0.11),DARK)
+    # Independent sealed relief pieces, with a recognizable cabin and deck.
+    _box(bridge,"MarcoTrasero",Vector3(0,0.85,0.407),Vector3(0.24,0.29,0.032),DARK)
+    _box(bridge,"PuertaTrasera",Vector3(0,0.85,0.430),Vector3(0.19,0.23,0.022),STEEL)
+    _box(bridge,"TiradorTrasero",Vector3(0.065,0.84,0.446),Vector3(0.022,0.058,0.025),METAL)
+    _box(bridge,"ViseraFrontal",Vector3(0,1.025,-0.46),Vector3(0.46,0.045,0.16),DARK)
+    _box(mast,"FaccionPanelMastil",Vector3(0,0.19,0.065),Vector3(0.085,0.20,0.025),ARMOR)
+    for side in [-1,1]:
+        var sign: float = float(side)
+        _box(bridge,"LuzNavegacion_%d" % side,Vector3(sign*0.32,1.105,0.12),Vector3(0.075,0.056,0.075),Color("#E87D49") if side < 0 else Color("#58C5A4"))
+        _box(root,"EscalonPopa_%d" % side,Vector3(sign*0.27,0.575,0.49),Vector3(0.12,0.045,0.16),STEEL)
+        var rotor := Node3D.new()
+        rotor.name = "RotorPatrulla_%d" % side
+        rotor.position = Vector3(sign*0.22,0.13,1.18)
+        root.add_child(rotor)
+        _cylinder(rotor,"CentroRotor",Vector3.ZERO,0.045,0.09,STEEL,Vector3(90,0,0))
+        for blade in range(3):
+            var pivot := Node3D.new()
+            pivot.rotation.z = float(blade)*TAU/3.0
+            rotor.add_child(pivot)
+            _sphere(pivot,"PalaVisual",Vector3(0,0.075,0),Vector3(0.055,0.13,0.035),METAL)
+        if detail >= 13:
+            for i in range(3):
+                _box(bridge,"RelieveVentilacion_%d_%d" % [side,i],Vector3(sign*0.351,0.73+float(i)*0.034,0.17),Vector3(0.025,0.015,0.10),METAL)
+            for i in range(3):
+                _box(root,"RegistroPasillo_%d_%d" % [side,i],Vector3(sign*0.36,0.574,-0.35+float(i)*0.25),Vector3(0.08,0.018,0.12),STEEL)
     var wake := Node3D.new()
     wake.name = "EstelaPatrulla"
     root.add_child(wake)
@@ -1708,11 +1733,17 @@ static func _patrol(root: Node3D, detail: int) -> void:
     root.add_child(fx)
     _box(fx,"Marca",Vector3(0.22,0.58,-0.73),Vector3(0.14,0.025,0.16),DARK).hide()
     _sphere(fx,"Humo",Vector3(0.15,1.12,0.29),Vector3(0.32,0.45,0.31),Color("#555B62")).hide()
-    _sphere(fx,"Fuego",Vector3(-0.16,0.88,0.46),Vector3(0.22,0.38,0.20),Color("#F49138")).hide()
+    _sphere(fx,"Fuego",Vector3(-0.25,1.10,0.46),Vector3(0.24,0.38,0.22),Color("#F49138")).hide()
+    _sphere(fx,"HumoSuperior",Vector3(0.22,1.48,0.38),Vector3(0.39,0.43,0.36),Color("#737B80")).hide()
+    _sphere(fx,"FuegoSecundario",Vector3(0.19,0.94,0.51),Vector3(0.21,0.33,0.20),Color("#FFAD54")).hide()
+    _box(fx,"MarcaPasillo",Vector3(0.36,0.578,-0.22),Vector3(0.11,0.024,0.17),Color("#252B30")).hide()
+    _box(fx,"Fragmento",Vector3(0.21,0.66,0.82),Vector3(0.18,0.055,0.18),STEEL,Vector3(15,22,30)).hide()
+    var hatch: Node3D = root.get_node("RegistroPopaPatrulla") as Node3D
+    hatch.set_meta("patrol_rest",hatch.transform)
     for child in root.get_children():
         if child is Node3D:
             child.set_meta("patrol_rest",child.transform)
-    root.set_meta("patrol_art_revision","1.1")
+    root.set_meta("patrol_art_revision","1.2")
     root.set_meta("patrol_damage",0)
 
 static func set_patrol_damage(root: Node3D, stage: int, phase: float = 0.0) -> bool:
@@ -1733,6 +1764,14 @@ static func set_patrol_damage(root: Node3D, stage: int, phase: float = 0.0) -> b
     (effects.get_node("Marca") as Node3D).visible = d >= 1
     (effects.get_node("Humo") as Node3D).visible = d >= 2
     (effects.get_node("Fuego") as Node3D).visible = d >= 3
+    (effects.get_node("HumoSuperior") as Node3D).visible = d >= 2
+    (effects.get_node("FuegoSecundario") as Node3D).visible = d >= 3
+    (effects.get_node("MarcaPasillo") as Node3D).visible = d >= 1
+    (effects.get_node("Fragmento") as Node3D).visible = d >= 3
+    var hatch: Node3D = root.get_node("RegistroPopaPatrulla") as Node3D
+    if d >= 2:
+        hatch.rotation_degrees.z = -14.0 if d == 2 else -28.0
+        hatch.position.y += 0.025 if d == 2 else 0.055
     var mast: Node3D = root.get_node("MastilPatrulla") as Node3D
     mast.rotation_degrees.z = 0.0 if d < 2 else (13.0 if d == 2 else 30.0)
     if d == 4:
@@ -1755,6 +1794,9 @@ static func pose_patrol(root: Node3D, kind: String, phase: float, heading: Vecto
     root.rotation_degrees.z = wave*(2.5 if kind == "move" else 0.7)
     var radar: Node3D = root.get_node("MastilPatrulla/RadarPatrulla") as Node3D
     radar.rotation.y = t*TAU
+    for side in [-1,1]:
+        var rotor: Node3D = root.get_node("RotorPatrulla_%d" % side) as Node3D
+        rotor.rotation.z = float(side)*t*TAU if kind == "move" else 0.0
     var module: Node3D = root.get_node("ModuloVisualPatrulla") as Node3D
     var action: bool = kind in ["attack","fire","aim"]
     module.rotation.y = atan2(-float(heading.x),-float(heading.y)) if action and heading != Vector2i.ZERO else 0.0
@@ -1762,6 +1804,34 @@ static func pose_patrol(root: Node3D, kind: String, phase: float, heading: Vecto
     for foam in root.get_node("EstelaPatrulla").get_children():
         (foam as Node3D).visible = kind == "move" and t > 0.0 and t < 1.0
     return true
+
+# Patrol-only opaque material finish. The validated destroyer stays untouched.
+static func _patrol_finish(node: Node, detail: bool) -> void:
+    if node is MeshInstance3D:
+        var part: MeshInstance3D = node as MeshInstance3D
+        var mat: StandardMaterial3D = part.material_override as StandardMaterial3D
+        if mat != null:
+            var label: String = str(part.name)
+            mat.metallic = 0.12
+            mat.roughness = 0.65
+            if label.begins_with("Cristal"):
+                mat.metallic = 0.03
+                mat.roughness = 0.34
+                mat.albedo_color = Color("#597C91")
+            elif label.begins_with("Humo") or label.begins_with("Espuma"):
+                mat.metallic = 0.0
+                mat.roughness = 1.0
+            elif label.begins_with("Fuego") or label == "DestelloVisual" or label.begins_with("LuzNavegacion"):
+                mat.metallic = 0.0
+                mat.emission_enabled = true
+                mat.emission = mat.albedo_color
+                mat.emission_energy_multiplier = 0.75
+            elif detail and label in ["CarcasaCabina","CubiertaPatrulla","ZocaloCabina"]:
+                mat.albedo_texture = _destroyer_grain()
+                mat.uv1_triplanar = true
+                mat.uv1_scale = Vector3(3,3,3)
+    for child in node.get_children():
+        _patrol_finish(child,detail)
 
 static func build(role: String, faction: int = -1, finish_enabled: bool = true, art_level: int = 10) -> Node3D:
     if not supports(role):
@@ -1891,6 +1961,7 @@ static func build(role: String, faction: int = -1, finish_enabled: bool = true, 
             _patrol(model,art_level)
             apply_faction_palette(model,faction)
             _destroyer_finish(model,art_level >= 13)
+            _patrol_finish(model,art_level >= 13)
         "destroyer":
             _destroyer(model,art_level)
             apply_faction_palette(model,faction)
