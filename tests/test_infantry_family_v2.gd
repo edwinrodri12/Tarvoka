@@ -268,6 +268,26 @@ func _run() -> void:
                     check(str(model.get_meta(Finish.RELIEF_V14,""))==role,"V14 native material relief")
                     check(str(model.get_meta(Finish.FIT_V15,""))==role,"V15 proportion fit")
                     check(str(model.get_meta(Finish.PREMIUM_V16,""))==role,"V16 premium art identity")
+                    check(str(model.get_meta(Finish.GEAR_V17,""))==role,"V17 role-specific kit")
+                    var is_hero: bool=bool(model.get_meta("tarvoka_infantry_v2_hero",false))
+                    check(int(model.get_meta(Finish.GEAR_COUNT_V17,-1))==(3 if is_hero else 0),
+                        "three premium kit meshes, zero tactical additions")
+                    for gear_name in ["V17_FabricKitFlap","V17_RubberKitLatch_-1","V17_RubberKitLatch_1"]:
+                        var gear: MeshInstance3D=model.find_child(gear_name,true,false) as MeshInstance3D
+                        if is_hero:
+                            check(gear!=null and gear.mesh is ArrayMesh and closed_solid(gear.mesh) and
+                                str(gear.get_parent().name)==str(Finish.GEAR_PARENT_V17[role]) and
+                                gear.has_meta(Finish.STAGE_MATS),"sealed opaque kit follows real gear "+gear_name)
+                            if gear!=null:
+                                var attached: MeshInstance3D=gear.get_parent() as MeshInstance3D
+                                var contact: Vector3=gear.get_meta("tarvoka_v17_surface_contact",Vector3.ZERO)
+                                check(attached!=null and is_equal_approx(
+                                    Finish.kit_rear_surface(attached.mesh,contact.x,contact.y),contact.z),
+                                    "V17 contact sampled on actual kit mesh")
+                                check(gear.mesh.get_aabb().has_point(contact-gear.position),
+                                    "fastener physically overlaps the sampled surface")
+                        else:
+                            check(gear==null,"no new tactical geometry "+gear_name)
                     var high: bool=bool(model.get_meta("tarvoka_infantry_v2_hero",false))
                     var expected_parts: Dictionary={"V16_ArmorNape":"CabezaRig"}
                     for side in [-1,1]:
@@ -647,6 +667,13 @@ func _run() -> void:
                         camera.look_at(Vector3(0,0.62,0),Vector3.UP)
                         hero.rotation_degrees.y=180
                         await save_frame(view,"v16_%s_shin_waist"%role)
+                        camera.size=1.45
+                        camera.position=Vector3(2.2,2.0,3.4)
+                        camera.look_at(Vector3(0,1.22,0.24),Vector3.UP)
+                        hero.rotation_degrees.y=0
+                        await save_frame(view,"v17_%s_kit_rear"%role)
+                        hero.rotation_degrees.y=25
+                        await save_frame(view,"v17_%s_kit_angle"%role)
                         # Close views of actual extremities rather than
                         # another wide full-body screenshot.
                         hero.rotation_degrees.y=140
@@ -712,7 +739,7 @@ func _run() -> void:
     await save_frame(view,"v15_six_official_rear")
     for unit in lineup:
         unit.free()
-    check(rendered==150,"150 real 3D comparison / tactical frames")
+    check(rendered==160,"160 real 3D comparison / tactical frames")
     # Art-only variants must never enter the tactical roster.
     for role in ["infantry_urban","infantry_defense",
             "infantry_antitank","infantry_engineer",
@@ -723,5 +750,5 @@ func _run() -> void:
         push_error("FAIL INFANTRY V2 NATIVE 3D: %d failures"%failed)
         quit(1)
     else:
-        print("PASS INFANTRY V2 NATIVE 3D: 160 models (6 core + 4 legacy), 8 factions, 2 LOD, 150 true PNG")
+        print("PASS INFANTRY V2 NATIVE 3D: 160 models (6 core + 4 legacy), 8 factions, 2 LOD, 160 true PNG")
         quit(0)

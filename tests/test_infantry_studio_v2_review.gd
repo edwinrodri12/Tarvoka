@@ -115,7 +115,7 @@ func _run() -> void:
         must(v2!=null and v2.get_parent()==original_preview,
             role+" V2 comparison remains in same 3D viewport")
         if role!="infantry_engineer":
-            var expected_edition: String="V16"
+            var expected_edition: String="V17"
             must(str(studio.call("_infantry_review_edition"))==expected_edition and
                 str(v2.get_meta("tarvoka_infantry_integrated_face_v8",""))==role and
                 bool(v2.get_meta("tarvoka_infantry_material_finish_v7",false)),

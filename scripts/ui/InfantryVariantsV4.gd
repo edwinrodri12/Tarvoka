@@ -226,6 +226,8 @@ static func apply(model: Node3D, role: String, faction_color: Color,
         return false
     if not _refine_v14_kit(model,role,hero):
         return false
+    if not Sculpt.refine_v17_kit(model,role,hero):
+        return false
     # Base sculpt is finished before these specialist pieces exist.
     # Apply the same cached surface classes and damage palette only to
     # the newly attached parts; base material identities stay unchanged.

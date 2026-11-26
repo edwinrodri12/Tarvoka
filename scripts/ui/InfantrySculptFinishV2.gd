@@ -188,7 +188,101 @@ static func _refine_core(model: Node3D, hero: bool) -> bool:
         return false
     if not _refine_v15_fit(model,hero) or not _refine_v16_exterior(model,hero):
         return false
+    if str(model.get_meta("tarvoka_infantry_role",""))=="line" and not refine_v17_kit(model,"line",hero):
+        return false
     return _attach_family_grips(model,hero)
+
+const GEAR_V17 := "tarvoka_infantry_premium_kit_v17"
+const GEAR_COUNT_V17 := "tarvoka_infantry_premium_kit_count_v17"
+const GEAR_PARENT_V17 := {
+    "line":"V2_MochilaOrganica",
+    "infantry_commando":"V9_FS24_Radio",
+    "infantry_sniper":"V4_CapaCamuflajePrecision",
+    "infantry_logistic":"V4_BolsaSuministros",
+    "infantry_medic":"V4_KitMedicoVerde"
+}
+
+# Find the actual rear surface of a closed kit, in its own mesh coordinates.
+# This avoids projecting the fasteners onto an imaginary bounding box.
+static func kit_rear_surface(mesh: Mesh,x: float,y: float)->float:
+    var faces: PackedVector3Array=mesh.get_faces()
+    var bounds: AABB=mesh.get_aabb()
+    var origin:=Vector3(x,y,bounds.end.z+1.0)
+    var closest: float=-INF
+    for i in range(0,faces.size(),3):
+        var hit: Variant=Geometry3D.ray_intersects_triangle(origin,Vector3(0,0,-1),
+            faces[i],faces[i+1],faces[i+2])
+        if hit is Vector3:
+            closest=maxf(closest,(hit as Vector3).z)
+    return closest
+
+# Each role receives a tailored flap/cover and two closed fasteners.
+# The pieces follow the existing real gear and inherit its local transform.
+# The lightweight LOD8 receives only identity metadata.
+static func refine_v17_kit(model: Node3D,role: String,hero: bool)->bool:
+    if not GEAR_PARENT_V17.has(role):
+        return false
+    model.set_meta(GEAR_V17,role)
+    model.set_meta(GEAR_COUNT_V17,0)
+    if not hero:
+        return true
+    var kit: MeshInstance3D=_find(model,str(GEAR_PARENT_V17[role])) as MeshInstance3D
+    if kit==null or kit.mesh==null or not kit.visible:
+        return false
+    var aabb: AABB=kit.mesh.get_aabb()
+    var center: Vector3=aabb.get_center()
+    var tone: Color=Color("#465950")
+    var width_ratio: float=0.24
+    var cover_height: float=0.09
+    match role:
+        "infantry_commando":
+            tone=Color("#263b41")
+            width_ratio=0.27
+            cover_height=0.11
+        "infantry_sniper":
+            tone=Color("#4e5d44")
+            width_ratio=0.22
+            cover_height=0.12
+        "infantry_logistic":
+            tone=Color("#596748")
+            width_ratio=0.26
+        "infantry_medic":
+            tone=Color("#35584b")
+            width_ratio=0.20
+    var flap_w: float=aabb.size.x*width_ratio
+    var flap_h: float=aabb.size.y*cover_height
+    var flap_d: float=aabb.size.z*0.075
+    var y: float=aabb.position.y+aabb.size.y*0.77
+    var rear: float=kit_rear_surface(kit.mesh,center.x,y)
+    if not is_finite(rear):
+        return false
+    var cloth: StandardMaterial3D=_coat(tone,0.03,0.83)
+    var fastener: StandardMaterial3D=_coat(tone.darkened(0.30),0.06,0.72)
+    var flap: MeshInstance3D=_mesh(kit,"V17_FabricKitFlap",_organic_mesh([
+        Vector3(flap_w*0.68,-flap_h,flap_d*0.55),
+        Vector3(flap_w,-flap_h*0.57,flap_d),
+        Vector3(flap_w,flap_h*0.52,flap_d),
+        Vector3(flap_w*0.72,flap_h,flap_d*0.58)],
+        14,PackedFloat32Array(),0.55),cloth,Vector3(center.x,y,rear-flap_d*0.65))
+    flap.set_meta("tarvoka_v17_surface_contact",Vector3(center.x,y,rear))
+    for side in [-1,1]:
+        var x: float=center.x+float(side)*aabb.size.x*0.24
+        # Keep the medical cross and the central faction insignia unobstructed.
+        var latch_y: float=aabb.position.y+aabb.size.y*0.32
+        var latch_z: float=kit_rear_surface(kit.mesh,x,latch_y)
+        if not is_finite(latch_z):
+            return false
+        var lw: float=aabb.size.x*0.048
+        var lh: float=aabb.size.y*0.068
+        var ld: float=aabb.size.z*0.085
+        var latch: MeshInstance3D=_mesh(kit,"V17_RubberKitLatch_%d"%side,_organic_mesh([
+            Vector3(lw*0.70,-lh,ld*0.65),Vector3(lw,-lh*0.63,ld),
+            Vector3(lw,lh*0.55,ld),Vector3(lw*0.72,lh,ld*0.65)],
+            12,PackedFloat32Array(),0.50),fastener,
+            Vector3(x,latch_y,latch_z-ld*0.65))
+        latch.set_meta("tarvoka_v17_surface_contact",Vector3(x,latch_y,latch_z))
+    model.set_meta(GEAR_COUNT_V17,3)
+    return true
 
 const PREMIUM_V16 := "tarvoka_infantry_premium_exterior_v16"
 const PREMIUM_COUNT_V16 := "tarvoka_infantry_premium_mesh_count_v16"
@@ -778,7 +872,9 @@ static func _family_texture(kind: String) -> ImageTexture:
 static func _finish_kind(label: String) -> String:
     if label.begins_with("V16_Armor"):
         return "armor"
-    if label.begins_with("V16_Rubber"):
+    if label.begins_with("V17_Fabric"):
+        return "fabric"
+    if label.begins_with("V16_Rubber") or label.begins_with("V17_Rubber"):
         return "rubber"
     if label in ["V2_CascoEsferoideCerrado","V2_CorazaPectoralHermetica"] or label.begins_with("Hombrera_") or label.begins_with("Rodillera_"):
         return "armor"
