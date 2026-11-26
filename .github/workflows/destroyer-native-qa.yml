@@ -56,9 +56,18 @@ jobs:
           evidence={}
           for path in sorted(root.glob('*.png')):
               contents=path.read_bytes()
-              assert contents[:8]==b'\\x89PNG\\r\\n\\x1a\\n' and struct.unpack('>II',contents[16:24])==(900,650)
+              assert contents[:8]==bytes.fromhex('89504e470d0a1a0a') and struct.unpack('>II',contents[16:24])==(900,650)
               evidence[path.name]=hashlib.sha256(contents).hexdigest()
-          assert len(evidence)==58
+          names={f'destroyer_v116_{i}.png' for i in range(16)}
+          names|={f'destroyer_v116_D{i}.png' for i in range(5)}
+          names|={f'destroyer_v116_detail_D{i}.png' for i in (2,3)}
+          names|={f'destroyer_v116_sink_{i}.png' for i in range(4)}
+          names|={f'destroyer_v116_light_{i}.png' for i in range(2)}
+          names|={f'destroyer_v116_faction_{i}.png' for i in range(-1,8)}
+          names|={f'destroyer_v116_compare_{role}_{i}.png' for role in ('destroyer','bastion') for i in range(2)}
+          names|={f'destroyer_v116_graded_D{i}.png' for i in (2,3)}
+          names|={f'destroyer_v116_orbit_{i:02}.png' for i in range(14)}
+          assert len(evidence)==58 and set(evidence)==names
           (root/'evidence.json').write_text(json.dumps(evidence,indent=2))
           PY
       - uses: actions/upload-artifact@v4
