@@ -5,6 +5,7 @@ const Arsenal=preload("res://scripts/core/ModernArsenal.gd")
 var failures:int=0
 var workload:Array[Dictionary]=[]
 var v19_shared_livery:Texture2D=null
+var v20_shared_roughness:Texture2D=null
 
 # Count visible render resources, not GPU frame time or Android memory.
 func _inventory(model:Node3D)->Dictionary:
@@ -121,6 +122,7 @@ func _run()->void:
             check(bool(model.get_meta("tarvoka_a02_v17_surface_finish",false)),"V17 satin sculpt finish")
             check(bool(model.get_meta("tarvoka_a02_v19_graphic_livery",false)),"V19 authored opaque decorative paint")
             check(bool(model.get_meta("tarvoka_a02_v20_surface_atlas",false)),"V20 four-face ornamental atlas")
+            check(bool(model.get_meta("tarvoka_a02_v20_material_relief",false)),"V20 ornamental relief and varied material finish")
             if paint!=null and paint.mesh is ArrayMesh:
                 var paint_data:Array=paint.mesh.surface_get_arrays(0)
                 var paint_vertices:PackedVector3Array=paint_data[Mesh.ARRAY_VERTEX]
@@ -146,6 +148,26 @@ func _run()->void:
                     check(atlas_tiles.size()==4,"V20 all four atlas tiles in use")
                 var painted:=paint.material_override as StandardMaterial3D
                 check(painted.albedo_texture!=null,"V19 actual paint texture")
+                check(painted.roughness_texture!=null and painted.roughness_texture_channel==BaseMaterial3D.TEXTURE_CHANNEL_RED,
+                    "V20 actual varied material sheen")
+                if painted.roughness_texture!=null:
+                    if v20_shared_roughness==null:
+                        v20_shared_roughness=painted.roughness_texture
+                        var rough_image:=v20_shared_roughness.get_image()
+                        check(rough_image!=null and rough_image.get_size()==Vector2i(256,256) and rough_image.has_mipmaps(),
+                            "V20 compact mipmapped roughness resource")
+                        if rough_image!=null:
+                            var low:float=1.0
+                            var high:float=0.0
+                            for y in range(rough_image.get_height()):
+                                for x in range(rough_image.get_width()):
+                                    var pigment:Color=rough_image.get_pixel(x,y)
+                                    low=minf(low,pigment.r)
+                                    high=maxf(high,pigment.r)
+                                    check(is_equal_approx(pigment.r,pigment.g) and is_equal_approx(pigment.r,pigment.b)
+                                        and pigment.a>=0.999,"V20 opaque grayscale roughness")
+                            check(low>=0.67 and high<=1.0 and high-low>=0.12,"V20 meaningful restrained contrast")
+                    check(painted.roughness_texture==v20_shared_roughness,"V20 reuse roughness across factions and LODs")
                 if painted.albedo_texture!=null:
                     if v19_shared_livery==null:
                         v19_shared_livery=painted.albedo_texture
@@ -213,7 +235,7 @@ func _run()->void:
                 var material:=casing.material_override as StandardMaterial3D
                 check(material!=null and material.vertex_color_use_as_albedo and material.vertex_color_is_srgb,
                     "V3 opaque tonal shell pigment")
-                check(material!=null and material.albedo_texture==v19_shared_livery,"V20 upper and side finish shares atlas")
+                check(material!=null and material.albedo_texture==v19_shared_livery and material.roughness_texture==v20_shared_roughness,"V20 upper and side finish shares material textures")
                 var arrays:Array=casing.mesh.surface_get_arrays(0)
                 var colors:PackedColorArray=arrays[Mesh.ARRAY_COLOR]
                 var vertices:PackedVector3Array=arrays[Mesh.ARRAY_VERTEX]
@@ -246,7 +268,7 @@ func _run()->void:
                 check(_closed(lower_shell.mesh) and lower_shell.mesh.get_faces()==casing.mesh.get_faces(),
                     "V18 lower pigment leaves sealed topology unchanged")
                 var lower_material:=lower_shell.material_override as StandardMaterial3D
-                check(lower_material!=null and lower_material.albedo_texture==v19_shared_livery,"V20 lower finish shares atlas")
+                check(lower_material!=null and lower_material.albedo_texture==v19_shared_livery and lower_material.roughness_texture==v20_shared_roughness,"V20 lower finish shares material textures")
             var accents:=model.find_children("A02_V18_LowerAccent_*","MeshInstance3D",true,false)
             check(accents.size()==(2 if lod==13 else 0),"V18 ornaments only at inspection LOD")
             if accents.size()==2 and lower_shell!=null:
@@ -263,6 +285,15 @@ func _run()->void:
                     check(accent.position.y<lower_shell.position.y,"V18 underside only")
                 check(belly!=null and insignia!=null and belly.material_override==insignia.material_override,
                     "V18 matching contrasting neutral insignia")
+            var crest:=model.find_child("A02_V20_OrnamentalCrest",true,false) as MeshInstance3D
+            check((crest!=null)==(lod==13),"V20 sculpted ornament only at high detail")
+            if crest!=null and paint!=null:
+                check(crest.mesh is ArrayMesh and crest.mesh.get_faces().size()==360 and _closed(crest.mesh),
+                    "V20 two closed ornamental reliefs batched into one instance")
+                var crest_bounds:AABB=crest.transform*crest.mesh.get_aabb()
+                var crown_bounds:AABB=paint.transform*paint.mesh.get_aabb()
+                check(crest_bounds.intersects(crown_bounds) and crest_bounds.end.y>crown_bounds.end.y
+                    and crest_bounds.position.y<crown_bounds.end.y,"V20 visible ornament embedded in crown")
             check(bool(model.get_meta("tarvoka_a02_v6_material_coherence",false)),"V6 material coherence")
             var first_guard:=model.find_child("A02_ClosedRotorGuard_0",true,false) as MeshInstance3D
             if first_guard!=null:
@@ -356,8 +387,8 @@ func _run()->void:
                     workload.append({"faction":faction,"lod":lod,"damage":damage,"resources":inventory})
                     check(int(inventory.instances)<=40,"V10 visible instance ceiling")
                     if damage==0:
-                        check(int(inventory.instances)==(27 if lod==8 else 36),"V18 exact intact mesh count")
-                        check(int(inventory.triangles)==(2436 if lod==8 else 5808),"V18 exact intact triangle count")
+                        check(int(inventory.instances)==(27 if lod==8 else 37),"V18 exact intact mesh count")
+                        check(int(inventory.triangles)==(2436 if lod==8 else 5928),"V18 exact intact triangle count")
                     check(int(inventory.triangles)<=(12000 if lod==8 else 24000),"V10 visible triangle ceiling")
                     check(int(inventory.unique_meshes)<=int(inventory.instances),"V10 valid mesh resource count")
                     check(int(inventory.unique_materials)<=int(inventory.instances),"V10 valid material resource count")
