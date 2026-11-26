@@ -89,6 +89,31 @@ func family_grip_contact(model: Node3D, side: int) -> bool:
     var contact: Vector3=holder.transform*palm.position
     return endpoint.distance_to(contact)<0.0001 and palm.visible and link.visible
 
+# V19: shared cache across factions, unique pixel data for each role.
+func check_v19_surfaces() -> void:
+    for kind in ["fabric","rubber","armor"]:
+        var albedos: Array[ImageTexture]=[]
+        var normals: Array[ImageTexture]=[]
+        for role in Finish.FAMILY_ANATOMY_ROLES:
+            var tex: ImageTexture=Finish._family_texture(kind,role)
+            var normal: ImageTexture=Finish._family_normal(kind,role)
+            check(tex==Finish._family_texture(kind,role) and normal==Finish._family_normal(kind,role),
+                "V19 reuses resources for same role and material")
+            var img: Image=tex.get_image()
+            var nimg: Image=normal.get_image()
+            check(img.get_size()==Vector2i(64,64) and nimg.get_size()==Vector2i(64,64) and
+                img.has_mipmaps() and nimg.has_mipmaps(),"V19 compact mipmapped textures")
+            check(img.detect_alpha()==Image.ALPHA_NONE and nimg.detect_alpha()==Image.ALPHA_NONE,
+                "V19 every texture pixel opaque")
+            for other in albedos:
+                check(tex!=other and img.get_data()!=other.get_image().get_data(),
+                    "V19 role-specific albedo pixel content "+role+" "+kind)
+            for other in normals:
+                check(normal!=other and nimg.get_data()!=other.get_image().get_data(),
+                    "V19 role-specific normal pixel content "+role+" "+kind)
+            albedos.append(tex)
+            normals.append(normal)
+
 func _initialize() -> void:
     call_deferred("_run")
 
@@ -102,6 +127,7 @@ func save_frame(view: SubViewport, name: String) -> void:
         rendered+=1
 
 func _run() -> void:
+    check_v19_surfaces()
     check(DirAccess.make_dir_recursive_absolute(
         ProjectSettings.globalize_path(OUT))==OK,"create QA image directory")
     var view := SubViewport.new()
@@ -270,6 +296,7 @@ func _run() -> void:
                     check(str(model.get_meta(Finish.PREMIUM_V16,""))==role,"V16 premium art identity")
                     check(str(model.get_meta(Finish.GEAR_V17,""))==role,"V17 role-specific kit")
                     check(str(model.get_meta(Finish.OPTICS_V18,""))==role,"V18 optics identity")
+                    check(str(model.get_meta(Finish.SURFACES_V19,""))==role,"V19 individual surface identity")
                     var optic_names: Array[String]=["V2_VisorOpacoPBR"]
                     if role=="infantry_commando":
                         for side in [-1,0,1]:
@@ -354,6 +381,15 @@ func _run() -> void:
                                 fabric_mat.normal_texture.get_width()==64 and fabric_mat.normal_texture.get_height()==64 and
                                 fabric_mat.normal_texture.get_image().has_mipmaps(),
                                 "distinct cached mipmapped fabric and rubber relief")
+                            check(fabric_mat.albedo_texture==Finish._family_texture("fabric",role) and
+                                fabric_mat.normal_texture==Finish._family_normal("fabric",role) and
+                                rubber_mat.albedo_texture==Finish._family_texture("rubber",role) and
+                                rubber_mat.normal_texture==Finish._family_normal("rubber",role),
+                                "V19 model uses its actual role textures")
+                        else:
+                            check(fabric_mat.albedo_texture==null and rubber_mat.albedo_texture==null and
+                                fabric_mat.normal_texture==null and rubber_mat.normal_texture==null,
+                                "V19 tactical LOD remains texture free")
                     for side in [-1,1]:
                         var suffix: String="_%d"%side
                         var palm: MeshInstance3D=model.find_child("V2_PalmaGuante"+suffix,true,false) as MeshInstance3D
@@ -418,6 +454,10 @@ func _run() -> void:
                         check(clean!=null and clean.transparency==BaseMaterial3D.TRANSPARENCY_DISABLED and
                             (clean.albedo_texture!=null)==bool(model.get_meta("tarvoka_infantry_v2_hero",false)),
                             "native texture on LOD13 only; opacity preserved")
+                        if clean!=null and detailed:
+                            check(clean.albedo_texture==Finish._family_texture("armor",role) and
+                                clean.normal_texture==Finish._family_normal("armor",role),
+                                "V19 actual helmet uses its role coating")
                         for damage in range(5):
                             check(Infantry.set_damage(model,damage) and Models.pose_model(role,model,"idle",0.0),
                                 "V7 stage update "+str(damage))
@@ -426,6 +466,10 @@ func _run() -> void:
                                 worn!=null and worn.albedo_color.a==1.0 and
                                 ((worn==clean)==(damage==0)),
                                 "stage-specific opaque materials")
+                            if worn!=null and clean!=null:
+                                check(worn.albedo_texture==clean.albedo_texture and
+                                    worn.normal_texture==clean.normal_texture,
+                                    "V19 D0-D4 share texture resources")
                             if damage>0:
                                 check(worn.albedo_color!=clean.albedo_color,
                                     "damage has distinct surface color")
