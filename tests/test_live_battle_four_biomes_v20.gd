@@ -284,13 +284,14 @@ func _run() -> void:
     assert(viewer._scene.get_meta("visual_biome")==Biomes.CANYON)
     viewer.close_view()
     # V28: collect comparable real-battle frames, not showroom renders.
-    # Same map seed, camera defaults and clear weather for every biome.
+    # Same fixed map, camera defaults and clear weather for every biome.
     if DisplayServer.get_name()!="headless":
         for biome in Biomes.CHOICES:
-            board.new_game(2,true,false,false,true,false,false,0,0,
+            board.new_game(2,true,false,false,true,true,false,0,0,
                 Vector2i(10,8),{},"clear",false,biome)
             main._open_battle_3d()
             assert(viewer._scene.get_meta("visual_biome")==biome)
+            assert(int(viewer._scene.get_meta("render_stats")["site_foundations_v26"])>0)
             for frame in range(8):
                 await process_frame
             var review_image: Image = viewer.preview.get_texture().get_image()
