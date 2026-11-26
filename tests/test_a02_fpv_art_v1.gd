@@ -412,6 +412,23 @@ func _run()->void:
             if image!=null and not image.is_empty() and image.save_png(out+"/a02-v2-"+str(view[0])+".png")==OK:
                 captures+=1
         check(captures==7,"V4 seven real Godot inspection angles")
+        # Macro crops deliberately focus on the artistic finish, not the
+        # full silhouette. Match the kind of close inspection used for P06.
+        var macro_count:int=0
+        for view in [
+            ["crown",Vector3(0,5,0),Vector3.FORWARD],
+            ["front",Vector3(1.6,2.5,-3.5),Vector3.UP],
+            ["rear",Vector3(-1.6,2.5,3.5),Vector3.UP]]:
+            camera.position=view[1]
+            camera.size=1.35
+            camera.look_at(Vector3(0,1.06,0),view[2])
+            await process_frame
+            await process_frame
+            await process_frame
+            var image:Image=vp.get_texture().get_image()
+            if image!=null and not image.is_empty() and image.save_png(out+"/a02-v19-macro-"+str(view[0])+".png")==OK:
+                macro_count+=1
+        check(macro_count==3,"V19 three native artistic macro crops")
         camera.position=Vector3(3.3,3.2,-4)
         camera.size=2.75
         camera.look_at(Vector3(0,0.90,0),Vector3.UP)
