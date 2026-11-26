@@ -35,6 +35,53 @@ static func texture(style: String) -> Texture2D:
     _cached[style] = result
     return result
 
+# V44–V52: nine low-contrast, periodic terrain microtextures. All are
+# grayscale, so tactical terrain colors and faction livery remain intact.
+# One texture per biome/style, shared across all chunks.
+static func biome_texture(biome: String) -> Texture2D:
+    var key: String = "biome_v44_"+biome
+    if _cached.has(key):
+        return _cached[key]
+    var img: Image = Image.create(TILE_SIZE,TILE_SIZE,false,Image.FORMAT_RGBA8)
+    for y in range(TILE_SIZE):
+        for x in range(TILE_SIZE):
+            var u: float = TAU*float(x)/float(TILE_SIZE)
+            var v: float = TAU*float(y)/float(TILE_SIZE)
+            var grain: float = _hash(x,y,73)
+            var broad: float = 0.5+0.5*sin(3.0*u+sin(2.0*v))
+            var detail: float = broad
+            match biome:
+                "temperate":
+                    detail = 0.5+0.5*sin(15.0*u+4.0*sin(3.0*v))*sin(9.0*v)
+                "winter":
+                    detail = 0.5+0.5*cos(4.0*u+2.0*v+sin(3.0*v))
+                "canyon":
+                    detail = 0.5+0.5*sin(12.0*v+2.0*sin(3.0*u))
+                "coastal":
+                    detail = 0.5+0.5*sin(5.0*u+7.0*v+sin(3.0*u))
+                "desert":
+                    detail = 0.5+0.5*sin(13.0*v+2.4*sin(2.0*u))
+                "tropical":
+                    detail = 0.5+0.5*sin(11.0*u)*cos(7.0*v+sin(4.0*u))
+                "wetland":
+                    detail = pow(0.5+0.5*sin(4.0*u+sin(3.0*v))*cos(3.0*v),2.0)
+                "urban":
+                    detail = 0.5+0.5*cos(16.0*u)*cos(16.0*v)
+                "archipelago":
+                    detail = 0.5+0.5*sin(18.0*v+0.8*sin(4.0*u))
+            var level: float = 0.84+0.065*broad+0.065*detail+0.03*grain
+            img.set_pixel(x,y,Color(level,level,level,1.0))
+    img.generate_mipmaps()
+    var result: ImageTexture = ImageTexture.create_from_image(img)
+    _cached[key] = result
+    return result
+
+static func apply_biome_soil(material: StandardMaterial3D,biome: String) -> void:
+    apply(material,"soil")
+    material.albedo_texture = biome_texture(biome)
+    material.roughness = 0.97 if biome in ["desert","canyon","archipelago"] else (
+        0.78 if biome in ["wetland","urban"] else 0.92)
+
 static func apply(material: StandardMaterial3D,
         style: String) -> void:
     material.vertex_color_use_as_albedo = true
