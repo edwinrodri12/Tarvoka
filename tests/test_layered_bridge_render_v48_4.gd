@@ -176,3 +176,25 @@ func _check_mixed_and_fog() -> void:
     assert(Terrain._tint(north)!=Terrain._tint(south))
     assert(Codec.decode(Codec.encode(plain))==plain and plain==before)
     mixed.free()
+    # Force visible examples of both forests and mountains, and verify
+    # region instancing uses the full surrounding height map.
+    for cell in [Vector2i(2,1),Vector2i(7,1),Vector2i(2,6),Vector2i(7,6)]:
+        map[cell.y][cell.x] = "forest"
+    for cell in [Vector2i(3,1),Vector2i(6,1),Vector2i(3,6),Vector2i(6,6)]:
+        map[cell.y][cell.x] = "mountain"
+    var art_state: Dictionary = Session.start([],map)
+    art_state[Regions.FIELD] = {"version":1,"primary":"tropical","secondary":"winter"}
+    art_state[Regions.SEED_FIELD] = 1729
+    var art_before: Dictionary = art_state.duplicate(true)
+    var art: Node3D = Terrain.build(art_state)
+    assert(art!=null)
+    assert(art.has_node("VegetacionRegional_tropical/BosqueInstanciado3D"))
+    assert(art.has_node("VegetacionRegional_winter/NieveEnConiferasInstanciadaV20"))
+    assert(art.has_node("RelieveRegional_tropical/Macizos3DPorBiomaV20"))
+    assert(art.has_node("RelieveRegional_winter/Macizos3DPorBiomaV20"))
+    var stats: Dictionary = art.get_meta("render_stats")
+    assert(stats["regional_tree_groups_v49"]==2 and stats["regional_ridge_groups_v49"]==2)
+    assert(stats["trees"]==8 and stats["mountain_ridges"]==4)
+    assert(stats["biome_extra_batches"]<=4 and stats["shared_chunk_materials_v27"]<=3)
+    assert(art_state==art_before)
+    art.free()
