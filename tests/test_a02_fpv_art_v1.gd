@@ -141,6 +141,7 @@ func _run()->void:
             check(bool(model.get_meta("tarvoka_a02_v23_palette_coherence",false)),"V23 satin palette identity")
             check(bool(model.get_meta("tarvoka_a02_v24_matte_art_finish",false)),"V24 restrained ornamental sheen")
             check(bool(model.get_meta("tarvoka_a02_v25_graphic_hierarchy",false)),"V25 coordinated graphic hierarchy")
+            check(bool(model.get_meta("tarvoka_a02_v27_tonal_surface_depth",false)),"V27 layered tonal ornamental depth")
             check(bool(model.get_meta("tarvoka_a02_v26_central_graphic_identity",false)),"V26 opaque central graphic identity")
             if paint!=null and paint.mesh is ArrayMesh:
                 var paint_data:Array=paint.mesh.surface_get_arrays(0)
@@ -215,6 +216,11 @@ func _run()->void:
                                     if image.get_pixel(x,y).get_luminance()>0.90:
                                         light_pixels+=1
                             check(light_pixels>=150 and light_pixels<=240,"V26 legible bitmap graphic coverage")
+                            for pair in [Vector4i(22,175,22,208),Vector4i(150,33,150,94),Vector4i(152,176,152,213),Vector4i(282,171,282,214)]:
+                                var high_ink:Color=image.get_pixel(pair.x,pair.y)
+                                var low_ink:Color=image.get_pixel(pair.z,pair.w)
+                                check(high_ink.is_equal_approx(Color("#f0f2f3")) and low_ink.is_equal_approx(Color("#aebbc3")),"V27 exact paired ornamental ink tones")
+                                check(high_ink.get_luminance()>low_ink.get_luminance()+0.20,"V27 ornamental tonal separation")
                     check(painted.albedo_texture==v19_shared_livery,"V19 shared texture across factions and LODs")
                 var paint_normals:PackedVector3Array=paint_data[Mesh.ARRAY_NORMAL]
                 var paint_colors:PackedColorArray=paint_data[Mesh.ARRAY_COLOR]
@@ -601,7 +607,7 @@ func _run()->void:
     var report:=FileAccess.open(out+"/a02-v10-workload.json",FileAccess.WRITE)
     check(report!=null,"V10 resource report created")
     if report!=null:
-        report.store_string(JSON.stringify({"revision":"V26","measurement":"visible native Godot mesh resources; not FPS or RAM","states":workload},"  "))
+        report.store_string(JSON.stringify({"revision":"V27","measurement":"visible native Godot mesh resources; not FPS or RAM","states":workload},"  "))
         report.close()
     check(Arsenal.profile("fpv")==profile,"no catalogue changes")
     vp.queue_free()
