@@ -48,8 +48,10 @@ static func start(units: Array, terrain: Array, first_faction: int = 0, fog_enab
 
 # Explicit sandbox entrypoint; ordinary new_game never enables it.
 static func start_layered(units: Array,terrain: Array,records: Array,
-        first_faction: int = 0,weather: String = "clear") -> Dictionary:
-    var state: Dictionary = start(units,terrain,first_faction,false,false,false,false,false,weather)
+        first_faction: int = 0,weather: String = "clear",fog: bool = false,economy: bool = false,modern: bool = false,relays: bool = false) -> Dictionary:
+    var state: Dictionary = start(units,terrain,first_faction,fog,relays,economy,modern,false,weather)
+    if (economy and not state.has("economy")) or (relays and not state.has("control")):
+        return {}
     state[Crossings.FIELD] = {"version":Crossings.VERSION,"records":records.duplicate(true)}
     var index: Dictionary = Crossings.state_index(state)
     if not index["valid"] or not Crossings.occupancy(terrain,index["cells"],state["units"])["valid"]:
@@ -66,7 +68,8 @@ static func move(state: Dictionary, unit_id: String, destination: Vector2i) -> D
     var crossing_index: Dictionary = Crossings.state_index(state)
     if not crossing_index["valid"]:
         return {"valid":false,"state":state.duplicate(true)}
-    var action: Dictionary = MoveActions.move(state["units"], unit_id, destination, state["faction"], state["terrain"], Weather.from_state(state),crossing_index["cells"])
+    var allowed: Variant = Visibility.visible_cells(state,int(state["faction"])) if Visibility.enabled(state) and not crossing_index["cells"].is_empty() else null
+    var action: Dictionary = MoveActions.move(state["units"], unit_id, destination, state["faction"], state["terrain"], Weather.from_state(state),crossing_index["cells"],allowed)
     return _apply(state, action)
 
 static func attack(state: Dictionary, attacker_id: String, defender_id: String) -> Dictionary:
