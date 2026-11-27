@@ -1148,7 +1148,9 @@ static func _relief_height(kind: String,x: int,y: int,role: String) -> float:
     var finish: float=float(profile.z)
     match kind:
         "fabric":
-            # Periodic warp/weft plus alternating diagonal twill, with a\n            # small secondary fiber instead of an even checkerboard.\n            return 0.24*cos(warp*u)*cos(weft*v)+0.10*cos(warp*u+weft*v)+0.045*cos(2.0*warp*u-weft*v)+0.055*grain
+            # Periodic warp/weft plus alternating diagonal twill, with a
+            # small secondary fiber instead of an even checkerboard.
+            return 0.24*cos(warp*u)*cos(weft*v)+0.10*cos(warp*u+weft*v)+0.045*cos(2.0*warp*u-weft*v)+0.055*grain
         "rubber":
             return 0.21*cos(warp*u+weft*v)+0.07*cos(warp*u-weft*v)+0.045*cos(2.0*weft*v)+0.04*grain
         _:
