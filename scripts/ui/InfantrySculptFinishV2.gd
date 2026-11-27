@@ -332,6 +332,129 @@ static func refine_v17_kit(model: Node3D,role: String,hero: bool)->bool:
     model.set_meta(GEAR_COUNT_V17,3)
     return true
 
+const ANATOMY_V27 := "tarvoka_infantry_anatomical_contours_v27"
+const ANATOMY_COUNT_V27 := "tarvoka_infantry_anatomical_count_v27"
+const HELMET_V28 := "tarvoka_infantry_helmet_profile_v28"
+# Upper arm, forearm, thigh and calf: independent interior shape weights.
+# The cap rings and all original joint positions are unchanged. Values
+# describe visual cloth volume, not physical size, reach or gameplay.
+const LIMB_GAIN_V27 := {
+    "line":Vector4(1.0,1.0,1.0,1.0),
+    "infantry_commando":Vector4(1.04,1.03,1.03,1.02),
+    "infantry_sniper":Vector4(0.95,0.96,0.96,0.97),
+    "infantry_logistic":Vector4(1.02,1.0,1.04,1.03),
+    "infantry_medic":Vector4(0.97,0.97,0.98,0.98)
+}
+# Preserve the actual closed endpoints and the length used by the contact
+# solver. More rings describe bicep, wrist taper, quadriceps and calf.
+static func _limb_mesh_v27(profile: Array[Vector3],offsets: PackedFloat32Array,
+        gain: float)->ArrayMesh:
+    var refined: Array[Vector3]=[]
+    for i in range(profile.size()):
+        var p: Vector3=profile[i]
+        var blend: float=sin(PI*float(i)/float(profile.size()-1))
+        var g: float=lerpf(1.0,gain,blend)
+        refined.append(Vector3(p.x*g,p.y,p.z*g))
+    return _organic_mesh(refined,20,offsets,0.90)
+
+static func _refine_limbs_v27(model: Node3D,hero: bool)->bool:
+    if not hero:
+        return true
+    var role: String=str(model.get_meta("tarvoka_infantry_role",""))
+    if not LIMB_GAIN_V27.has(role):
+        return false
+    var gain: Vector4=LIMB_GAIN_V27[role]
+    var profiles: Dictionary={
+        "V2_MangaCerrada":[
+            Vector3(0.103,-0.52,0.112),Vector3(0.112,-0.46,0.121),
+            Vector3(0.119,-0.38,0.132),Vector3(0.132,-0.28,0.139),
+            Vector3(0.141,-0.17,0.143),Vector3(0.142,-0.07,0.139),
+            Vector3(0.134,0.01,0.132),Vector3(0.119,0.06,0.12)],
+        "V2_AntebrazoCerrado":[
+            Vector3(0.091,-0.5,0.104),Vector3(0.099,-0.40,0.108),
+            Vector3(0.105,-0.27,0.110),Vector3(0.099,-0.12,0.105),
+            Vector3(0.088,0.07,0.094),Vector3(0.076,0.24,0.082),
+            Vector3(0.066,0.40,0.071),Vector3(0.061,0.5,0.066)],
+        "V2_MusloTaper":[
+            Vector3(0.126,-0.52,0.136),Vector3(0.134,-0.46,0.148),
+            Vector3(0.145,-0.38,0.158),Vector3(0.155,-0.29,0.173),
+            Vector3(0.160,-0.19,0.179),Vector3(0.157,-0.10,0.177),
+            Vector3(0.152,-0.03,0.173),Vector3(0.149,0.012,0.169)],
+        "V2_PantorrillaTaper":[
+            Vector3(0.105,-0.84,0.121),Vector3(0.110,-0.79,0.126),
+            Vector3(0.119,-0.73,0.135),Vector3(0.130,-0.66,0.144),
+            Vector3(0.140,-0.58,0.151),Vector3(0.138,-0.52,0.149),
+            Vector3(0.128,-0.46,0.138),Vector3(0.119,-0.415,0.128)]
+    }
+    var offsets: Dictionary={
+        "V2_MangaCerrada":PackedFloat32Array([0,0.002,0.006,0.010,0.008,0.004,0.001,0]),
+        "V2_AntebrazoCerrado":PackedFloat32Array([0,0.002,0.005,0.006,0.004,0.002,0,0]),
+        "V2_MusloTaper":PackedFloat32Array([0,0.002,-0.003,-0.009,-0.010,-0.005,0,0]),
+        "V2_PantorrillaTaper":PackedFloat32Array([0,0.005,0.012,0.020,0.024,0.017,0.006,0])
+    }
+    var prefix_names: Array[String]=["V2_MangaCerrada","V2_AntebrazoCerrado","V2_MusloTaper","V2_PantorrillaTaper"]
+    var count: int=0
+    for side in [-1,1]:
+        for i in range(prefix_names.size()):
+            var prefix: String=prefix_names[i]
+            var part: MeshInstance3D=_find(model,prefix+"_%d"%side) as MeshInstance3D
+            if part==null or not part.mesh is ArrayMesh:
+                return false
+            var before: AABB=part.mesh.get_aabb()
+            var profile: Array[Vector3]=[]
+            profile.assign(profiles[prefix])
+            part.mesh=_limb_mesh_v27(profile,offsets[prefix],gain[i])
+            part.set_meta("tarvoka_v27_original_bounds",before)
+            count+=1
+    model.set_meta(ANATOMY_V27,role)
+    model.set_meta(ANATOMY_COUNT_V27,count)
+    return true
+
+# Preserve every front vertex of the approved helmet, including its
+# visor/brow seat. Only the rear shell receives a role-specific crown
+# and occipital contour. This is a deterministic deformation of the
+# existing closed triangles, not a second overlapping shell.
+const HELMET_PROFILE_V28 := {
+    "line":Vector2(0.035,0.025),
+    "infantry_commando":Vector2(0.075,0.050),
+    "infantry_sniper":Vector2(-0.065,-0.055),
+    "infantry_logistic":Vector2(0.050,0.065),
+    "infantry_medic":Vector2(-0.035,0.035)
+}
+
+static func _helmet_vertex_v28(vertex: Vector3,bounds: AABB,profile: Vector2)->Vector3:
+    var center: Vector3=bounds.get_center()
+    var height: float=clampf((vertex.y-bounds.position.y)/bounds.size.y,0.0,1.0)
+    var rear: float=clampf((vertex.z-center.z)/maxf(0.0001,bounds.size.z*0.5),0.0,1.0)
+    var blend: float=rear*sin(PI*height)
+    return Vector3(vertex.x*(1.0+profile.x*blend),vertex.y,
+        vertex.z+profile.y*bounds.size.z*blend)
+
+static func _refine_helmet_v28(model: Node3D,hero: bool)->bool:
+    if not hero:
+        return true
+    var role: String=str(model.get_meta("tarvoka_infantry_role",""))
+    if not HELMET_PROFILE_V28.has(role):
+        return false
+    var helmet: MeshInstance3D=_find(model,"V2_CascoEsferoideCerrado") as MeshInstance3D
+    if helmet==null or not helmet.mesh is ArrayMesh:
+        return false
+    var original: AABB=helmet.mesh.get_aabb()
+    var faces: PackedVector3Array=helmet.mesh.get_faces()
+    if faces.is_empty() or original.size.y<=0.0:
+        return false
+    var tool:=SurfaceTool.new()
+    tool.begin(Mesh.PRIMITIVE_TRIANGLES)
+    var profile: Vector2=HELMET_PROFILE_V28[role]
+    for vertex in faces:
+        tool.add_vertex(_helmet_vertex_v28(vertex,original,profile))
+    tool.generate_normals()
+    helmet.mesh=tool.commit()
+    helmet.set_meta("tarvoka_v28_original_bounds",original)
+    helmet.set_meta("tarvoka_v28_source_face_count",faces.size())
+    model.set_meta(HELMET_V28,role)
+    return true
+
 const FACTION_ARMOR_V26 := "tarvoka_infantry_faction_armor_v26"
 const FACTION_COUNT_V26 := "tarvoka_infantry_faction_armor_count_v26"
 # A stronger shared faction livery, tailored to each role. Helmet, chest,
@@ -1616,7 +1739,7 @@ static func apply(model: Node3D, faction_paint: Color, hero: bool) -> bool:
         _plate(upper,"V2_FaccionHerramientas",Vector3(-0.34,-0.13,0.51),
             0.20,0.095,0.026,faction)
     if role in FAMILY_ANATOMY_ROLES:
-        if not _refine_core(model,hero) or not _refine_faction_armor_v26(model,paint,hero) or not _finish_family_materials(model,hero):
+        if not _refine_core(model,hero) or not _refine_limbs_v27(model,hero) or not _refine_helmet_v28(model,hero) or not _refine_faction_armor_v26(model,paint,hero) or not _finish_family_materials(model,hero):
             return false
     model.set_meta(FLAG,true)
     model.set_meta("tarvoka_infantry_v2_hero",hero)

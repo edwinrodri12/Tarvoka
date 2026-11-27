@@ -120,3 +120,7 @@ Auditoría estática: antes, la rama de daño D4 ocultaba el destello y fijaba e
 ## V26 — armadura y color de facción, sólo LOD13
 
 Base validada V25.3 673cebc, native 45912886929 (188 PNG) y Pages 45912886877 (exportación y WebGL aprobados, despliegue omitido). Las imágenes recuperadas mostraban silueta y color aún discretos comparados con G05. V26 usa diez superficies existentes por soldado con mezcla de color específica de cinco roles, remodela dos costillas laterales sin nuevos nodos, conserva opacidad y estados D0–D4. No modifica G05 ni LOD8; no cambia las reglas. Pruebas de geometría cerrada, envolvente, identidad real y color de facción para ocho facciones. No publicar antes de QA y comparación visual.
+
+## V27–V28 — contornos anatómicos y casco individual
+
+Rama candidata derivada de V26 5c3d9da (QA aún en cola). V27 sustituye ocho mallas de tela por contornos de ocho anillos y veinte lados, mantiene extremos longitudinales, pivotes, contactos de manos, suelas y solver. Perfil por rol, volumen posterior de pantorrilla y curvatura de mangas. V28 deforma sólo mitad posterior de la malla existente del casco, conserva vértices frontales y número de caras; cinco perfiles, sin segundo caparazón. Sólo LOD13; G05 y LOD8 intactos. Puertas nativas y WebGL amplían comprobación de metadatos, estanqueidad y extremos, sin eliminar las 188 imágenes. Requiere QA visual, no se publica.

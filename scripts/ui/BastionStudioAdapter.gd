@@ -434,6 +434,9 @@ func _engineer_web_entry_report() -> void:
     evidence["validation_v24"]=str(model_root.get_meta("tarvoka_infantry_validation_v24",""))==_role
     evidence["faction_armor_v26"]=str(model_root.get_meta("tarvoka_infantry_faction_armor_v26",""))==_role
     evidence["faction_armor_count_v26"]=int(model_root.get_meta("tarvoka_infantry_faction_armor_count_v26",0))
+    evidence["anatomy_v27"]=str(model_root.get_meta("tarvoka_infantry_anatomical_contours_v27",""))==_role
+    evidence["anatomy_count_v27"]=int(model_root.get_meta("tarvoka_infantry_anatomical_count_v27",0))
+    evidence["helmet_v28"]=str(model_root.get_meta("tarvoka_infantry_helmet_profile_v28",""))==_role
     evidence["native_viewport"]=model_root.get_parent()==preview
     JavaScriptBridge.eval("window.__tarvokaInfantryEntry="+JSON.stringify(evidence),true)
     if _role=="infantry_engineer":
@@ -1717,6 +1720,8 @@ func _infantry_review_edition() -> String:
         if EngineerFinishV9.has_model(model_root):
             return "V9"
     if model_root!=null and str(model_root.get_meta("tarvoka_infantry_role_identity_v6",""))==_role:
+        if str(model_root.get_meta("tarvoka_infantry_helmet_profile_v28",""))==_role:
+            return "V28"
         if str(model_root.get_meta("tarvoka_infantry_faction_armor_v26",""))==_role:
             return "V26"
         if str(model_root.get_meta("tarvoka_infantry_validation_v24",""))==_role:

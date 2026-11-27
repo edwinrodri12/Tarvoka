@@ -332,6 +332,45 @@ func _run() -> void:
                     check(str(model.get_meta(Finish.GEAR_V17,""))==role,"V17 role-specific kit")
                     check(str(model.get_meta(Finish.OPTICS_V18,""))==role,"V18 optics identity")
                     check(str(model.get_meta(Finish.SURFACES_V19,""))==role,"V19 individual surface identity")
+                    var v28_hero: bool=bool(model.get_meta("tarvoka_infantry_v2_hero",false))
+                    check(model.has_meta(Finish.ANATOMY_V27)==v28_hero and
+                        model.has_meta(Finish.HELMET_V28)==v28_hero,
+                        "V27/V28 detailed-only shape refinements")
+                    if v28_hero:
+                        check(str(model.get_meta(Finish.ANATOMY_V27,""))==role and
+                            int(model.get_meta(Finish.ANATOMY_COUNT_V27,0))==8 and
+                            str(model.get_meta(Finish.HELMET_V28,""))==role,
+                            "V27/V28 real anatomy and helmet identity")
+                        for v27_side in [-1,1]:
+                            for v27_prefix in ["V2_MangaCerrada","V2_AntebrazoCerrado","V2_MusloTaper","V2_PantorrillaTaper"]:
+                                var v27_part: MeshInstance3D=model.find_child(v27_prefix+"_%d"%v27_side,true,false) as MeshInstance3D
+                                check(v27_part!=null and v27_part.has_meta("tarvoka_v27_original_bounds") and
+                                    closed_solid(v27_part.mesh),"V27 actual watertight limb "+v27_prefix)
+                                if v27_part==null or not v27_part.has_meta("tarvoka_v27_original_bounds"):
+                                    continue
+                                var v27_before: AABB=v27_part.get_meta("tarvoka_v27_original_bounds")
+                                var v27_after: AABB=v27_part.mesh.get_aabb()
+                                check(is_equal_approx(v27_before.position.y,v27_after.position.y) and
+                                    is_equal_approx(v27_before.end.y,v27_after.end.y),
+                                    "V27 original longitudinal endpoints retained")
+                                check(v27_part.mesh.get_faces().size()==960,
+                                    "V27 twenty sides and eight capped contour rings")
+                        var v28_shell: MeshInstance3D=model.find_child("V2_CascoEsferoideCerrado",true,false) as MeshInstance3D
+                        check(v28_shell!=null and v28_shell.has_meta("tarvoka_v28_original_bounds") and
+                            closed_solid(v28_shell.mesh),"V28 helmet stays sealed")
+                        if v28_shell!=null and v28_shell.has_meta("tarvoka_v28_original_bounds"):
+                            var v28_before: AABB=v28_shell.get_meta("tarvoka_v28_original_bounds")
+                            var v28_after: AABB=v28_shell.mesh.get_aabb()
+                            check(v28_shell.mesh.get_faces().size()==int(v28_shell.get_meta("tarvoka_v28_source_face_count")) and
+                                is_equal_approx(v28_before.position.y,v28_after.position.y) and
+                                is_equal_approx(v28_before.end.y,v28_after.end.y) and
+                                is_equal_approx(v28_before.position.z,v28_after.position.z),
+                                "V28 same helmet topology, height and front edge")
+                            var v28_front: Vector3=Vector3(0.1,v28_before.get_center().y,v28_before.position.z)
+                            check(Finish._helmet_vertex_v28(v28_front,v28_before,Finish.HELMET_PROFILE_V28[role]).is_equal_approx(v28_front),
+                                "V28 front visor seat unchanged")
+                    else:
+                        check(not model.has_meta(Finish.ANATOMY_COUNT_V27),"V27 no tactical contour changes")
                     var v26_hero: bool=bool(model.get_meta("tarvoka_infantry_v2_hero",false))
                     check(model.has_meta(Finish.FACTION_ARMOR_V26)==v26_hero,
                         "V26 livery restricted to detailed models")
