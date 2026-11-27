@@ -114,3 +114,7 @@ V24 superó las 23 comprobaciones y se integró en ba9c1adc con árbol idéntico
 ## V26 — identidad gráfica central (candidato aislado)
 
 V25 y V24: 110 PNG verificados, 80 estados iguales, 55/55 límites de máscara iguales y delta máximo de cobertura 0.00078. El contraste exterior mejora, pero la composición central aún es demasiado simple. V26 añade un motivo gráfico impreso de identificación A02 y un borde de contraste al atlas opaco compartido; conserva geometría, UV, dimensiones de atlas, animaciones y reglas. La legibilidad en el modelo y los ocho colores debe comprobarse con renders reales. No es aprobación artística.
+
+## V27 — profundidad tonal ornamental (candidato aislado)
+
+V26 integrada en 4599b299 tras finalizar las comprobaciones disponibles. V27 incorpora pares de pigmento claro y oscuro en los campos ornamentales exteriores y sus bordes existentes, conservando la inscripción V26 y el atlas compartido de 512×256. Sin geometría, UV, texturas adicionales, animaciones ni cambios de reglas. Se comprueban muestras exactas y contraste de los pares, identidad del Studio y recursos existentes. Pendientes renders nativos comparativos, WebGL y evaluación artística frente al Bastion. No es aprobación artística.
