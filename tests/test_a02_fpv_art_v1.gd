@@ -126,6 +126,7 @@ func _run()->void:
             check(bool(model.get_meta("tarvoka_a02_v21_distinct_end_art",false)),"V21 distinct front and rear graphic artwork")
             check(bool(model.get_meta("tarvoka_a02_v22_outer_surface_finish",false)),"V22 coordinated outer finish")
             check(bool(model.get_meta("tarvoka_a02_v23_palette_coherence",false)),"V23 satin palette identity")
+            check(bool(model.get_meta("tarvoka_a02_v24_matte_art_finish",false)),"V24 restrained ornamental sheen")
             if paint!=null and paint.mesh is ArrayMesh:
                 var paint_data:Array=paint.mesh.surface_get_arrays(0)
                 var paint_vertices:PackedVector3Array=paint_data[Mesh.ARRAY_VERTEX]
@@ -200,8 +201,9 @@ func _run()->void:
                 var wall:int=0
                 var wall_normals:Dictionary={}
                 check(paint.mesh.get_faces().size()==180,"V17 original 60-triangle sculpt topology")
-                check(is_equal_approx((paint.material_override as StandardMaterial3D).roughness,0.66),
-                    "V17 satin crown finish")
+                check(is_equal_approx((paint.material_override as StandardMaterial3D).roughness,0.88) and
+                    is_equal_approx((paint.material_override as StandardMaterial3D).metallic_specular,0.25),
+                    "V24 matte crown finish")
                 for j in range(paint_normals.size()):
                     var normal:Vector3=paint_normals[j]
                     check(absf(normal.length()-1.0)<0.001,"V4 unit-length normals")
@@ -240,6 +242,7 @@ func _run()->void:
                 check(material!=null and material.vertex_color_use_as_albedo and material.vertex_color_is_srgb,
                     "V3 opaque tonal shell pigment")
                 check(material!=null and material.albedo_texture==v19_shared_livery and material.roughness_texture==v20_shared_roughness,"V20 upper and side finish shares material textures")
+                check(material!=null and is_equal_approx(material.roughness,0.86) and is_equal_approx(material.metallic_specular,0.25),"V24 satin neutral shell")
                 for i in range(4):
                     var ornament:=model.find_child("A02_SculptedShoulder_"+str(i),true,false) as MeshInstance3D
                     check(ornament!=null and ornament.mesh==casing.mesh and ornament.material_override==material,
@@ -305,6 +308,8 @@ func _run()->void:
             check(bool(model.get_meta("tarvoka_a02_v6_material_coherence",false)),"V6 material coherence")
             var first_guard:=model.find_child("A02_ClosedRotorGuard_0",true,false) as MeshInstance3D
             if first_guard!=null:
+                var finish:=first_guard.material_override as StandardMaterial3D
+                check(finish!=null and is_equal_approx(finish.roughness,0.90) and is_equal_approx(finish.metallic_specular,0.20),"V24 restrained outer ornament sheen")
                 for i in range(1,4):
                     var other_guard:=model.find_child("A02_ClosedRotorGuard_"+str(i),true,false) as MeshInstance3D
                     check(other_guard!=null and other_guard.mesh==first_guard.mesh and
@@ -572,7 +577,7 @@ func _run()->void:
     var report:=FileAccess.open(out+"/a02-v10-workload.json",FileAccess.WRITE)
     check(report!=null,"V10 resource report created")
     if report!=null:
-        report.store_string(JSON.stringify({"revision":"V23","measurement":"visible native Godot mesh resources; not FPS or RAM","states":workload},"  "))
+        report.store_string(JSON.stringify({"revision":"V24","measurement":"visible native Godot mesh resources; not FPS or RAM","states":workload},"  "))
         report.close()
     check(Arsenal.profile("fpv")==profile,"no catalogue changes")
     vp.queue_free()
