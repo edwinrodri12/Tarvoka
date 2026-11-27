@@ -123,6 +123,13 @@ func _run() -> void:
     var config: Dictionary = {"version":1,"primary":"desert","secondary":"tropical"}
     var expected: Array = Regions.geographic_candidate(1729,Vector2i(24,18),config)
     assert(setup.map_preview.preview_map==expected)
+    assert(not setup.start_button.disabled)
+    setup.secondary_biome_picker.select(5)
+    setup._changed(true)
+    assert(setup.start_button.disabled)
+    setup.secondary_biome_picker.select(6)
+    setup._changed(true)
+    assert(not setup.start_button.disabled and setup.map_preview.preview_map==expected)
     var before_mixed: Dictionary = board.state.duplicate(true)
     screen._start_skirmish_setup(setup.options())
     assert(board.state==before_mixed)
@@ -138,6 +145,12 @@ func _run() -> void:
         assert(tile.has("region")==bool(tile["explored"]))
     var tampered: Dictionary = JSON.parse_string(Codec.encode(board.state))
     tampered["terrain"][0][0] = "mountain" if expected[0][0]!="mountain" else "plain"
+    assert(Codec.decode(JSON.stringify(tampered)).is_empty())
+    tampered = JSON.parse_string(Codec.encode(board.state))
+    tampered[Regions.GENERATED_FIELD] = 1
+    assert(Codec.decode(JSON.stringify(tampered)).is_empty())
+    tampered = JSON.parse_string(Codec.encode(board.state))
+    tampered[Regions.SEED_FIELD] = 1.0e20
     assert(Codec.decode(JSON.stringify(tampered)).is_empty())
     screen.secondary_biome_picker.select(5)
     screen._confirm_new_game()

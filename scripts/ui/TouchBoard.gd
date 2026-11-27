@@ -455,8 +455,11 @@ func _draw() -> void:
     for y in range(dimensions.y):
         for x in range(dimensions.x):
             var pos := origin + Vector2(x, y) * tile
-            var terrain_type := str(state.get("terrain", [])[y][x])
             var cell := Vector2i(x,y)
+            if fog and not explored.has(cell):
+                draw_rect(Rect2(pos,Vector2.ONE*tile),fog_cover_color(false))
+                continue
+            var terrain_type := str(state.get("terrain", [])[y][x])
             var region: Dictionary = regions.get(cell,{}) if not fog or explored.has(cell) else {}
             var local_biome: String = MixedPreview.local_style(region,cell,dimensions,visual_biome)
             var pigment: Color = VisualStyle.terrain_color(terrain_type,x,y,visual_biome) if region.is_empty() else MixedPreview.tile_tint(terrain_type,cell,region)

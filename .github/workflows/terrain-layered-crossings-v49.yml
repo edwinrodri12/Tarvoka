@@ -24,11 +24,16 @@ on:
       - "scripts/core/SaveCodec.gd"
       - "scripts/core/MoveActions.gd"
       - "scripts/core/BasicAI.gd"
+      - "scripts/core/Visibility.gd"
+      - "scripts/core/Logistics.gd"
       - "scripts/ui/MixedBiomePreviewV49.gd"
       - "tests/test_layered_bridge_render_v48_4.gd"
       - "tests/test_layered_crossings_mixed_biomes_v49.gd"
       - ".github/workflows/terrain-layered-crossings-v49.yml"
   workflow_dispatch:
+concurrency:
+  group: terrain-v49-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 permissions:
   contents: read
 jobs:

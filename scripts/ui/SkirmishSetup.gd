@@ -463,6 +463,8 @@ func _changed(manual: bool = false) -> void:
     if secondary_biome_picker.disabled:
         secondary_biome_picker.select(0)
     var mixed: Dictionary = _mixed_config()
+    if start_button!=null:
+        start_button.disabled = not mixed.is_empty() and not MixedRegions.valid_config(mixed)
     var preset_summary: String = "%s · %s · %s" % [
         scenario_picker.get_item_text(scenario_picker.selected),
         size_picker.get_item_text(size_picker.selected),
@@ -509,6 +511,8 @@ func _changed(manual: bool = false) -> void:
         preview_caption.text = "%s · %s. Vista de terreno sin unidades ni órdenes." % [
             scenario_picker.get_item_text(scenario_picker.selected),
             size_picker.get_item_text(size_picker.selected)]
+        if not mixed.is_empty() and not MixedRegions.valid_config(mixed):
+            preview_caption.text = "Elige dos biomas distintos para activar la vista previa mixta."
 
 
 func _mixed_config() -> Dictionary:

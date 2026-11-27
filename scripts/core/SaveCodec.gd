@@ -125,6 +125,8 @@ static func decode(raw: String) -> Dictionary:
         var mixed = state[MixedRegions.FIELD]
         if not mixed is Dictionary or not _whole(mixed.get("version")) or not _whole(state.get(MixedRegions.SEED_FIELD)):
             return {}
+        if float(mixed["version"])!=MixedRegions.VERSION or float(state[MixedRegions.SEED_FIELD])<Scenarios.MIN_SEED or float(state[MixedRegions.SEED_FIELD])>Scenarios.MAX_SEED:
+            return {}
         mixed["version"] = int(mixed["version"])
         state[MixedRegions.SEED_FIELD] = int(state[MixedRegions.SEED_FIELD])
     if state.has(Crossings.FIELD):

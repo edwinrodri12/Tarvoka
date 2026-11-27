@@ -709,7 +709,12 @@ func _ready() -> void:
     secondary_biome_picker.add_item("Sin segundo bioma",0)
     for i in range(Winter.CHOICES.size()):
         secondary_biome_picker.add_item("Región sur · "+Winter.label_for(Winter.from_index(i)),i+1)
-    secondary_biome_picker.select(0)
+    secondary_biome_picker.select(Winter.CHOICES.find(board.state[MixedRegions.FIELD]["secondary"])+1 if board.state.has(MixedRegions.GENERATED_FIELD) else 0)
+    secondary_biome_picker.disabled = scenario_picker.get_selected_id()!=Scenarios.GEOGRAPHIC_SCENARIO_ID
+    scenario_picker.item_selected.connect(func(_index: int):
+        secondary_biome_picker.disabled = scenario_picker.get_selected_id()!=Scenarios.GEOGRAPHIC_SCENARIO_ID
+        if secondary_biome_picker.disabled:
+            secondary_biome_picker.select(0))
     secondary_biome_picker.tooltip_text = "Disponible en Geografía del bioma; elige dos paisajes distintos."
     panel.add_child(secondary_biome_picker)
     var biome_help := Label.new()
@@ -2144,6 +2149,7 @@ func _load_game(path: String = "user://tarvoka_battle_v1.json") -> bool:
         scenario_picker.select(board.current_scenario_id)
         biome_picker.select(Winter.index_for(board.state))
         secondary_biome_picker.select(Winter.CHOICES.find(board.state[MixedRegions.FIELD]["secondary"])+1 if board.state.has(MixedRegions.GENERATED_FIELD) else 0)
+        secondary_biome_picker.disabled = scenario_picker.get_selected_id()!=Scenarios.GEOGRAPHIC_SCENARIO_ID
         var grid: Vector2i = board.map_dimensions()
         map_size_picker.select(0 if grid == Vector2i(10,8) else (1 if grid == Vector2i(24,18) else 2))
         balance_picker.select(1 if board.symmetric_setup else 0)
@@ -2246,6 +2252,8 @@ func _reroll_map_seed() -> void:
     map_seed_picker.value = next
     if not Scenarios.uses_seed(scenario_picker.get_selected_id()):
         scenario_picker.select(Scenarios.RANDOM_SCENARIO_ID)
+        secondary_biome_picker.select(0)
+        secondary_biome_picker.disabled = true
 
 func _cancel_selection() -> void:
     board.cancel_selection()
@@ -2390,7 +2398,8 @@ func _start_skirmish_setup(configuration: Dictionary) -> void:
     fog_picker.select(int(configuration["fog"]))
     weather_picker.select(int(configuration.get("weather",0)))
     biome_picker.select(int(configuration.get("biome",0)))
-    secondary_biome_picker.select(clampi(int(configuration.get("secondary_biome",0)),0,Winter.CHOICES.size()))
+    secondary_biome_picker.disabled = scenario_picker.get_selected_id()!=Scenarios.GEOGRAPHIC_SCENARIO_ID
+    secondary_biome_picker.select(clampi(int(configuration.get("secondary_biome",0)),0,Winter.CHOICES.size()) if not secondary_biome_picker.disabled else 0)
     weather_cycle_picker.select(int(configuration.get("weather_cycle",0)))
     economy_picker.select(int(configuration["economy"]))
     relay_picker.select(int(configuration["objective"]))

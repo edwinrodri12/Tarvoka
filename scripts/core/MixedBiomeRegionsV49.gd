@@ -55,7 +55,7 @@ static func public_regions(regions: Dictionary,observed: Dictionary) -> Dictiona
 
 # Optional visual-only save metadata independent of the tactical map seed.
 static func valid_state(state: Dictionary) -> bool:
-    if state.has(GENERATED_FIELD) and (state[GENERATED_FIELD]!=true or not state.has(FIELD) or not state.has(SEED_FIELD) or state.get("map_seed")!=state.get(SEED_FIELD) or state.get(Scenarios.GEOGRAPHY_FIELD)!=Scenarios.GEOGRAPHY_VERSION):
+    if state.has(GENERATED_FIELD) and (not state[GENERATED_FIELD] is bool or state[GENERATED_FIELD]!=true or not state.has(FIELD) or not state.has(SEED_FIELD) or state.get("map_seed")!=state.get(SEED_FIELD) or state.get(Scenarios.GEOGRAPHY_FIELD)!=Scenarios.GEOGRAPHY_VERSION):
         return false
     if not state.has(FIELD) and not state.has(SEED_FIELD):
         return true
