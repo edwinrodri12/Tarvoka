@@ -63,7 +63,8 @@ static func _ring_pt(radius: Vector3, segment: int, total: int) -> Vector3:
 # Every segment is physically capped at each end: no floating cylinders,
 # open-sided planes, cut-off legs, backpack shells or faceless proxy surfaces.
 static func _organic_mesh(rings: Array[Vector3], sides: int=12,
-        offsets: PackedFloat32Array=PackedFloat32Array(), shape: float=1.0) -> ArrayMesh:
+        offsets: PackedFloat32Array=PackedFloat32Array(), shape: float=1.0,
+        center_x: float=0.0) -> ArrayMesh:
     var tool := SurfaceTool.new()
     tool.begin(Mesh.PRIMITIVE_TRIANGLES)
     var count: int = maxi(8,sides)
@@ -77,6 +78,8 @@ static func _organic_mesh(rings: Array[Vector3], sides: int=12,
                 var angle: float = TAU*float(i)/float(count)
                 pt.x = signf(cos(angle))*pow(absf(cos(angle)),shape)*rings[row].x
                 pt.z = signf(sin(angle))*pow(absf(sin(angle)),shape)*rings[row].z
+            if center_x!=0.0:
+                pt.x += center_x
             pt.z += shift
             ring.append(pt)
         points.append(ring)
@@ -89,8 +92,8 @@ static func _organic_mesh(rings: Array[Vector3], sides: int=12,
             # Godot front faces use clockwise winding viewed from outside.
             for v in [a,b,c,b,d,c]:
                 tool.add_vertex(v)
-    var low: Vector3 = Vector3(0,rings[0].y,offsets[0] if offsets.size()==rings.size() else 0.0)
-    var top: Vector3 = Vector3(0,rings[-1].y,offsets[-1] if offsets.size()==rings.size() else 0.0)
+    var low: Vector3 = Vector3(center_x,rings[0].y,offsets[0] if offsets.size()==rings.size() else 0.0)
+    var top: Vector3 = Vector3(center_x,rings[-1].y,offsets[-1] if offsets.size()==rings.size() else 0.0)
     for i in range(count):
         var lower: Vector3 = points[0][i]
         var lower_next: Vector3 = points[0][(i+1)%count]
@@ -1203,7 +1206,10 @@ static func _refine_equipment_v30(model: Node3D,hero: bool)->bool:
         var before: AABB=part.mesh.get_aabb()
         var r: Vector3=before.size*0.5
         var center: Vector3=before.get_center()
-        if minf(r.x,minf(r.y,r.z))<=0.0 or not is_zero_approx(center.x):
+        # The original nine-sided rear pockets are not symmetric in X.
+        # Preserve their actual local center, rather than rejecting the
+        # entire soldier because the bounding box is slightly offset.
+        if minf(r.x,minf(r.y,r.z))<=0.0 or not center.is_finite():
             return false
         var corner: float=0.68 if label.begins_with("V2_Cincha") else 0.76
         if label=="V2_CierreMochila":
@@ -1216,7 +1222,7 @@ static func _refine_equipment_v30(model: Node3D,hero: bool)->bool:
             Vector3(r.x*0.94,center.y+r.y*0.72,r.z*0.90),
             Vector3(r.x*corner,center.y+r.y,r.z*corner)]
         var offsets:=PackedFloat32Array([center.z,center.z,center.z,center.z,center.z,center.z])
-        part.mesh=_organic_mesh(rings,16,offsets,0.55)
+        part.mesh=_organic_mesh(rings,16,offsets,0.55,center.x)
         part.set_meta("tarvoka_v30_original_bounds",before)
     model.set_meta(EQUIPMENT_V30,role)
     model.set_meta(EQUIPMENT_COUNT_V30,labels.size())

@@ -142,3 +142,7 @@ La revisión visual V26 mostraba botas de silueta blanda frente a G05. V32 susti
 ## V32.1 — corrección V28.1 de precisión del casco
 
 V26 Pages 45922402949 y V28 Pages 45922713342 aprobados; native V28 45922713332 falló 32 veces sólo en la comprobación compuesta de topología/altura/frente del casco. La causa exacta aún no está confirmada: se elimina el paso de extracción get_faces() y se reconstruye desde los vértices nativos sin índices del ArrayMesh orgánico. El QA separa conteo, altura y borde frontal sin relajar tolerancias, y compara todos los vértices frontales originales por índice. Mantiene prueba de malla cerrada. No modifica roles, materiales ni articulaciones. Nueva ejecución requerida, V32 no aprobado todavía.
+
+## V32.2 — corrección V30.1 del equipo asimétrico
+
+Native V30 45923571663 falla en construcción de los cinco soldados (9 comprobaciones iniciales de seis roles y equipo). El bolsillo curvo original usa nueve lados; su AABB en X tiene centro distinto de cero. V30 exigía simetría exacta y devolvía false, interrumpiendo apply antes de activar la identidad de escultura. V30.1 admite el centro real y lo aplica a todos los vértices y tapas del perfil cerrado. Conserva pruebas de dimensiones, centro, estanqueidad y 192 triángulos; añade regresión específica de bolsillo asimétrico. La rama V32 acumula la corrección V28.1 anterior. No se modifica geometría de LOD8 ni G05. Requiere confirmación nativa.

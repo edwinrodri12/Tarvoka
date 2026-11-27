@@ -408,6 +408,10 @@ func _run() -> void:
                                 v30_after.get_center().is_equal_approx(v30_before.get_center()) and
                                 v30_part.mesh.get_faces().size()==576,
                                 "V30 original envelope with 192 closed triangles")
+                            if v30_label.begins_with("V2_BolsilloCurvo"):
+                                check(absf(v30_before.get_center().x)>0.0001 and
+                                    is_equal_approx(v30_after.get_center().x,v30_before.get_center().x),
+                                    "V30.1 asymmetric nine-sided original pocket center preserved")
                     else:
                         check(not model.has_meta(Finish.EQUIPMENT_COUNT_V30),
                             "V30 tactical equipment unchanged")
