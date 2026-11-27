@@ -8,7 +8,7 @@ on:
       minimum_source_commit:
         description: 'Full SHA of the integrated main revision required on Pages'
         required: true
-        default: '8045d3e64ad4fd33c7f62fac32a0bd9c1fedf3fc'
+        default: '018047aac902fe265b0890446fda153ee721212d'
 
 permissions:
   contents: read
@@ -28,7 +28,7 @@ jobs:
       - name: Verify public manifest, source ancestry and served package hash
         shell: bash
         env:
-          MINIMUM_SOURCE_COMMIT: ${{ inputs.minimum_source_commit || '8045d3e64ad4fd33c7f62fac32a0bd9c1fedf3fc' }}
+          MINIMUM_SOURCE_COMMIT: ${{ inputs.minimum_source_commit || '018047aac902fe265b0890446fda153ee721212d' }}
         run: |
           set -euo pipefail
           mkdir -p build/qa/a02-live
@@ -38,7 +38,7 @@ jobs:
           base = 'https://edwinrodri12.github.io/Tarvoka/'
           merged = os.environ['MINIMUM_SOURCE_COMMIT']
           report = {'url':base,'minimum_integrated_commit':merged}
-          expected_counts = {'V16':(34,5688), 'V17':(34,5688), 'V18':(36,5808)}
+          expected_counts = {'V16':(34,5688), 'V17':(34,5688), 'V18':(36,5808), 'V19':(36,5808), 'V20':(37,5928), 'V21':(37,5928), 'V22':(37,5928)}
           def fetch(path):
               req = urllib.request.Request(base + path + '?a02-audit=' + merged[:12],
                   headers={'Cache-Control':'no-cache','User-Agent':'TARVOKA-release-audit'})
@@ -57,8 +57,16 @@ jobs:
               assert subprocess.run(['git','merge-base','--is-ancestor',source,'origin/main']).returncode == 0, 'Served revision is not on main'
               art = subprocess.check_output(['git','show',source+':scripts/ui/A02FpvArtV1.gd'])
               expected = hashlib.sha256(art).hexdigest()
-              edition = 'V18' if b'tarvoka_a02_v18_undershell_finish' in art else (
-                  'V17' if b'tarvoka_a02_v17_surface_finish' in art else 'V16')
+              edition_markers = [
+                  ('V22', b'tarvoka_a02_v22_outer_surface_finish'),
+                  ('V21', b'tarvoka_a02_v21_distinct_end_art'),
+                  ('V20', b'tarvoka_a02_v20_material_relief'),
+                  ('V19', b'tarvoka_a02_v19_graphic_livery'),
+                  ('V18', b'tarvoka_a02_v18_undershell_finish'),
+                  ('V17', b'tarvoka_a02_v17_surface_finish'),
+                  ('V16', b'tarvoka_a02_v16_damage_presentation')]
+              edition = next((name for name, marker in edition_markers if marker in art), None)
+              assert edition in expected_counts, 'Unrecognized art revision'
               assert b'tarvoka_a02_v16_damage_presentation' in art, 'Unrecognized A02 source'
               assert manifest['a02'] == edition+' EN REVISION', 'Manifest edition differs from source'
               assert manifest['a02_source_sha256'] == expected, 'Wrong A02 art content'
@@ -109,8 +117,10 @@ jobs:
                   const info=await page.evaluate(()=>window.__tarvokaA02Entry);
                   report.info=info;
                   if(info.role!=='fpv'||info.edition!==expected.expected_edition||!info.native_model||info.lod!==13||info.stage!==0||info.visible_meshes!==expected.expected_meshes||info.triangles!==expected.expected_triangles||info.transparent_meshes.length!==0||!info.faction_selector)throw Error('Unexpected live native model: '+JSON.stringify(info));
-                  if(expected.expected_edition!=='V16'&&!info.surface_finish)throw Error('Missing native satin finish');
-                  if(expected.expected_edition==='V18'&&!info.undershell_finish)throw Error('Missing native lower finish');
+                  const revision=Number(expected.expected_edition.slice(1));
+                  for(const [since,field] of [[17,'surface_finish'],[18,'undershell_finish'],[19,'graphic_livery'],[20,'surface_atlas'],[20,'material_relief'],[21,'distinct_end_art'],[22,'outer_surface_finish']]){
+                    if(revision>=since&&!info[field])throw Error('Missing native art marker '+field);
+                  }
                   for(const action of ['a02_move','a02_hover','a02_hit','a02_d0','a02_d1','a02_d2','a02_d3','a02_d4','stop'])
                     if(!info.actions.includes(action))throw Error('Missing '+action);
                   const menu=page.locator('#tarvoka-a02-compact-nav');
