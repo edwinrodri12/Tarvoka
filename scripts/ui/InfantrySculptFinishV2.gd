@@ -332,6 +332,77 @@ static func refine_v17_kit(model: Node3D,role: String,hero: bool)->bool:
     model.set_meta(GEAR_COUNT_V17,3)
     return true
 
+const FACTION_ARMOR_V26 := "tarvoka_infantry_faction_armor_v26"
+const FACTION_COUNT_V26 := "tarvoka_infantry_faction_armor_count_v26"
+# A stronger shared faction livery, tailored to each role. Helmet, chest,
+# shoulders, waist and shins read as painted protective hardware, while
+# fabrics, optics, medical symbols and existing exact-color badges stay intact.
+const LIVERY_V26 := {
+    "line":Vector3(0.55,0.52,0.72),
+    "infantry_commando":Vector3(0.44,0.64,0.76),
+    "infantry_sniper":Vector3(0.36,0.32,0.55),
+    "infantry_logistic":Vector3(0.60,0.55,0.67),
+    "infantry_medic":Vector3(0.67,0.58,0.74)
+}
+
+static func faction_armor_weight_v26(role: String,label: String)->float:
+    var weights: Vector3=LIVERY_V26[role]
+    if label=="V2_CascoEsferoideCerrado":
+        return weights.x
+    if label=="V2_CorazaPectoralHermetica":
+        return weights.y
+    if label.begins_with("Hombrera_"):
+        return weights.z
+    if label.begins_with("V16_ArmorShin"):
+        return weights.y*0.78
+    if label.begins_with("V16_ArmorWaist"):
+        return weights.z*0.65
+    return weights.y*0.68
+
+static func _refine_faction_armor_v26(model: Node3D,paint: Color,hero: bool)->bool:
+    var role: String=str(model.get_meta("tarvoka_infantry_role",""))
+    if not LIVERY_V26.has(role):
+        return false
+    # Never change the already benchmarked Android mesh/material path.
+    if not hero:
+        return true
+    var labels: Array[String]=["V2_CascoEsferoideCerrado","V2_CorazaPectoralHermetica"]
+    for side in [-1,1]:
+        var suffix: String="_%d"%side
+        labels.append_array(["Hombrera"+suffix,"V16_ArmorWaist"+suffix,
+            "V16_ArmorShin"+suffix,"V2_CostillaArmadura"+suffix])
+    for label in labels:
+        var part: MeshInstance3D=_find(model,label) as MeshInstance3D
+        if part==null or part.mesh==null or not part.material_override is StandardMaterial3D:
+            return false
+        var source: StandardMaterial3D=part.material_override as StandardMaterial3D
+        var coat: StandardMaterial3D=source.duplicate() as StandardMaterial3D
+        var original: Color=source.albedo_color
+        var weight: float=faction_armor_weight_v26(role,label)
+        coat.albedo_color=Color(original.r,original.g,original.b,1.0).lerp(paint,weight)
+        part.material_override=coat
+        part.set_meta("tarvoka_v26_base_paint",original)
+        part.set_meta("tarvoka_v26_livery_weight",weight)
+        if label.begins_with("V2_CostillaArmadura"):
+            # Replace the old side plate with a rounded, closed armor rib
+            # at its identical pivot and bounding envelope. Role-dependent
+            # taper changes the relief, not collision or joint locations.
+            var old_bounds: AABB=part.mesh.get_aabb()
+            var r: Vector3=old_bounds.size*0.5
+            var corner: float=0.58+0.23*float(LIVERY_V26[role].y)
+            var rings: Array[Vector3]=[
+                Vector3(r.x*corner,-r.y,r.z*corner),
+                Vector3(r.x*0.91,-r.y*0.72,r.z*0.91),
+                Vector3(r.x,-r.y*0.29,r.z),
+                Vector3(r.x,r.y*0.29,r.z),
+                Vector3(r.x*0.90,r.y*0.72,r.z*0.90),
+                Vector3(r.x*corner,r.y,r.z*corner)]
+            part.mesh=_organic_mesh(rings,16,PackedFloat32Array(),0.57)
+            part.set_meta("tarvoka_v26_rib_bounds",old_bounds)
+    model.set_meta(FACTION_ARMOR_V26,role)
+    model.set_meta(FACTION_COUNT_V26,labels.size())
+    return true
+
 const PREMIUM_V16 := "tarvoka_infantry_premium_exterior_v16"
 const PREMIUM_COUNT_V16 := "tarvoka_infantry_premium_mesh_count_v16"
 
@@ -948,7 +1019,7 @@ static func _family_texture(kind: String,role: String) -> ImageTexture:
 static func _finish_kind(label: String) -> String:
     if label=="V2_VisorOpacoPBR" or label=="V4_CristalPrecision" or label.begins_with("V4_CristalNV_"):
         return "optic"
-    if label.begins_with("V16_Armor"):
+    if label.begins_with("V16_Armor") or label.begins_with("V2_CostillaArmadura"):
         return "armor"
     if label.begins_with("V17_Fabric"):
         return "fabric"
@@ -982,6 +1053,8 @@ static func _finish_family_materials(model: Node3D,hero: bool) -> bool:
     for item in model.find_children("*","MeshInstance3D",true,false):
         var part: MeshInstance3D=item as MeshInstance3D
         var kind: String=_finish_kind(str(part.name))
+        if str(part.name).begins_with("V2_CostillaArmadura") and not part.has_meta("tarvoka_v26_rib_bounds"):
+            continue
         if kind.is_empty() or part.has_meta(STAGE_MATS):
             continue
         var src: StandardMaterial3D=part.material_override as StandardMaterial3D
@@ -1543,7 +1616,7 @@ static func apply(model: Node3D, faction_paint: Color, hero: bool) -> bool:
         _plate(upper,"V2_FaccionHerramientas",Vector3(-0.34,-0.13,0.51),
             0.20,0.095,0.026,faction)
     if role in FAMILY_ANATOMY_ROLES:
-        if not _refine_core(model,hero) or not _finish_family_materials(model,hero):
+        if not _refine_core(model,hero) or not _refine_faction_armor_v26(model,paint,hero) or not _finish_family_materials(model,hero):
             return false
     model.set_meta(FLAG,true)
     model.set_meta("tarvoka_infantry_v2_hero",hero)

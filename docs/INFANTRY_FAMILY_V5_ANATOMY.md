@@ -116,3 +116,7 @@ Confirmado run V15.2 nativo 45907686049 exitoso, incluyendo 140 PNG, Guardia LOD
 ### V25.2 — pose D4 estable y humo independiente
 
 Auditoría estática: antes, la rama de daño D4 ocultaba el destello y fijaba el cuerpo caído, pero una petición posterior de marcha, ataque o trabajo todavía podía alterar torso, brazos y cabeza. Se fuerza la pose neutra de las cinco unidades revisadas mientras D4 está activo, manteniendo el reloj de humo independiente, la postura caída y el contacto de manos. G05 y modelos históricos no se modifican. QA compara diez transformaciones reales del esqueleto al solicitar diez acciones distintas, para cada una de las cinco unidades, ocho facciones y dos LOD (800 solicitudes D4 previstas). Mantiene pruebas de humo, restauración D0 y geometría opaca. Validación nativa y revisión visual siguen pendientes; no se modifica main.
+
+## V26 — armadura y color de facción, sólo LOD13
+
+Base validada V25.3 673cebc, native 45912886929 (188 PNG) y Pages 45912886877 (exportación y WebGL aprobados, despliegue omitido). Las imágenes recuperadas mostraban silueta y color aún discretos comparados con G05. V26 usa diez superficies existentes por soldado con mezcla de color específica de cinco roles, remodela dos costillas laterales sin nuevos nodos, conserva opacidad y estados D0–D4. No modifica G05 ni LOD8; no cambia las reglas. Pruebas de geometría cerrada, envolvente, identidad real y color de facción para ocho facciones. No publicar antes de QA y comparación visual.

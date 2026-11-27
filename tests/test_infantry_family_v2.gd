@@ -332,6 +332,42 @@ func _run() -> void:
                     check(str(model.get_meta(Finish.GEAR_V17,""))==role,"V17 role-specific kit")
                     check(str(model.get_meta(Finish.OPTICS_V18,""))==role,"V18 optics identity")
                     check(str(model.get_meta(Finish.SURFACES_V19,""))==role,"V19 individual surface identity")
+                    var v26_hero: bool=bool(model.get_meta("tarvoka_infantry_v2_hero",false))
+                    check(model.has_meta(Finish.FACTION_ARMOR_V26)==v26_hero,
+                        "V26 livery restricted to detailed models")
+                    if v26_hero:
+                        check(str(model.get_meta(Finish.FACTION_ARMOR_V26,""))==role and
+                            int(model.get_meta(Finish.FACTION_COUNT_V26,0))==10,
+                            "V26 ten real faction armor surfaces")
+                        var v26_labels: Array[String]=["V2_CascoEsferoideCerrado","V2_CorazaPectoralHermetica"]
+                        for v26_side in [-1,1]:
+                            for v26_prefix in ["Hombrera","V16_ArmorWaist","V16_ArmorShin","V2_CostillaArmadura"]:
+                                v26_labels.append(v26_prefix+"_%d"%v26_side)
+                        for v26_label in v26_labels:
+                            var v26_part: MeshInstance3D=model.find_child(v26_label,true,false) as MeshInstance3D
+                            check(v26_part!=null and v26_part.has_meta(Finish.STAGE_MATS) and
+                                v26_part.has_meta("tarvoka_v26_base_paint"),
+                                "V26 actual staged armor "+v26_label)
+                            if v26_part==null or not v26_part.has_meta(Finish.STAGE_MATS):
+                                continue
+                            var v26_base: Color=v26_part.get_meta("tarvoka_v26_base_paint",Color.BLACK)
+                            var v26_expected: Color=v26_base.lerp(Models.faction_paint_color(faction),
+                                Finish.faction_armor_weight_v26(role,v26_label))
+                            var v26_palette: Array=v26_part.get_meta(Finish.STAGE_MATS)
+                            check(v26_palette.size()==5 and v26_palette[0].albedo_color.is_equal_approx(v26_expected),
+                                "V26 actual faction coat on physical shell")
+                            for v26_material in v26_palette:
+                                check(v26_material.transparency==BaseMaterial3D.TRANSPARENCY_DISABLED and
+                                    v26_material.albedo_color.a==1.0,"V26 all armor damage stages opaque")
+                            if v26_label.begins_with("V2_CostillaArmadura"):
+                                var v26_bounds: AABB=v26_part.get_meta("tarvoka_v26_rib_bounds",AABB())
+                                check(closed_solid(v26_part.mesh) and
+                                    v26_part.mesh.get_aabb().size.is_equal_approx(v26_bounds.size) and
+                                    v26_part.mesh.get_aabb().get_center().is_equal_approx(v26_bounds.get_center()),
+                                    "V26 rib is closed and original envelope preserved")
+                    else:
+                        check(not model.has_meta(Finish.FACTION_COUNT_V26),
+                            "V26 no tactical livery or geometry change")
                     check(str(model.get_meta(Finish.MOTION_V21,""))==role,"V21 role motion identity")
                     check(str(model.get_meta(Finish.FX_V22,""))==role,"V22 role effect identity")
                     check(str(model.get_meta("tarvoka_infantry_validation_v24",""))==role,

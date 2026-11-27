@@ -2,7 +2,7 @@ name: TARVOKA Infantry V1 Native 3D QA
 
 on:
   push:
-    branches: [main, art/infantry-premium-v16-20261126, art/infantry-specialist-v20-22-20261126, art/infantry-validation-v23-24-20261126, art/infantry-integration-v25-20261126]
+    branches: [main, art/infantry-premium-v16-20261126, art/infantry-specialist-v20-22-20261126, art/infantry-validation-v23-24-20261126, art/infantry-integration-v25-20261126, art/infantry-premium-v26-20261126]
     paths:
       - 'scripts/ui/InfantrySculptFinishV2.gd'
       - 'scripts/ui/InfantryVariantsV4.gd'
