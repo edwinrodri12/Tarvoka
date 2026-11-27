@@ -229,8 +229,11 @@ static func _guard_finish(primitive:TorusMesh,faction:Color)->ArrayMesh:
         # V23: neutral satin visual base with a clearly colored
         # ornamental upper field; no change to geometry or silhouette.
         var shade:Color=Color("#394650").lerp(faction,0.10+0.65*upper)
-        var graphic:float=(1.0-blocks)*upper*0.35
-        pigments.append(shade.lerp(Color("#303b44"),graphic))
+        # Broad alternating ornamental pigment fields make the faction
+        # color read as deliberate graphic artwork, not uniform plastic.
+        # This is vertex color only, on unchanged fictional art geometry.
+        var graphic:float=(1.0-blocks)*upper*0.72
+        pigments.append(shade.lerp(Color("#394650"),graphic))
     arrays[Mesh.ARRAY_COLOR]=pigments
     var mesh:=ArrayMesh.new()
     mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES,arrays)
@@ -387,6 +390,7 @@ static func build(root:Node3D,faction:Color,hero:bool)->bool:
         if part.get_parent()!=effects:
             part.set_meta(BASE_MATERIAL,part.material_override)
     root.set_meta(DAMAGE,0)
+    root.set_meta("tarvoka_a02_v25_graphic_hierarchy",true)
     root.set_meta("tarvoka_a02_v24_matte_art_finish",true)
     root.set_meta("tarvoka_a02_v23_palette_coherence",true)
     root.set_meta("tarvoka_a02_v22_outer_surface_finish",true)
