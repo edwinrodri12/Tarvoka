@@ -4,6 +4,7 @@ class_name TarvokaBattlefieldPreview
 const Scenarios = preload("res://scripts/core/Scenarios.gd")
 const Chrome = preload("res://scripts/ui/GameUiTheme.gd")
 const Winter = preload("res://scripts/ui/WinterBattleBiome.gd")
+const MixedRegions = preload("res://scripts/core/MixedBiomeRegionsV49.gd")
 
 const SIZES := [Vector2i(10,8),Vector2i(24,18),Vector2i(40,30)]
 const TILES := {
@@ -18,6 +19,8 @@ var scenario_name := ""
 var grid_size := Vector2i.ZERO
 var selected_seed := 0
 var visual_biome := Winter.TEMPERATE
+var mixed_config: Dictionary = {}
+var mixed_regions: Dictionary = {}
 
 func _ready() -> void:
     mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -25,17 +28,20 @@ func _ready() -> void:
     resized.connect(queue_redraw)
 
 func configure(scenario_id: int, size_id: int, seed: int,
-        biome: String = Winter.TEMPERATE) -> void:
+        biome: String = Winter.TEMPERATE,mixed: Dictionary = {}) -> void:
     var next_size: Vector2i = SIZES[clampi(size_id,0,SIZES.size()-1)]
     var next_seed: int = clampi(seed,Scenarios.MIN_SEED,Scenarios.MAX_SEED)
     var next_biome: String = biome if Winter.valid(biome) else Winter.TEMPERATE
-    if grid_size == next_size and selected_seed == next_seed and scenario_name == str(scenario_id) and visual_biome == next_biome:
+    var next_mixed: Dictionary = mixed.duplicate(true) if scenario_id==Scenarios.GEOGRAPHIC_SCENARIO_ID and MixedRegions.valid_config(mixed) else {}
+    if grid_size == next_size and selected_seed == next_seed and scenario_name == str(scenario_id) and visual_biome == next_biome and mixed_config==next_mixed:
         return
     visual_biome = next_biome
     grid_size = next_size
     selected_seed = next_seed
     scenario_name = str(scenario_id)
-    preview_map = Scenarios.selected_terrain(scenario_id,grid_size,selected_seed,visual_biome)
+    mixed_config = next_mixed
+    mixed_regions = MixedRegions.generate(selected_seed,grid_size,mixed_config) if not mixed_config.is_empty() else {}
+    preview_map = Scenarios.selected_terrain(scenario_id,grid_size,selected_seed,visual_biome) if mixed_config.is_empty() else MixedRegions.geographic_candidate(selected_seed,grid_size,mixed_config)
     queue_redraw()
 
 func _draw() -> void:
@@ -54,6 +60,9 @@ func _draw() -> void:
             var tile: Color = (
                 Winter.tile_color(kind,x,y,visual_biome) if visual_biome != Winter.TEMPERATE
                 else TILES.get(kind,TILES["plain"]))
+            if mixed_regions.has(Vector2i(x,y)):
+                var region: Dictionary = mixed_regions[Vector2i(x,y)]
+                tile = Winter.tile_color(kind,x,y,region["primary"]).lerp(Winter.tile_color(kind,x,y,region["secondary"]),float(region["secondary_weight"])/1000.0)
             var top_left := inset + Vector2(float(x)*tile_w,float(y)*tile_h)
             var rect := Rect2(top_left,Vector2(tile_w+0.13,tile_h+0.13))
             draw_rect(rect,tile,true)
