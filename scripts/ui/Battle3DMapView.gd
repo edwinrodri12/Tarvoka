@@ -73,6 +73,8 @@ var _confirm_order_button: Button
 var _cancel_order_button: Button
 var _move_here_button: Button
 var _choose_unit_button: Button
+var _choose_order_button: Button
+var _layered_end_button: Button
 var _legacy_header: PanelContainer
 var _legacy_footer: PanelContainer
 var immersive_hud: Control
@@ -210,6 +212,16 @@ func _ready() -> void:
     _choose_unit_button.pressed.connect(_choose_unit_here)
     _choose_unit_button.hide()
     commands.add_child(_choose_unit_button)
+    _choose_order_button = Button.new()
+    _choose_order_button.text = "Otra orden"
+    _choose_order_button.pressed.connect(_cycle_layered_order)
+    _choose_order_button.hide()
+    commands.add_child(_choose_order_button)
+    _layered_end_button = Button.new()
+    _layered_end_button.text = "Fin turno"
+    _layered_end_button.pressed.connect(_finish_layered_turn)
+    _layered_end_button.hide()
+    commands.add_child(_layered_end_button)
     _cancel_order_button = Button.new()
     _cancel_order_button.name = "CancelarOrden3D"
     _cancel_order_button.text = "Cancelar orden"
@@ -691,12 +703,17 @@ func open_from_board(board: Control) -> bool:
     if board == null:
         return false
     var state: Variant = board.get("state")
-    if not state is Dictionary or state.has(Crossings.FIELD):
+    if not state is Dictionary or (state.has(Crossings.FIELD) and not bool(board.get("allow_layered_3d"))):
         return false
     var viewer: int = 0 if bool(board.get("ai_enabled")) else int(state.get("faction",0))
     if not open_from_state(state,str(board.get("selected_id")),viewer):
         return false
     _live_board = board
+    if state.has(Crossings.FIELD):
+        # Explicit test harness only; use the visible legacy command footer.
+        _set_immersive_mode(false)
+        _update_order_ui()
+        return true
     # Fullscreen map-first mode is exclusive to a live game, never to a
     # detached 3D studio preview (where execution must remain impossible).
     _set_immersive_mode(true)
@@ -731,6 +748,8 @@ func _update_order_ui() -> void:
     _confirm_order_button.visible = pending
     _move_here_button.hide()
     _choose_unit_button.hide()
+    _choose_order_button.hide()
+    _layered_end_button.hide()
     _sync_immersive_hud()
     if not active:
         if _state_snapshot.has(Crossings.FIELD) and _cells.has(_selected_cell):
@@ -740,6 +759,20 @@ func _update_order_ui() -> void:
         else:
             _choose_unit_button.text = "Elegir unidad"
         _order_note.text = "Solo inspección: no es tu turno o la partida ha terminado."
+        return
+    if _state_snapshot.has(Crossings.FIELD):
+        var chosen: String = str(_live_board.get("selected_id"))
+        _choose_unit_button.text = "Cambiar nivel"
+        _choose_unit_button.visible = not Orders.visible_friends(_current_state(),_selected_cell).is_empty()
+        var options: Array[Dictionary] = Orders.layered_intents(_current_state(),chosen,_selected_cell)
+        _choose_order_button.visible = options.size()>1
+        _layered_end_button.visible = not pending
+        _order_note.text = "Puente · selecciona unidad, elige orden y confirma."
+        if pending:
+            var queued: Dictionary = _order_quote.get("order",{})
+            var kind: String = str(queued.get("kind",""))
+            _order_note.text = ("Objetivo exacto: "+str(queued.get("target_id",""))+" · " if kind=="attack" else "Mover · ")+str(_order_quote.get("message",""))
+            _confirm_order_button.text = "CONFIRMAR ATAQUE" if kind=="attack" else "CONFIRMAR MOVIMIENTO"
         return
     _choose_unit_button.text = "Elegir unidad"
     if _selected_cell.x >= 0:
@@ -821,6 +854,26 @@ func _choose_unit_here() -> void:
     if not chosen.is_empty():
         _select_3d_unit(chosen)
 
+func _finish_layered_turn() -> void:
+    if not _state_snapshot.has(Crossings.FIELD) or not Orders.can_control(_live_board) or not _order_quote.is_empty() or _current_state()!=_state_snapshot:
+        return
+    _live_board.call("finish_turn")
+    _refresh_from_board()
+
+func _cycle_layered_order() -> void:
+    if not _state_snapshot.has(Crossings.FIELD) or not Orders.can_control(_live_board) or _current_state()!=_state_snapshot:
+        return
+    var options: Array[Dictionary] = Orders.layered_intents(_current_state(),str(_live_board.get("selected_id")),_selected_cell)
+    if options.is_empty():
+        return
+    var next := 0
+    var prior: Dictionary = _order_quote.get("order",{})
+    for i in range(options.size()):
+        if options[i]["kind"]==prior.get("kind") and options[i]["target_id"]==prior.get("target_id"):
+            next = (i+1)%options.size()
+            break
+    _preview_3d_intent(options[next])
+
 func _request_move_here() -> void:
     if not Orders.can_control(_live_board) or _selected_cell.x < 0:
         return
@@ -844,6 +897,20 @@ func tap_battle_cell(cell: Vector2i) -> bool:
         _refresh_from_board()
         return false
     var selected_before: String = str(_live_board.get("selected_id"))
+    if _state_snapshot.has(Crossings.FIELD):
+        # Repeated taps NEVER commit a layered order; explicit button only.
+        _drop_3d_quote()
+        inspect_cell(cell,false)
+        if not Orders.can_control(_live_board):
+            return true
+        var options: Array[Dictionary] = Orders.layered_intents(_current_state(),selected_before,cell)
+        if not options.is_empty():
+            return _preview_3d_intent(options[0])
+        var chosen: String = Orders.next_friendly(_current_state(),cell,selected_before)
+        if not chosen.is_empty():
+            return _select_3d_unit(chosen)
+        _update_order_ui()
+        return true
     var intent: Dictionary = Orders.legal_intent(_current_state(),selected_before,cell)
     var friends: Array[Dictionary] = Orders.visible_friends(_current_state(),cell)
     # Repeated tap on the SAME still-legal target explicitly authorizes the
@@ -969,7 +1036,8 @@ func inspect_cell(cell: Vector2i, recenter: bool = true) -> bool:
     var selected_friendly: String = _friendly_unit_at(cell)
     if _state_snapshot.has(Crossings.FIELD):
         selected_friendly = ""
-        _selected_hint_unit_id = ""
+        if _live_board==null:
+            _selected_hint_unit_id = ""
     if not selected_friendly.is_empty():
         _selected_hint_unit_id = selected_friendly
         _refresh_ranges()

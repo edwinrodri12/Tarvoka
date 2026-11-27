@@ -24,6 +24,8 @@ on:
       - "scripts/core/SaveCodec.gd"
       - "scripts/core/MoveActions.gd"
       - "scripts/core/BasicAI.gd"
+      - "scripts/core/TacticalHints.gd"
+      - "scripts/ui/Battle3DOrders.gd"
       - "scripts/core/Visibility.gd"
       - "scripts/core/Logistics.gd"
       - "scripts/ui/MixedBiomePreviewV49.gd"
@@ -85,6 +87,7 @@ jobs:
             test -s "artifacts/tarvoka_mixed_v50_2_large_${pair}.png"
           done
           grep -q "V50_LARGE_MAP" /tmp/v49-render.log
+          grep -q "PASS V50_6_LIVE_LAYERED:" /tmp/v49-render.log
       - uses: actions/upload-artifact@v4
         if: always()
         with:
