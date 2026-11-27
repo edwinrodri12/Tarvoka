@@ -39,7 +39,7 @@ jobs:
           set -euo pipefail
           timeout 300s xvfb-run -a -s '-screen 0 1280x720x24' env LIBGL_ALWAYS_SOFTWARE=1 /tmp/Godot_v4.3-stable_linux.x86_64 --rendering-method gl_compatibility --audio-driver Dummy --path . --script res://tests/test_destroyer_hull_v1.gd 2>&1 | tee /tmp/destroyer.log
           if grep -E 'SCRIPT ERROR:|ERROR:|Parse Error:|Assertion failed' /tmp/destroyer.log; then exit 1; fi
-          grep -F 'PASS DESTROYER HULL V1.20: 18 variants, 62 PNGs' /tmp/destroyer.log
+          grep -F 'PASS DESTROYER HULL V1.21: 18 variants, 62 PNGs' /tmp/destroyer.log
           test "$(find build/qa/destroyer-v1 -name '*.png' | wc -l)" -eq 62
       - name: Verify full orbit and workload evidence
         run: |
@@ -52,27 +52,27 @@ jobs:
           expected={(f,l,d) for f in range(-1,8) for l in (8,13) for d in range(5)}
           assert len(data)==90 and {(x['faction'],x['lod'],x['damage']) for x in data}==expected
           for i in range(14):
-              assert (root/f'destroyer_v120_orbit_{i:02}.png').is_file()
+              assert (root/f'destroyer_v121_orbit_{i:02}.png').is_file()
           evidence={}
           for path in sorted(root.glob('*.png')):
               contents=path.read_bytes()
               assert contents[:8]==bytes.fromhex('89504e470d0a1a0a') and struct.unpack('>II',contents[16:24])==(900,650)
               evidence[path.name]=hashlib.sha256(contents).hexdigest()
-          names={f'destroyer_v120_{i}.png' for i in range(16)}
-          names|={f'destroyer_v120_D{i}.png' for i in range(5)}
-          names|={f'destroyer_v120_detail_D{i}.png' for i in (2,3)}
-          names|={f'destroyer_v120_sink_{i}.png' for i in range(4)}
-          names|={f'destroyer_v120_light_{i}.png' for i in range(2)}
-          names|={f'destroyer_v120_faction_{i}.png' for i in range(-1,8)}
-          names|={f'destroyer_v120_compare_{role}_{i}.png' for role in ('destroyer','bastion') for i in range(2)}
-          names|={f'destroyer_v120_graded_D{i}.png' for i in (2,3)}
-          names|={f'destroyer_v120_orbit_{i:02}.png' for i in range(14)}
-          names|={f'destroyer_v120_silhouette_{lod}_{i}.png' for lod in (8,13) for i in range(2)}
+          names={f'destroyer_v121_{i}.png' for i in range(16)}
+          names|={f'destroyer_v121_D{i}.png' for i in range(5)}
+          names|={f'destroyer_v121_detail_D{i}.png' for i in (2,3)}
+          names|={f'destroyer_v121_sink_{i}.png' for i in range(4)}
+          names|={f'destroyer_v121_light_{i}.png' for i in range(2)}
+          names|={f'destroyer_v121_faction_{i}.png' for i in range(-1,8)}
+          names|={f'destroyer_v121_compare_{role}_{i}.png' for role in ('destroyer','bastion') for i in range(2)}
+          names|={f'destroyer_v121_graded_D{i}.png' for i in (2,3)}
+          names|={f'destroyer_v121_orbit_{i:02}.png' for i in range(14)}
+          names|={f'destroyer_v121_silhouette_{lod}_{i}.png' for lod in (8,13) for i in range(2)}
           assert len(evidence)==62 and set(evidence)==names
           (root/'evidence.json').write_text(json.dumps(evidence,indent=2))
           PY
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: tarvoka-destroyer-v120-native
+          name: tarvoka-destroyer-v121-native
           path: build/qa/destroyer-v1/

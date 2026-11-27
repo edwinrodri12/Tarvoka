@@ -1230,7 +1230,7 @@ static func _destroyer_finish(node: Node, detail: bool) -> void:
                 family = "gasket"
                 mat.metallic = 0.0
                 mat.roughness = 0.86
-            elif label.contains("Pasamanos") or label.contains("Baranda") or label.contains("Amarre") or label.contains("Tirador") or label.begins_with("Remache"):
+            elif label.contains("Pasamanos") or label.contains("Baranda") or label.contains("Amarre") or label.contains("Tirador") or label.begins_with("Remache") or label.begins_with("BisagraTapa"):
                 family = "hardware"
                 mat.metallic = 0.60
                 mat.roughness = 0.43
@@ -1269,7 +1269,7 @@ static func _destroyer_finish(node: Node, detail: bool) -> void:
                     mat.vertex_color_use_as_albedo = true
                     mat.emission = Color("#F66A24")
                     mat.emission_energy_multiplier = 0.38
-            if detail and (label in ["CascoNaval","Cubierta","Helipuerto","CarcasaInferior","Puente","TechoPuente","CarcasaMastil","CarcasaTorreta","RegistroProa","TapaBiselada"] or label.begins_with("RegistroPopa")):
+            if detail and (label in ["CascoNaval","Cubierta","Helipuerto","CarcasaInferior","Puente","TechoPuente","CarcasaMastil","CarcasaTorreta","RegistroProa","TapaBiselada"] or label.begins_with("RegistroPopa") or label.begins_with("TapaModulo_") or label.begins_with("RegistroServicio_")):
                 mat.albedo_texture = _destroyer_grain()
                 mat.uv1_triplanar = true
                 mat.uv1_triplanar_sharpness = 4.0
@@ -1420,8 +1420,13 @@ static func _destroyer_deck_equipment(root: Node3D, art_level: int) -> void:
     for x in range(4):
         for z in range(3):
             var pos := Vector3(-0.255+float(x)*0.17,0.937,-0.55+float(z)*0.20)
-            _box(deck,"TapaModulo_%d_%d" % [x,z],pos,
-                Vector3(0.145,0.035,0.175),DARK)
+            if detail:
+                var cover: MeshInstance3D = _destroyer_insert(deck,"TapaModulo_%d_%d" % [x,z],pos,
+                    Vector3(0.145,0.175,0.035),DARK.lerp(STEEL,0.24))
+                cover.rotation_degrees.x = 90.0
+            else:
+                _box(deck,"TapaModulo_%d_%d" % [x,z],pos,
+                    Vector3(0.145,0.035,0.175),DARK)
             if detail:
                 _box(deck,"BisagraTapa_%d_%d" % [x,z],pos+Vector3(0,0.024,0.061),
                     Vector3(0.10,0.027,0.035),ARMOR)
@@ -1695,7 +1700,7 @@ static func _destroyer(root: Node3D, art_level: int = 10) -> void:
     for station in stations:
         deck_stations.append([station[0],station[1]*0.86,0.738,0.802])
     _destroyer_shell(root,"Cubierta",deck_stations,ARMOR)
-    root.set_meta("destroyer_art_revision","1.20")
+    root.set_meta("destroyer_art_revision","1.21")
     _destroyer_bridge(root,art_level)
     _destroyer_navigation(root,art_level)
     _destroyer_deck_equipment(root,art_level)
@@ -1774,6 +1779,9 @@ static func _destroyer_damage_setup(root: Node3D, art_level: int) -> void:
             Vector3(0.22,0.018,0.23),Color("#393031"),Vector3(0,side*16,0)).hide()
     var lid: Node3D = root.get_node("ModuloCubierta/TapaModulo_3_2") as Node3D
     lid.set_meta("naval_rest_transform",lid.transform)
+    var hinge: Node3D = root.get_node_or_null("ModuloCubierta/BisagraTapa_3_2") as Node3D
+    if hinge != null:
+        hinge.set_meta("naval_rest_transform",hinge.transform)
     for child in root.get_children():
         if child is Node3D:
             child.set_meta("naval_rest_transform",child.transform)
@@ -1818,6 +1826,11 @@ static func set_destroyer_damage(root: Node3D, stage: int, progress: float = 0.0
         bridge.transform = Transform3D(lean,hinge-lean*hinge)
         lid.rotation_degrees.z = -28.0
         lid.position += Vector3(0.025,0.025,0.0)
+    var deck_hinge: Node3D = root.get_node_or_null("ModuloCubierta/BisagraTapa_3_2") as Node3D
+    if deck_hinge != null:
+        var lid_rest: Transform3D = lid.get_meta("naval_rest_transform")
+        var hinge_rest: Transform3D = deck_hinge.get_meta("naval_rest_transform")
+        deck_hinge.transform = lid.transform*lid_rest.affine_inverse()*hinge_rest
     if d == 4:
         var tilt := Basis(Vector3.BACK,deg_to_rad(22.0*t))
         for child in root.get_children():
