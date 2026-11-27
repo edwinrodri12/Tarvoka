@@ -3,6 +3,7 @@ class_name TarvokaLogistics
 
 const Rules = preload("res://scripts/core/Rules.gd")
 const Crossings = preload("res://scripts/core/LayeredCrossingsV48.gd")
+const Domains = preload("res://scripts/core/Domains.gd")
 
 # Opt-in supplies for modern battles. Legacy roles and saves without ammo/fuel
 # remain unchanged until a new modern battle explicitly equips them.
