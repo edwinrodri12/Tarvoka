@@ -48,14 +48,14 @@ static func build(axis: String) -> Node3D:
 
 # Closed ramp wedge from the approach tile center to the elevated deck.
 # Coordinates are local to the bridge; one ramp per end of a span.
-static func build_ramp(axis: String,side: int,ground_y: float) -> Node3D:
-    if axis not in ["ew","ns"] or side not in [-1,1] or ground_y>=ROAD_TOP:
+static func build_ramp(axis: String,side: int,ground_y: float,reach: int = 1) -> Node3D:
+    if axis not in ["ew","ns"] or side not in [-1,1] or ground_y>=ROAD_TOP or reach not in [1,2]:
         return null
     var root := Node3D.new()
     root.name = "RampaExperimentalV48"
     root.rotation.y = PI*0.5 if axis=="ns" else 0.0
     var inner: float = float(side)*CELL*0.5
-    var outer: float = float(side)*CELL
+    var outer: float = float(side)*CELL*float(reach)
     var points: Array[Vector3] = [
         Vector3(inner,ROAD_TOP,-RAMP_HALF_WIDTH),
         Vector3(inner,ROAD_TOP,RAMP_HALF_WIDTH),
@@ -85,6 +85,8 @@ static func build_ramp(axis: String,side: int,ground_y: float) -> Node3D:
     instance.material_override = mat
     root.add_child(instance)
     root.set_meta("ground_y",ground_y)
+    root.set_meta("reach",reach)
+    root.set_meta("slope_degrees",rad_to_deg(atan((ROAD_TOP-ground_y)/(absf(outer-inner)))))
     root.set_meta("deck_y",ROAD_TOP)
     return root
 
