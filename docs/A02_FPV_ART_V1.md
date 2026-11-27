@@ -110,3 +110,7 @@ V23 artifact 15167006226 y V22 artifact 15164738390: 110 PNG con SHA-256 comprob
 ## V25 — jerarquía gráfica ornamental (candidato aislado)
 
 V24 superó las 23 comprobaciones y se integró en ba9c1adc con árbol idéntico al candidato validado. Comparación real V23/V24: 110 PNG con SHA-256 verificado, 80 estados idénticos, 54/55 límites de máscara iguales; luminancia media descriptiva de píxeles compartidos de las 16 vistas de facción/LOD 113.71 a 107.29 (escala RGB 8 bits, no reflectancia física). Se observan reflejos más moderados, pero los campos exteriores aún parecen uniformes. V25 intensifica la separación gráfica entre zonas neutras y pigmento de facción sobre las mismas superficies decorativas. Sin geometría, recursos extra, cambios funcionales o mecánicas. Pruebas de color y render pendientes. No es aprobación artística.
+
+## V26 — identidad gráfica central (candidato aislado)
+
+V25 y V24: 110 PNG verificados, 80 estados iguales, 55/55 límites de máscara iguales y delta máximo de cobertura 0.00078. El contraste exterior mejora, pero la composición central aún es demasiado simple. V26 añade un motivo gráfico impreso de identificación A02 y un borde de contraste al atlas opaco compartido; conserva geometría, UV, dimensiones de atlas, animaciones y reglas. La legibilidad en el modelo y los ocho colores debe comprobarse con renders reales. No es aprobación artística.
