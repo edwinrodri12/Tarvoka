@@ -641,7 +641,17 @@ func _render() -> void:
     # Centre on the actual asymmetric hull length, not the origin.
     camera.size = 4.8
     var target := Vector3(0,0.75,-0.37)
+    # Neutral fill for the single bottom-facing inspection. Preserve all
+    # upper comparisons and the contrast threshold; not a hull material change.
+    var lower_fill := DirectionalLight3D.new()
+    lower_fill.rotation_degrees = Vector3(90,0,0)
+    lower_fill.light_color = Color("#F2F5F8")
+    lower_fill.light_energy = 0.65
+    lower_fill.shadow_enabled = false
+    stage.add_child(lower_fill)
+    lower_fill.hide()
     for step in range(14):
+        lower_fill.visible = step==13
         if step<12:
             var angle: float = TAU*float(step)/12.0
             camera.position = target+Vector3(sin(angle)*6.0,3.4,cos(angle)*6.0)
@@ -657,6 +667,7 @@ func _render() -> void:
         if image!=null and not image.is_empty():
             _check_framed_image(image,"Orbit %02d" % step)
             check(image.save_png(output+"/destroyer_v118_orbit_%02d.png" % step)==OK,"Orbit image saved")
+    lower_fill.hide()
     # Matched silhouette comparison: tactical LOD8 vs inspection LOD13.
     Art.set_destroyer_damage(model,0)
     model.hide()
