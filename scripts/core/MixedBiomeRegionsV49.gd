@@ -6,6 +6,7 @@ const Rules = preload("res://scripts/core/Rules.gd")
 const VERSION := 1
 const FIELD := "mixed_biomes_v49"
 const SEED_FIELD := "mixed_biome_seed_v49"
+const GENERATED_FIELD := "mixed_geography_v49"
 
 # Two distinct visual regions with mirrored longitudinal geography.
 # Region metadata is derived rather than saved cell by cell.
@@ -50,6 +51,8 @@ static func public_regions(regions: Dictionary,observed: Dictionary) -> Dictiona
 
 # Optional visual-only save metadata independent of the tactical map seed.
 static func valid_state(state: Dictionary) -> bool:
+    if state.has(GENERATED_FIELD) and (state[GENERATED_FIELD]!=true or not state.has(FIELD) or not state.has(SEED_FIELD) or state.get("map_seed")!=state.get(SEED_FIELD) or state.get(Scenarios.GEOGRAPHY_FIELD)!=Scenarios.GEOGRAPHY_VERSION):
+        return false
     if not state.has(FIELD) and not state.has(SEED_FIELD):
         return true
     return state.get(FIELD) is Dictionary and valid_config(state[FIELD]) and state.get(SEED_FIELD) is int and Scenarios.valid_seed(state[SEED_FIELD])
