@@ -55,6 +55,8 @@ static func encode(state: Dictionary) -> String:
     if state.has(MixedRegions.FIELD):
         snapshot[MixedRegions.FIELD] = state[MixedRegions.FIELD].duplicate(true)
         snapshot[MixedRegions.SEED_FIELD] = state[MixedRegions.SEED_FIELD]
+        if state.has(MixedRegions.GENERATED_FIELD):
+            snapshot[MixedRegions.GENERATED_FIELD] = true
     if state.has(Crossings.FIELD):
         snapshot[Crossings.FIELD] = state[Crossings.FIELD].duplicate(true)
     if state.has("opening"):
@@ -301,6 +303,8 @@ static func _valid_state(state: Dictionary) -> bool:
             return false
         var expected: Array = Scenarios.geographic_terrain(int(state["map_seed"]),dimensions,
             Winter.from_state(state),int(state[Scenarios.GEOGRAPHY_FIELD])) if state.has(Scenarios.GEOGRAPHY_FIELD) else Scenarios.seeded_terrain(int(state["map_seed"]),dimensions)
+        if state.has(MixedRegions.GENERATED_FIELD):
+            expected = MixedRegions.geographic_candidate(int(state["map_seed"]),dimensions,state[MixedRegions.FIELD])
         if state["terrain"] != expected:
             return false
     if not state.get("units") is Array or state["units"].size() > MAX_UNITS:
