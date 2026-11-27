@@ -34,6 +34,7 @@ const Domains = preload("res://scripts/core/Domains.gd")
 const Crossings = preload("res://scripts/core/LayeredCrossingsV48.gd")
 const BridgeArt = preload("res://scripts/ui/LayeredBridgeArtV48.gd")
 const Biomes = preload("res://scripts/ui/WinterBattleBiome.gd")
+const MixedRegions = preload("res://scripts/core/MixedBiomeRegionsV49.gd")
 const CELL := 2.40
 const MAX_DETAILED_UNITS := 8
 const WATER_LEVEL := -0.17
@@ -121,9 +122,25 @@ static func _biome_color(kind: String,cell: Vector2i,
         return COLORS.get(kind,COLORS["plain"])
     return Biomes.tile_color(kind,cell.x,cell.y,biome)
 
+# V49.2: public region pigments use existing geometry and draw batches.
+# Vegetation meshes and material textures remain the original base biome.
+static func _region_pigment(kind: String,cell: Vector2i,biome: String,region: Dictionary,
+        corner: bool = false) -> Color:
+    var primary: String = str(region.get("primary",biome))
+    var secondary: String = str(region.get("secondary",primary))
+    return _pigment(kind,cell,primary,corner).lerp(_pigment(kind,cell,secondary,corner),
+        clampf(float(region.get("secondary_weight",0))/1000.0,0.0,1.0))
+
+static func _pigment(kind: String,cell: Vector2i,biome: String,corner: bool) -> Color:
+    if corner and kind=="water":
+        return _shore_color(biome)
+    if corner and kind=="road":
+        return Biomes.ROAD_SLUSH if biome==Biomes.WINTER else _road_color(biome).lerp(_biome_color("plain",cell,biome),0.58)
+    return _biome_color(kind,cell,biome)
+
 static func _tint(record: Dictionary,biome: String = Biomes.TEMPERATE) -> Color:
-    var tint: Color = _biome_color(str(record.get("kind","unknown")),
-        record.get("cell",Vector2i.ZERO),biome)
+    var tint: Color = _region_pigment(str(record.get("kind","unknown")),
+        record.get("cell",Vector2i.ZERO),biome,record.get("mixed_region_v49",{}))
     if not bool(record.get("visible",false)) and bool(record.get("seen",false)):
         tint = tint.darkened(0.60)
     return tint
@@ -152,6 +169,8 @@ static func _shared_corner_tint(cells: Dictionary, corner: Vector2i,
             elif kind == "road":
                 tint = Biomes.ROAD_SLUSH if biome==Biomes.WINTER else _road_color(biome).lerp(_biome_color("plain",corner,biome),0.58)
                 weight = 0.88
+            if tile.has("mixed_region_v49"):
+                tint = _region_pigment(kind,corner+Vector2i(dx,dy),biome,tile["mixed_region_v49"],true)
             total += tint*weight
             weight_sum += weight
     if weight_sum <= 0.0:
@@ -383,6 +402,16 @@ static func _water_corner_tint(cells: Dictionary,corner: Vector2i,
             if kind not in ["unknown","water"]:
                 known_land += 1
     var deep: Color = _biome_color("water",corner,biome)
+    var total := Color(0,0,0,0)
+    var samples := 0
+    for dy in [-1,0]:
+        for dx in [-1,0]:
+            var tile: Dictionary = cells.get(corner+Vector2i(dx,dy),{})
+            if tile.get("kind")=="water" and bool(tile.get("details",false)) and tile.has("mixed_region_v49"):
+                total += _region_pigment("water",corner,biome,tile["mixed_region_v49"])
+                samples += 1
+    if samples>0:
+        deep = total*(1.0/float(samples))
     var shallow: Color = deep.lightened(0.23)
     return deep.lerp(shallow,clampf(float(known_land)*0.34,0.0,1.0))
 
@@ -1354,7 +1383,7 @@ static func _make_units(parent: Node3D,state: Dictionary,
 static func build(state: Dictionary, selected_id: String = "", viewer: int = 0) -> Node3D:
     var biome: String = Biomes.from_state(state)
     var terrain: Array = state.get("terrain",[])
-    if not Rules.valid_terrain(terrain):
+    if not Rules.valid_terrain(terrain) or not MixedRegions.valid_state(state):
         return null
     var bridge_index: Dictionary = Crossings.state_index(state)
     if not bridge_index["valid"]:
@@ -1375,6 +1404,7 @@ static func build(state: Dictionary, selected_id: String = "", viewer: int = 0) 
     var use_fog: bool = Visibility.enabled(state)
     var explored: Dictionary = Visibility.explored_cells(state,viewer) if use_fog else {}
     var visible: Dictionary = Visibility.visible_cells(state,viewer) if use_fog else {}
+    var regions: Dictionary = MixedRegions.generate(state[MixedRegions.SEED_FIELD],dims,state[MixedRegions.FIELD]) if state.has(MixedRegions.FIELD) else {}
     var cells: Dictionary = {}
     var chunks: Array[Dictionary] = []
     for y in range(0,dims.y,Adapter.CHUNK_SIDE):
@@ -1386,6 +1416,8 @@ static func build(state: Dictionary, selected_id: String = "", viewer: int = 0) 
                 scene.free()
                 return null
             for tile in chunk["cells"]:
+                if bool(tile.get("seen",false)) and regions.has(tile["cell"]):
+                    tile["mixed_region_v49"] = regions[tile["cell"]]
                 cells[tile["cell"]] = tile
             chunks.append(chunk)
     var counters: Dictionary = {"land":0,"water":0,"unknown":0,
@@ -1591,6 +1623,7 @@ static func build(state: Dictionary, selected_id: String = "", viewer: int = 0) 
     scene.set_meta("viewer",viewer)
     scene.set_meta("visual_only",true)
     scene.set_meta("visual_biome",biome)
+    scene.set_meta("mixed_pigments_v49",state.has(MixedRegions.FIELD))
     scene.set_meta("public_cells",cells)
     scene.set_meta("render_stats",counters)
     scene.set_meta("selected_unit_id",selected_id)
