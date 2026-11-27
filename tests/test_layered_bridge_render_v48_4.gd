@@ -3,6 +3,8 @@ extends SceneTree
 const Terrain = preload("res://scripts/ui/BattleTerrain3D.gd")
 const Session = preload("res://scripts/core/BattleSession.gd")
 const Art = preload("res://scripts/ui/LayeredBridgeArtV48.gd")
+const Regions = preload("res://scripts/core/MixedBiomeRegionsV49.gd")
+const Codec = preload("res://scripts/core/SaveCodec.gd")
 const Playback = preload("res://scripts/ui/LayeredBridgePlaybackV48.gd")
 const View = preload("res://scripts/ui/Battle3DMapView.gd")
 
@@ -131,5 +133,46 @@ func _run() -> void:
         assert(viewer._state_snapshot==state and state==original)
         viewer.close_view()
         viewer.free()
+    _check_mixed_and_fog()
     print("PASS V48_4_NATIVE_BRIDGE: real unit bounds, two axes, ramps and read-only water surface")
     quit(0)
+
+func _check_mixed_and_fog() -> void:
+    var map: Array = []
+    for y in range(8):
+        var row: Array = []
+        for x in range(10):
+            row.append("water" if x==4 else "plain")
+        map.append(row)
+    var bridge := Vector2i(4,3)
+    map[3][4] = "road"
+    var unit: Dictionary = _fixture("F","tank","ground",Vector2i(0,0),0)
+    unit["vision"] = 1
+    var enemy: Dictionary = _fixture("E","destroyer","naval",bridge,1)
+    var state: Dictionary = Session.start_layered([unit,enemy],map,[{"x":4,"y":3,"axis":"ew"}],0,"clear",true)
+    assert(not state.is_empty())
+    state[Regions.FIELD] = {"version":1,"primary":"temperate","secondary":"winter"}
+    state[Regions.SEED_FIELD] = 1729
+    var model: Node3D = Terrain.build(state,"F",0)
+    assert(model!=null)
+    var cells: Dictionary = model.get_meta("public_cells")
+    assert(cells[bridge]["kind"]=="unknown" and not cells[bridge].has("mixed_region_v49"))
+    assert(not cells[bridge].has("bridge_axis_v48"))
+    assert(not model.has_node("Unidad3D_E"))
+    assert(model.get_meta("render_stats")["bridge_spans_v48"]==0)
+    assert(cells[Vector2i.ZERO].has("mixed_region_v49"))
+    model.free()
+    var plain: Dictionary = Session.start([],map)
+    plain[Regions.FIELD] = state[Regions.FIELD].duplicate(true)
+    plain[Regions.SEED_FIELD] = 1729
+    var before: Dictionary = plain.duplicate(true)
+    var mixed: Node3D = Terrain.build(plain)
+    assert(mixed!=null and mixed.get_meta("mixed_pigments_v49"))
+    var public: Dictionary = mixed.get_meta("public_cells")
+    var north: Dictionary = public[Vector2i(2,0)]
+    var south: Dictionary = public[Vector2i(2,7)]
+    assert(north["mixed_region_v49"]["secondary_weight"]==0)
+    assert(south["mixed_region_v49"]["secondary_weight"]==1000)
+    assert(Terrain._tint(north)!=Terrain._tint(south))
+    assert(Codec.decode(Codec.encode(plain))==plain and plain==before)
+    mixed.free()
