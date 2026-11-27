@@ -2,6 +2,7 @@ extends RefCounted
 class_name TarvokaLogistics
 
 const Rules = preload("res://scripts/core/Rules.gd")
+const Crossings = preload("res://scripts/core/LayeredCrossingsV48.gd")
 
 # Opt-in supplies for modern battles. Legacy roles and saves without ammo/fuel
 # remain unchanged until a new modern battle explicitly equips them.
@@ -175,6 +176,9 @@ static func field_air_service_allowed(state: Dictionary, unit: Dictionary) -> bo
     var pos = unit.get("pos", null)
     if not pos is Vector2i or not Rules.valid_terrain(terrain) or not Rules.inside(pos, terrain):
         return false
+    var index: Dictionary = Crossings.state_index(state)
+    if not index["valid"] or index["cells"].has(pos):
+        return false
     return str(terrain[pos.y][pos.x]) in ["plain", "road"]
 
 # Source-aware quote: base stocks are unlimited but ALWAYS paid, while field
@@ -226,6 +230,12 @@ static func quote(state: Dictionary, unit_id: String) -> Dictionary:
         var truck_pos: Vector2i = truck["pos"]
         if absi(pos.x - truck_pos.x) + absi(pos.y - truck_pos.y) > 1:
             continue
+        if state.has(Crossings.FIELD):
+            var index: Dictionary = Crossings.state_index(state)
+            if not index["valid"]:
+                continue
+            if (index["cells"].has(pos) or index["cells"].has(truck_pos)) and not Crossings.allows_step(state["terrain"],index["cells"],truck_pos,pos,Domains.GROUND):
+                continue
         var proposed: Dictionary = _calculate_quote(recipient, credits, "truck", str(truck["id"]), int(truck.get("supply_ammo", TRUCK_AMMO_CAP)), int(truck.get("supply_fuel", TRUCK_FUEL_CAP)))
         var count: int = int(proposed.get("ammo", 0)) + int(proposed.get("fuel", 0))
         if proposed.get("valid", false) and count > best_units:
