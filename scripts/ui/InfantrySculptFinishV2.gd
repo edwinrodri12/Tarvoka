@@ -335,6 +335,100 @@ static func refine_v17_kit(model: Node3D,role: String,hero: bool)->bool:
     model.set_meta(GEAR_COUNT_V17,3)
     return true
 
+const BADGES_V34 := "tarvoka_infantry_fitted_badges_v34"
+const BADGE_COUNT_V34 := "tarvoka_infantry_fitted_badge_count_v34"
+const COLLAR_V35 := "tarvoka_infantry_collar_finish_v35"
+
+# Intersect the actual closed sleeve or shoulder shell in its local frame.
+# Do not use an approximate cylinder radius or the old floating box.
+static func side_surface_v34(mesh: Mesh,side: int,y: float,z: float)->float:
+    var faces: PackedVector3Array=mesh.get_faces()
+    var bounds: AABB=mesh.get_aabb()
+    var outside: float=bounds.end.x+1.0 if side>0 else bounds.position.x-1.0
+    var origin:=Vector3(outside,y,z)
+    var closest: float=-INF
+    for i in range(0,faces.size(),3):
+        var hit: Variant=Geometry3D.ray_intersects_triangle(origin,Vector3(-side,0,0),
+            faces[i],faces[i+1],faces[i+2])
+        if hit is Vector3:
+            closest=maxf(closest,float(side)*(hit as Vector3).x)
+    return closest*float(side)
+
+# Closed thin shaped relief follows the actual curved shell. Reuse the
+# original emblem node and exact faction material; no decals or extra draws.
+static func _fit_badge_v34(badge: MeshInstance3D,shell: MeshInstance3D,
+        side: int,center_y: float,half_y: float,half_z: float)->bool:
+    if badge==null or shell==null or badge.get_parent()!=shell.get_parent():
+        return false
+    var source: ArrayMesh=_organic_mesh([
+        Vector3(0.003,-half_y,half_z*0.62),
+        Vector3(0.007,-half_y*0.72,half_z*0.88),
+        Vector3(0.009,-half_y*0.31,half_z),
+        Vector3(0.009,half_y*0.31,half_z),
+        Vector3(0.007,half_y*0.72,half_z*0.88),
+        Vector3(0.003,half_y,half_z*0.62)],16,PackedFloat32Array(),0.70)
+    var raw: PackedVector3Array=source.surface_get_arrays(0)[Mesh.ARRAY_VERTEX]
+    var tool:=SurfaceTool.new()
+    tool.begin(Mesh.PRIMITIVE_TRIANGLES)
+    var cache: Dictionary={}
+    for point in raw:
+        var y: float=point.y+center_y
+        var z: float=point.z
+        var lookup:=Vector2(y,z)
+        if not cache.has(lookup):
+            cache[lookup]=side_surface_v34(shell.mesh,side,y,z)
+        var x: float=cache[lookup]
+        if not is_finite(x):
+            return false
+        tool.add_vertex(Vector3(x+point.x,y,z)+shell.position)
+    tool.generate_normals()
+    badge.mesh=tool.commit()
+    badge.position=Vector3.ZERO
+    badge.rotation=Vector3.ZERO
+    badge.scale=Vector3.ONE
+    badge.set_meta("tarvoka_v34_shell",str(shell.name))
+    badge.set_meta("tarvoka_v34_sample_count",cache.size())
+    return true
+
+static func _refine_badges_v34(model: Node3D,hero: bool)->bool:
+    if not hero:
+        return true
+    var role: String=str(model.get_meta("tarvoka_infantry_role",""))
+    if role not in FAMILY_ANATOMY_ROLES:
+        return false
+    for side in [-1,1]:
+        var suffix: String="_%d"%side
+        var shoulder: MeshInstance3D=_find(model,"Hombrera"+suffix) as MeshInstance3D
+        var sleeve: MeshInstance3D=_find(model,"V2_MangaCerrada"+suffix) as MeshInstance3D
+        var plate: MeshInstance3D=_find(model,"FaccionHombro"+suffix) as MeshInstance3D
+        var patch: MeshInstance3D=_find(model,"V2_FaccionParcheManga"+suffix) as MeshInstance3D
+        if not _fit_badge_v34(plate,shoulder,side,-0.026,0.049,0.058):
+            return false
+        if not _fit_badge_v34(patch,sleeve,side,-0.205,0.069,0.063):
+            return false
+    model.set_meta(BADGES_V34,role)
+    model.set_meta(BADGE_COUNT_V34,4)
+    return true
+
+# A tapered textile neck seal with a small compressed fold. Maintain the
+# original head rig, longitudinal envelope and maximum radial dimensions.
+static func _refine_collar_v35(model: Node3D,hero: bool)->bool:
+    if not hero:
+        return true
+    var collar: MeshInstance3D=_find(model,"CuelloProtegido") as MeshInstance3D
+    if collar==null or collar.mesh==null:
+        return false
+    var before: AABB=collar.mesh.get_aabb()
+    collar.mesh=_organic_mesh([
+        Vector3(0.145,-0.10,0.13),Vector3(0.164,-0.080,0.141),
+        Vector3(0.175,-0.052,0.151),Vector3(0.166,-0.027,0.143),
+        Vector3(0.159,0.006,0.138),Vector3(0.167,0.040,0.148),
+        Vector3(0.167,0.067,0.151),Vector3(0.153,0.098,0.140),
+        Vector3(0.14,0.125,0.13)],24,PackedFloat32Array(),1.0)
+    collar.set_meta("tarvoka_v35_original_bounds",before)
+    model.set_meta(COLLAR_V35,str(model.get_meta("tarvoka_infantry_role","")))
+    return true
+
 const BOOTS_V32 := "tarvoka_infantry_boot_finish_v32"
 const BOOT_COUNT_V32 := "tarvoka_infantry_boot_detail_count_v32"
 
@@ -1908,7 +2002,7 @@ static func apply(model: Node3D, faction_paint: Color, hero: bool) -> bool:
         _plate(upper,"V2_FaccionHerramientas",Vector3(-0.34,-0.13,0.51),
             0.20,0.095,0.026,faction)
     if role in FAMILY_ANATOMY_ROLES:
-        if not _refine_core(model,hero) or not _refine_limbs_v27(model,hero) or not _refine_helmet_v28(model,hero) or not _refine_faction_armor_v26(model,paint,hero) or not _refine_equipment_v30(model,hero) or not _refine_boots_v32(model,paint,hero) or not _finish_family_materials(model,hero):
+        if not _refine_core(model,hero) or not _refine_limbs_v27(model,hero) or not _refine_helmet_v28(model,hero) or not _refine_faction_armor_v26(model,paint,hero) or not _refine_equipment_v30(model,hero) or not _refine_boots_v32(model,paint,hero) or not _refine_badges_v34(model,hero) or not _refine_collar_v35(model,hero) or not _finish_family_materials(model,hero):
             return false
     model.set_meta(FLAG,true)
     model.set_meta("tarvoka_infantry_v2_hero",hero)

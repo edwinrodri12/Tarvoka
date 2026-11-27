@@ -115,7 +115,11 @@ func _run() -> void:
         must(v2!=null and v2.get_parent()==original_preview,
             role+" V2 comparison remains in same 3D viewport")
         if role!="infantry_engineer":
-            var expected_edition: String="V32"
+            var expected_edition: String="V35"
+            must(str(v2.get_meta("tarvoka_infantry_fitted_badges_v34",""))==role and
+                int(v2.get_meta("tarvoka_infantry_fitted_badge_count_v34",0))==4 and
+                str(v2.get_meta("tarvoka_infantry_collar_finish_v35",""))==role,
+                role+" actual fitted badges and neck seal in shared viewport")
             must(str(v2.get_meta("tarvoka_infantry_boot_finish_v32",""))==role and
                 int(v2.get_meta("tarvoka_infantry_boot_detail_count_v32",0))==4,
                 role+" actual V32 boot armor in shared viewport")

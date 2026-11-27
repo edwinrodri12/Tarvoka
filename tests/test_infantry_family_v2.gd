@@ -332,6 +332,60 @@ func _run() -> void:
                     check(str(model.get_meta(Finish.GEAR_V17,""))==role,"V17 role-specific kit")
                     check(str(model.get_meta(Finish.OPTICS_V18,""))==role,"V18 optics identity")
                     check(str(model.get_meta(Finish.SURFACES_V19,""))==role,"V19 individual surface identity")
+                    var v35_hero: bool=bool(model.get_meta("tarvoka_infantry_v2_hero",false))
+                    check(model.has_meta(Finish.BADGES_V34)==v35_hero and
+                        model.has_meta(Finish.COLLAR_V35)==v35_hero,
+                        "V34/V35 only detailed infantry")
+                    if v35_hero:
+                        check(str(model.get_meta(Finish.BADGES_V34,""))==role and
+                            int(model.get_meta(Finish.BADGE_COUNT_V34,0))==4 and
+                            str(model.get_meta(Finish.COLLAR_V35,""))==role,
+                            "V34/V35 fitted badges and neck seal identity")
+                        for v34_side in [-1,1]:
+                            for v34_prefix in ["FaccionHombro","V2_FaccionParcheManga"]:
+                                var v34_badge: MeshInstance3D=model.find_child(v34_prefix+"_%d"%v34_side,true,false) as MeshInstance3D
+                                check(v34_badge!=null and v34_badge.has_meta("tarvoka_v34_shell") and
+                                    int(v34_badge.get_meta("tarvoka_v34_sample_count",0))>12 and
+                                    closed_solid(v34_badge.mesh),"V34 actual closed fitted badge")
+                                if v34_badge==null or not v34_badge.has_meta("tarvoka_v34_shell"):
+                                    continue
+                                var v34_shell: MeshInstance3D=model.find_child(str(v34_badge.get_meta("tarvoka_v34_shell")),true,false) as MeshInstance3D
+                                check(v34_shell!=null and v34_shell.get_parent()==v34_badge.get_parent(),
+                                    "V34 shell and emblem share animated rig")
+                                var v34_mat: StandardMaterial3D=v34_badge.material_override as StandardMaterial3D
+                                check(v34_mat!=null and v34_mat.albedo_color.is_equal_approx(Models.faction_paint_color(faction)) and
+                                    v34_mat.transparency==BaseMaterial3D.TRANSPARENCY_DISABLED,
+                                    "V34 exact faction paint retained")
+                                if v34_shell!=null:
+                                    var v34_points: PackedVector3Array=v34_badge.mesh.surface_get_arrays(0)[Mesh.ARRAY_VERTEX]
+                                    var v34_fit: bool=true
+                                    var v34_inside: bool=false
+                                    var v34_outside: bool=false
+                                    var v34_cache: Dictionary={}
+                                    for v34_point in v34_points:
+                                        var v34_local: Vector3=v34_point-v34_shell.position
+                                        var v34_key:=Vector2(v34_local.y,v34_local.z)
+                                        if not v34_cache.has(v34_key):
+                                            v34_cache[v34_key]=Finish.side_surface_v34(v34_shell.mesh,v34_side,v34_local.y,v34_local.z)
+                                        var v34_delta: float=(v34_local.x-float(v34_cache[v34_key]))*float(v34_side)
+                                        v34_fit=v34_fit and is_finite(v34_delta) and absf(v34_delta)<=0.0091
+                                        v34_inside=v34_inside or v34_delta< -0.001
+                                        v34_outside=v34_outside or v34_delta>0.001
+                                    check(v34_fit and v34_inside and v34_outside,
+                                        "V34 all real vertices follow shell, embedded inner surface")
+                        var v35_neck: MeshInstance3D=model.find_child("CuelloProtegido",true,false) as MeshInstance3D
+                        check(v35_neck!=null and v35_neck.has_meta("tarvoka_v35_original_bounds") and
+                            closed_solid(v35_neck.mesh),"V35 sealed neck contour")
+                        if v35_neck!=null and v35_neck.has_meta("tarvoka_v35_original_bounds"):
+                            var v35_before: AABB=v35_neck.get_meta("tarvoka_v35_original_bounds")
+                            var v35_after: AABB=v35_neck.mesh.get_aabb()
+                            check(v35_before.size.is_equal_approx(v35_after.size) and
+                                v35_before.get_center().is_equal_approx(v35_after.get_center()) and
+                                v35_neck.mesh.get_faces().size()==1296,
+                                "V35 original envelope and 432 triangles")
+                    else:
+                        check(not model.has_meta(Finish.BADGE_COUNT_V34),
+                            "V34 no tactical changes")
                     var v32_hero: bool=bool(model.get_meta("tarvoka_infantry_v2_hero",false))
                     check(model.has_meta(Finish.BOOTS_V32)==v32_hero,
                         "V32 detail only on hero boots")
