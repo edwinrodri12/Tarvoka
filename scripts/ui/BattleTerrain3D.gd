@@ -335,6 +335,13 @@ static func _append_road_finish(tool: SurfaceTool,at: Vector3,
             RoadShore._rect(tool,at,surface,-0.025,0.025,start,end,stripe,0.084)
         elif axis==2:
             RoadShore._rect(tool,at,surface,start,end,-0.025,0.025,stripe,0.084)
+    if biome==Biomes.URBAN and axis in [1,2]:
+        for side in [-1.0,1.0]:
+            var edge: float = float(side)*0.86
+            if axis==1:
+                RoadShore._rect(tool,at,surface,edge-0.09,edge+0.09,-half,half,Color("#adb0a9"),0.045)
+            else:
+                RoadShore._rect(tool,at,surface,-half,half,edge-0.09,edge+0.09,Color("#adb0a9"),0.045)
     # Water-facing curb bands are visual only: they do not create a bridge
     # over a water tile or change naval connectivity.
     var shores: Dictionary = tile["shore"]
@@ -464,17 +471,41 @@ static func _append_extended_ground(tool: SurfaceTool,at: Vector3,
             RoadShore._rect(tool,at,surface,x,x+0.43,z,z+0.25,
                 Color("#6d7358"),0.016)
     elif biome==Biomes.URBAN:
-        for i in range(2):
-            var x: float = -0.87+float(i)*0.91
-            RoadShore._rect(tool,at,surface,x,x+0.83,-0.82,0.82,
-                Color("#a8aba4") if i==0 else Color("#969b99"),0.020)
-            RoadShore._rect(tool,at,surface,x,x+0.83,-0.018,0.018,
-                Color("#696f70"),0.028)
+        _append_urban_plaza(tool,at,surface,cell)
     elif biome==Biomes.ARCHIPELAGO:
         for i in range(2):
             var z: float = -0.45+float(i)*0.65
             RoadShore._rect(tool,at,surface,-0.72,0.72,z,z+0.04,
                 Color("#cabd92"),0.016)
+
+# V51.3: varied paved courtyards, gutters and recessed utility covers.
+# All vertices follow the existing terrain fan. No new building, collider,
+# material or draw group; no object may obscure the tactical unit center.
+static func _append_urban_plaza(tool: SurfaceTool,at: Vector3,surface: Dictionary,cell: Vector2i) -> void:
+    var style: int = posmod(cell.x*17+cell.y*31,3)
+    var slab: Color = [Color("#999e98"),Color("#a7aba3"),Color("#919a9c")][style]
+    RoadShore._rect(tool,at,surface,-0.97,0.97,-0.97,0.97,slab.darkened(0.16),0.015)
+    for row in range(3):
+        for col in range(3):
+            var x: float = -0.92+float(col)*0.62
+            var z: float = -0.92+float(row)*0.62
+            var variation: float = float(posmod(cell.x*7+cell.y*11+row*13+col*3,5)-2)*0.025
+            var color: Color = slab.lightened(variation) if variation>=0.0 else slab.darkened(-variation)
+            RoadShore._rect(tool,at,surface,x,x+0.59,z,z+0.59,color,0.024)
+    for side in [-1.0,1.0]:
+        var edge: float = float(side)*0.98
+        RoadShore._rect(tool,at,surface,edge-0.045,edge+0.045,-0.98,0.98,slab.lightened(0.16),0.033)
+    var center := Vector2(0.67 if style!=1 else -0.67,0.67 if style==2 else -0.67)
+    var midpoint: Vector3 = RoadShore._point(at,surface,center.x,center.y,0.035)
+    for segment in range(8):
+        var a: float = TAU*float(segment)/8.0
+        var b: float = TAU*float(segment+1)/8.0
+        var p: Vector3 = RoadShore._point(at,surface,center.x+cos(a)*0.12,center.y+sin(a)*0.12,0.035)
+        var q: Vector3 = RoadShore._point(at,surface,center.x+cos(b)*0.12,center.y+sin(b)*0.12,0.035)
+        _tri(tool,midpoint,p,q,Color("#596465"))
+    for bar in range(3):
+        var z: float = center.y-0.045+float(bar)*0.045
+        RoadShore._rect(tool,at,surface,center.x-0.07,center.x+0.07,z,z+0.012,Color("#88918d"),0.041)
 
 # V44: restrained ground-edge detail on public plain cells, using the
 # exact tactical height sampler. Keep the center clear for unit silhouettes.

@@ -9,6 +9,8 @@ const Session = preload("res://scripts/core/BattleSession.gd")
 const Opening = preload("res://scripts/core/OpeningBalance.gd")
 const BasicAI = preload("res://scripts/core/BasicAI.gd")
 const SaveStore = preload("res://scripts/core/SaveStore.gd")
+const Codec = preload("res://scripts/core/SaveCodec.gd")
+const Crossings = preload("res://scripts/core/LayeredCrossingsV48.gd")
 const TacticalHints = preload("res://scripts/core/TacticalHints.gd")
 const Scenarios = preload("res://scripts/core/Scenarios.gd")
 const Rules = preload("res://scripts/core/Rules.gd")
@@ -52,7 +54,7 @@ var campaign_locked := false
 var campaign_markers: Array[Vector2i] = []
 var selected_id := ""
 var inspected_enemy_id := "" # Only currently visible enemy, never saved.
-var allow_layered_3d := false # Explicit experimental harness only; normal setup/load remains blocked.
+var allow_layered_3d := false # Explicit validated geographic opt-in; standard menus remain unchanged.
 var require_order_confirmation := false # Main enables safer two-stage taps; legacy test boards remain immediate.
 var pending_order: Dictionary = {}
 var selected_factory_pos := Vector2i(-1,-1)
@@ -107,41 +109,33 @@ func _ready() -> void:
     new_game()
 
 func new_game(scenario_id: int = 0, symmetric: bool = false, fog_mode: bool = false, relay_mode: bool = false, specialized: bool = false, economy_mode: bool = false, modern: bool = false, first_faction: int = 0, map_seed: int = 0, map_dimensions: Vector2i = Vector2i(10,8), chosen_factions: Dictionary = {}, weather: String = "clear", dynamic_weather: bool = false,
-        visual_biome: String = Winter.TEMPERATE,mixed_config: Dictionary = {}) -> void:
+        visual_biome: String = Winter.TEMPERATE,mixed_config: Dictionary = {},layered_geography: bool = false) -> void:
     if not mixed_config.is_empty() and (scenario_id!=Scenarios.GEOGRAPHIC_SCENARIO_ID or not Scenarios.valid_seed(map_seed) or not Rules.supported_size(map_dimensions) or not MixedRegions.valid_config(mixed_config) or mixed_config["primary"]!=visual_biome):
         message = "Configuración multibioma inválida; se conserva la partida."
         return
-    campaign_locked = false
-    campaign_markers.clear()
-    symmetric_setup = symmetric
-    specialized_roster = specialized or modern
-    modern_roster = modern
+    if layered_geography and (scenario_id!=Scenarios.GEOGRAPHIC_SCENARIO_ID or not Scenarios.valid_seed(map_seed) or not Rules.supported_size(map_dimensions)):
+        message = "Los puentes elevados requieren geografía válida; se conserva la partida."
+        return
+    var next_specialized: bool = specialized or modern
     var enemy_hp: int = 10 if symmetric else 8
     var enemy_attack: int = 5 if symmetric else 4
     if not Rules.supported_size(map_dimensions):
         map_dimensions = Vector2i(10,8)
-    view_zoom = 1.0
-    view_pan = Vector2.ZERO
-    iso_zoom = 1.0
-    iso_pan = Vector2.ZERO
-    _reset_touch_gesture()
-    motion_effects.clear()
-    unit_headings.clear()
     var is_seeded: bool = Scenarios.uses_seed(scenario_id) and Scenarios.valid_seed(map_seed)
-    current_scenario_id = scenario_id if is_seeded else (scenario_id if scenario_id >= 0 and scenario_id < Scenarios.LABELS.size() else 0)
+    var next_scenario: int = scenario_id if is_seeded else (scenario_id if scenario_id >= 0 and scenario_id < Scenarios.LABELS.size() else 0)
     var chosen_biome: String = visual_biome if Winter.valid(visual_biome) else Winter.TEMPERATE
-    var terrain: Array = Scenarios.selected_terrain(current_scenario_id,map_dimensions,map_seed,chosen_biome) if mixed_config.is_empty() else MixedRegions.geographic_candidate(map_seed,map_dimensions,mixed_config)
+    var terrain: Array = Scenarios.selected_terrain(next_scenario,map_dimensions,map_seed,chosen_biome) if mixed_config.is_empty() else MixedRegions.geographic_candidate(map_seed,map_dimensions,mixed_config)
     var units: Array = [
         {"id":"A","faction":0,"hp":10,"pos":Vector2i(1,2),"move_points":3,"attack":5,"defense":0,"cover":0,"acted":false},
         {"id":"B","faction":0,"hp":10,"pos":Vector2i(1,5),"move_points":3,"attack":5,"defense":0,"cover":0,"acted":false},
         {"id":"X","faction":1,"hp":enemy_hp,"pos":Vector2i(8,2),"move_points":3,"attack":enemy_attack,"defense":0,"cover":0,"acted":false},
         {"id":"Y","faction":1,"hp":enemy_hp,"pos":Vector2i(8,5),"move_points":3,"attack":enemy_attack,"defense":0,"cover":0,"acted":false}
     ]
-    if specialized_roster:
+    if next_specialized:
         units = Roles.experimental_armies(symmetric)
-    if modern_roster:
+    if modern:
         units = Roles.modern_armies(symmetric)
-    if fog_mode and not specialized_roster:
+    if fog_mode and not next_specialized:
         # Classic recon scouts are mirrored: mobility 4, sight 5.
         units.append({"id":"S","faction":0,"hp":6,"pos":Vector2i(1,3),"move_points":4,"attack":2,"defense":0,"cover":0,"vision":5,"acted":false})
         units.append({"id":"Z","faction":1,"hp":6,"pos":Vector2i(8,3),"move_points":4,"attack":2,"defense":0,"cover":0,"vision":5,"acted":false})
@@ -151,26 +145,46 @@ func new_game(scenario_id: int = 0, symmetric: bool = false, fog_mode: bool = fa
             unit["pos"] = Vector2i(Scenarios.scale_x(old.x,map_dimensions),
                 Scenarios.scale_y(old.y,map_dimensions))
     var opener: int = first_faction if first_faction in [0,1] else 0
-    state = Session.start(units, terrain, opener, fog_mode, relay_mode, economy_mode, modern_roster, true, weather, dynamic_weather)
-    # Persistent decorative setting: separate from snow weather penalties.
-    # Omitted from normal/legacy matches to preserve v1 save payloads.
+    var next_state: Dictionary = Session.start(units, terrain, opener, fog_mode, relay_mode, economy_mode, modern, true, weather, dynamic_weather)
     if Winter.valid(visual_biome) and visual_biome != Winter.TEMPERATE:
-        state[Winter.FIELD] = visual_biome
+        next_state[Winter.FIELD] = visual_biome
+    if Identity.is_valid(chosen_factions):
+        next_state[Identity.STATE_FIELD] = chosen_factions.duplicate(true)
+    if is_seeded:
+        next_state["map_seed"] = map_seed
+        if next_scenario==Scenarios.GEOGRAPHIC_SCENARIO_ID:
+            next_state[Scenarios.GEOGRAPHY_FIELD] = Scenarios.GEOGRAPHY_VERSION
+    if not mixed_config.is_empty():
+        next_state[MixedRegions.FIELD] = mixed_config.duplicate(true)
+        next_state[MixedRegions.SEED_FIELD] = map_seed
+        next_state[MixedRegions.GENERATED_FIELD] = true
+    if layered_geography:
+        next_state = Session.with_geographic_crossings(next_state)
+        if next_state.is_empty() or Codec.encode(next_state).is_empty():
+            message = "Mapa sin puentes seguros o configuración incompatible; se conserva la partida."
+            return
+    # Only replace UI/session after all requested topology checks pass.
+    campaign_locked = false
+    campaign_markers.clear()
+    symmetric_setup = symmetric
+    specialized_roster = next_specialized
+    modern_roster = modern
+    current_scenario_id = next_scenario
+    state = next_state
+    allow_layered_3d = layered_geography
+    if layered_geography:
+        require_order_confirmation = true
+    view_zoom = 1.0
+    view_pan = Vector2.ZERO
+    iso_zoom = 1.0
+    iso_pan = Vector2.ZERO
+    _reset_touch_gesture()
+    motion_effects.clear()
+    unit_headings.clear()
     weather_visual_current = Weather.from_state(state)
     weather_visual_previous = weather_visual_current
     weather_blend = 1.0
-    if Identity.is_valid(chosen_factions):
-        # Cosmetic team presentation only; no new engine faction values.
-        state[Identity.STATE_FIELD] = chosen_factions.duplicate(true)
     inspected_cell = Vector2i(-1,-1)
-    if is_seeded:
-        state["map_seed"] = map_seed
-        if current_scenario_id==Scenarios.GEOGRAPHIC_SCENARIO_ID:
-            state[Scenarios.GEOGRAPHY_FIELD] = Scenarios.GEOGRAPHY_VERSION
-    if not mixed_config.is_empty():
-        state[MixedRegions.FIELD] = mixed_config.duplicate(true)
-        state[MixedRegions.SEED_FIELD] = map_seed
-        state[MixedRegions.GENERATED_FIELD] = true
     selected_factory_pos = Vector2i(-1,-1)
     selected_id = ""
     inspected_enemy_id = ""
@@ -1448,16 +1462,19 @@ func save_game(path: String = SaveStore.DEFAULT_PATH) -> bool:
     message = "Partida guardada." if ok else "No se pudo guardar la partida."
     return ok
 
-func load_game(path: String = SaveStore.DEFAULT_PATH) -> bool:
+func load_game(path: String = SaveStore.DEFAULT_PATH,accept_layered: bool = false) -> bool:
     var report: Dictionary = SaveStore.load_report(path)
     var restored: Dictionary = report["state"]
-    if restored.has("layered_crossings_v48"):
-        message = "Partida experimental de puentes: visor tactico no compatible aun."
+    if restored.has(Crossings.FIELD) and not accept_layered:
+        message = "Partida de puentes: requiere apertura explícita del visor 3D."
         return false
     if restored.is_empty():
         message = "No se pudo cargar la partida."
         return false
     state = restored
+    allow_layered_3d = state.has(Crossings.FIELD)
+    if allow_layered_3d:
+        require_order_confirmation = true
     weather_visual_current = Weather.from_state(state)
     weather_visual_previous = weather_visual_current
     weather_blend = 1.0
@@ -1502,12 +1519,15 @@ func _infer_symmetric_setup() -> bool:
             return int(unit.get("attack", 0)) == 5
     return false
 
-func resume_autosave() -> bool:
+func resume_autosave(accept_layered: bool = false) -> bool:
     var report: Dictionary = SaveStore.load_report(autosave_path)
     var restored: Dictionary = report["state"]
-    if restored.is_empty() or restored.has("layered_crossings_v48"):
+    if restored.is_empty() or (restored.has(Crossings.FIELD) and not accept_layered):
         return false
     state = restored
+    allow_layered_3d = state.has(Crossings.FIELD)
+    if allow_layered_3d:
+        require_order_confirmation = true
     weather_visual_current = Weather.from_state(state)
     weather_visual_previous = weather_visual_current
     weather_blend = 1.0
