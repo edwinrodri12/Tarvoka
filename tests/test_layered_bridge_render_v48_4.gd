@@ -134,6 +134,7 @@ func _run() -> void:
         viewer.close_view()
         viewer.free()
     _check_mixed_and_fog()
+    await _capture_mixed_regions()
     print("PASS V48_4_NATIVE_BRIDGE: real unit bounds, two axes, ramps and read-only water surface")
     quit(0)
 
@@ -198,3 +199,38 @@ func _check_mixed_and_fog() -> void:
     assert(stats["biome_extra_batches"]<=4 and stats["shared_chunk_materials_v27"]<=3)
     assert(art_state==art_before)
     art.free()
+
+func _capture_mixed_regions() -> void:
+    for pair in [["temperate","winter"],["desert","tropical"],["wetland","urban"],["coastal","archipelago"]]:
+        var dims := Vector2i(24,18)
+        var config: Dictionary = {"version":1,"primary":pair[0],"secondary":pair[1]}
+        var map: Array = Regions.geographic_candidate(1729,dims,config)
+        var state: Dictionary = Session.start([],map)
+        state[Regions.FIELD] = config
+        state[Regions.SEED_FIELD] = 1729
+        var snapshot: Dictionary = state.duplicate(true)
+        var model: Node3D = Terrain.build(state)
+        assert(model!=null and state==snapshot)
+        root.add_child(model)
+        var light := DirectionalLight3D.new()
+        light.rotation_degrees = Vector3(-55,-35,0)
+        light.light_energy = 1.15
+        root.add_child(light)
+        var camera := Camera3D.new()
+        camera.projection = Camera3D.PROJECTION_ORTHOGONAL
+        camera.size = 49.0
+        root.add_child(camera)
+        var focus: Vector3 = Terrain.world_at(Vector2i(11,8))
+        camera.position = focus+Vector3(18,45,42)
+        camera.look_at(focus)
+        camera.make_current()
+        for frame in range(12):
+            await process_frame
+        await RenderingServer.frame_post_draw
+        var image: Image = root.get_texture().get_image()
+        assert(image!=null and not image.is_empty())
+        assert(image.save_png("res://artifacts/tarvoka_mixed_v49_6_%s_%s.png" % pair)==OK)
+        print("V49_MIXED_STATS pair=",pair," stats=",model.get_meta("render_stats"))
+        model.free()
+        light.free()
+        camera.free()
