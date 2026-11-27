@@ -243,7 +243,8 @@ static func build(root:Node3D,faction:Color,hero:bool)->bool:
     body.name=BODY
     root.add_child(body)
     var graphite:=_mat(Color("#33414a"),0.12,0.74)
-    var coated_shell:=_mat(Color.WHITE,0.16,0.62)
+    var coated_shell:=_mat(Color.WHITE,0.08,0.86)
+    coated_shell.metallic_specular=0.25
     coated_shell.vertex_color_use_as_albedo=true
     coated_shell.vertex_color_is_srgb=true
     coated_shell.albedo_texture=_crown_livery()
@@ -251,11 +252,13 @@ static func build(root:Node3D,faction:Color,hero:bool)->bool:
     coated_shell.roughness_texture_channel=BaseMaterial3D.TEXTURE_CHANNEL_RED
     coated_shell.texture_filter=BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
     var shell:=_mat(Color("#697b86"),0.16,0.64)
-    var coated_guard:=_mat(Color.WHITE,0.15,0.63)
+    var coated_guard:=_mat(Color.WHITE,0.04,0.90)
+    coated_guard.metallic_specular=0.20
     coated_guard.vertex_color_use_as_albedo=true
     coated_guard.vertex_color_is_srgb=true
     var sculpt:=_sculpt()
-    var enamel:=_mat(faction,0.12,0.66)
+    var enamel:=_mat(faction,0.04,0.88)
+    enamel.metallic_specular=0.25
     enamel.vertex_color_use_as_albedo=true
     enamel.vertex_color_is_srgb=true
     var crown_livery:=enamel.duplicate() as StandardMaterial3D
@@ -336,7 +339,8 @@ static func build(root:Node3D,faction:Color,hero:bool)->bool:
     if hero:
         # A restrained, sculpted ornamental highlight over the flat livery.
         # Kept as a single closed mesh resource at inspection detail only.
-        var crest_material:=_mat(insignia_color.lerp(faction,0.30),0.18,0.50)
+        var crest_material:=_mat(insignia_color.lerp(faction,0.30),0.10,0.80)
+        crest_material.metallic_specular=0.25
         _part(body,"A02_V20_OrnamentalCrest",_crest_reliefs(sculpt),
             Vector3.ZERO,Vector3.ONE,crest_material)
         for side in [-1.0,1.0]:
@@ -383,6 +387,7 @@ static func build(root:Node3D,faction:Color,hero:bool)->bool:
         if part.get_parent()!=effects:
             part.set_meta(BASE_MATERIAL,part.material_override)
     root.set_meta(DAMAGE,0)
+    root.set_meta("tarvoka_a02_v24_matte_art_finish",true)
     root.set_meta("tarvoka_a02_v23_palette_coherence",true)
     root.set_meta("tarvoka_a02_v22_outer_surface_finish",true)
     root.set_meta("tarvoka_a02_v21_distinct_end_art",true)
