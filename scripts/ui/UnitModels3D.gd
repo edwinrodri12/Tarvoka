@@ -1095,6 +1095,8 @@ static var _destroyer_steel_texture: ImageTexture
 static var _destroyer_normal_texture: ImageTexture
 static var _destroyer_rough_texture: ImageTexture
 static var _destroyer_livery_texture: ImageTexture
+static var _destroyer_panel_texture: ImageTexture
+static var _destroyer_panel_roughness: ImageTexture
 static var _destroyer_cloud_mesh: ArrayMesh
 static var _destroyer_flame_mesh: ArrayMesh
 
@@ -1250,6 +1252,54 @@ static func _destroyer_livery_uv(part: MeshInstance3D, width: float, height: flo
     part.mesh = mapped
     part.set_meta("destroyer_integrated_livery",true)
 
+# One opaque authored sheet for the large naval superstructure surfaces.
+# Local projection is normalized to each closed shell, with no repeated tiles.
+# Panel seams are pigment/roughness only, never cutouts or extra geometry.
+static func _destroyer_panel_atlas() -> void:
+    if _destroyer_panel_texture != null:
+        return
+    var pigment := Image.create(128,128,false,Image.FORMAT_RGBA8)
+    var roughness := Image.create(128,128,false,Image.FORMAT_RGBA8)
+    for y in range(128):
+        for x in range(128):
+            var u: float = (float(x)+0.5)/128.0
+            var v: float = (float(y)+0.5)/128.0
+            var border: float = minf(minf(u,1.0-u),minf(v,1.0-v))
+            var seam: float = minf(absf(u-0.34),absf(u-0.68))
+            var joint: bool = border<0.021 or (seam<0.009 and v>0.12 and v<0.88)
+            var edge: bool = border<0.035 or (seam<0.021 and v>0.12 and v<0.88)
+            var tone: float = 0.96+0.018*sin(u*TAU*3.0+cos(v*TAU*2.0))
+            if joint:
+                tone = 0.70
+            elif edge:
+                tone = 0.995
+            elif u>0.34 and u<0.68:
+                tone *= 0.96
+            var r: float = 0.92 if joint else (0.82 if edge else 0.88+0.03*sin(u*TAU)*cos(v*TAU))
+            pigment.set_pixel(x,y,Color(tone,tone,tone,1.0))
+            roughness.set_pixel(x,y,Color(r,r,r,1.0))
+    pigment.generate_mipmaps()
+    roughness.generate_mipmaps()
+    _destroyer_panel_texture = ImageTexture.create_from_image(pigment)
+    _destroyer_panel_roughness = ImageTexture.create_from_image(roughness)
+
+static func _destroyer_apply_panel_atlas(part: MeshInstance3D, mat: StandardMaterial3D) -> void:
+    _destroyer_panel_atlas()
+    var bounds: AABB = part.get_aabb()
+    # The existing local shell positions provide a stable 3D projection.
+    # Godot triplanar coordinates are centered and scaled per axis.
+    var extent: Vector3 = bounds.size
+    mat.uv1_scale = Vector3(0.90/maxf(extent.x,0.01),0.90/maxf(extent.y,0.01),0.90/maxf(extent.z,0.01))
+    mat.uv1_offset = Vector3(0.5,0.5,0.5)-bounds.get_center()*mat.uv1_scale
+    mat.uv1_triplanar = true
+    mat.uv1_triplanar_sharpness = 8.0
+    mat.albedo_texture = _destroyer_panel_texture
+    mat.roughness_texture = _destroyer_panel_roughness
+    mat.roughness_texture_channel = BaseMaterial3D.TEXTURE_CHANNEL_RED
+    # The micro-normal is retained at low amplitude, no simulated holes.
+    mat.normal_scale = 0.14
+    part.set_meta("destroyer_panel_atlas_v123",true)
+
 static func _destroyer_finish(node: Node, detail: bool) -> void:
     if node is MeshInstance3D:
         var part: MeshInstance3D = node as MeshInstance3D
@@ -1327,6 +1377,8 @@ static func _destroyer_finish(node: Node, detail: bool) -> void:
                 if family!="enamel":
                     mat.roughness_texture = _destroyer_roughness()
                     mat.roughness_texture_channel = BaseMaterial3D.TEXTURE_CHANNEL_RED
+            if detail and label in ["CarcasaInferior","Puente","TechoPuente","CarcasaMastil"]:
+                _destroyer_apply_panel_atlas(part,mat)
             if detail and part.get_meta("destroyer_integrated_livery",false):
                 mat.albedo_texture = _destroyer_livery()
                 mat.uv1_triplanar = false
@@ -1781,7 +1833,7 @@ static func _destroyer(root: Node3D, art_level: int = 10) -> void:
         deck_stations.append([station[0],station[1]*0.86,0.738,0.802])
     # Mid-value non-slip deck separates the light superstructure and dark trim.
     _destroyer_shell(root,"Cubierta",deck_stations,Color("#657481"))
-    root.set_meta("destroyer_art_revision","1.22")
+    root.set_meta("destroyer_art_revision","1.23")
     _destroyer_bridge(root,art_level)
     _destroyer_navigation(root,art_level)
     _destroyer_deck_equipment(root,art_level)

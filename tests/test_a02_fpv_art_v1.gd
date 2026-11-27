@@ -118,6 +118,19 @@ func _run()->void:
                         tones[color.to_html()]=true
                         check(color.a>=0.999,"opaque pigment")
                     check(tones.size()>=3,"graduated faction and neutral tones")
+                    var neutral:=Color("#394650")
+                    var colored_count:int=0
+                    var neutral_count:int=0
+                    var official:Color=Models.faction_paint_color(faction)
+                    for color in pigment:
+                        var c:=Vector3(color.r,color.g,color.b)
+                        var n:=Vector3(neutral.r,neutral.g,neutral.b)
+                        var official_rgb:=Vector3(official.r,official.g,official.b)
+                        if c.distance_to(n)<0.10:
+                            neutral_count+=1
+                        if c.distance_to(official_rgb)<n.distance_to(official_rgb)*0.50:
+                            colored_count+=1
+                    check(neutral_count>0 and colored_count>0,"V25 both neutral and faction graphic fields survive")
             check(bool(model.get_meta("tarvoka_a02_v4_surface_normals",false)),"V4 deliberate face shading")
             check(bool(model.get_meta("tarvoka_a02_v17_surface_finish",false)),"V17 satin sculpt finish")
             check(bool(model.get_meta("tarvoka_a02_v19_graphic_livery",false)),"V19 authored opaque decorative paint")
@@ -127,6 +140,7 @@ func _run()->void:
             check(bool(model.get_meta("tarvoka_a02_v22_outer_surface_finish",false)),"V22 coordinated outer finish")
             check(bool(model.get_meta("tarvoka_a02_v23_palette_coherence",false)),"V23 satin palette identity")
             check(bool(model.get_meta("tarvoka_a02_v24_matte_art_finish",false)),"V24 restrained ornamental sheen")
+            check(bool(model.get_meta("tarvoka_a02_v25_graphic_hierarchy",false)),"V25 coordinated graphic hierarchy")
             if paint!=null and paint.mesh is ArrayMesh:
                 var paint_data:Array=paint.mesh.surface_get_arrays(0)
                 var paint_vertices:PackedVector3Array=paint_data[Mesh.ARRAY_VERTEX]
@@ -577,7 +591,7 @@ func _run()->void:
     var report:=FileAccess.open(out+"/a02-v10-workload.json",FileAccess.WRITE)
     check(report!=null,"V10 resource report created")
     if report!=null:
-        report.store_string(JSON.stringify({"revision":"V24","measurement":"visible native Godot mesh resources; not FPS or RAM","states":workload},"  "))
+        report.store_string(JSON.stringify({"revision":"V25","measurement":"visible native Godot mesh resources; not FPS or RAM","states":workload},"  "))
         report.close()
     check(Arsenal.profile("fpv")==profile,"no catalogue changes")
     vp.queue_free()
