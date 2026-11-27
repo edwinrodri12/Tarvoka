@@ -649,11 +649,16 @@ static func faction_paint_color(faction: int) -> Color:
 static func apply_faction_palette(model: Node3D, faction: int) -> int:
     # Independently generated models receive independent StandardMaterial3D
     # instances; recoloring a tank cannot modify any other unit.
-    if model == null or faction < 0 or faction >= VisualStyle.FACTIONS.size():
+    if model == null or faction < -1 or faction >= VisualStyle.FACTIONS.size():
         return 0
-    var painted: int = _paint_panels(model,faction_paint_color(faction))
-    if model.has_meta("destroyer_art_revision"):
-        painted += _destroyer_repaint_hull(model,faction_paint_color(faction))
+    var naval: bool = model.has_meta("destroyer_art_revision")
+    if faction < 0 and not naval:
+        return 0
+    # The neutral naval livery must not be mistaken for the grey faction.
+    var paint: Color = Color("#4F626A") if faction < 0 else faction_paint_color(faction)
+    var painted: int = _paint_panels(model,paint)
+    if naval:
+        painted += _destroyer_repaint_hull(model,paint)
     return painted
 
 static func paintable_count(model: Node) -> int:
@@ -1774,8 +1779,9 @@ static func _destroyer(root: Node3D, art_level: int = 10) -> void:
     var deck_stations: Array = []
     for station in stations:
         deck_stations.append([station[0],station[1]*0.86,0.738,0.802])
-    _destroyer_shell(root,"Cubierta",deck_stations,ARMOR)
-    root.set_meta("destroyer_art_revision","1.21")
+    # Mid-value non-slip deck separates the light superstructure and dark trim.
+    _destroyer_shell(root,"Cubierta",deck_stations,Color("#657481"))
+    root.set_meta("destroyer_art_revision","1.22")
     _destroyer_bridge(root,art_level)
     _destroyer_navigation(root,art_level)
     _destroyer_deck_equipment(root,art_level)

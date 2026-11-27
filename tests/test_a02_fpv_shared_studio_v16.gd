@@ -73,7 +73,7 @@ func _run()->void:
         quit(1)
         return
     check(picker.is_visible_in_tree(),"A02 in visible unified unit selector")
-    check(picker.get_item_text(index).contains("A02") and picker.get_item_text(index).contains("V21"),
+    check(picker.get_item_text(index).contains("A02") and picker.get_item_text(index).contains("V23"),
         "A02 visibly labelled in shared unit list")
     check(str(studio.get("_role"))=="apc","ordinary Studio homepage starts with existing default")
     picker.select(index)
@@ -81,7 +81,7 @@ func _run()->void:
     studio.call("_studio_select_tab",0)
     await process_frame
     var model:=studio.get("model_root") as Node3D
-    check(model!=null and bool(model.get_meta("tarvoka_a02_v20_surface_atlas",false)) and bool(model.get_meta("tarvoka_a02_v20_material_relief",false)) and bool(model.get_meta("tarvoka_a02_v21_distinct_end_art",false)),"native V21 distinct decorative ends")
+    check(model!=null and bool(model.get_meta("tarvoka_a02_v20_surface_atlas",false)) and bool(model.get_meta("tarvoka_a02_v20_material_relief",false)) and bool(model.get_meta("tarvoka_a02_v21_distinct_end_art",false)) and bool(model.get_meta("tarvoka_a02_v22_outer_surface_finish",false)) and bool(model.get_meta("tarvoka_a02_v23_palette_coherence",false)),"native V23 satin palette")
     if model==null:
         quit(1)
         return
@@ -178,5 +178,5 @@ func _run()->void:
     studio.queue_free()
     await process_frame
     if failures==0:
-        print("PASS A02 V21 SHARED STUDIO: actual buttons, damage, faction, stop, model switching")
+        print("PASS A02 V23 SHARED STUDIO: actual buttons, damage, faction, stop, model switching")
     quit(0 if failures==0 else 1)

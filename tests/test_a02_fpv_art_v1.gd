@@ -124,6 +124,8 @@ func _run()->void:
             check(bool(model.get_meta("tarvoka_a02_v20_surface_atlas",false)),"V20 four-face ornamental atlas")
             check(bool(model.get_meta("tarvoka_a02_v20_material_relief",false)),"V20 ornamental relief and varied material finish")
             check(bool(model.get_meta("tarvoka_a02_v21_distinct_end_art",false)),"V21 distinct front and rear graphic artwork")
+            check(bool(model.get_meta("tarvoka_a02_v22_outer_surface_finish",false)),"V22 coordinated outer finish")
+            check(bool(model.get_meta("tarvoka_a02_v23_palette_coherence",false)),"V23 satin palette identity")
             if paint!=null and paint.mesh is ArrayMesh:
                 var paint_data:Array=paint.mesh.surface_get_arrays(0)
                 var paint_vertices:PackedVector3Array=paint_data[Mesh.ARRAY_VERTEX]
@@ -238,6 +240,10 @@ func _run()->void:
                 check(material!=null and material.vertex_color_use_as_albedo and material.vertex_color_is_srgb,
                     "V3 opaque tonal shell pigment")
                 check(material!=null and material.albedo_texture==v19_shared_livery and material.roughness_texture==v20_shared_roughness,"V20 upper and side finish shares material textures")
+                for i in range(4):
+                    var ornament:=model.find_child("A02_SculptedShoulder_"+str(i),true,false) as MeshInstance3D
+                    check(ornament!=null and ornament.mesh==casing.mesh and ornament.material_override==material,
+                        "V22 shared closed shell pigment and sheen on every ornamental surface")
                 var arrays:Array=casing.mesh.surface_get_arrays(0)
                 var colors:PackedColorArray=arrays[Mesh.ARRAY_COLOR]
                 var vertices:PackedVector3Array=arrays[Mesh.ARRAY_VERTEX]
@@ -566,7 +572,7 @@ func _run()->void:
     var report:=FileAccess.open(out+"/a02-v10-workload.json",FileAccess.WRITE)
     check(report!=null,"V10 resource report created")
     if report!=null:
-        report.store_string(JSON.stringify({"revision":"V21","measurement":"visible native Godot mesh resources; not FPS or RAM","states":workload},"  "))
+        report.store_string(JSON.stringify({"revision":"V23","measurement":"visible native Godot mesh resources; not FPS or RAM","states":workload},"  "))
         report.close()
     check(Arsenal.profile("fpv")==profile,"no catalogue changes")
     vp.queue_free()
