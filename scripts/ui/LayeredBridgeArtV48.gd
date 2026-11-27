@@ -3,8 +3,8 @@ class_name TarvokaLayeredBridgeArtV48
 
 # Read-only experimental bridge art. Never changes the tactical graph.
 const CELL := 2.4
-const DECK_TOP := 1.15
-const DECK_BOTTOM := 0.94
+const DECK_TOP := 1.99
+const DECK_BOTTOM := 1.78
 const WATER_LEVEL := -0.17
 const ROAD_TOP := DECK_TOP+0.04
 const RAMP_HALF_WIDTH := 0.63
