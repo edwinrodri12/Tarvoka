@@ -10,6 +10,14 @@ on:
       - "tests/test_modern_arsenal_ui.gd"
       - "scripts/ui/BattleTerrain3D.gd"
       - "scripts/ui/TerrainSurfaceFinish3D.gd"
+      - "scripts/ui/SkirmishSetup.gd"
+      - "scripts/ui/Main.gd"
+      - "scripts/ui/TouchBoard.gd"
+      - "scripts/ui/BattlefieldPreview.gd"
+      - "scripts/ui/IsoRenderer.gd"
+      - "scripts/ui/BattleMinimap.gd"
+      - "scripts/ui/City3DPerfProbeV7.gd"
+      - "tests/test_seeded_map_ui.gd"
       - "tests/test_scenarios.gd"
       - "scripts/ui/Battle3DMapView.gd"
       - "scripts/core/BattleSession.gd"
@@ -26,7 +34,7 @@ permissions:
 jobs:
   prototype:
     runs-on: ubuntu-22.04
-    timeout-minutes: 12
+    timeout-minutes: 16
     steps:
       - uses: actions/checkout@v4
       - name: Install Godot and import checkout
@@ -46,6 +54,13 @@ jobs:
           timeout 150s /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . --script res://tests/test_layered_crossings_mixed_biomes_v49.gd 2>&1 | tee /tmp/v49-test.log
           if grep -E 'SCRIPT ERROR:|Parse Error:|Assertion failed' /tmp/v49-test.log; then exit 1; fi
           grep -q 'PASS V48_V49_EXPERIMENT:' /tmp/v49-test.log
+      - name: Validate actual mixed skirmish setup and saved match
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout 150s /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . --script res://tests/test_seeded_map_ui.gd 2>&1 | tee /tmp/v49-setup.log
+          if grep -E 'SCRIPT ERROR:|Parse Error:|Assertion failed' /tmp/v49-setup.log; then exit 1; fi
+          grep -q 'PASS seeded map UI:' /tmp/v49-setup.log
       - name: Render real bridge and actual unit envelopes
         shell: bash
         run: |
