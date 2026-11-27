@@ -20,6 +20,7 @@ const Logistics = preload("res://scripts/core/Logistics.gd")
 const Visibility = preload("res://scripts/core/Visibility.gd")
 const VisualStyle = preload("res://scripts/ui/VisualStyle.gd")
 const Winter = preload("res://scripts/ui/WinterBattleBiome.gd")
+const MixedRegions = preload("res://scripts/core/MixedBiomeRegionsV49.gd")
 const Weather = preload("res://scripts/core/Weather.gd")
 const WeatherPainter = preload("res://scripts/ui/WeatherPainter.gd")
 const BattleVFX = preload("res://scripts/ui/BattleVFX.gd")
@@ -104,7 +105,10 @@ func _ready() -> void:
     new_game()
 
 func new_game(scenario_id: int = 0, symmetric: bool = false, fog_mode: bool = false, relay_mode: bool = false, specialized: bool = false, economy_mode: bool = false, modern: bool = false, first_faction: int = 0, map_seed: int = 0, map_dimensions: Vector2i = Vector2i(10,8), chosen_factions: Dictionary = {}, weather: String = "clear", dynamic_weather: bool = false,
-        visual_biome: String = Winter.TEMPERATE) -> void:
+        visual_biome: String = Winter.TEMPERATE,mixed_config: Dictionary = {}) -> void:
+    if not mixed_config.is_empty() and (scenario_id!=Scenarios.GEOGRAPHIC_SCENARIO_ID or not Scenarios.valid_seed(map_seed) or not Rules.supported_size(map_dimensions) or not MixedRegions.valid_config(mixed_config) or mixed_config["primary"]!=visual_biome):
+        message = "Configuración multibioma inválida; se conserva la partida."
+        return
     campaign_locked = false
     campaign_markers.clear()
     symmetric_setup = symmetric
@@ -124,7 +128,7 @@ func new_game(scenario_id: int = 0, symmetric: bool = false, fog_mode: bool = fa
     var is_seeded: bool = Scenarios.uses_seed(scenario_id) and Scenarios.valid_seed(map_seed)
     current_scenario_id = scenario_id if is_seeded else (scenario_id if scenario_id >= 0 and scenario_id < Scenarios.LABELS.size() else 0)
     var chosen_biome: String = visual_biome if Winter.valid(visual_biome) else Winter.TEMPERATE
-    var terrain: Array = Scenarios.selected_terrain(current_scenario_id,map_dimensions,map_seed,chosen_biome)
+    var terrain: Array = Scenarios.selected_terrain(current_scenario_id,map_dimensions,map_seed,chosen_biome) if mixed_config.is_empty() else MixedRegions.geographic_candidate(map_seed,map_dimensions,mixed_config)
     var units: Array = [
         {"id":"A","faction":0,"hp":10,"pos":Vector2i(1,2),"move_points":3,"attack":5,"defense":0,"cover":0,"acted":false},
         {"id":"B","faction":0,"hp":10,"pos":Vector2i(1,5),"move_points":3,"attack":5,"defense":0,"cover":0,"acted":false},
@@ -161,6 +165,10 @@ func new_game(scenario_id: int = 0, symmetric: bool = false, fog_mode: bool = fa
         state["map_seed"] = map_seed
         if current_scenario_id==Scenarios.GEOGRAPHIC_SCENARIO_ID:
             state[Scenarios.GEOGRAPHY_FIELD] = Scenarios.GEOGRAPHY_VERSION
+    if not mixed_config.is_empty():
+        state[MixedRegions.FIELD] = mixed_config.duplicate(true)
+        state[MixedRegions.SEED_FIELD] = map_seed
+        state[MixedRegions.GENERATED_FIELD] = true
     selected_factory_pos = Vector2i(-1,-1)
     selected_id = ""
     inspected_enemy_id = ""
