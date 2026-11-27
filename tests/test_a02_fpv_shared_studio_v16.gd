@@ -73,7 +73,7 @@ func _run()->void:
         quit(1)
         return
     check(picker.is_visible_in_tree(),"A02 in visible unified unit selector")
-    check(picker.get_item_text(index).contains("A02") and picker.get_item_text(index).contains("V18"),
+    check(picker.get_item_text(index).contains("A02") and picker.get_item_text(index).contains("V20"),
         "A02 visibly labelled in shared unit list")
     check(str(studio.get("_role"))=="apc","ordinary Studio homepage starts with existing default")
     picker.select(index)
@@ -81,7 +81,7 @@ func _run()->void:
     studio.call("_studio_select_tab",0)
     await process_frame
     var model:=studio.get("model_root") as Node3D
-    check(model!=null and bool(model.get_meta("tarvoka_a02_v18_undershell_finish",false)),"native V18 geometry")
+    check(model!=null and bool(model.get_meta("tarvoka_a02_v20_surface_atlas",false)) and bool(model.get_meta("tarvoka_a02_v20_material_relief",false)),"native V20 geometry and ornamental relief")
     if model==null:
         quit(1)
         return
@@ -178,5 +178,5 @@ func _run()->void:
     studio.queue_free()
     await process_frame
     if failures==0:
-        print("PASS A02 V18 SHARED STUDIO: actual buttons, damage, faction, stop, model switching")
+        print("PASS A02 V20 SHARED STUDIO: actual buttons, damage, faction, stop, model switching")
     quit(0 if failures==0 else 1)

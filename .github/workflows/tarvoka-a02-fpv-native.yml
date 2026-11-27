@@ -57,7 +57,7 @@ jobs:
             exit 1
           fi
 
-      - name: Validate native A02 and 52 inspection renders
+      - name: Validate native A02 and 55 inspection renders
         shell: bash
         run: |
           set -euo pipefail
@@ -83,8 +83,9 @@ jobs:
           expected |= {f'a02-v8-d{d}.png' for d in range(5)}
           expected |= {f'a02-v14-orbit-{a:03d}.png' for a in range(0, 360, 30)}
           expected |= {f'a02-v14-{kind}-{step}.png' for kind in ('move','hover','hit','wreck') for step in range(3)}
+          expected |= {f'a02-v19-macro-{view}.png' for view in ('crown','front','rear')}
           actual = {p.name for p in root.glob('*.png')}
-          assert len(expected) == 52 and actual == expected, f'Missing {expected-actual}; extra {actual-expected}'
+          assert len(expected) == 55 and actual == expected, f'Missing {expected-actual}; extra {actual-expected}'
           frames = []
           for name in sorted(expected):
               path = root / name
@@ -95,7 +96,7 @@ jobs:
               mask = difference.convert('L').point(lambda x: 255 if x > 6 else 0)
               ratio = mask.histogram()[255] / (image.width * image.height)
               bounds = mask.getbbox()
-              assert bounds and 0.02 < ratio < 0.70, f'Empty or suspect frame {name}: {ratio}'
+              assert bounds and 0.02 < ratio < (0.95 if '-macro-' in name else 0.70), f'Empty or suspect frame {name}: {ratio}'
               frames.append({'file': name, 'sha256': hashlib.sha256(path.read_bytes()).hexdigest(),
                   'visible_pixel_ratio': round(ratio, 5), 'bounds': bounds})
           inventory = json.loads((root / 'a02-v10-workload.json').read_text())
@@ -103,10 +104,10 @@ jobs:
           matrix = {(row['faction'], row['lod'], row['damage']) for row in states}
           assert len(states) == 80 and matrix == {(f,l,d) for f in range(8) for l in (8,13) for d in range(5)}
           (root / 'a02-v15-evidence.json').write_text(json.dumps({
-              'expected_frames': 52, 'actual_frames': len(frames), 'states': len(matrix),
+              'expected_frames': 55, 'actual_frames': len(frames), 'states': len(matrix),
               'measurement': 'PNG foreground coverage is a rendering sanity check, not aesthetic approval',
               'frames': frames}, indent=2) + '\n')
-          print('PASS A02 52 real nonempty PNGs and 80 unique resource states')
+          print('PASS A02 55 real nonempty PNGs and 80 unique resource states')
           PY
       # Shared Studio control QA runs in tarvoka-3d-pages.yml after its
       # production scene and all pinned art dependencies have been assembled.
