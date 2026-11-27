@@ -52,6 +52,7 @@ var campaign_locked := false
 var campaign_markers: Array[Vector2i] = []
 var selected_id := ""
 var inspected_enemy_id := "" # Only currently visible enemy, never saved.
+var allow_layered_3d := false # Explicit experimental harness only; normal setup/load remains blocked.
 var require_order_confirmation := false # Main enables safer two-stage taps; legacy test boards remain immediate.
 var pending_order: Dictionary = {}
 var selected_factory_pos := Vector2i(-1,-1)
@@ -904,7 +905,8 @@ func _request_order(cell: Vector2i, target: Dictionary) -> void:
     var hints: Dictionary = TacticalHints.for_unit(state, selected_id)
     var enemy_id := str(target.get("id", ""))
     var kind := "attack" if not target.is_empty() else "move"
-    var legal: bool = bool(hints["attacks"].has(cell)) if kind == "attack" else bool(hints["moves"].has(cell))
+    var detail: Dictionary = TacticalHints.attack_at(hints,cell,enemy_id)
+    var legal: bool = not detail.is_empty() if kind == "attack" else bool(hints["moves"].has(cell))
     if not legal:
         pending_order.clear()
         message = "Apertura completada. Pulsa Terminar turno." if Opening.remaining(state) == 0 else "Accion no permitida."
@@ -913,9 +915,9 @@ func _request_order(cell: Vector2i, target: Dictionary) -> void:
     if require_order_confirmation and pending_order != order:
         pending_order = order
         if kind == "attack":
-            var damage := int(hints["attacks"][cell]["damage"])
-            var response_max: int = int(hints["attacks"][cell].get("counter_damage",0))
-            var effects: Dictionary = hints["attacks"][cell]
+            var damage := int(detail["damage"])
+            var response_max: int = int(detail.get("counter_damage",0))
+            var effects: Dictionary = detail
             var ground_note := " | terreno: ATQ %+d, cobertura rival +%d%s" % [
                 int(effects.get("terrain_attack_bonus",0)),int(effects.get("terrain_defense_cover",0)),
                 ", flanqueo" if bool(effects.get("flanked",false)) else ""
@@ -946,7 +948,7 @@ func _commit_order(order: Dictionary) -> bool:
     var hints: Dictionary = TacticalHints.for_unit(state, unit_id)
     var result: Dictionary = {}
     if kind == "attack":
-        if not hints["attacks"].has(cell) or str(hints["attacks"][cell]["id"]) != enemy_id:
+        if TacticalHints.attack_at(hints,cell,enemy_id).is_empty():
             message = "Objetivo ya no disponible."
             return false
         result = Session.attack(state, unit_id, enemy_id)
@@ -1193,6 +1195,9 @@ func _gui_input(event: InputEvent) -> void:
             accept_event()
 
 func _tap(point: Vector2) -> void:
+    if state.has("layered_crossings_v48"):
+        message = "Usa el visor 3D experimental para elegir nivel y objetivo."
+        return
     if campaign_locked:
         return
     if ai_enabled and int(state.get("faction", -1)) != 0:

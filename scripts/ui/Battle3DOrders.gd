@@ -7,12 +7,15 @@ const Hints = preload("res://scripts/core/TacticalHints.gd")
 const Visibility = preload("res://scripts/core/Visibility.gd")
 const Domains = preload("res://scripts/core/Domains.gd")
 const Rules = preload("res://scripts/core/Rules.gd")
+const Crossings = preload("res://scripts/core/LayeredCrossingsV48.gd")
 
 static func can_control(board: Control) -> bool:
     if board == null:
         return false
     var state: Variant = board.get("state")
     if not state is Dictionary or not Rules.valid_terrain(state.get("terrain",[])):
+        return false
+    if state.has(Crossings.FIELD) and not bool(board.get("allow_layered_3d")):
         return false
     # The overlay must NEVER use legacy double-tap's direct commit mode.
     if not bool(board.get("require_order_confirmation")):
@@ -52,7 +55,7 @@ static func next_friendly(state: Dictionary, cell: Vector2i, current: String) ->
     return str(options[0]["id"])
 
 static func legal_intent(state: Dictionary, unit_id: String,
-        cell: Vector2i) -> Dictionary:
+        cell: Vector2i,requested_kind: String = "",requested_target: String = "") -> Dictionary:
     if unit_id.is_empty() or int(state.get("faction",-1)) not in [0,1]:
         return {}
     if not Rules.inside(cell,state.get("terrain",[])):
@@ -68,6 +71,13 @@ static func legal_intent(state: Dictionary, unit_id: String,
     if Visibility.enabled(state) and not visible.has(cell):
         return {}
     var hints: Dictionary = Hints.for_unit(state,unit_id)
+    if state.has(Crossings.FIELD) and requested_kind=="attack":
+        var detail: Dictionary = Hints.attack_at(hints,cell,requested_target)
+        if detail.is_empty():
+            return {}
+        return {"kind":"attack","unit_id":unit_id,"cell":cell,"target_id":requested_target,"details":detail}
+    if state.has(Crossings.FIELD) and requested_kind=="move":
+        return {"kind":"move","unit_id":unit_id,"cell":cell,"target_id":"","cost":int(hints["moves"][cell])} if hints["moves"].has(cell) else {}
     # Attack takes priority even when friendly surface/air units share the
     # same coordinate as the hostile target of the selected weapon.
     if hints["attacks"].has(cell):
@@ -79,6 +89,24 @@ static func legal_intent(state: Dictionary, unit_id: String,
         return {"kind":"move","unit_id":unit_id,"cell":cell,
             "target_id":"","cost":int(hints["moves"][cell])}
     return {}
+
+# Explicit alternatives for a shared coordinate: move, or each visible
+# attackable unit by ID. Never infer the target from render/draw order.
+static func layered_intents(state: Dictionary,unit_id: String,cell: Vector2i) -> Array[Dictionary]:
+    var result: Array[Dictionary] = []
+    if not state.has(Crossings.FIELD):
+        return result
+    var hints: Dictionary = Hints.for_unit(state,unit_id)
+    var ids: Array = hints.get("attacks_by_id",{}).keys()
+    ids.sort()
+    for id in ids:
+        var intent: Dictionary = legal_intent(state,unit_id,cell,"attack",str(id))
+        if not intent.is_empty():
+            result.append(intent)
+    var move: Dictionary = legal_intent(state,unit_id,cell,"move")
+    if not move.is_empty():
+        result.append(move)
+    return result
 
 static func select(board: Control, unit_id: String) -> bool:
     if not can_control(board) or unit_id.is_empty():
@@ -111,7 +139,7 @@ static func request_preview(board: Control, intent: Dictionary) -> Dictionary:
     var cell: Variant = intent.get("cell",null)
     if not cell is Vector2i or str(board.get("selected_id")) != unit_id:
         return {}
-    var safe: Dictionary = legal_intent(state,unit_id,cell)
+    var safe: Dictionary = legal_intent(state,unit_id,cell,str(intent.get("kind","")),str(intent.get("target_id","")))
     if safe.is_empty() or safe.get("kind") != intent.get("kind") or \
             safe.get("target_id") != intent.get("target_id"):
         return {}
