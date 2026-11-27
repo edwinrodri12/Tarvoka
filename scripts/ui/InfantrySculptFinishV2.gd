@@ -332,6 +332,86 @@ static func refine_v17_kit(model: Node3D,role: String,hero: bool)->bool:
     model.set_meta(GEAR_COUNT_V17,3)
     return true
 
+const BOOTS_V32 := "tarvoka_infantry_boot_finish_v32"
+const BOOT_COUNT_V32 := "tarvoka_infantry_boot_detail_count_v32"
+
+# The original boot upper uses its existing ankle-space coordinates.
+# Sample the actual forward surface for the fitted toe and instep armor.
+static func boot_front_surface_v32(mesh: Mesh,x: float,y: float)->float:
+    var faces: PackedVector3Array=mesh.get_faces()
+    var bounds: AABB=mesh.get_aabb()
+    var origin:=Vector3(x,y,bounds.position.z-1.0)
+    var nearest: float=INF
+    for i in range(0,faces.size(),3):
+        var hit: Variant=Geometry3D.ray_intersects_triangle(origin,Vector3(0,0,1),
+            faces[i],faces[i+1],faces[i+2])
+        if hit is Vector3:
+            nearest=minf(nearest,(hit as Vector3).z)
+    return nearest
+
+static func _refine_boots_v32(model: Node3D,paint: Color,hero: bool)->bool:
+    if not hero:
+        return true
+    var role: String=str(model.get_meta("tarvoka_infantry_role",""))
+    if role not in FAMILY_ANATOMY_ROLES:
+        return false
+    var shell: Color=Color("#35454a")
+    var weight: float=0.20
+    match role:
+        "infantry_commando":
+            shell=Color("#28373e")
+            weight=0.25
+        "infantry_sniper":
+            shell=Color("#465347")
+            weight=0.12
+        "infantry_logistic":
+            shell=Color("#484d42")
+            weight=0.22
+        "infantry_medic":
+            shell=Color("#536460")
+            weight=0.24
+    var toe_mat: StandardMaterial3D=_coat(shell.lerp(paint,weight),0.08,0.65)
+    var band_mat: StandardMaterial3D=_coat(shell.darkened(0.20),0.02,0.84)
+    for side in [-1,1]:
+        var suffix: String="_%d"%side
+        var boot: MeshInstance3D=_find(model,"V2_BotaMoldeada"+suffix) as MeshInstance3D
+        var sole: MeshInstance3D=_find(model,"V2_Suela"+suffix) as MeshInstance3D
+        if boot==null or sole==null or boot.get_parent()!=sole.get_parent():
+            return false
+        var original: AABB=boot.mesh.get_aabb()
+        # Broad toe, defined heel/ankle and more gradual instep. The two
+        # original longitudinal endpoints and separate outsole are retained.
+        boot.mesh=_organic_mesh([
+            Vector3(0.112,-0.925,0.196),Vector3(0.124,-0.907,0.203),
+            Vector3(0.126,-0.875,0.204),Vector3(0.124,-0.845,0.195),
+            Vector3(0.121,-0.815,0.181),Vector3(0.118,-0.775,0.162),
+            Vector3(0.110,-0.725,0.145),Vector3(0.103,-0.655,0.126)],
+            24,PackedFloat32Array([0,0,0,0.012,0.025,0.047,0.079,0.10]),0.57)
+        boot.set_meta("tarvoka_v32_original_bounds",original)
+        var toe_y: float=-0.868
+        var toe_z: float=boot_front_surface_v32(boot.mesh,0.0,toe_y)
+        var band_y: float=-0.789
+        var band_z: float=boot_front_surface_v32(boot.mesh,0.0,band_y)
+        if not is_finite(toe_z) or not is_finite(band_z):
+            return false
+        # The protective toe remains a separate closed volume embedded in
+        # the boot, above the sole. Both new meshes are children of the
+        # actual boot and follow its ankle, never the stationary torso.
+        var toe: MeshInstance3D=_mesh(boot,"V32_ArmorToe"+suffix,_organic_mesh([
+            Vector3(0.080,-0.045,0.024),Vector3(0.109,-0.028,0.039),
+            Vector3(0.110,0.012,0.041),Vector3(0.082,0.037,0.024)],
+            20,PackedFloat32Array([0.005,0,0,0.006]),0.58),
+            toe_mat,Vector3(0,toe_y,toe_z+0.018))
+        toe.set_meta("tarvoka_v32_contact",Vector3(0,toe_y,toe_z))
+        var band: MeshInstance3D=_mesh(boot,"V32_RubberInstep"+suffix,_organic_mesh([
+            Vector3(0.072,-0.022,0.017),Vector3(0.098,-0.012,0.025),
+            Vector3(0.098,0.012,0.025),Vector3(0.073,0.022,0.016)],
+            16,PackedFloat32Array(),0.62),band_mat,Vector3(0,band_y,band_z+0.010))
+        band.set_meta("tarvoka_v32_contact",Vector3(0,band_y,band_z))
+    model.set_meta(BOOTS_V32,role)
+    model.set_meta(BOOT_COUNT_V32,4)
+    return true
+
 const ANATOMY_V27 := "tarvoka_infantry_anatomical_contours_v27"
 const ANATOMY_COUNT_V27 := "tarvoka_infantry_anatomical_count_v27"
 const HELMET_V28 := "tarvoka_infantry_helmet_profile_v28"
@@ -1197,7 +1277,7 @@ static func _family_texture(kind: String,role: String) -> ImageTexture:
 static func _finish_kind(label: String) -> String:
     if label=="V2_VisorOpacoPBR" or label=="V4_CristalPrecision" or label.begins_with("V4_CristalNV_"):
         return "optic"
-    if label.begins_with("V16_Armor") or label.begins_with("V2_CostillaArmadura"):
+    if label.begins_with("V32_Armor") or label.begins_with("V16_Armor") or label.begins_with("V2_CostillaArmadura"):
         return "armor"
     if label.begins_with("V17_Fabric"):
         return "fabric"
@@ -1207,7 +1287,7 @@ static func _finish_kind(label: String) -> String:
         return "rubber"
     if label in ["V6_SupplyCase","V4_FundaInstrumentos"]:
         return "armor"
-    if label.begins_with("V16_Rubber") or label.begins_with("V17_Rubber"):
+    if label.begins_with("V32_Rubber") or label.begins_with("V16_Rubber") or label.begins_with("V17_Rubber"):
         return "rubber"
     if label in ["V2_CascoEsferoideCerrado","V2_CorazaPectoralHermetica"] or label.begins_with("Hombrera_") or label.begins_with("Rodillera_"):
         return "armor"
@@ -1807,7 +1887,7 @@ static func apply(model: Node3D, faction_paint: Color, hero: bool) -> bool:
         _plate(upper,"V2_FaccionHerramientas",Vector3(-0.34,-0.13,0.51),
             0.20,0.095,0.026,faction)
     if role in FAMILY_ANATOMY_ROLES:
-        if not _refine_core(model,hero) or not _refine_limbs_v27(model,hero) or not _refine_helmet_v28(model,hero) or not _refine_faction_armor_v26(model,paint,hero) or not _refine_equipment_v30(model,hero) or not _finish_family_materials(model,hero):
+        if not _refine_core(model,hero) or not _refine_limbs_v27(model,hero) or not _refine_helmet_v28(model,hero) or not _refine_faction_armor_v26(model,paint,hero) or not _refine_equipment_v30(model,hero) or not _refine_boots_v32(model,paint,hero) or not _finish_family_materials(model,hero):
             return false
     model.set_meta(FLAG,true)
     model.set_meta("tarvoka_infantry_v2_hero",hero)

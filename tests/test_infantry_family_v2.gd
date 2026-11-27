@@ -332,6 +332,45 @@ func _run() -> void:
                     check(str(model.get_meta(Finish.GEAR_V17,""))==role,"V17 role-specific kit")
                     check(str(model.get_meta(Finish.OPTICS_V18,""))==role,"V18 optics identity")
                     check(str(model.get_meta(Finish.SURFACES_V19,""))==role,"V19 individual surface identity")
+                    var v32_hero: bool=bool(model.get_meta("tarvoka_infantry_v2_hero",false))
+                    check(model.has_meta(Finish.BOOTS_V32)==v32_hero,
+                        "V32 detail only on hero boots")
+                    if v32_hero:
+                        check(str(model.get_meta(Finish.BOOTS_V32,""))==role and
+                            int(model.get_meta(Finish.BOOT_COUNT_V32,0))==4,
+                            "V32 four actual fitted boot parts")
+                    for v32_side in [-1,1]:
+                        var v32_suffix: String="_%d"%v32_side
+                        var v32_boot: MeshInstance3D=model.find_child("V2_BotaMoldeada"+v32_suffix,true,false) as MeshInstance3D
+                        var v32_sole: MeshInstance3D=model.find_child("V2_Suela"+v32_suffix,true,false) as MeshInstance3D
+                        check(v32_boot!=null and v32_sole!=null and
+                            v32_boot.get_parent()==v32_sole.get_parent() and
+                            is_equal_approx(v32_sole.mesh.get_aabb().position.y,-0.9675),
+                            "V32 unchanged outsole and real ankle pivot")
+                        if v32_hero and v32_boot!=null:
+                            var v32_before: AABB=v32_boot.get_meta("tarvoka_v32_original_bounds",AABB())
+                            var v32_after: AABB=v32_boot.mesh.get_aabb()
+                            check(closed_solid(v32_boot.mesh) and
+                                v32_boot.mesh.get_faces().size()==1152 and
+                                is_equal_approx(v32_before.position.y,v32_after.position.y) and
+                                is_equal_approx(v32_before.end.y,v32_after.end.y),
+                                "V32 closed 384-triangle boot with original height")
+                        for v32_prefix in ["V32_ArmorToe","V32_RubberInstep"]:
+                            var v32_detail: MeshInstance3D=model.find_child(v32_prefix+v32_suffix,true,false) as MeshInstance3D
+                            if not v32_hero:
+                                check(v32_detail==null,"V32 no extra tactical boot meshes")
+                                continue
+                            check(v32_detail!=null and v32_detail.get_parent()==v32_boot and
+                                closed_solid(v32_detail.mesh) and v32_detail.has_meta(Finish.STAGE_MATS),
+                                "V32 sealed staged protection follows actual boot")
+                            if v32_detail==null or v32_boot==null:
+                                continue
+                            var v32_contact: Vector3=v32_detail.get_meta("tarvoka_v32_contact",Vector3.INF)
+                            check(v32_contact.is_finite() and
+                                is_equal_approx(v32_contact.z,Finish.boot_front_surface_v32(v32_boot.mesh,
+                                    v32_contact.x,v32_contact.y)) and
+                                v32_detail.mesh.get_aabb().has_point(v32_contact-v32_detail.position),
+                                "V32 sampled boot contact lies inside armor envelope")
                     var v30_hero: bool=bool(model.get_meta("tarvoka_infantry_v2_hero",false))
                     check(model.has_meta(Finish.TEXTILE_V29)==v30_hero and
                         model.has_meta(Finish.EQUIPMENT_V30)==v30_hero,
