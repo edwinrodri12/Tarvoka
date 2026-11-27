@@ -338,6 +338,7 @@ func _check_live_layered_orders() -> void:
     board.set("allow_layered_3d",true)
     assert(viewer.open_from_board(board))
     assert(viewer._select_3d_unit("P"))
+    assert(viewer._ranges_node.get_meta("counts")["attacks"]==3)
     assert(viewer.tap_battle_cell(cell))
     assert(viewer._order_quote["order"]["target_id"]=="A")
     assert(viewer.tap_battle_cell(cell) and board.get("state")==state)

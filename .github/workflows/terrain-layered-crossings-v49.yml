@@ -26,6 +26,7 @@ on:
       - "scripts/core/BasicAI.gd"
       - "scripts/core/TacticalHints.gd"
       - "scripts/ui/Battle3DOrders.gd"
+      - "scripts/ui/BattleRanges3D.gd"
       - "scripts/core/Visibility.gd"
       - "scripts/core/Logistics.gd"
       - "scripts/ui/MixedBiomePreviewV49.gd"

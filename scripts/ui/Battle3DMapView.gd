@@ -712,6 +712,7 @@ func open_from_board(board: Control) -> bool:
     if state.has(Crossings.FIELD):
         # Explicit test harness only; use the visible legacy command footer.
         _set_immersive_mode(false)
+        _refresh_ranges()
         _update_order_ui()
         return true
     # Fullscreen map-first mode is exclusive to a live game, never to a
@@ -1096,7 +1097,12 @@ func _refresh_ranges() -> void:
     if _scene == null:
         return
     if _state_snapshot.has(Crossings.FIELD):
-        _range_text.text = "Puente experimental · alcances visuales pendientes."
+        if _live_board!=null and Orders.can_control(_live_board) and _ranges_visible:
+            _ranges_node = Ranges.build_layered(_scene,_state_snapshot,str(_live_board.get("selected_id")),_cells)
+            var counts: Dictionary = _ranges_node.get_meta("counts")
+            _range_text.text = "Por nivel · Azul %d destinos · Rojo %d objetivos exactos" % [counts["moves"],counts["attacks"]]
+        else:
+            _range_text.text = "Puente experimental · inspección o alcances ocultos."
         return
     if not _ranges_visible:
         _range_text.text = "Alcances ocultos · Toca «Alcances» para verlos."

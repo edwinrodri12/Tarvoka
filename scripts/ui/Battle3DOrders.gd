@@ -36,10 +36,15 @@ static func visible_friends(state: Dictionary, cell: Vector2i) -> Array[Dictiona
         if not unit is Dictionary or int(unit.get("hp",0)) <= 0:
             continue
         if int(unit.get("faction",-1)) == int(state.get("faction",-1)) and unit.get("pos") == cell:
-            options.append({"id":str(unit.get("id","")),"layer":Domains.layer(unit),
+            var layer: String = Domains.layer(unit)
+            if state.has(Crossings.FIELD):
+                layer = Domains.domain(unit)
+            options.append({"id":str(unit.get("id","")),"layer":layer,
                 "acted":bool(unit.get("acted",false))})
     options.sort_custom(func(a,b):
         if a["layer"] != b["layer"]:
+            if state.has(Crossings.FIELD):
+                return ["ground","naval","air"].find(a["layer"]) < ["ground","naval","air"].find(b["layer"])
             return a["layer"] == "surface"
         return str(a["id"]) < str(b["id"])
     )
@@ -100,12 +105,11 @@ static func layered_intents(state: Dictionary,unit_id: String,cell: Vector2i) ->
     var ids: Array = hints.get("attacks_by_id",{}).keys()
     ids.sort()
     for id in ids:
-        var intent: Dictionary = legal_intent(state,unit_id,cell,"attack",str(id))
-        if not intent.is_empty():
-            result.append(intent)
-    var move: Dictionary = legal_intent(state,unit_id,cell,"move")
-    if not move.is_empty():
-        result.append(move)
+        var detail: Dictionary = Hints.attack_at(hints,cell,str(id))
+        if not detail.is_empty():
+            result.append({"kind":"attack","unit_id":unit_id,"cell":cell,"target_id":str(id),"details":detail})
+    if hints["moves"].has(cell):
+        result.append({"kind":"move","unit_id":unit_id,"cell":cell,"target_id":"","cost":int(hints["moves"][cell])})
     return result
 
 static func select(board: Control, unit_id: String) -> bool:
