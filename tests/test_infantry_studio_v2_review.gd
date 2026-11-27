@@ -115,7 +115,11 @@ func _run() -> void:
         must(v2!=null and v2.get_parent()==original_preview,
             role+" V2 comparison remains in same 3D viewport")
         if role!="infantry_engineer":
-            var expected_edition: String="V35"
+            var expected_edition: String="V37"
+            must(str(v2.get_meta("tarvoka_infantry_shoulder_layers_v36",""))==role and
+                str(v2.get_meta("tarvoka_infantry_elbow_contour_v37",""))==role and
+                int(v2.get_meta("tarvoka_infantry_joint_mesh_count_v37",0))==4,
+                role+" actual V36/V37 joint sculpt in shared viewport")
             must(str(v2.get_meta("tarvoka_infantry_fitted_badges_v34",""))==role and
                 int(v2.get_meta("tarvoka_infantry_fitted_badge_count_v34",0))==4 and
                 str(v2.get_meta("tarvoka_infantry_collar_finish_v35",""))==role,

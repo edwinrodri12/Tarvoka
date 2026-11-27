@@ -335,6 +335,76 @@ static func refine_v17_kit(model: Node3D,role: String,hero: bool)->bool:
     model.set_meta(GEAR_COUNT_V17,3)
     return true
 
+const SHOULDER_V36 := "tarvoka_infantry_shoulder_layers_v36"
+const ELBOW_V37 := "tarvoka_infantry_elbow_contour_v37"
+const JOINT_COUNT_V37 := "tarvoka_infantry_joint_mesh_count_v37"
+
+# Role-specific lower lip and compressed transition on the existing shell.
+# Upper crown and maximum dimensions are retained. Refit the original
+# faction insignia AFTER this sculpt so it follows the new surface.
+const SHOULDER_LIP_V36 := {
+    "line":0.92,"infantry_commando":0.96,"infantry_sniper":0.87,
+    "infantry_logistic":0.90,"infantry_medic":0.88
+}
+
+static func _refine_joints_v37(model: Node3D,hero: bool)->bool:
+    if not hero:
+        return true
+    var role: String=str(model.get_meta("tarvoka_infantry_role",""))
+    if not SHOULDER_LIP_V36.has(role):
+        return false
+    var lip: float=SHOULDER_LIP_V36[role]
+    for side in [-1,1]:
+        var suffix: String="_%d"%side
+        var shoulder: MeshInstance3D=_find(model,"Hombrera"+suffix) as MeshInstance3D
+        var elbow: MeshInstance3D=_find(model,"V13_CodoProtegido"+suffix) as MeshInstance3D
+        var arm: Node3D=_find(model,"BrazoRig"+suffix)
+        if shoulder==null or elbow==null or arm==null or shoulder.get_parent()!=arm or elbow.get_parent()!=arm:
+            return false
+        var shell_bounds: AABB=shoulder.mesh.get_aabb()
+        var sw: float=shell_bounds.size.x*0.5/0.154
+        var sd: float=shell_bounds.size.z*0.5/0.147
+        var profile: Array[Vector3]=[
+            Vector3(0.105,-0.145,0.108),
+            Vector3(0.124,-0.133,0.125),
+            Vector3(0.139,-0.110,0.139),
+            Vector3(0.139*lip,-0.098,0.139*lip),
+            Vector3(0.148,-0.073,0.142),
+            Vector3(0.154,-0.02,0.147),
+            Vector3(0.147,0.022,0.138),
+            Vector3(0.136,0.05,0.124),
+            Vector3(0.091,0.091,0.087),
+            Vector3(0.052,0.113,0.054)]
+        var rings: Array[Vector3]=[]
+        for ring in profile:
+            rings.append(Vector3(ring.x*sw,ring.y,ring.z*sd))
+        shoulder.mesh=_organic_mesh(rings,24,PackedFloat32Array(),0.84)
+        shoulder.set_meta("tarvoka_v36_original_bounds",shell_bounds)
+        # The elbow guard is a single sealed, stepped rubber piece. Its
+        # center and extents derive from the original asymmetric 14-side
+        # mesh, preserving the solved elbow and forearm endpoints.
+        var guard_bounds: AABB=elbow.mesh.get_aabb()
+        var r: Vector3=guard_bounds.size*0.5
+        var center: Vector3=guard_bounds.get_center()
+        var guard_rings: Array[Vector3]=[
+            Vector3(r.x*0.72,center.y-r.y,r.z*0.70),
+            Vector3(r.x*0.91,center.y-r.y*0.77,r.z*0.87),
+            Vector3(r.x*0.94,center.y-r.y*0.48,r.z*0.94),
+            Vector3(r.x*0.87,center.y-r.y*0.32,r.z*0.86),
+            Vector3(r.x,center.y-r.y*0.08,r.z),
+            Vector3(r.x,center.y+r.y*0.33,r.z),
+            Vector3(r.x*0.92,center.y+r.y*0.62,r.z*0.89),
+            Vector3(r.x*0.75,center.y+r.y,r.z*0.72)]
+        var offsets:=PackedFloat32Array()
+        offsets.resize(guard_rings.size())
+        offsets.fill(center.z)
+        elbow.mesh=_organic_mesh(guard_rings,24,offsets,0.68,center.x)
+        elbow.set_meta("tarvoka_v37_original_bounds",guard_bounds)
+    model.set_meta(SHOULDER_V36,role)
+    model.set_meta(ELBOW_V37,role)
+    model.set_meta(JOINT_COUNT_V37,4)
+    return true
+
 const BADGES_V34 := "tarvoka_infantry_fitted_badges_v34"
 const BADGE_COUNT_V34 := "tarvoka_infantry_fitted_badge_count_v34"
 const COLLAR_V35 := "tarvoka_infantry_collar_finish_v35"
@@ -2002,7 +2072,7 @@ static func apply(model: Node3D, faction_paint: Color, hero: bool) -> bool:
         _plate(upper,"V2_FaccionHerramientas",Vector3(-0.34,-0.13,0.51),
             0.20,0.095,0.026,faction)
     if role in FAMILY_ANATOMY_ROLES:
-        if not _refine_core(model,hero) or not _refine_limbs_v27(model,hero) or not _refine_helmet_v28(model,hero) or not _refine_faction_armor_v26(model,paint,hero) or not _refine_equipment_v30(model,hero) or not _refine_boots_v32(model,paint,hero) or not _refine_badges_v34(model,hero) or not _refine_collar_v35(model,hero) or not _finish_family_materials(model,hero):
+        if not _refine_core(model,hero) or not _refine_limbs_v27(model,hero) or not _refine_helmet_v28(model,hero) or not _refine_faction_armor_v26(model,paint,hero) or not _refine_equipment_v30(model,hero) or not _refine_boots_v32(model,paint,hero) or not _refine_joints_v37(model,hero) or not _refine_badges_v34(model,hero) or not _refine_collar_v35(model,hero) or not _finish_family_materials(model,hero):
             return false
     model.set_meta(FLAG,true)
     model.set_meta("tarvoka_infantry_v2_hero",hero)

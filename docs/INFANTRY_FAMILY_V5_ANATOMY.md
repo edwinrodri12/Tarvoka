@@ -160,3 +160,7 @@ Se habilita disparo de APK debug sólo en la rama V33 y sólo por cambio explíc
 ## V34–V35 — insignias ajustadas y cuello textil
 
 Base V33.1 conserva V32.2 validada. V34 reutiliza cuatro insignias originales por soldado, sustituyendo su malla por relieve cerrado fino deformado mediante intersección en X de la superficie real de mangas y hombreras. Conserva material exacto de facción y pivote común. V35 reemplaza cuello existente por nueve anillos de 24 lados con pliegue comprimido, misma envolvente y articulación. No añade nodos, sólo LOD13. QA comprueba cada vértice de las insignias, penetración/salida, opacidad y color, y cierre y dimensiones del cuello. Requiere render nativo y evaluación visual; no FINAL ni publicación.
+
+## V36–V37 — hombreras y codos
+
+Base V35 validada: native 45933841707, WebGL 45933841665, sin despliegue. V36 esculpe las hombreras existentes con diez anillos, 24 lados, labio inferior y transición comprimida según rol. Se ajustan después las insignias V34 sobre la superficie nueva. V37 sustituye dos protecciones de codo por ocho anillos de 24 lados, conservando centro real de la malla original de 14 lados y pivote ELBOW_LOCAL. Cuatro mallas existentes, sin nuevos nodos, LOD13 exclusivo. QA de cierre, dimensiones, material D0–D4, jerarquía y contactos anteriores; requiere ejecución y evaluación visual. Main avanzó después de V33; no fusionar hasta comprobar sus nuevos cambios. No FINAL.

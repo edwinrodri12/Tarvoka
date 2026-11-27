@@ -332,6 +332,39 @@ func _run() -> void:
                     check(str(model.get_meta(Finish.GEAR_V17,""))==role,"V17 role-specific kit")
                     check(str(model.get_meta(Finish.OPTICS_V18,""))==role,"V18 optics identity")
                     check(str(model.get_meta(Finish.SURFACES_V19,""))==role,"V19 individual surface identity")
+                    var v37_hero: bool=bool(model.get_meta("tarvoka_infantry_v2_hero",false))
+                    check(model.has_meta(Finish.SHOULDER_V36)==v37_hero and
+                        model.has_meta(Finish.ELBOW_V37)==v37_hero,
+                        "V36/V37 hero-only joint sculpt")
+                    if v37_hero:
+                        check(str(model.get_meta(Finish.SHOULDER_V36,""))==role and
+                            str(model.get_meta(Finish.ELBOW_V37,""))==role and
+                            int(model.get_meta(Finish.JOINT_COUNT_V37,0))==4,
+                            "V36/V37 four real refined joint meshes")
+                        for v37_side in [-1,1]:
+                            var v37_suffix: String="_%d"%v37_side
+                            var v37_arm: Node3D=model.find_child("BrazoRig"+v37_suffix,true,false) as Node3D
+                            for v37_prefix in ["Hombrera","V13_CodoProtegido"]:
+                                var v37_part: MeshInstance3D=model.find_child(v37_prefix+v37_suffix,true,false) as MeshInstance3D
+                                var v37_key: String="tarvoka_v36_original_bounds" if v37_prefix=="Hombrera" else "tarvoka_v37_original_bounds"
+                                check(v37_part!=null and v37_part.has_meta(v37_key) and
+                                    v37_part.get_parent()==v37_arm and closed_solid(v37_part.mesh) and
+                                    v37_part.has_meta(Finish.STAGE_MATS),"V37 sealed staged joint on actual arm")
+                                if v37_part==null or not v37_part.has_meta(v37_key):
+                                    continue
+                                var v37_before: AABB=v37_part.get_meta(v37_key)
+                                var v37_after: AABB=v37_part.mesh.get_aabb()
+                                check(v37_before.size.is_equal_approx(v37_after.size) and
+                                    v37_before.get_center().is_equal_approx(v37_after.get_center()),
+                                    "V37 joint original envelope preserved")
+                                var v37_expected: int=1440 if v37_prefix=="Hombrera" else 1152
+                                check(v37_part.mesh.get_faces().size()==v37_expected,
+                                    "V37 actual revised triangle count")
+                                if v37_prefix=="V13_CodoProtegido":
+                                    check(v37_part.position.is_equal_approx(Finish.ELBOW_LOCAL),
+                                        "V37 unchanged solved elbow pivot")
+                    else:
+                        check(not model.has_meta(Finish.JOINT_COUNT_V37),"V37 tactical joint geometry untouched")
                     var v35_hero: bool=bool(model.get_meta("tarvoka_infantry_v2_hero",false))
                     check(model.has_meta(Finish.BADGES_V34)==v35_hero and
                         model.has_meta(Finish.COLLAR_V35)==v35_hero,

@@ -2,7 +2,7 @@ name: TARVOKA Infantry V1 Native 3D QA
 
 on:
   push:
-    branches: [main, art/infantry-premium-v16-20261126, art/infantry-specialist-v20-22-20261126, art/infantry-validation-v23-24-20261126, art/infantry-integration-v25-20261126, art/infantry-premium-v26-20261126, art/infantry-anatomy-v27-28-20261126, art/infantry-uniform-v29-30-20261126, art/infantry-boots-v32-20261126, art/infantry-integration-v33-20261126, art/infantry-fit-v34-35-20261126]
+    branches: [main, art/infantry-premium-v16-20261126, art/infantry-specialist-v20-22-20261126, art/infantry-validation-v23-24-20261126, art/infantry-integration-v25-20261126, art/infantry-premium-v26-20261126, art/infantry-anatomy-v27-28-20261126, art/infantry-uniform-v29-30-20261126, art/infantry-boots-v32-20261126, art/infantry-integration-v33-20261126, art/infantry-fit-v34-35-20261126, art/infantry-joints-v36-37-20261126]
     paths:
       - 'scripts/ui/InfantrySculptFinishV2.gd'
       - 'scripts/ui/InfantryVariantsV4.gd'
