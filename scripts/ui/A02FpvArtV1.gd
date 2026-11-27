@@ -226,9 +226,11 @@ static func _guard_finish(primitive:TorusMesh,faction:Color)->ArrayMesh:
         var phase:float=atan2(vertex.z,vertex.x)
         var blocks:float=smoothstep(0.12,0.45,absf(sin(phase*4.0)))
         var upper:float=smoothstep(-0.015,0.06,vertex.y)
-        var shade:Color=Color("#43535d").lerp(faction,0.12+0.74*upper)
-        var graphic:float=(1.0-blocks)*upper*0.20
-        pigments.append(shade.lerp(Color("#25353f"),graphic))
+        # V23: neutral satin visual base with a clearly colored
+        # ornamental upper field; no change to geometry or silhouette.
+        var shade:Color=Color("#394650").lerp(faction,0.10+0.65*upper)
+        var graphic:float=(1.0-blocks)*upper*0.35
+        pigments.append(shade.lerp(Color("#303b44"),graphic))
     arrays[Mesh.ARRAY_COLOR]=pigments
     var mesh:=ArrayMesh.new()
     mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES,arrays)
@@ -324,7 +326,7 @@ static func build(root:Node3D,faction:Color,hero:bool)->bool:
     # neutral reliefs embedded into the same fictional game silhouette.
     # Keep the faction paint itself unchanged; choose a contrasting
     # neutral graphic for readability on both light and dark palettes.
-    var insignia_color:Color=Color("#26323a") if faction.get_luminance()>=0.50 else Color("#d8e1e4")
+    var insignia_color:Color=Color("#26323a") if faction.get_luminance()>=0.50 else Color("#b3c0c7")
     var emblem:=_mat(insignia_color,0.08,0.82)
     var dark_mark:=_mat(Color("#41535e"),0.08,0.80)
     _part(body,"A02_V5_CrownInsignia",sculpt,Vector3(0,1.205,-0.09),
@@ -381,6 +383,7 @@ static func build(root:Node3D,faction:Color,hero:bool)->bool:
         if part.get_parent()!=effects:
             part.set_meta(BASE_MATERIAL,part.material_override)
     root.set_meta(DAMAGE,0)
+    root.set_meta("tarvoka_a02_v23_palette_coherence",true)
     root.set_meta("tarvoka_a02_v22_outer_surface_finish",true)
     root.set_meta("tarvoka_a02_v21_distinct_end_art",true)
     root.set_meta("tarvoka_a02_v20_material_relief",true)
