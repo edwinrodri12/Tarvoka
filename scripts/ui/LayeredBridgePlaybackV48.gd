@@ -7,6 +7,7 @@ const Domains = preload("res://scripts/core/Domains.gd")
 const Logistics = preload("res://scripts/core/Logistics.gd")
 const Weather = preload("res://scripts/core/Weather.gd")
 const Turns = preload("res://scripts/core/Turns.gd")
+const Visibility = preload("res://scripts/core/Visibility.gd")
 
 # A visual quote, never an authoritative action. Playback restores the
 # original pose; confirming real movement remains a separate engine action.
@@ -15,13 +16,14 @@ static func quote(state: Dictionary,unit_id: String,destination: Vector2i) -> Di
     if not index["valid"] or index["cells"].is_empty():
         return {}
     var side: int = int(state.get("faction",-1))
+    var allowed: Variant = Visibility.visible_cells(state,side) if Visibility.enabled(state) else null
     for unit in state.get("units",[]):
         if str(unit.get("id",""))!=unit_id or not Turns.can_move(unit,side):
             continue
         var domain: String = Domains.domain(unit)
         var route: Array[Vector2i] = Crossings.route_for(state["terrain"],index["cells"],
             state["units"],unit["pos"],destination,domain,side,Logistics.movement_budget(unit),
-            Logistics.road_fast(unit),Weather.from_state(state),Weather.traction(unit))
+            Logistics.road_fast(unit),Weather.from_state(state),Weather.traction(unit),allowed)
         if route.size()<2:
             return {}
         return {"id":unit_id,"domain":domain,"route":route,"seconds":float(route.size()-1)*0.48}
