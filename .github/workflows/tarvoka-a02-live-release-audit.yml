@@ -8,7 +8,7 @@ on:
       minimum_source_commit:
         description: 'Full SHA of the integrated main revision required on Pages'
         required: true
-        default: '018047aac902fe265b0890446fda153ee721212d'
+        default: '39097840ec8f74681bce21672097a43f75cda28d'
 
 permissions:
   contents: read
@@ -28,7 +28,7 @@ jobs:
       - name: Verify public manifest, source ancestry and served package hash
         shell: bash
         env:
-          MINIMUM_SOURCE_COMMIT: ${{ inputs.minimum_source_commit || '018047aac902fe265b0890446fda153ee721212d' }}
+          MINIMUM_SOURCE_COMMIT: ${{ inputs.minimum_source_commit || '39097840ec8f74681bce21672097a43f75cda28d' }}
         run: |
           set -euo pipefail
           mkdir -p build/qa/a02-live
@@ -38,7 +38,7 @@ jobs:
           base = 'https://edwinrodri12.github.io/Tarvoka/'
           merged = os.environ['MINIMUM_SOURCE_COMMIT']
           report = {'url':base,'minimum_integrated_commit':merged}
-          expected_counts = {'V16':(34,5688), 'V17':(34,5688), 'V18':(36,5808), 'V19':(36,5808), 'V20':(37,5928), 'V21':(37,5928), 'V22':(37,5928)}
+          expected_counts = {'V16':(34,5688), 'V17':(34,5688), 'V18':(36,5808), 'V19':(36,5808), 'V20':(37,5928), 'V21':(37,5928), 'V22':(37,5928), 'V23':(37,5928)}
           def fetch(path):
               req = urllib.request.Request(base + path + '?a02-audit=' + merged[:12],
                   headers={'Cache-Control':'no-cache','User-Agent':'TARVOKA-release-audit'})
@@ -58,6 +58,7 @@ jobs:
               art = subprocess.check_output(['git','show',source+':scripts/ui/A02FpvArtV1.gd'])
               expected = hashlib.sha256(art).hexdigest()
               edition_markers = [
+                  ('V23', b'tarvoka_a02_v23_palette_coherence'),
                   ('V22', b'tarvoka_a02_v22_outer_surface_finish'),
                   ('V21', b'tarvoka_a02_v21_distinct_end_art'),
                   ('V20', b'tarvoka_a02_v20_material_relief'),
@@ -118,7 +119,7 @@ jobs:
                   report.info=info;
                   if(info.role!=='fpv'||info.edition!==expected.expected_edition||!info.native_model||info.lod!==13||info.stage!==0||info.visible_meshes!==expected.expected_meshes||info.triangles!==expected.expected_triangles||info.transparent_meshes.length!==0||!info.faction_selector)throw Error('Unexpected live native model: '+JSON.stringify(info));
                   const revision=Number(expected.expected_edition.slice(1));
-                  for(const [since,field] of [[17,'surface_finish'],[18,'undershell_finish'],[19,'graphic_livery'],[20,'surface_atlas'],[20,'material_relief'],[21,'distinct_end_art'],[22,'outer_surface_finish']]){
+                  for(const [since,field] of [[17,'surface_finish'],[18,'undershell_finish'],[19,'graphic_livery'],[20,'surface_atlas'],[20,'material_relief'],[21,'distinct_end_art'],[22,'outer_surface_finish'],[23,'palette_coherence']]){
                     if(revision>=since&&!info[field])throw Error('Missing native art marker '+field);
                   }
                   for(const action of ['a02_move','a02_hover','a02_hit','a02_d0','a02_d1','a02_d2','a02_d3','a02_d4','stop'])
