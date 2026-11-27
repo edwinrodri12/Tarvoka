@@ -57,6 +57,7 @@ func _initialize() -> void:
     assert(map==before)
     _check_layered_session(map,records,crossing)
     _check_fog_supply(map,records,crossing)
+    _check_long_supply(map,records,cells)
     # CPU-readable mesh bounds, not an actual rendered review.
     for axis in ["ew","ns"]:
         var model: Node3D = Art.build(axis)
@@ -264,3 +265,30 @@ func _check_fog_supply(map: Array,records: Array,crossing: Vector2i) -> void:
     assert(Codec.encode(bad).is_empty())
     var rotor: Dictionary = Roles.make_unit("R",0,crossing,"attack_heli")
     assert(not Logistics.field_air_service_allowed(economy,rotor))
+
+# V50.9: reverse costs must respect deck/channel and allowed knowledge.
+func _check_long_supply(map: Array,records: Array,cells: Dictionary) -> void:
+    var ground: Dictionary = Bridges.distances_to(map,cells,[Vector2i(7,3)],"ground")
+    assert(ground[Vector2i(2,3)]==10)
+    assert(not ground.has(Vector2i(4,2)))
+    var naval: Dictionary = Bridges.distances_to(map,cells,[Vector2i(4,5)],"naval")
+    assert(naval[Vector2i(4,1)]==8 and not naval.has(Vector2i(5,3)))
+    var allowed: Dictionary = {}
+    for y in range(8):
+        for x in range(10):
+            if x!=4:
+                allowed[Vector2i(x,y)] = true
+    assert(not Bridges.distances_to(map,cells,[Vector2i(7,3)],"ground",false,"clear","foot",allowed).has(Vector2i(2,3)))
+    var tank: Dictionary = Roles.make_unit("R",0,Vector2i(7,3),"tank")
+    var enemy: Dictionary = Roles.make_unit("E",1,Vector2i(9,7),"tank")
+    var state: Dictionary = Session.start_layered([tank,enemy],map,records,0,"clear",false,true,true)
+    assert(not state.is_empty())
+    state["units"][0]["ammo"] = 0
+    var before: Dictionary = state.duplicate(true)
+    var result: Dictionary = AI.step(state)
+    assert(result["valid"] and result["action"]=="move" and state==before)
+    var pos: Vector2i = result["state"]["units"][0]["pos"]
+    var return_cost: Dictionary = Bridges.distances_to(map,cells,[Vector2i(0,3)],"ground",true)
+    assert(return_cost[pos]<return_cost[Vector2i(7,3)])
+    assert(pos.x<7 and Codec.decode(Codec.encode(result["state"]))==result["state"])
+    print("PASS V50_9_LONG_SUPPLY: reverse graph, known-only path and legal multi-turn return")
