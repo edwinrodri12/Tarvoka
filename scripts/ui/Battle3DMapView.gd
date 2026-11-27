@@ -19,6 +19,7 @@ const G11ActionsV29 = preload("res://scripts/ui/G11BattleActionsV29.gd")
 const Biomes = preload("res://scripts/ui/WinterBattleBiome.gd")
 const Crossings = preload("res://scripts/core/LayeredCrossingsV48.gd")
 const BridgeArt = preload("res://scripts/ui/LayeredBridgeArtV48.gd")
+const BridgePlayback = preload("res://scripts/ui/LayeredBridgePlaybackV48.gd")
 const WeatherOverlay = preload("res://scripts/ui/BattleWeatherOverlay3D.gd")
 const ImmersiveHud = preload("res://scripts/ui/ImmersiveBattleHud.gd")
 const SiteInteraction = preload("res://scripts/ui/SiteInteractionData.gd")
@@ -47,6 +48,9 @@ var _camera_size: float = 28.0
 var _state_snapshot: Dictionary = {}
 var _viewing_side: int = 0
 var _selected_hint_unit_id: String = ""
+var _bridge_playback: Dictionary = {}
+var _bridge_playback_time: float = 0.0
+var _bridge_original_pose: Transform3D = Transform3D.IDENTITY
 var _ranges_node: Node3D = null
 var _ranges_visible: bool = true
 var _range_text: Label
@@ -470,6 +474,49 @@ func _process(_delta: float) -> void:
         holder.stretch_shrink = mini(8,holder.stretch_shrink+1)
     _advance_water(_delta)
     _update_weather_effects(_delta)
+    _advance_bridge_playback(_delta)
+
+# Experimental read-only playback API; no live order or state mutation.
+func preview_bridge_move(unit_id: String,destination: Vector2i) -> bool:
+    _stop_bridge_playback()
+    if _live_board!=null or _scene==null:
+        return false
+    var plan: Dictionary = BridgePlayback.quote(_state_snapshot,unit_id,destination)
+    if plan.is_empty():
+        return false
+    var model: Node3D = _scene.get_node_or_null("Unidad3D_"+unit_id)
+    if model==null or not model.has_meta("bridge_anchor_offset_v48"):
+        return false
+    _bridge_original_pose = model.transform
+    _bridge_playback = plan
+    _bridge_playback_time = 0.0
+    return true
+
+func _advance_bridge_playback(delta: float) -> void:
+    if _bridge_playback.is_empty() or _scene==null:
+        return
+    var model: Node3D = _scene.get_node_or_null("Unidad3D_"+str(_bridge_playback["id"]))
+    if model==null:
+        _bridge_playback.clear()
+        return
+    _bridge_playback_time += maxf(delta,0.0)
+    var progress: float = _bridge_playback_time/float(_bridge_playback["seconds"])
+    if progress>1.30:
+        _stop_bridge_playback()
+        return
+    var pose: Dictionary = BridgePlayback.sample(_scene,_bridge_playback,
+        progress,float(model.get_meta("bridge_anchor_offset_v48")))
+    if not pose.is_empty():
+        model.position = pose["position"]
+        model.rotation.y = pose["yaw"]
+
+func _stop_bridge_playback() -> void:
+    if not _bridge_playback.is_empty() and _scene!=null:
+        var model: Node3D = _scene.get_node_or_null("Unidad3D_"+str(_bridge_playback["id"]))
+        if model!=null:
+            model.transform = _bridge_original_pose
+    _bridge_playback.clear()
+    _bridge_playback_time = 0.0
 
 func _sync_weather_overlay_size() -> void:
     if is_instance_valid(_weather_overlay) and preview!=null:
@@ -530,6 +577,7 @@ func _focus_for_selected(state: Dictionary, selected_id: String) -> Vector2i:
     return Vector2i(_dims.x/2,_dims.y/2)
 
 func open_from_state(state: Dictionary, selected_id: String = "", viewer: int = 0) -> bool:
+    _stop_bridge_playback()
     _viewing_side = viewer if viewer in [0,1] else 0
     # Standalone and browser tests remain read-only.
     _set_immersive_mode(false)
@@ -684,8 +732,15 @@ func _update_order_ui() -> void:
     _choose_unit_button.hide()
     _sync_immersive_hud()
     if not active:
+        if _state_snapshot.has(Crossings.FIELD) and _cells.has(_selected_cell):
+            var options: Array = Crossings.selectable_units(_state_snapshot,_selected_cell,_viewing_side,{_selected_cell:true})
+            _choose_unit_button.visible = not options.is_empty()
+            _choose_unit_button.text = "Cambiar nivel"
+        else:
+            _choose_unit_button.text = "Elegir unidad"
         _order_note.text = "Solo inspección: no es tu turno o la partida ha terminado."
         return
+    _choose_unit_button.text = "Elegir unidad"
     if _selected_cell.x >= 0:
         _choose_unit_button.visible = not Orders.visible_friends(
             _current_state(),_selected_cell).is_empty()
@@ -743,6 +798,21 @@ func _preview_3d_intent(intent: Dictionary) -> bool:
     return not _order_quote.is_empty()
 
 func _choose_unit_here() -> void:
+    if _live_board==null and _state_snapshot.has(Crossings.FIELD):
+        var options: Array = Crossings.selectable_units(_state_snapshot,_selected_cell,_viewing_side,{_selected_cell:true})
+        if options.is_empty():
+            return
+        var next := 0
+        for i in range(options.size()):
+            if options[i]["id"]==_selected_hint_unit_id:
+                next = (i+1)%options.size()
+                break
+        _selected_hint_unit_id = options[next]["id"]
+        _range_text.text = "Inspección · %s · %s" % [options[next]["domain"],_selected_hint_unit_id]
+        if _cursor!=null:
+            var point: Vector3 = Terrain.world_at(_selected_cell)
+            _cursor.position.y = Terrain.bridge_surface_y(_cells,_scene.get_meta("bridge_cells_v48"),_scene.get_meta("bridge_ramp_profiles_v48"),point,options[next]["domain"])+0.065
+        return
     if not Orders.can_control(_live_board) or _selected_cell.x < 0:
         return
     var chosen: String = Orders.next_friendly(_current_state(),
@@ -892,6 +962,9 @@ func inspect_cell(cell: Vector2i, recenter: bool = true) -> bool:
     _selected_cell = cell
     _inspect_3d_site(cell)
     var selected_friendly: String = _friendly_unit_at(cell)
+    if _state_snapshot.has(Crossings.FIELD):
+        selected_friendly = ""
+        _selected_hint_unit_id = ""
     if not selected_friendly.is_empty():
         _selected_hint_unit_id = selected_friendly
         _refresh_ranges()
@@ -929,6 +1002,8 @@ func inspect_cell(cell: Vector2i, recenter: bool = true) -> bool:
     if recenter or _look_at == Vector3.ZERO:
         _look_at = Terrain.world_at(cell)+Vector3.UP*0.17
         _refresh_camera()
+    if _state_snapshot.has(Crossings.FIELD):
+        _update_order_ui()
     return true
 
 func _friendly_unit_at(cell: Vector2i) -> String:
@@ -1133,6 +1208,7 @@ func _on_viewport_input(event: InputEvent) -> void:
         accept_event()
 
 func close_view() -> void:
+    _stop_bridge_playback()
     _drop_3d_quote()
     if unit_detail_panel != null:
         unit_detail_panel.hide()
