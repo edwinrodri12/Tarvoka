@@ -1,0 +1,161 @@
+name: TARVOKA A02 public Studio release audit
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/tarvoka-a02-live-release-audit.yml'
+  workflow_dispatch:
+    inputs:
+      minimum_source_commit:
+        description: 'Full SHA of the integrated main revision required on Pages'
+        required: true
+        default: '39097840ec8f74681bce21672097a43f75cda28d'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: a02-live-studio-audit-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify-public-studio:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Verify public manifest, source ancestry and served package hash
+        shell: bash
+        env:
+          MINIMUM_SOURCE_COMMIT: ${{ inputs.minimum_source_commit || '39097840ec8f74681bce21672097a43f75cda28d' }}
+        run: |
+          set -euo pipefail
+          mkdir -p build/qa/a02-live
+          python3 - <<'PY'
+          import hashlib, json, os, pathlib, re, subprocess, urllib.request
+          out = pathlib.Path('build/qa/a02-live')
+          base = 'https://edwinrodri12.github.io/Tarvoka/'
+          merged = os.environ['MINIMUM_SOURCE_COMMIT']
+          report = {'url':base,'minimum_integrated_commit':merged}
+          expected_counts = {'V16':(34,5688), 'V17':(34,5688), 'V18':(36,5808), 'V19':(36,5808), 'V20':(37,5928), 'V21':(37,5928), 'V22':(37,5928), 'V23':(37,5928)}
+          def fetch(path):
+              req = urllib.request.Request(base + path + '?a02-audit=' + merged[:12],
+                  headers={'Cache-Control':'no-cache','User-Agent':'TARVOKA-release-audit'})
+              return urllib.request.urlopen(req, timeout=45)
+          try:
+              with fetch('studio-version.json') as r:
+                  manifest = json.load(r)
+              report['manifest'] = manifest
+              (out/'served-manifest.json').write_text(json.dumps(manifest,indent=2))
+              source = manifest['source_commit']
+              assert re.fullmatch('[0-9a-f]{40}', source), 'Invalid source commit'
+              assert re.fullmatch('[0-9a-f]{40}', merged), 'Minimum revision must be a full SHA'
+              subprocess.run(['git','fetch','origin','main'],check=True)
+              assert subprocess.run(['git','merge-base','--is-ancestor',merged,'origin/main']).returncode == 0, 'Requested revision not integrated on main'
+              assert subprocess.run(['git','merge-base','--is-ancestor',merged,source]).returncode == 0, 'Served source predates required integration'
+              assert subprocess.run(['git','merge-base','--is-ancestor',source,'origin/main']).returncode == 0, 'Served revision is not on main'
+              art = subprocess.check_output(['git','show',source+':scripts/ui/A02FpvArtV1.gd'])
+              expected = hashlib.sha256(art).hexdigest()
+              edition_markers = [
+                  ('V23', b'tarvoka_a02_v23_palette_coherence'),
+                  ('V22', b'tarvoka_a02_v22_outer_surface_finish'),
+                  ('V21', b'tarvoka_a02_v21_distinct_end_art'),
+                  ('V20', b'tarvoka_a02_v20_material_relief'),
+                  ('V19', b'tarvoka_a02_v19_graphic_livery'),
+                  ('V18', b'tarvoka_a02_v18_undershell_finish'),
+                  ('V17', b'tarvoka_a02_v17_surface_finish'),
+                  ('V16', b'tarvoka_a02_v16_damage_presentation')]
+              edition = next((name for name, marker in edition_markers if marker in art), None)
+              assert edition in expected_counts, 'Unrecognized art revision'
+              assert b'tarvoka_a02_v16_damage_presentation' in art, 'Unrecognized A02 source'
+              assert manifest['a02'] == edition+' EN REVISION', 'Manifest edition differs from source'
+              assert manifest['a02_source_sha256'] == expected, 'Wrong A02 art content'
+              report['expected_a02_sha256'] = expected
+              report['expected_edition'] = edition
+              report['expected_meshes'],report['expected_triangles'] = expected_counts[edition]
+              digest = hashlib.sha256()
+              with fetch('index.pck') as r:
+                  for chunk in iter(lambda:r.read(1024*1024),b''):
+                      digest.update(chunk)
+              report['actual_bundle_sha256'] = digest.hexdigest()
+              assert digest.hexdigest() == manifest['bundle_sha256'], 'Served package differs from manifest'
+              report['passed'] = True
+              print('PASS PUBLIC A02 RELEASE IDENTITY',source)
+          except Exception as exc:
+              report['passed'] = False
+              report['error'] = str(exc)
+              raise
+          finally:
+              (out/'release-audit.json').write_text(json.dumps(report,indent=2))
+          PY
+      - name: Verify actual public WebGL model on desktop and mobile
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm install --no-save playwright-core pngjs
+          cat > /tmp/a02-live.cjs <<'JS'
+          const {chromium}=require(process.cwd()+'/node_modules/playwright-core');
+          const {PNG}=require(process.cwd()+'/node_modules/pngjs');
+          const fs=require('node:fs');
+          const out='build/qa/a02-live';
+          const expected=JSON.parse(fs.readFileSync(out+'/release-audit.json','utf8'));
+          (async()=>{
+            const browser=await chromium.launch({headless:true,executablePath:'/usr/bin/google-chrome',
+              args:['--no-sandbox','--disable-dev-shm-usage','--enable-webgl','--use-gl=angle','--use-angle=swiftshader','--enable-unsafe-swiftshader']});
+            const reports=[];
+            try {
+              for(const [alias,width,height] of [['a02',1280,720],['fpv',844,390]]){
+                const page=await browser.newPage({viewport:{width,height},deviceScaleFactor:1});
+                const errors=[];
+                const report={alias,width,height,errors};
+                reports.push(report);
+                page.on('pageerror',e=>errors.push(String(e)));
+                page.on('console',m=>{if(/SCRIPT ERROR:|Parse Error:|Could not create render/.test(m.text())) errors.push(m.text());});
+                try {
+                  await page.goto('https://edwinrodri12.github.io/Tarvoka/?unidad='+alias+'&audit='+expected.manifest.source_commit,{waitUntil:'domcontentloaded',timeout:60000});
+                  await page.waitForFunction(()=>window.__tarvokaA02Entry!==undefined,null,{timeout:180000});
+                  const info=await page.evaluate(()=>window.__tarvokaA02Entry);
+                  report.info=info;
+                  if(info.role!=='fpv'||info.edition!==expected.expected_edition||!info.native_model||info.lod!==13||info.stage!==0||info.visible_meshes!==expected.expected_meshes||info.triangles!==expected.expected_triangles||info.transparent_meshes.length!==0||!info.faction_selector)throw Error('Unexpected live native model: '+JSON.stringify(info));
+                  const revision=Number(expected.expected_edition.slice(1));
+                  for(const [since,field] of [[17,'surface_finish'],[18,'undershell_finish'],[19,'graphic_livery'],[20,'surface_atlas'],[20,'material_relief'],[21,'distinct_end_art'],[22,'outer_surface_finish'],[23,'palette_coherence']]){
+                    if(revision>=since&&!info[field])throw Error('Missing native art marker '+field);
+                  }
+                  for(const action of ['a02_move','a02_hover','a02_hit','a02_d0','a02_d1','a02_d2','a02_d3','a02_d4','stop'])
+                    if(!info.actions.includes(action))throw Error('Missing '+action);
+                  const menu=page.locator('#tarvoka-a02-compact-nav');
+                  const summary=menu.locator('summary');
+                  if(await menu.count()!==1||!(await summary.isVisible())||await menu.getAttribute('open')!==null)throw Error('Compact navigation not collapsed');
+                  await summary.click();
+                  if(!(await menu.locator('a[href="?unidad=a02"]').isVisible()))throw Error('Missing visible review entry');
+                  await summary.click();
+                  await page.waitForTimeout(1200);
+                  const png=PNG.sync.read(await page.screenshot({path:out+'/public-'+alias+'.png'}));
+                  if(png.width!==width||png.height!==height||errors.length)throw Error('Unexpected screenshot or browser errors '+errors.join('; '));
+                  const response=await page.request.get('https://edwinrodri12.github.io/Tarvoka/studio-version.json?audit='+expected.manifest.source_commit,{headers:{'Cache-Control':'no-cache'}});
+                  if(!response.ok())throw Error('Cannot verify manifest after rendering');
+                  const finalManifest=await response.json();
+                  if(finalManifest.source_commit!==expected.manifest.source_commit||finalManifest.bundle_sha256!==expected.manifest.bundle_sha256)throw Error('Publication changed during audit; retry against a stable revision');
+                  report.passed=true;
+                } catch(e) {
+                  report.passed=false; report.error=String(e);
+                  await page.screenshot({path:out+'/failed-'+alias+'.png'}).catch(()=>{});
+                  throw e;
+                } finally {await page.close();}
+              }
+            } finally {
+              fs.writeFileSync(out+'/browser-audit.json',JSON.stringify(reports,null,2));
+              await browser.close();
+            }
+          })().catch(e=>{console.error(e);process.exitCode=1;});
+          JS
+          node /tmp/a02-live.cjs
+      - name: Archive release audit evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: a02-public-release-audit
+          path: build/qa/a02-live/
+          if-no-files-found: warn
+          retention-days: 14
