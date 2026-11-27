@@ -141,6 +141,7 @@ func _run()->void:
             check(bool(model.get_meta("tarvoka_a02_v23_palette_coherence",false)),"V23 satin palette identity")
             check(bool(model.get_meta("tarvoka_a02_v24_matte_art_finish",false)),"V24 restrained ornamental sheen")
             check(bool(model.get_meta("tarvoka_a02_v25_graphic_hierarchy",false)),"V25 coordinated graphic hierarchy")
+            check(bool(model.get_meta("tarvoka_a02_v26_central_graphic_identity",false)),"V26 opaque central graphic identity")
             if paint!=null and paint.mesh is ArrayMesh:
                 var paint_data:Array=paint.mesh.surface_get_arrays(0)
                 var paint_vertices:PackedVector3Array=paint_data[Mesh.ARRAY_VERTEX]
@@ -205,6 +206,15 @@ func _run()->void:
                                 var tile_image:=image.get_region(Rect2i(tile*128,Vector2i(128,128)))
                                 fingerprints[hash(tile_image.get_data())]=true
                             check(fingerprints.size()==5,"V21 five distinct face-family graphic patterns")
+                            var plaque_dark:Color=image.get_pixel(45,82)
+                            var glyph_light:Color=image.get_pixel(49,85)
+                            check(plaque_dark.is_equal_approx(Color("#747f87")) and glyph_light.is_equal_approx(Color("#f8fafb")),"V26 contrasting printed identity artwork")
+                            var light_pixels:int=0
+                            for y in range(85,95):
+                                for x in range(47,81):
+                                    if image.get_pixel(x,y).get_luminance()>0.90:
+                                        light_pixels+=1
+                            check(light_pixels>=150 and light_pixels<=240,"V26 legible bitmap graphic coverage")
                     check(painted.albedo_texture==v19_shared_livery,"V19 shared texture across factions and LODs")
                 var paint_normals:PackedVector3Array=paint_data[Mesh.ARRAY_NORMAL]
                 var paint_colors:PackedColorArray=paint_data[Mesh.ARRAY_COLOR]
@@ -591,7 +601,7 @@ func _run()->void:
     var report:=FileAccess.open(out+"/a02-v10-workload.json",FileAccess.WRITE)
     check(report!=null,"V10 resource report created")
     if report!=null:
-        report.store_string(JSON.stringify({"revision":"V25","measurement":"visible native Godot mesh resources; not FPS or RAM","states":workload},"  "))
+        report.store_string(JSON.stringify({"revision":"V26","measurement":"visible native Godot mesh resources; not FPS or RAM","states":workload},"  "))
         report.close()
     check(Arsenal.profile("fpv")==profile,"no catalogue changes")
     vp.queue_free()
