@@ -9,6 +9,8 @@ on:
       - "scripts/core/TerrainTactics.gd"
       - "tests/test_modern_arsenal_ui.gd"
       - "scripts/ui/BattleTerrain3D.gd"
+      - "scripts/ui/TerrainSurfaceFinish3D.gd"
+      - "tests/test_scenarios.gd"
       - "scripts/ui/Battle3DMapView.gd"
       - "scripts/core/BattleSession.gd"
       - "scripts/core/SaveCodec.gd"
@@ -49,11 +51,15 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p artifacts
-          timeout 180s xvfb-run -a -s "-screen 0 1280x800x24" /tmp/Godot_v4.3-stable_linux.x86_64 --path . --rendering-driver opengl3 --audio-driver Dummy --script res://tests/test_layered_bridge_render_v48_4.gd 2>&1 | tee /tmp/v49-render.log
+          timeout 300s xvfb-run -a -s "-screen 0 1280x800x24" /tmp/Godot_v4.3-stable_linux.x86_64 --path . --rendering-driver opengl3 --audio-driver Dummy --script res://tests/test_layered_bridge_render_v48_4.gd 2>&1 | tee /tmp/v49-render.log
           if grep -E 'SCRIPT ERROR:|Parse Error:|Assertion failed' /tmp/v49-render.log; then exit 1; fi
           grep -q 'PASS V48_4_NATIVE_BRIDGE:' /tmp/v49-render.log
           test -s artifacts/tarvoka_bridge_v48_4_ew.png
           test -s artifacts/tarvoka_bridge_v48_4_ns.png
+          for pair in temperate_winter desert_tropical wetland_urban coastal_archipelago; do
+            test -s "artifacts/tarvoka_mixed_v49_6_${pair}.png"
+          done
+          grep -q "V49_MIXED_STATS" /tmp/v49-render.log
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -61,3 +67,4 @@ jobs:
           path: |
             /tmp/v49-*.log
             artifacts/tarvoka_bridge_v48_4_*.png
+            artifacts/tarvoka_mixed_v49_6_*.png
