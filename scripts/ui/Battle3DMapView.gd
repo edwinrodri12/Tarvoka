@@ -833,6 +833,10 @@ func tap_battle_cell(cell: Vector2i) -> bool:
     if not _cells.has(cell):
         return false
     if _live_board == null:
+        if _state_snapshot.has(Crossings.FIELD) and cell!=_selected_cell and not _selected_hint_unit_id.is_empty():
+            if preview_bridge_move(_selected_hint_unit_id,cell):
+                _order_note.text = "Recorrido de demostración · no ejecuta órdenes ni consume combustible."
+                return true
         return inspect_cell(cell)
     if _current_state() != _state_snapshot:
         _drop_3d_quote()
