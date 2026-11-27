@@ -570,6 +570,7 @@ static func _build_chunk(parent: Node3D, data: Dictionary,
         var at: Vector3 = world_at(cell)
         var half: float = CELL*0.5
         var tinted: Color = _tint(tile,biome)
+        var local_biome: String = _regional_style(tile,biome)
         if kind == "unknown":
             var flat: Vector3 = at+Vector3(0,FOG_LEVEL,0)
             _panel(unknown,flat+Vector3(-half,0,-half),
@@ -590,7 +591,7 @@ static func _build_chunk(parent: Node3D, data: Dictionary,
                 var cw: Color = _cached_water_tint(cells,cell+Vector2i(0,1),water_cache,biome)
                 _tri_tinted(water,wn,ww,we,cn,cw,ce)
                 _tri_tinted(water,we,ww,ws,ce,cw,cs)
-                _append_coastal_foam(water,cells,cell,biome)
+                _append_coastal_foam(water,cells,cell,local_biome)
             else:
                 _panel(water,wn,we,ws,ww,tinted)
             water_count += 1
@@ -621,7 +622,10 @@ static func _build_chunk(parent: Node3D, data: Dictionary,
         # Close exposed soil down to known water, including road crossings.
         # Reuse the ground mesh/material; no additional draw batch.
         var bank_top: Array[Vector3] = [nw,ne,se,sw]
-        var bank_tint: Color = _shore_color(biome)
+        var bank_tint: Color = _shore_color(local_biome)
+        if tile.has("mixed_region_v49"):
+            var region: Dictionary = tile["mixed_region_v49"]
+            bank_tint = _shore_color(region["primary"]).lerp(_shore_color(region["secondary"]),float(region["secondary_weight"])/1000.0)
         if not bool(tile.get("details",false)):
             bank_tint = bank_tint.darkened(0.60)
         _append_water_banks(ground,cells,cell,bank_top,bank_tint)
@@ -632,14 +636,14 @@ static func _build_chunk(parent: Node3D, data: Dictionary,
         var surface_cell: Dictionary = {
             "x":cell.x,"z":cell.y,"top":_cell_height(tile),
             "half":half,"corners":corners}
-        if kind=="plain" and biome==Biomes.DESERT:
+        if kind=="plain" and local_biome==Biomes.DESERT:
             _append_sand_ripples(ground,at,surface_cell,cell)
-        elif kind=="plain" and biome in [Biomes.WETLAND,Biomes.URBAN,Biomes.ARCHIPELAGO]:
-            _append_extended_ground(ground,at,surface_cell,cell,biome)
+        elif kind=="plain" and local_biome in [Biomes.WETLAND,Biomes.URBAN,Biomes.ARCHIPELAGO]:
+            _append_extended_ground(ground,at,surface_cell,cell,local_biome)
         elif kind=="plain":
-            _append_natural_ground(ground,at,surface_cell,cell,biome)
+            _append_natural_ground(ground,at,surface_cell,cell,local_biome)
         if kind == "road":
-            _append_road_finish(road,at,surface_cell,tile,biome)
+            _append_road_finish(road,at,surface_cell,tile,local_biome)
             crossings_count += _append_crossing_parapets(road,at,surface_cell,tile)
             roads_count += 1
         else:
@@ -647,7 +651,7 @@ static func _build_chunk(parent: Node3D, data: Dictionary,
             for key in ["north","south","west","east"]:
                 if not bool(shore_edges.get(key,false)):
                     continue
-                _append_shore_bands(shore,at,surface_cell,key,biome)
+                _append_shore_bands(shore,at,surface_cell,key,local_biome)
                 shores_count += 1
     var chunk := Node3D.new()
     chunk.name = "Sector3D_%d_%d" % [data["origin"].x,data["origin"].y]
