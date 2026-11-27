@@ -58,6 +58,7 @@ func _initialize() -> void:
     _check_layered_session(map,records,crossing)
     _check_fog_supply(map,records,crossing)
     _check_long_supply(map,records,cells)
+    _check_geographic_crossings()
     # CPU-readable mesh bounds, not an actual rendered review.
     for axis in ["ew","ns"]:
         var model: Node3D = Art.build(axis)
@@ -292,3 +293,38 @@ func _check_long_supply(map: Array,records: Array,cells: Dictionary) -> void:
     assert(return_cost[pos]<return_cost[Vector2i(7,3)])
     assert(pos.x<7 and Codec.decode(Codec.encode(result["state"]))==result["state"])
     print("PASS V50_9_LONG_SUPPLY: reverse graph, known-only path and legal multi-turn return")
+
+# V51: deterministic topology overlay, no change to seed-generated terrain.
+func _check_geographic_crossings() -> void:
+    var cases := 0
+    var with_spans := 0
+    for dims in [Vector2i(10,8),Vector2i(24,18),Vector2i(40,30)]:
+        for biome in Scenarios.GEOGRAPHY_BIOMES:
+            for seed in [1,1729,999999]:
+                var map: Array = Scenarios.geographic_terrain(seed,dims,biome)
+                var before: Array = map.duplicate(true)
+                var records: Array = Bridges.geographic_records(map)
+                assert(records==Bridges.geographic_records(map) and map==before)
+                assert(Bridges.index_records(map,records)["valid"])
+                cases += 1
+                if records.is_empty():
+                    continue
+                with_spans += 1
+                var cells: Dictionary = Bridges.index_records(map,records)["cells"]
+                for cell in cells:
+                    assert(cells.get(Vector2i(dims.x-1-cell.x,cell.y))==cells[cell])
+                var state: Dictionary = Session.start([Roles.make_unit("P",0,Vector2i(1,Scenarios.scale_y(2,dims)),"tank"),
+                    Roles.make_unit("E",1,Vector2i(dims.x-2,Scenarios.scale_y(2,dims)),"tank")],map)
+                state["map_seed"] = seed
+                state[Scenarios.GEOGRAPHY_FIELD] = Scenarios.GEOGRAPHY_VERSION
+                if biome!="temperate":
+                    state["visual_biome"] = biome
+                var layered: Dictionary = Session.with_geographic_crossings(state)
+                assert(not layered.is_empty() and not state.has(Bridges.FIELD))
+                assert(layered["terrain"]==before)
+                assert(Codec.decode(Codec.encode(layered))==layered)
+                var tampered: Dictionary = layered.duplicate(true)
+                tampered[Bridges.FIELD]["records"].pop_back()
+                assert(Codec.encode(tampered).is_empty())
+    assert(cases==81)
+    print("V51_GEOGRAPHIC_CROSSINGS maps=",cases," maps_with_safe_spans=",with_spans)

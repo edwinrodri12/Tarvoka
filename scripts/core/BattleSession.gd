@@ -58,6 +58,22 @@ static func start_layered(units: Array,terrain: Array,records: Array,
         return {}
     return state
 
+# Opt-in conversion of a canonical geographic battle, preserving its
+# economy, opening, weather, faction and exploration. Empty means no safe
+# crossing available or invalid occupancy; caller keeps the original.
+static func with_geographic_crossings(state: Dictionary) -> Dictionary:
+    if not state.has("map_seed") or state.has(Crossings.FIELD) or not state.get("terrain") is Array or not state.get("units") is Array:
+        return {}
+    var records: Array = Crossings.geographic_records(state["terrain"])
+    if records.is_empty():
+        return {}
+    var next: Dictionary = state.duplicate(true)
+    next[Crossings.FIELD] = {"version":Crossings.VERSION,"records":records}
+    var index: Dictionary = Crossings.state_index(next)
+    if not index["valid"] or not Crossings.occupancy(next["terrain"],index["cells"],next["units"])["valid"]:
+        return {}
+    return next
+
 static func move(state: Dictionary, unit_id: String, destination: Vector2i) -> Dictionary:
     if not _active(state) or not Opening.can_order(state):
         return {"valid": false, "state": state.duplicate(true)}

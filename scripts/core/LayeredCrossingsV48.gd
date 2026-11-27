@@ -8,15 +8,16 @@ class_name TarvokaLayeredCrossingsV48
 const Rules = preload("res://scripts/core/Rules.gd")
 const Domains = preload("res://scripts/core/Domains.gd")
 const Weather = preload("res://scripts/core/Weather.gd")
+const Scenarios = preload("res://scripts/core/Scenarios.gd")
 const VERSION := 1
 const FIELD := "layered_crossings_v48"
 
 # V48.7: optional fog and installations; no installation or relay may
-# occupy a layered crossing. Seeded generation is still unsupported.
+# occupy a layered crossing. V51 permits canonical geography-derived spans.
 static func state_index(state: Dictionary) -> Dictionary:
     if not state.has(FIELD):
         return {"valid":true,"cells":{}}
-    if state.has("map_seed"):
+    if state.has("map_seed") and state.get(Scenarios.GEOGRAPHY_FIELD)!=Scenarios.GEOGRAPHY_VERSION:
         return {"valid":false,"cells":{}}
     var config = state[FIELD]
     if not config is Dictionary or config.size()!=2 or not config.get("version") is int or config["version"]!=VERSION or not config.get("records") is Array or config["records"].is_empty():
@@ -26,6 +27,8 @@ static func state_index(state: Dictionary) -> Dictionary:
     var index: Dictionary = index_records(state["terrain"],config["records"])
     if not index["valid"]:
         return index
+    if state.has("map_seed") and config["records"]!=geographic_records(state["terrain"]):
+        return {"valid":false,"cells":{}}
     for field in ["economy","control"]:
         if not state.has(field):
             continue
@@ -37,6 +40,52 @@ static func state_index(state: Dictionary) -> Dictionary:
             if not site is Dictionary or not site.get("pos") is Vector2i or index["cells"].has(site["pos"]):
                 return {"valid":false,"cells":{}}
     return index
+
+# V51: derive only safe, symmetric single-tile elevated spans from the
+# existing map. Two flat approach tiles per end, no installation anchors,
+# no overlapping ramps. Do not alter the underlying reproducible terrain.
+static func geographic_records(terrain: Array) -> Array:
+    if not Rules.valid_terrain(terrain):
+        return []
+    var dims: Vector2i = Rules.map_size(terrain)
+    var reserved: Dictionary = {}
+    for cell in Scenarios._large_anchor_cells(dims):
+        reserved[cell] = true
+    var records: Array = []
+    for y in range(1,dims.y-1):
+        for x in range(1,int(dims.x/2)):
+            var left := Vector2i(x,y)
+            var right := Vector2i(dims.x-1-x,y)
+            for axis in ["ew","ns"]:
+                var direction: Vector2i = Vector2i.RIGHT if axis=="ew" else Vector2i.DOWN
+                var channel := Vector2i(-direction.y,direction.x)
+                var claimed: Dictionary = {}
+                var valid := true
+                for cell in [left,right]:
+                    if terrain[cell.y][cell.x]!="road" or reserved.has(cell) or claimed.has(cell):
+                        valid = false
+                        break
+                    claimed[cell] = true
+                    for side in [-1,1]:
+                        var water: Vector2i = cell+channel*side
+                        if not Rules.inside(water,terrain) or terrain[water.y][water.x]!="water":
+                            valid = false
+                        for reach in [1,2]:
+                            var at: Vector2i = cell+direction*side*reach
+                            if not Rules.inside(at,terrain) or reserved.has(at) or claimed.has(at):
+                                valid = false
+                                continue
+                            if terrain[at.y][at.x] not in ["plain","road"]:
+                                valid = false
+                            claimed[at] = true
+                if not valid:
+                    continue
+                for cell in claimed:
+                    reserved[cell] = true
+                records.append({"x":left.x,"y":left.y,"axis":axis})
+                records.append({"x":right.x,"y":right.y,"axis":axis})
+                break
+    return records
 
 static func index_records(terrain: Array,records: Array) -> Dictionary:
     if not Rules.valid_terrain(terrain) or records.size()>Rules.MAX_AREA:
