@@ -1090,6 +1090,7 @@ static var _destroyer_steel_texture: ImageTexture
 static var _destroyer_normal_texture: ImageTexture
 static var _destroyer_rough_texture: ImageTexture
 static var _destroyer_cloud_mesh: ArrayMesh
+static var _destroyer_flame_mesh: ArrayMesh
 
 static func _destroyer_grain() -> ImageTexture:
     if _destroyer_steel_texture != null:
@@ -1172,6 +1173,40 @@ static func _destroyer_cloud() -> ArrayMesh:
     _destroyer_cloud_mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES,arrays)
     return _destroyer_cloud_mesh
 
+# Closed stylized flame with the same topology as the former sphere.
+# Analytic inverse-transpose normals for the taper and curved tip.
+static func _destroyer_flame() -> ArrayMesh:
+    if _destroyer_flame_mesh != null:
+        return _destroyer_flame_mesh
+    var source := SphereMesh.new()
+    source.radius = 0.5
+    source.height = 1.0
+    source.radial_segments = 12
+    source.rings = 6
+    var arrays: Array = source.surface_get_arrays(0)
+    var vertices: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
+    var normals: PackedVector3Array = arrays[Mesh.ARRAY_NORMAL]
+    var colors := PackedColorArray()
+    for i in range(vertices.size()):
+        var point: Vector3 = vertices[i]
+        var normal: Vector3 = normals[i]
+        var h: float = clampf(point.y+0.5,0.0,1.0)
+        var taper: float = 1.16-0.84*h
+        var bend: float = 0.18*h*h
+        vertices[i] = Vector3(taper*point.x+bend,point.y,taper*point.z)
+        var nx: float = normal.x/taper
+        var nz: float = normal.z/taper
+        normals[i] = Vector3(nx,normal.y-nx*(-0.84*point.x+0.36*h)-nz*(-0.84*point.z),nz).normalized()
+        var tint: Color = Color("#F27828").lerp(Color("#FFF2AB"),h/0.32) if h<0.32 else Color("#FFF2AB").lerp(Color("#E64A20"),(h-0.32)/0.68)
+        colors.append(tint)
+    arrays[Mesh.ARRAY_VERTEX] = vertices
+    arrays[Mesh.ARRAY_NORMAL] = normals
+    arrays[Mesh.ARRAY_COLOR] = colors
+    arrays[Mesh.ARRAY_TANGENT] = null
+    _destroyer_flame_mesh = ArrayMesh.new()
+    _destroyer_flame_mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES,arrays)
+    return _destroyer_flame_mesh
+
 static func _destroyer_finish(node: Node, detail: bool) -> void:
     if node is MeshInstance3D:
         var part: MeshInstance3D = node as MeshInstance3D
@@ -1230,6 +1265,10 @@ static func _destroyer_finish(node: Node, detail: bool) -> void:
                 mat.emission_enabled = true
                 mat.emission = mat.albedo_color
                 mat.emission_energy_multiplier = 0.8
+                if part.has_meta("destroyer_tapered_flame"):
+                    mat.vertex_color_use_as_albedo = true
+                    mat.emission = Color("#F66A24")
+                    mat.emission_energy_multiplier = 0.38
             if detail and (label in ["CascoNaval","Cubierta","Helipuerto","CarcasaInferior","Puente","TechoPuente","CarcasaMastil","CarcasaTorreta","RegistroProa","TapaBiselada"] or label.begins_with("RegistroPopa")):
                 mat.albedo_texture = _destroyer_grain()
                 mat.uv1_triplanar = true
@@ -1656,7 +1695,7 @@ static func _destroyer(root: Node3D, art_level: int = 10) -> void:
     for station in stations:
         deck_stations.append([station[0],station[1]*0.86,0.738,0.802])
     _destroyer_shell(root,"Cubierta",deck_stations,ARMOR)
-    root.set_meta("destroyer_art_revision","1.19")
+    root.set_meta("destroyer_art_revision","1.20")
     _destroyer_bridge(root,art_level)
     _destroyer_navigation(root,art_level)
     _destroyer_deck_equipment(root,art_level)
@@ -1708,11 +1747,16 @@ static func _destroyer_damage_setup(root: Node3D, art_level: int) -> void:
             smoke.set_meta("destroyer_irregular_cloud",true)
         smoke.set_meta("destroyer_fx_rest",smoke.transform)
         smoke.hide()
+    # All flames share the aft deck contact plane. No floating fire.
     for i in range(4 if art_level >= 13 else 2):
+        var height: float = [0.34,0.43,0.29,0.37][i]
         var flame: MeshInstance3D = _sphere(fx,"Fuego_%d" % i,
-            Vector3(-0.24+float(i%2)*0.17,1.10+float(i/2)*0.14,0.72),
-            Vector3(0.17,0.34+float(i%2)*0.11,0.18),Color("#FF9435"))
-        flame.rotation_degrees.z = -16.0+float(i)*9.0
+            Vector3(-0.19+float(i%2)*0.33,0.830+height*0.5,0.88+float(i/2)*0.12),
+            Vector3(0.19,height,0.18),Color.WHITE if art_level>=13 else Color("#FF9435"))
+        if art_level>=13:
+            flame.mesh = _destroyer_flame()
+            flame.rotation_degrees.y = 35.0+float(i)*83.0
+            flame.set_meta("destroyer_tapered_flame",true)
         flame.set_meta("destroyer_fx_rest",flame.transform)
         flame.hide()
     _box(fx,"FragmentoCubierta",Vector3(0.35,0.87,0.84),
@@ -1810,7 +1854,10 @@ static func animate_destroyer_damage(root: Node3D, phase: float) -> bool:
             item.position += Vector3(0.032*wave,0.045*wave,0.024*cos(phase*TAU+i))*amplitude
             item.scale *= 1.0+0.085*wave*amplitude
         elif label.begins_with("Fuego"):
-            item.scale *= Vector3(1.0-0.06*wave,1.0+0.18*wave,1.0-0.06*wave)
+            var stretch: float = 1.0+0.18*wave
+            # Keep the lower end at its authored contact plane while flickering.
+            item.scale *= Vector3(1.0-0.06*wave,stretch,1.0-0.06*wave)
+            item.position.y += rest.basis.get_scale().y*0.5*(stretch-1.0)
     return true
 
 static func pose_destroyer(root: Node3D, kind: String, progress: float,
