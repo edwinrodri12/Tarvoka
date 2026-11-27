@@ -6,6 +6,7 @@ class_name TarvokaBattleMinimap
 const Visibility = preload("res://scripts/core/Visibility.gd")
 const VisualStyle = preload("res://scripts/ui/VisualStyle.gd")
 const Winter = preload("res://scripts/ui/WinterBattleBiome.gd")
+const MixedPreview = preload("res://scripts/ui/MixedBiomePreviewV49.gd")
 const Weather = preload("res://scripts/core/Weather.gd")
 const IsoTransform = preload("res://scripts/ui/IsoProjection.gd")
 const TacticalAlerts = preload("res://scripts/ui/TacticalAlertsData.gd")
@@ -73,16 +74,20 @@ static func safe_snapshot(state: Dictionary, viewer: int = 0,
     var fog: bool = Visibility.enabled(state)
     var visible: Dictionary = Visibility.visible_cells(state,viewer) if fog else {}
     var explored: Dictionary = Visibility.explored_cells(state,viewer) if fog else {}
+    var regions: Dictionary = MixedPreview.regions_for(state,dims)
     for y in range(dims.y):
         for x in range(dims.x):
             var cell := Vector2i(x,y)
             var is_known: bool = not fog or explored.has(cell)
             var is_visible: bool = not fog or visible.has(cell)
-            result["tiles"].append({
+            var tile: Dictionary = {
                 "pos":cell,
                 "kind":str(state["terrain"][y][x]) if is_known else "unknown",
                 "visible":is_visible,"explored":is_known
-            })
+            }
+            if is_known and regions.has(cell):
+                tile["region"] = regions[cell].duplicate(true)
+            result["tiles"].append(tile)
     for unit in state.get("units",[]):
         if int(unit.get("hp",0)) <= 0:
             continue
@@ -140,8 +145,10 @@ static func _rasterize_terrain(data: Dictionary) -> Texture2D:
         var cell: Vector2i = item["pos"]
         var color := Color("#09101C")
         if bool(item["explored"]):
-            color = Weather.terrain_tint(VisualStyle.terrain_color(str(item["kind"]),cell.x,cell.y,
-                str(data.get("biome",Winter.TEMPERATE))),str(data.get("weather","clear")))
+            var pigment: Color = VisualStyle.terrain_color(str(item["kind"]),cell.x,cell.y,str(data.get("biome",Winter.TEMPERATE)))
+            if item.has("region"):
+                pigment = MixedPreview.tile_tint(str(item["kind"]),cell,item["region"])
+            color = Weather.terrain_tint(pigment,str(data.get("weather","clear")))
             if not bool(item["visible"]):
                 color = color.darkened(0.70)
         image.set_pixel(cell.x,cell.y,color)
