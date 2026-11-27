@@ -59,13 +59,19 @@ func _run() -> void:
         # A failed fit is diagnostic evidence, not hidden by scaling the ship.
         assert(ship_report.has("fits_channel_width"))
         assert(ship_report["fits_vertical"] and ship_report["fits_channel_width"])
-        assert(stats["bridge_clearance_failures_v48"]==int(not bool(ship_report["fits_vertical"]) or not bool(ship_report["fits_channel_width"])))
+        assert(ground_report.has("fits_deck_width"))
+        assert(is_equal_approx(float(ground_report["deck_width"]),Art.ROAD_WIDTH))
+        assert(is_equal_approx(ground.rotation.y,PI*0.5 if axis=="ew" else 0.0))
+        # Record an outstanding ground-width violation honestly, rather
+        # than scaling the approved model or certifying an unmeasured fit.
+        assert(stats["bridge_clearance_failures_v48"]==int(not bool(ground_report["fits_deck_width"]))+int(not bool(ship_report["fits_vertical"]) or not bool(ship_report["fits_channel_width"])))
         assert(is_equal_approx(ship.rotation.y,PI*0.5 if axis=="ns" else 0.0))
         for side in [-1,1]:
             var ramp: Node3D = model.get_node("Rampa_%d_%d_%d" % [cell.x,cell.y,side])
             var mesh: ArrayMesh = ramp.get_child(0).mesh
             assert(mesh.surface_get_array_len(0)==36)
             assert(is_equal_approx(float(ramp.get_meta("deck_y")),Art.ROAD_TOP))
+            assert(is_equal_approx(float(ramp.get_meta("road_width_v50")),Art.ROAD_WIDTH))
         var direction := Vector2i.RIGHT if axis=="ew" else Vector2i.DOWN
         var destination: Vector2i = cell+direction*2
         var plan: Dictionary = Playback.quote(state,"G",destination)
@@ -94,9 +100,9 @@ func _run() -> void:
         root.add_child(light)
         var camera := Camera3D.new()
         camera.projection = Camera3D.PROJECTION_ORTHOGONAL
-        camera.size = 9.0
+        camera.size = 11.5
         root.add_child(camera)
-        var focus: Vector3 = Terrain.world_at(cell)+Vector3.UP*0.85
+        var focus: Vector3 = Terrain.world_at(cell)+Vector3.UP*2.1
         camera.position = focus+Vector3(7,4,8) if axis=="ew" else focus+Vector3(8,4,-7)
         camera.look_at(focus)
         camera.make_current()

@@ -7,7 +7,9 @@ const DECK_TOP := 1.99
 const DECK_BOTTOM := 1.78
 const WATER_LEVEL := -0.17
 const ROAD_TOP := DECK_TOP+0.04
-const RAMP_HALF_WIDTH := 0.63
+const DECK_WIDTH := 2.36
+const ROAD_WIDTH := 2.16
+const RAMP_HALF_WIDTH := ROAD_WIDTH*0.5
 
 static func _box(parent: Node3D,label: String,dimensions: Vector3,
         at: Vector3,tint: Color) -> void:
@@ -31,18 +33,19 @@ static func build(axis: String) -> Node3D:
     root.rotation.y = PI*0.5 if axis=="ns" else 0.0
     var concrete := Color("#a8aaa3")
     var metal := Color("#767f81")
-    _box(root,"Tablero",Vector3(CELL,DECK_TOP-DECK_BOTTOM,1.48),
+    _box(root,"Tablero",Vector3(CELL,DECK_TOP-DECK_BOTTOM,DECK_WIDTH),
         Vector3(0,(DECK_TOP+DECK_BOTTOM)*0.5,0),concrete)
-    _box(root,"Calzada",Vector3(CELL,0.04,1.26),
+    _box(root,"Calzada",Vector3(CELL,0.04,ROAD_WIDTH),
         Vector3(0,DECK_TOP+0.02,0),Color("#4f585e"))
     for side in [-1.0,1.0]:
-        var z: float = float(side)*0.70
+        var z: float = float(side)*(DECK_WIDTH*0.5-0.06)
         _box(root,"Viga",Vector3(CELL,0.16,0.12),Vector3(0,DECK_BOTTOM+0.08,z),metal)
         _box(root,"Parapeto",Vector3(CELL,0.20,0.10),Vector3(0,DECK_TOP+0.12,z),concrete)
     for x in [-0.8,0.0,0.8]:
         _box(root,"Marca",Vector3(0.36,0.008,0.035),
             Vector3(x,DECK_TOP+0.044,0),Color("#e6dfb4"))
     root.set_meta("clearance",DECK_BOTTOM-WATER_LEVEL)
+    root.set_meta("road_width_v50",ROAD_WIDTH)
     root.set_meta("prototype_only",true)
     return root
 
@@ -88,6 +91,7 @@ static func build_ramp(axis: String,side: int,ground_y: float,reach: int = 1) ->
     root.set_meta("reach",reach)
     root.set_meta("slope_degrees",rad_to_deg(atan((ROAD_TOP-ground_y)/(absf(outer-inner)))))
     root.set_meta("deck_y",ROAD_TOP)
+    root.set_meta("road_width_v50",ROAD_WIDTH)
     return root
 
 # Bounds in the root parent's coordinate system, including root scale.

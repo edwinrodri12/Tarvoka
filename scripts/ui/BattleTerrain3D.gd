@@ -1398,6 +1398,10 @@ static func _make_units(parent: Node3D,state: Dictionary,
             # ship along the channel, perpendicular to the bridge deck.
             if bridge_cells.has(cell) and domain=="naval" and role=="destroyer":
                 model.rotation.y = PI*0.5 if bridge_cells[cell]=="ns" else 0.0
+            elif bridge_cells.has(cell) and domain=="ground" and role=="tank":
+                # Native tank tracks run along local Z. Align with deck,
+                # not with the water channel. Preserve all model dimensions.
+                model.rotation.y = PI*0.5 if bridge_cells[cell]=="ew" else 0.0
             model.position = Vector3.ZERO
             # Determine the real visible bounds with the model's existing
             # scale. Do not rescale or modify any approved unit mesh.
@@ -1418,6 +1422,14 @@ static func _make_units(parent: Node3D,state: Dictionary,
                         var lateral_max: float = adjusted.end.x if across_x else adjusted.end.z
                         report["fits_channel_width"] = lateral_min>=-CELL*0.5+0.03 and lateral_max<=CELL*0.5-0.03
                         report["channel_width"] = CELL
+                    else:
+                        var across_x: bool = bridge_cells[cell]=="ns"
+                        var lateral_min: float = adjusted.position.x if across_x else adjusted.position.z
+                        var lateral_max: float = adjusted.end.x if across_x else adjusted.end.z
+                        report["deck_width"] = BridgeArt.ROAD_WIDTH
+                        report["lateral_min"] = lateral_min
+                        report["lateral_max"] = lateral_max
+                        report["fits_deck_width"] = lateral_min>=-BridgeArt.ROAD_WIDTH*0.5+0.03 and lateral_max<=BridgeArt.ROAD_WIDTH*0.5-0.03
                     model.set_meta("bridge_clearance_v48",report)
             else:
                 model.position = world_at(cell)+Vector3.UP*(base_y+altitude)
@@ -1620,7 +1632,7 @@ static func build(state: Dictionary, selected_id: String = "", viewer: int = 0) 
     for child in scene.get_children():
         if child.has_meta("bridge_clearance_v48"):
             var report: Dictionary = child.get_meta("bridge_clearance_v48")
-            if not bool(report.get("fits_vertical",false)) or not bool(report.get("fits_channel_width",true)):
+            if not bool(report.get("fits_vertical",false)) or not bool(report.get("fits_channel_width",true)) or not bool(report.get("fits_deck_width",true)):
                 clearance_failures += 1
     counters["bridge_clearance_failures_v48"] = clearance_failures
     scene.set_meta("bridge_inspection_only_v48",state.has(Crossings.FIELD))
