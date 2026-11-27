@@ -208,6 +208,19 @@ static func _crown_livery()->ImageTexture:
     image.fill_rect(Rect2i(289,179,62,28),Color("#bcc7ce"))
     image.fill_rect(Rect2i(299,185,42,16),Color("#f7f9fa"))
     image.fill_rect(Rect2i(279,227,82,6),Color("#91a0ab"))
+    # V27: layered ornamental ink borders, using only the existing atlas.
+    # Paired restrained light/dark accents suggest depth without new geometry.
+    for origin in [0,128]:
+        image.fill_rect(Rect2i(origin+20,175,88,2),Color("#f0f2f3"))
+        image.fill_rect(Rect2i(origin+20,207,88,2),Color("#aebbc3"))
+        image.fill_rect(Rect2i(origin+20,177,2,30),Color("#d6dce0"))
+        image.fill_rect(Rect2i(origin+106,177,2,30),Color("#bac5cc"))
+    image.fill_rect(Rect2i(150,33,84,2),Color("#f0f2f3"))
+    image.fill_rect(Rect2i(150,93,84,2),Color("#aebbc3"))
+    image.fill_rect(Rect2i(151,176,82,2),Color("#f0f2f3"))
+    image.fill_rect(Rect2i(151,212,82,2),Color("#aebbc3"))
+    image.fill_rect(Rect2i(281,171,78,2),Color("#f0f2f3"))
+    image.fill_rect(Rect2i(281,213,78,2),Color("#aebbc3"))
     # Deliberately vary the sheen of the printed graphic families. This
     # single opaque grayscale resource is shared between the painted shells.
     var roughness:=Image.create(512,256,false,Image.FORMAT_RGBA8)
@@ -409,6 +422,7 @@ static func build(root:Node3D,faction:Color,hero:bool)->bool:
         if part.get_parent()!=effects:
             part.set_meta(BASE_MATERIAL,part.material_override)
     root.set_meta(DAMAGE,0)
+    root.set_meta("tarvoka_a02_v27_tonal_surface_depth",true)
     root.set_meta("tarvoka_a02_v26_central_graphic_identity",true)
     root.set_meta("tarvoka_a02_v25_graphic_hierarchy",true)
     root.set_meta("tarvoka_a02_v24_matte_art_finish",true)
