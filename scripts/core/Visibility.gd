@@ -220,6 +220,13 @@ static func observed_state(state: Dictionary, faction: int) -> Dictionary:
             if not known.has(Vector2i(x, y)):
                 terrain[y][x] = "water"
     observed["terrain"] = terrain
+    # Filter topology as well as units; observer records are not a save.
+    if observed.has("layered_crossings_v48"):
+        var records: Array = []
+        for record in observed["layered_crossings_v48"]["records"]:
+            if known.has(Vector2i(record["x"],record["y"])):
+                records.append(record)
+        observed["layered_crossings_v48"]["records"] = records
     # Never send either side's exact contact history to the AI planner.
     # Planned P1 scouting may use *own* stale sightings only after tests.
     observed.erase("explored")
