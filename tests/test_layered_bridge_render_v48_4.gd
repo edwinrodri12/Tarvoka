@@ -10,6 +10,7 @@ const View = preload("res://scripts/ui/Battle3DMapView.gd")
 const Board = preload("res://scripts/ui/TouchBoard.gd")
 const Orders = preload("res://scripts/ui/Battle3DOrders.gd")
 const Hints = preload("res://scripts/core/TacticalHints.gd")
+const Roles = preload("res://scripts/core/UnitRoles.gd")
 
 func _initialize() -> void:
     call_deferred("_run")
@@ -362,9 +363,9 @@ func _check_live_layered_orders() -> void:
     viewer.close_view()
     # The same destination can contain a hostile naval unit without blocking
     # a ground order. Test stale preview rejection and exact real commit.
-    var mover: Dictionary = _fixture("M","tank","ground",Vector2i(3,3),0)
-    var movement: Dictionary = Session.start_layered([mover,_fixture("N","destroyer","naval",cell,1),
-        _fixture("A","attack_heli","air",cell,0)],map,[{"x":4,"y":3,"axis":"ew"}])
+    var mover: Dictionary = Roles.make_unit("M",0,Vector2i(3,3),"tank")
+    var movement: Dictionary = Session.start_layered([mover,Roles.make_unit("N",1,cell,"destroyer"),
+        Roles.make_unit("A",0,cell,"attack_heli")],map,[{"x":4,"y":3,"axis":"ew"}])
     board.set("state",movement.duplicate(true))
     board.set("selected_id","")
     assert(viewer.open_from_board(board) and viewer._select_3d_unit("M"))

@@ -505,6 +505,28 @@ func preview_bridge_move(unit_id: String,destination: Vector2i) -> bool:
     _bridge_playback_time = 0.0
     return true
 
+# After an authoritative move, animate the rebuilt model from the old
+# route to its committed pose. No delayed state changes or duplicate orders.
+func _play_committed_bridge_move(plan: Dictionary) -> bool:
+    if _live_board==null or _scene==null or plan.is_empty():
+        return false
+    var route: Array = plan.get("route",[])
+    if route.size()<2:
+        return false
+    var model: Node3D = _scene.get_node_or_null("Unidad3D_"+str(plan["id"]))
+    if model==null or not model.has_meta("bridge_anchor_offset_v48") or model.get_meta("cell")!=route.back():
+        return false
+    # Do not replay across currently hidden tiles after visibility changes.
+    for cell in route:
+        if not _cells.has(cell) or not bool(_cells[cell].get("visible",false)):
+            return false
+    _bridge_original_pose = model.transform
+    _bridge_playback = plan.duplicate(true)
+    _bridge_playback["committed"] = true
+    _bridge_playback_time = 0.0
+    _advance_bridge_playback(0.0)
+    return true
+
 func _advance_bridge_playback(delta: float) -> void:
     if _bridge_playback.is_empty() or _scene==null:
         return
@@ -514,7 +536,7 @@ func _advance_bridge_playback(delta: float) -> void:
         return
     _bridge_playback_time += maxf(delta,0.0)
     var progress: float = _bridge_playback_time/float(_bridge_playback["seconds"])
-    if progress>1.30:
+    if progress>=(1.0 if bool(_bridge_playback.get("committed",false)) else 1.30):
         _stop_bridge_playback()
         return
     var pose: Dictionary = BridgePlayback.sample(_scene,_bridge_playback,
@@ -815,6 +837,8 @@ func _cancel_3d_order() -> void:
     _update_order_ui()
 
 func _select_3d_unit(unit_id: String) -> bool:
+    if bool(_bridge_playback.get("committed",false)):
+        _stop_bridge_playback()
     _drop_3d_quote()
     if not Orders.select(_live_board,unit_id):
         return false
@@ -856,6 +880,7 @@ func _choose_unit_here() -> void:
         _select_3d_unit(chosen)
 
 func _finish_layered_turn() -> void:
+    _stop_bridge_playback()
     if not _state_snapshot.has(Crossings.FIELD) or not Orders.can_control(_live_board) or not _order_quote.is_empty() or _current_state()!=_state_snapshot:
         return
     _live_board.call("finish_turn")
@@ -885,6 +910,8 @@ func _request_move_here() -> void:
 
 func tap_battle_cell(cell: Vector2i) -> bool:
     # Inspections are safe in detached mode. Live taps can ONLY preview.
+    if bool(_bridge_playback.get("committed",false)):
+        _stop_bridge_playback()
     if not _cells.has(cell):
         return false
     if _live_board == null:
@@ -973,6 +1000,9 @@ func _confirm_3d_order() -> void:
                     "target":order.get("cell",Vector2i.ZERO),
                     "faction":_viewing_side}
                 break
+    var bridge_plan: Dictionary = {}
+    if _state_snapshot.has(Crossings.FIELD) and order.get("kind")=="move":
+        bridge_plan = BridgePlayback.quote(_state_snapshot,command_id,order["cell"])
     var committed: bool = Orders.confirm(_live_board,_order_quote)
     if not committed:
         # A rejected confirmation cannot leak a queued order into the 2D HUD.
@@ -983,6 +1013,8 @@ func _confirm_3d_order() -> void:
         return
     if committed:
         _order_note.text = str(_live_board.get("message"))
+        if not bridge_plan.is_empty():
+            _play_committed_bridge_move(bridge_plan)
         # Playback is AFTER the authoritative engine commit and scene rebuild.
         # Failed orders and defeated/hidden units never animate.
         if not visual.is_empty() and _scene!=null:
