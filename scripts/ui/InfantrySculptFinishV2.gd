@@ -1074,6 +1074,59 @@ static var _family_textures: Dictionary={}
 const RELIEF_V14 := "tarvoka_infantry_relief_v14"
 static var _family_normals: Dictionary={}
 
+const TEXTILE_V29 := "tarvoka_infantry_textile_finish_v29"
+const EQUIPMENT_V30 := "tarvoka_infantry_equipment_finish_v30"
+const EQUIPMENT_COUNT_V30 := "tarvoka_infantry_equipment_count_v30"
+# Roughness, relief strength, tile density for each hero textile finish.
+# The existing 64x64 cached images and local triplanar mapping remain.
+const TEXTILE_PROFILES_V29 := {
+    "line":Vector3(0.87,0.39,3.2),
+    "infantry_commando":Vector3(0.83,0.37,3.6),
+    "infantry_sniper":Vector3(0.94,0.46,3.0),
+    "infantry_logistic":Vector3(0.88,0.42,3.1),
+    "infantry_medic":Vector3(0.85,0.34,3.8)
+}
+
+# Seven existing pieces get a tailored closed edge and reinforced center.
+# Original node, material, local transform and bounding envelope survive.
+# The specialist signature and its V17 fasteners are not moved.
+static func _refine_equipment_v30(model: Node3D,hero: bool)->bool:
+    if not hero:
+        return true
+    var role: String=str(model.get_meta("tarvoka_infantry_role",""))
+    if not TEXTILE_PROFILES_V29.has(role):
+        return false
+    var labels: Array[String]=["V2_CierreMochila"]
+    for side in [-1,1]:
+        var suffix: String="_%d"%side
+        labels.append_array(["V2_BolsilloCurvo"+suffix,"V2_BolsilloPeitoral"+suffix,
+            "V2_CinchaPortaequipo"+suffix])
+    for label in labels:
+        var part: MeshInstance3D=_find(model,label) as MeshInstance3D
+        if part==null or part.mesh==null:
+            return false
+        var before: AABB=part.mesh.get_aabb()
+        var r: Vector3=before.size*0.5
+        var center: Vector3=before.get_center()
+        if minf(r.x,minf(r.y,r.z))<=0.0 or not is_zero_approx(center.x):
+            return false
+        var corner: float=0.68 if label.begins_with("V2_Cincha") else 0.76
+        if label=="V2_CierreMochila":
+            corner=0.58
+        var rings: Array[Vector3]=[
+            Vector3(r.x*corner,center.y-r.y,r.z*corner),
+            Vector3(r.x*0.94,center.y-r.y*0.72,r.z*0.90),
+            Vector3(r.x,center.y-r.y*0.42,r.z),
+            Vector3(r.x,center.y+r.y*0.42,r.z),
+            Vector3(r.x*0.94,center.y+r.y*0.72,r.z*0.90),
+            Vector3(r.x*corner,center.y+r.y,r.z*corner)]
+        var offsets:=PackedFloat32Array([center.z,center.z,center.z,center.z,center.z,center.z])
+        part.mesh=_organic_mesh(rings,16,offsets,0.55)
+        part.set_meta("tarvoka_v30_original_bounds",before)
+    model.set_meta(EQUIPMENT_V30,role)
+    model.set_meta(EQUIPMENT_COUNT_V30,labels.size())
+    return true
+
 const SURFACES_V19 := "tarvoka_infantry_role_surfaces_v19"
 # Integer periodic frequencies keep tiled mipmapped textures seamless.
 # Each role has its own weave, tread and coating profile, independent of faction.
@@ -1095,9 +1148,9 @@ static func _relief_height(kind: String,x: int,y: int,role: String) -> float:
     var finish: float=float(profile.z)
     match kind:
         "fabric":
-            return 0.30*cos(warp*u)*cos(weft*v)+0.07*cos(warp*u+weft*v)+0.07*grain
+            # Periodic warp/weft plus alternating diagonal twill, with a\n            # small secondary fiber instead of an even checkerboard.\n            return 0.24*cos(warp*u)*cos(weft*v)+0.10*cos(warp*u+weft*v)+0.045*cos(2.0*warp*u-weft*v)+0.055*grain
         "rubber":
-            return 0.24*cos(warp*u+weft*v)+0.06*cos(warp*u-weft*v)+0.05*grain
+            return 0.21*cos(warp*u+weft*v)+0.07*cos(warp*u-weft*v)+0.045*cos(2.0*weft*v)+0.04*grain
         _:
             return 0.045*sin(finish*u+3.0*v)*cos(5.0*u-finish*v)+0.023*grain
 
@@ -1129,7 +1182,7 @@ static func _family_texture(kind: String,role: String) -> ImageTexture:
             var h: float=_relief_height(kind,x,y,role)
             var tone: float=0.96+0.15*h
             if kind=="fabric":
-                tone=0.92+0.12*h
+                tone=0.91+0.21*h
             elif kind=="rubber":
                 tone=0.94+0.12*h
             tone=clampf(tone,0.0,1.0)
@@ -1148,7 +1201,7 @@ static func _finish_kind(label: String) -> String:
         return "fabric"
     if label in ["V9_MantleSeam_-1","V9_MantleSeam_1","V6_MedicalPouch"]:
         return "fabric"
-    if label in ["V9_CargaAsa","V6_ServiceHandle"]:
+    if label in ["V9_CargaAsa","V6_ServiceHandle","V2_CierreMochila"]:
         return "rubber"
     if label in ["V6_SupplyCase","V4_FundaInstrumentos"]:
         return "armor"
@@ -1177,6 +1230,8 @@ static func _finish_family_materials(model: Node3D,hero: bool) -> bool:
         var part: MeshInstance3D=item as MeshInstance3D
         var kind: String=_finish_kind(str(part.name))
         if str(part.name).begins_with("V2_CostillaArmadura") and not part.has_meta("tarvoka_v26_rib_bounds"):
+            continue
+        if str(part.name)=="V2_CierreMochila" and not part.has_meta("tarvoka_v30_original_bounds"):
             continue
         if kind.is_empty() or part.has_meta(STAGE_MATS):
             continue
@@ -1211,6 +1266,15 @@ static func _finish_family_materials(model: Node3D,hero: bool) -> bool:
                 clean.normal_enabled=true
                 clean.normal_texture=_family_normal(kind,role)
                 clean.normal_scale=0.30 if kind=="fabric" else (0.24 if kind=="rubber" else 0.20)
+                if kind=="fabric":
+                    var textile: Vector3=TEXTILE_PROFILES_V29[role]
+                    clean.roughness=textile.x
+                    clean.normal_scale=textile.y
+                    clean.uv1_scale=Vector3.ONE*textile.z
+                    clean.metallic_specular=0.22
+                elif kind=="rubber":
+                    clean.normal_scale=0.32
+                    clean.roughness=0.86
             var stages: Array[StandardMaterial3D]=[clean]
             for stage in range(1,5):
                 var weathered: StandardMaterial3D=clean.duplicate() as StandardMaterial3D
@@ -1244,6 +1308,8 @@ static func _finish_family_materials(model: Node3D,hero: bool) -> bool:
     model.set_meta(DAMAGE_V7,0)
     model.set_meta(RELIEF_V14,str(model.get_meta("tarvoka_infantry_role","")))
     model.set_meta(SURFACES_V19,role)
+    if hero:
+        model.set_meta(TEXTILE_V29,role)
     return true
 
 static func sync_family_damage(model: Node3D,stage: int) -> void:
@@ -1739,7 +1805,7 @@ static func apply(model: Node3D, faction_paint: Color, hero: bool) -> bool:
         _plate(upper,"V2_FaccionHerramientas",Vector3(-0.34,-0.13,0.51),
             0.20,0.095,0.026,faction)
     if role in FAMILY_ANATOMY_ROLES:
-        if not _refine_core(model,hero) or not _refine_limbs_v27(model,hero) or not _refine_helmet_v28(model,hero) or not _refine_faction_armor_v26(model,paint,hero) or not _finish_family_materials(model,hero):
+        if not _refine_core(model,hero) or not _refine_limbs_v27(model,hero) or not _refine_helmet_v28(model,hero) or not _refine_faction_armor_v26(model,paint,hero) or not _refine_equipment_v30(model,hero) or not _finish_family_materials(model,hero):
             return false
     model.set_meta(FLAG,true)
     model.set_meta("tarvoka_infantry_v2_hero",hero)

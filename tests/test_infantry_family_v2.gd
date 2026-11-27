@@ -332,6 +332,46 @@ func _run() -> void:
                     check(str(model.get_meta(Finish.GEAR_V17,""))==role,"V17 role-specific kit")
                     check(str(model.get_meta(Finish.OPTICS_V18,""))==role,"V18 optics identity")
                     check(str(model.get_meta(Finish.SURFACES_V19,""))==role,"V19 individual surface identity")
+                    var v30_hero: bool=bool(model.get_meta("tarvoka_infantry_v2_hero",false))
+                    check(model.has_meta(Finish.TEXTILE_V29)==v30_hero and
+                        model.has_meta(Finish.EQUIPMENT_V30)==v30_hero,
+                        "V29/V30 hero-only finish")
+                    if v30_hero:
+                        check(str(model.get_meta(Finish.TEXTILE_V29,""))==role and
+                            str(model.get_meta(Finish.EQUIPMENT_V30,""))==role and
+                            int(model.get_meta(Finish.EQUIPMENT_COUNT_V30,0))==7,
+                            "V29/V30 real textile and seven equipment parts")
+                        var v29_fabric: MeshInstance3D=model.find_child("V2_MangaCerrada_1",true,false) as MeshInstance3D
+                        var v29_profile: Vector3=Finish.TEXTILE_PROFILES_V29[role]
+                        check(v29_fabric!=null and v29_fabric.material_override is StandardMaterial3D,
+                            "V29 textile exists on actual arm")
+                        if v29_fabric!=null and v29_fabric.material_override is StandardMaterial3D:
+                            var v29_mat: StandardMaterial3D=v29_fabric.material_override
+                            check(v29_mat.uv1_triplanar and not v29_mat.uv1_world_triplanar and
+                                is_equal_approx(v29_mat.roughness,v29_profile.x) and
+                                is_equal_approx(v29_mat.normal_scale,v29_profile.y) and
+                                v29_mat.uv1_scale.is_equal_approx(Vector3.ONE*v29_profile.z),
+                                "V29 actual role-specific PBR and local mapping")
+                        var v30_labels: Array[String]=["V2_CierreMochila"]
+                        for v30_side in [-1,1]:
+                            for v30_prefix in ["V2_BolsilloCurvo","V2_BolsilloPeitoral","V2_CinchaPortaequipo"]:
+                                v30_labels.append(v30_prefix+"_%d"%v30_side)
+                        for v30_label in v30_labels:
+                            var v30_part: MeshInstance3D=model.find_child(v30_label,true,false) as MeshInstance3D
+                            check(v30_part!=null and v30_part.has_meta("tarvoka_v30_original_bounds") and
+                                v30_part.has_meta(Finish.STAGE_MATS) and closed_solid(v30_part.mesh),
+                                "V30 closed staged equipment "+v30_label)
+                            if v30_part==null or not v30_part.has_meta("tarvoka_v30_original_bounds"):
+                                continue
+                            var v30_before: AABB=v30_part.get_meta("tarvoka_v30_original_bounds")
+                            var v30_after: AABB=v30_part.mesh.get_aabb()
+                            check(v30_after.size.is_equal_approx(v30_before.size) and
+                                v30_after.get_center().is_equal_approx(v30_before.get_center()) and
+                                v30_part.mesh.get_faces().size()==576,
+                                "V30 original envelope with 192 closed triangles")
+                    else:
+                        check(not model.has_meta(Finish.EQUIPMENT_COUNT_V30),
+                            "V30 tactical equipment unchanged")
                     var v28_hero: bool=bool(model.get_meta("tarvoka_infantry_v2_hero",false))
                     check(model.has_meta(Finish.ANATOMY_V27)==v28_hero and
                         model.has_meta(Finish.HELMET_V28)==v28_hero,

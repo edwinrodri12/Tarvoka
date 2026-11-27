@@ -124,3 +124,7 @@ Base validada V25.3 673cebc, native 45912886929 (188 PNG) y Pages 45912886877 (e
 ## V27–V28 — contornos anatómicos y casco individual
 
 Rama candidata derivada de V26 5c3d9da (QA aún en cola). V27 sustituye ocho mallas de tela por contornos de ocho anillos y veinte lados, mantiene extremos longitudinales, pivotes, contactos de manos, suelas y solver. Perfil por rol, volumen posterior de pantorrilla y curvatura de mangas. V28 deforma sólo mitad posterior de la malla existente del casco, conserva vértices frontales y número de caras; cinco perfiles, sin segundo caparazón. Sólo LOD13; G05 y LOD8 intactos. Puertas nativas y WebGL amplían comprobación de metadatos, estanqueidad y extremos, sin eliminar las 188 imágenes. Requiere QA visual, no se publica.
+
+## V29–V30 — acabado textil y equipo exterior
+
+V26 native 45922402945 aprobado; V28 aún en validación. V29 conserva caché de texturas 64x64 y opacidad, introduce tejido de sarga periódico, contraste textil y cinco perfiles PBR locales de tela. V30 sustituye siete piezas existentes (dos bolsillos dorsales, dos pectorales, dos cinchas, cierre) por perfiles cerrados de seis anillos y 16 lados; conserva AABB y transformaciones, sin nuevos nodos. No mueve el equipo específico ni los anclajes V17. Pruebas reales de identidad, envolvente, PBR, D0–D4 y 188 PNG; sólo LOD13. No se publica hasta revisión nativa y visual.

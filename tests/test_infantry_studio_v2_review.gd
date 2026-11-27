@@ -115,7 +115,11 @@ func _run() -> void:
         must(v2!=null and v2.get_parent()==original_preview,
             role+" V2 comparison remains in same 3D viewport")
         if role!="infantry_engineer":
-            var expected_edition: String="V28"
+            var expected_edition: String="V30"
+            must(str(v2.get_meta("tarvoka_infantry_textile_finish_v29",""))==role and
+                str(v2.get_meta("tarvoka_infantry_equipment_finish_v30",""))==role and
+                int(v2.get_meta("tarvoka_infantry_equipment_count_v30",0))==7,
+                role+" V29 textile and V30 equipment in shared viewport")
             must(str(v2.get_meta("tarvoka_infantry_anatomical_contours_v27",""))==role and
                 int(v2.get_meta("tarvoka_infantry_anatomical_count_v27",0))==8 and
                 str(v2.get_meta("tarvoka_infantry_helmet_profile_v28",""))==role,
