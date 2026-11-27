@@ -95,6 +95,26 @@ func _initialize() -> void:
                 assert(Regions.public_regions(regions,{Vector2i.ZERO:true}).size()==1)
                 cases += 1
     assert(cases==216)
+    # Four contrasting region pairs, three supported sizes and two seeds.
+    var geographic_cases := 0
+    for pair in [["temperate","winter"],["desert","tropical"],["wetland","urban"],["coastal","archipelago"]]:
+        var config: Dictionary = {"version":1,"primary":pair[0],"secondary":pair[1]}
+        for dims in [Vector2i(10,8),Vector2i(24,18),Vector2i(40,30)]:
+            for seed in [1729,999999]:
+                var mixed: Array = Regions.geographic_candidate(seed,dims,config)
+                assert(Rules.valid_terrain(mixed))
+                assert(mixed==Regions.geographic_candidate(seed,dims,config))
+                var connected: Dictionary = Scenarios._geo_reachable_land(mixed,Vector2i(1,Scenarios.scale_y(2,dims)))
+                for y in range(dims.y):
+                    for x in range(dims.x):
+                        assert(mixed[y][x]==mixed[y][dims.x-1-x])
+                        if mixed[y][x]!="water":
+                            assert(connected.has(Vector2i(x,y)))
+                for anchor in Scenarios._large_anchor_cells(dims):
+                    if anchor.y>0 and anchor.y<dims.y-1:
+                        assert(mixed[anchor.y][anchor.x]!="water")
+                geographic_cases += 1
+    assert(geographic_cases==24)
     var mix: Dictionary = {"version":1,"primary":"temperate","secondary":"winter"}
     var north := Vector2i(2,0)
     var south := Vector2i(2,7)
