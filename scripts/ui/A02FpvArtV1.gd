@@ -154,6 +154,25 @@ static func _crown_livery()->ImageTexture:
     for y in [22,101]:
         image.fill_rect(Rect2i(43,y,42,3),Color("#9fa8ad"))
         image.fill_rect(Rect2i(47,y+3,34,2),Color("#ffffff"))
+    # V26: authored game-unit graphic identity, printed in opaque pigment.
+    # The broad dark plaque and custom three-character bitmap are decorative
+    # art, not a separate mesh, functional equipment or transparency.
+    image.fill_rect(Rect2i(43,80,42,20),Color("#a0aab1"))
+    image.fill_rect(Rect2i(45,82,38,16),Color("#747f87"))
+    var glyphs:Array=[
+        ["01110","11011","11111","11011","11011"],
+        ["01110","11011","11011","11011","01110"],
+        ["11110","00011","01110","11000","11111"]]
+    for glyph_index in range(glyphs.size()):
+        for row in range(5):
+            var line:String=glyphs[glyph_index][row]
+            for column in range(5):
+                if line.substr(column,1)=="1":
+                    image.fill_rect(Rect2i(47+glyph_index*12+column*2,85+row*2,2,2),
+                        Color("#f8fafb"))
+    # A single broad decorative stripe frames the existing crown artwork.
+    image.fill_rect(Rect2i(44,35,40,3),Color("#84929c"))
+    image.fill_rect(Rect2i(46,39,36,2),Color("#ffffff"))
     # Three additional graphic families: lower face and two side families.
     # Opaque printed ornament, not modeled hardware, apertures or mechanisms.
     image.fill_rect(Rect2i(128,0,128,128),Color("#e6e9eb"))
@@ -229,8 +248,11 @@ static func _guard_finish(primitive:TorusMesh,faction:Color)->ArrayMesh:
         # V23: neutral satin visual base with a clearly colored
         # ornamental upper field; no change to geometry or silhouette.
         var shade:Color=Color("#394650").lerp(faction,0.10+0.65*upper)
-        var graphic:float=(1.0-blocks)*upper*0.35
-        pigments.append(shade.lerp(Color("#303b44"),graphic))
+        # Broad alternating ornamental pigment fields make the faction
+        # color read as deliberate graphic artwork, not uniform plastic.
+        # This is vertex color only, on unchanged fictional art geometry.
+        var graphic:float=(1.0-blocks)*upper*0.72
+        pigments.append(shade.lerp(Color("#394650"),graphic))
     arrays[Mesh.ARRAY_COLOR]=pigments
     var mesh:=ArrayMesh.new()
     mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES,arrays)
@@ -387,6 +409,8 @@ static func build(root:Node3D,faction:Color,hero:bool)->bool:
         if part.get_parent()!=effects:
             part.set_meta(BASE_MATERIAL,part.material_override)
     root.set_meta(DAMAGE,0)
+    root.set_meta("tarvoka_a02_v26_central_graphic_identity",true)
+    root.set_meta("tarvoka_a02_v25_graphic_hierarchy",true)
     root.set_meta("tarvoka_a02_v24_matte_art_finish",true)
     root.set_meta("tarvoka_a02_v23_palette_coherence",true)
     root.set_meta("tarvoka_a02_v22_outer_surface_finish",true)
