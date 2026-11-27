@@ -67,9 +67,11 @@ static func _surface_uv(normal:Vector3,point:Vector3)->Vector2:
             tile=Vector2(0,1)
             uv=Vector2(point.z+0.5,0.5-point.y)
         else:
-            tile=Vector2(1,1)
+            # Separate front and rear printed artwork, keeping mirrored
+            # sides and the exact original closed sculpture.
+            tile=Vector2(1,1) if normal.z<0.0 else Vector2(2,1)
             uv=Vector2(point.x+0.5,0.5-point.y)
-    return (tile*128.0+Vector2(4,4)+uv.clamp(Vector2.ZERO,Vector2.ONE)*120.0)/256.0
+    return (tile*128.0+Vector2(4,4)+uv.clamp(Vector2.ZERO,Vector2.ONE)*120.0)/Vector2(512,256)
 
 # Bevelled abstract game sculpture. All surfaces remain closed and clockwise.
 static func _face(t:SurfaceTool,a:Vector3,b:Vector3,c:Vector3,outward:Vector3)->void:
@@ -136,7 +138,7 @@ static func _shell_finish(source:ArrayMesh,upper:Color,lower:Color)->ArrayMesh:
 static func _crown_livery()->ImageTexture:
     if is_instance_valid(_decorative_crown_texture):
         return _decorative_crown_texture
-    var image:=Image.create(256,256,false,Image.FORMAT_RGBA8)
+    var image:=Image.create(512,256,false,Image.FORMAT_RGBA8)
     image.fill(Color("#f8f8f8"))
     # Parallel decorative framed color blocks and short printed accents.
     # All graphics are flat pigment; no openings or mechanical detail.
@@ -174,12 +176,22 @@ static func _crown_livery()->ImageTexture:
             image.fill_rect(Rect2i(origin+x,197,11,2),Color("#ffffff"))
         image.fill_rect(Rect2i(origin+13,223,102,5),Color("#8998a2"))
         image.fill_rect(Rect2i(origin+21,230,86,3),Color("#ffffff"))
-    # Distinct end-face graphic identity; no extra physical pieces.
-    image.fill_rect(Rect2i(168,178,48,26),Color("#bfc9d0"))
-    image.fill_rect(Rect2i(178,184,28,14),Color("#e6edf1"))
+    # Front: a broad high-contrast graphic field and layered print border.
+    # Rear: a distinct stepped graphic motif; both are flat decorative ink.
+    image.fill_rect(Rect2i(146,171,92,48),Color("#95a2ad"))
+    image.fill_rect(Rect2i(151,176,82,38),Color("#dfe5e9"))
+    image.fill_rect(Rect2i(158,181,68,12),Color("#a2afb9"))
+    image.fill_rect(Rect2i(165,198,54,9),Color("#f4f6f7"))
+    image.fill_rect(Rect2i(256,128,128,128),Color("#d9e0e4"))
+    image.fill_rect(Rect2i(266,146,108,14),Color("#8798a4"))
+    image.fill_rect(Rect2i(274,165,92,56),Color("#a5b2ba"))
+    image.fill_rect(Rect2i(281,171,78,44),Color("#e9edef"))
+    image.fill_rect(Rect2i(289,179,62,28),Color("#bcc7ce"))
+    image.fill_rect(Rect2i(299,185,42,16),Color("#f7f9fa"))
+    image.fill_rect(Rect2i(279,227,82,6),Color("#91a0ab"))
     # Deliberately vary the sheen of the printed graphic families. This
     # single opaque grayscale resource is shared between the painted shells.
-    var roughness:=Image.create(256,256,false,Image.FORMAT_RGBA8)
+    var roughness:=Image.create(512,256,false,Image.FORMAT_RGBA8)
     for y in range(image.get_height()):
         for x in range(image.get_width()):
             var pigment:Color=image.get_pixel(x,y)
@@ -366,6 +378,7 @@ static func build(root:Node3D,faction:Color,hero:bool)->bool:
         if part.get_parent()!=effects:
             part.set_meta(BASE_MATERIAL,part.material_override)
     root.set_meta(DAMAGE,0)
+    root.set_meta("tarvoka_a02_v21_distinct_end_art",true)
     root.set_meta("tarvoka_a02_v20_material_relief",true)
     root.set_meta("tarvoka_a02_v20_surface_atlas",true)
     root.set_meta("tarvoka_a02_v19_graphic_livery",true)
