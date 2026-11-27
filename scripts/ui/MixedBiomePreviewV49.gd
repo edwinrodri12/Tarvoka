@@ -28,3 +28,24 @@ static func build_image(terrain: Array,seed: int,config: Dictionary,
     for cell in public:
         image.set_pixel(cell.x,cell.y,tile_tint(terrain[cell.y][cell.x],cell,public[cell]))
     return image
+
+# V50: cache at most one immutable region field for 2D drawing.
+# Callers read records only; no battle state or fog data is cached here.
+static var _region_key: Array = []
+static var _region_cache: Dictionary = {}
+
+static func regions_for(state: Dictionary,dims: Vector2i) -> Dictionary:
+    if not Regions.valid_state(state) or not state.has(Regions.FIELD):
+        return {}
+    var config: Dictionary = state[Regions.FIELD]
+    var key: Array = [dims,state[Regions.SEED_FIELD],config["primary"],config["secondary"],config["version"]]
+    if key!=_region_key:
+        _region_key = key
+        _region_cache = Regions.generate(state[Regions.SEED_FIELD],dims,config)
+    return _region_cache
+
+static func local_style(region: Dictionary,cell: Vector2i,dims: Vector2i,base: String) -> String:
+    if region.is_empty():
+        return base
+    var threshold: int = posmod(cell.y*313+mini(cell.x,dims.x-1-cell.x)*157+73,1000)
+    return region["secondary"] if int(region["secondary_weight"])>threshold else region["primary"]
