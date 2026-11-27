@@ -1480,6 +1480,12 @@ static func build(state: Dictionary, selected_id: String = "", viewer: int = 0) 
     var corner_cache: Dictionary = {}
     var water_cache: Dictionary = {}
     var materials: Dictionary = {}
+    if not regions.is_empty():
+        var config: Dictionary = state[MixedRegions.FIELD]
+        var soil := StandardMaterial3D.new()
+        SurfaceFinish.apply_mixed_soil(soil,config["primary"],config["secondary"])
+        soil.cull_mode = BaseMaterial3D.CULL_DISABLED
+        materials["soil"] = soil
     var height_cache: Dictionary = {}
     var terrain_start_usec: int = Time.get_ticks_usec()
     for chunk in chunks:
