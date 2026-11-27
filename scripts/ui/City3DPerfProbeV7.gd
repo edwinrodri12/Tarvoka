@@ -215,6 +215,8 @@ func snapshot() -> Dictionary:
     var terrain_stats: Dictionary = scene_root.get_meta("render_stats",{}) if is_instance_valid(scene_root) else {}
     return {
         "terrain_build_ms":float(terrain_stats.get("chunk_build_ms_v42",0.0)),
+        "scene_build_ms":float(terrain_stats.get("scene_build_ms_v50",0.0)),
+        "landscape_build_ms":float(terrain_stats.get("landscape_build_ms_v50",0.0)),
         "terrain_height_samples":int(terrain_stats.get("height_samples_v42",0)),
         "terrain_shared_materials":int(terrain_stats.get("shared_chunk_materials_v27",0)),
         "terrain_regional_tree_groups":int(terrain_stats.get("regional_tree_groups_v49",0)),
@@ -304,6 +306,15 @@ func refresh_once() -> void:
                 headquarters["headquarters"],headquarters["meshes"],
                 headquarters["surfaces"],headquarters["neutral"],
                 headquarters["ruins"]])
+        var terrain: Dictionary = scene_root.get_meta("render_stats",{})
+        readout.text += "\nMapa 3D %.1f ms · terreno %.1f ms · paisaje %.1f ms" % [
+            float(terrain.get("scene_build_ms_v50",0.0)),
+            float(terrain.get("chunk_build_ms_v42",0.0)),
+            float(terrain.get("landscape_build_ms_v50",0.0))]
+        readout.text += "\nSectores %d · materiales %d · grupos regionales %d/%d" % [
+            int(terrain.get("chunks",0)),int(terrain.get("shared_chunk_materials_v27",0)),
+            int(terrain.get("regional_tree_groups_v49",0)),int(terrain.get("regional_ridge_groups_v49",0))]
+
 
 func _process(delta: float) -> void:
     if not visible:
