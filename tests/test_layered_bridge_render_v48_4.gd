@@ -62,9 +62,19 @@ func _run() -> void:
         assert(ground_report.has("fits_deck_width"))
         assert(is_equal_approx(float(ground_report["deck_width"]),Art.ROAD_WIDTH))
         assert(is_equal_approx(ground.rotation.y,PI*0.5 if axis=="ew" else 0.0))
-        # Record an outstanding ground-width violation honestly, rather
-        # than scaling the approved model or certifying an unmeasured fit.
-        assert(stats["bridge_clearance_failures_v48"]==int(not bool(ground_report["fits_deck_width"]))+int(not bool(ship_report["fits_vertical"]) or not bool(ship_report["fits_channel_width"])))
+        # Measured native tank is 2.2244 units wide. Require an actual fit
+        # with 0.03 margin on each side, not just successful diagnostics.
+        assert(ground_report["fits_vertical"] and ground_report["fits_deck_width"])
+        assert(stats["bridge_clearance_failures_v48"]==0)
+        var span: Node3D = model.get_node("PuenteElevado_%d_%d" % [cell.x,cell.y])
+        assert(float(span.get_meta("rail_inner_width_v50"))>=Art.ROAD_WIDTH-0.001)
+        assert(Art.DECK_WIDTH<=Art.CELL)
+        var air_bounds: Dictionary = Art.model_bounds(air)
+        var ground_bounds: Dictionary = Art.model_bounds(ground)
+        assert(air_bounds["valid"] and ground_bounds["valid"])
+        var air_box: AABB = air_bounds["bounds"]
+        var ground_box: AABB = ground_bounds["bounds"]
+        assert(air_box.position.y>=ground_box.end.y+0.05)
         assert(is_equal_approx(ship.rotation.y,PI*0.5 if axis=="ns" else 0.0))
         for side in [-1,1]:
             var ramp: Node3D = model.get_node("Rampa_%d_%d_%d" % [cell.x,cell.y,side])

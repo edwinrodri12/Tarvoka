@@ -7,8 +7,9 @@ const DECK_TOP := 1.99
 const DECK_BOTTOM := 1.78
 const WATER_LEVEL := -0.17
 const ROAD_TOP := DECK_TOP+0.04
-const DECK_WIDTH := 2.36
-const ROAD_WIDTH := 2.16
+const DECK_WIDTH := CELL
+const ROAD_WIDTH := 2.32
+const RAIL_WIDTH := 0.04
 const RAMP_HALF_WIDTH := ROAD_WIDTH*0.5
 
 static func _box(parent: Node3D,label: String,dimensions: Vector3,
@@ -40,12 +41,14 @@ static func build(axis: String) -> Node3D:
     for side in [-1.0,1.0]:
         var z: float = float(side)*(DECK_WIDTH*0.5-0.06)
         _box(root,"Viga",Vector3(CELL,0.16,0.12),Vector3(0,DECK_BOTTOM+0.08,z),metal)
-        _box(root,"Parapeto",Vector3(CELL,0.20,0.10),Vector3(0,DECK_TOP+0.12,z),concrete)
+        var rail_z: float = float(side)*(DECK_WIDTH*0.5-RAIL_WIDTH*0.5)
+        _box(root,"Parapeto",Vector3(CELL,0.20,RAIL_WIDTH),Vector3(0,DECK_TOP+0.12,rail_z),concrete)
     for x in [-0.8,0.0,0.8]:
         _box(root,"Marca",Vector3(0.36,0.008,0.035),
             Vector3(x,DECK_TOP+0.044,0),Color("#e6dfb4"))
     root.set_meta("clearance",DECK_BOTTOM-WATER_LEVEL)
     root.set_meta("road_width_v50",ROAD_WIDTH)
+    root.set_meta("rail_inner_width_v50",DECK_WIDTH-2.0*RAIL_WIDTH)
     root.set_meta("prototype_only",true)
     return root
 
