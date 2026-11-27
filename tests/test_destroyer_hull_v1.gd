@@ -356,6 +356,19 @@ func _run() -> void:
                     var fixed: Transform3D = group.transform
                     var blade: Node3D = rotor.get_node("Lobulo_0") as Node3D
                     var local: Transform3D = blade.transform
+                    var hub: MeshInstance3D = rotor.get_node("Cubo") as MeshInstance3D
+                    for index in range(3):
+                        var lobe: Node3D = rotor.get_node("Lobulo_%d" % index) as Node3D
+                        var paddle: MeshInstance3D = lobe.get_node("PalaVisual") as MeshInstance3D
+                        check(paddle.get_meta("destroyer_propulsion_finish",false)==(lod>=13),"Propulsion detail tier")
+                        check((lobe.transform*paddle.transform*paddle.get_aabb()).intersects(hub.transform*hub.get_aabb()),"Visual paddle overlaps hub")
+                        if lod>=13:
+                            check(_closed(paddle.mesh) and _outward(paddle.mesh),"Closed outward propulsion insert")
+                            check(paddle.get_meta("destroyer_finish_family","")=="propulsion","Differentiated propulsion material")
+                            check((paddle.material_override as StandardMaterial3D).roughness_texture!=null,"Shared propulsion surface texture")
+                    var landing: MeshInstance3D = aft.get_node("Helipuerto") as MeshInstance3D
+                    var edge: MeshInstance3D = aft.get_node("BordeHelipuerto_%d" % side) as MeshInstance3D
+                    check(_deck_center_contact(edge,landing),"Aft faction strip intersects actual landing surface")
                     for phase in [0.0,0.25,0.5,0.75,1.0]:
                         check(Art.pose_destroyer_aft(model,phase,phase*2.0-1.0), "Aft visual pose")
                         check(rotor.basis.is_equal_approx(Basis(Vector3.BACK,float(side)*fposmod(phase,1.0)*TAU)), "Independent rotor phase")
@@ -379,6 +392,9 @@ func _run() -> void:
             check(model.has_node("AcabadoNavalV18/BarandaPasillo_1") == (lod >= 13), "Deck detail LOD")
             var contact_deck: MeshInstance3D = model.get_node("Cubierta") as MeshInstance3D
             for side in [-1,1]:
+                for index in range(5):
+                    var edge: MeshInstance3D = model.get_node("AcabadoNavalV18/BordeCubierta_%d_%d" % [side,index]) as MeshInstance3D
+                    check(_deck_center_contact(edge,contact_deck),"Deck perimeter center intersects actual closed surface")
                 for i in range(3 if lod>=13 else 1):
                     var service: MeshInstance3D = model.get_node("AcabadoNavalV18/RegistroServicio_%d_%d" % [side,i]) as MeshInstance3D
                     check(_deck_center_contact(service,contact_deck),"Service cover center intersects actual deck surface")

@@ -1235,6 +1235,10 @@ static func _destroyer_finish(node: Node, detail: bool) -> void:
                 family = "hardware"
                 mat.metallic = 0.60
                 mat.roughness = 0.43
+            elif detail and label in ["CarcasaVisual","Cubo","PalaVisual","SoporteInferior"]:
+                family = "propulsion"
+                mat.metallic = 0.56 if label=="PalaVisual" or label=="Cubo" else 0.42
+                mat.roughness = 0.44 if label=="PalaVisual" or label=="Cubo" else 0.61
             elif label.begins_with("MarcaHelipuerto"):
                 family = "marking"
                 mat.metallic = 0.0
@@ -1270,7 +1274,7 @@ static func _destroyer_finish(node: Node, detail: bool) -> void:
                     mat.vertex_color_use_as_albedo = true
                     mat.emission = Color("#F66A24")
                     mat.emission_energy_multiplier = 0.38
-            if detail and (label in ["CascoNaval","Cubierta","Helipuerto","CarcasaInferior","Puente","TechoPuente","CarcasaMastil","CarcasaTorreta","RegistroProa","TapaBiselada"] or label.begins_with("RegistroPopa") or label.begins_with("TapaModulo_") or label.begins_with("RegistroServicio_") or label.begins_with("PuertaServicio_") or label=="PuertaPosterior"):
+            if detail and (label in ["CascoNaval","Cubierta","Helipuerto","CarcasaInferior","Puente","TechoPuente","CarcasaMastil","CarcasaTorreta","RegistroProa","TapaBiselada"] or label.begins_with("RegistroPopa") or label.begins_with("TapaModulo_") or label.begins_with("RegistroServicio_") or label.begins_with("PuertaServicio_") or label=="PuertaPosterior" or label in ["CarcasaVisual","SoporteInferior","PalaVisual","TimonVisual"]):
                 mat.albedo_texture = _destroyer_grain()
                 mat.uv1_triplanar = true
                 mat.uv1_triplanar_sharpness = 4.0
@@ -1535,7 +1539,7 @@ static func _destroyer_aft(root: Node3D, art_level: int) -> void:
         var sign: float = float(side)
         _box(aft,"MarcaHelipuerto_%d" % side,Vector3(sign*0.15,0.842,1.11),
             Vector3(0.055,0.014,0.36),METAL)
-        var aft_accent: MeshInstance3D = _box(aft,"BordeHelipuerto_%d" % side,Vector3(sign*0.41,0.846,1.11),
+        var aft_accent: MeshInstance3D = _box(aft,"BordeHelipuerto_%d" % side,Vector3(sign*0.41,0.843,1.11),
             Vector3(0.035,0.020,0.35),ARMOR)
         aft_accent.set_meta(TANK_PAINT_META,"accent")
         _box(aft,"BaseAmarre_%d" % side,Vector3(sign*0.32,0.824,1.49),
@@ -1572,8 +1576,15 @@ static func _destroyer_aft(root: Node3D, art_level: int) -> void:
             blade.name = "Lobulo_%d" % i
             blade.rotation.z = float(i)*TAU/3.0
             rotor.add_child(blade)
-            _sphere(blade,"PalaVisual",Vector3(0,0.081,0),
-                Vector3(0.085,0.16,0.045),ARMOR)
+            if detail:
+                # Closed faceted art insert, not a functional propulsion design.
+                # Preserve the original pivot and abstract blade envelope.
+                var lobe: MeshInstance3D = _destroyer_insert(blade,"PalaVisual",
+                    Vector3(0,0.081,0),Vector3(0.085,0.16,0.045),STEEL.lerp(METAL,0.25))
+                lobe.set_meta("destroyer_propulsion_finish",true)
+            else:
+                _sphere(blade,"PalaVisual",Vector3(0,0.081,0),
+                    Vector3(0.085,0.16,0.045),ARMOR)
         _box(group,"SoporteInferior",Vector3(0,0.07,-0.18),
             Vector3(0.14,0.19,0.14),STEEL)
         var rudder := Node3D.new()
