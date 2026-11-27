@@ -54,6 +54,7 @@ jobs:
           timeout 150s /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . --script res://tests/test_layered_crossings_mixed_biomes_v49.gd 2>&1 | tee /tmp/v49-test.log
           if grep -E 'SCRIPT ERROR:|Parse Error:|Assertion failed' /tmp/v49-test.log; then exit 1; fi
           grep -q 'PASS V48_V49_EXPERIMENT:' /tmp/v49-test.log
+          grep -q "V50_CACHED_SAVE_12" /tmp/v49-test.log
       - name: Validate actual mixed skirmish setup and saved match
         shell: bash
         run: |
@@ -75,6 +76,10 @@ jobs:
             test -s "artifacts/tarvoka_mixed_v49_6_${pair}.png"
           done
           grep -q "V49_MIXED_STATS" /tmp/v49-render.log
+          for pair in desert_tropical wetland_archipelago; do
+            test -s "artifacts/tarvoka_mixed_v50_2_large_${pair}.png"
+          done
+          grep -q "V50_LARGE_MAP" /tmp/v49-render.log
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -83,3 +88,4 @@ jobs:
             /tmp/v49-*.log
             artifacts/tarvoka_bridge_v48_4_*.png
             artifacts/tarvoka_mixed_v49_6_*.png
+            artifacts/tarvoka_mixed_v50_2_large_*.png
