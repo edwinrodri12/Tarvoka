@@ -18,6 +18,7 @@ const Orders = preload("res://scripts/ui/Battle3DOrders.gd")
 const G11ActionsV29 = preload("res://scripts/ui/G11BattleActionsV29.gd")
 const Biomes = preload("res://scripts/ui/WinterBattleBiome.gd")
 const Crossings = preload("res://scripts/core/LayeredCrossingsV48.gd")
+const BridgeVisibility = preload("res://scripts/core/Visibility.gd")
 const BridgeArt = preload("res://scripts/ui/LayeredBridgeArtV48.gd")
 const BridgePlayback = preload("res://scripts/ui/LayeredBridgePlaybackV48.gd")
 const WeatherOverlay = preload("res://scripts/ui/BattleWeatherOverlay3D.gd")
@@ -479,7 +480,7 @@ func _process(_delta: float) -> void:
 # Experimental read-only playback API; no live order or state mutation.
 func preview_bridge_move(unit_id: String,destination: Vector2i) -> bool:
     _stop_bridge_playback()
-    if _live_board!=null or _scene==null:
+    if _live_board!=null or _scene==null or int(_state_snapshot.get("faction",-1))!=_viewing_side:
         return false
     var plan: Dictionary = BridgePlayback.quote(_state_snapshot,unit_id,destination)
     if plan.is_empty():
@@ -733,7 +734,7 @@ func _update_order_ui() -> void:
     _sync_immersive_hud()
     if not active:
         if _state_snapshot.has(Crossings.FIELD) and _cells.has(_selected_cell):
-            var options: Array = Crossings.selectable_units(_state_snapshot,_selected_cell,_viewing_side,{_selected_cell:true})
+            var options: Array = Crossings.selectable_units(_state_snapshot,_selected_cell,_viewing_side,BridgeVisibility.visible_cells(_state_snapshot,_viewing_side))
             _choose_unit_button.visible = not options.is_empty()
             _choose_unit_button.text = "Cambiar nivel"
         else:
@@ -799,7 +800,7 @@ func _preview_3d_intent(intent: Dictionary) -> bool:
 
 func _choose_unit_here() -> void:
     if _live_board==null and _state_snapshot.has(Crossings.FIELD):
-        var options: Array = Crossings.selectable_units(_state_snapshot,_selected_cell,_viewing_side,{_selected_cell:true})
+        var options: Array = Crossings.selectable_units(_state_snapshot,_selected_cell,_viewing_side,BridgeVisibility.visible_cells(_state_snapshot,_viewing_side))
         if options.is_empty():
             return
         var next := 0
@@ -977,7 +978,7 @@ func inspect_cell(cell: Vector2i, recenter: bool = true) -> bool:
     var label_text: String = "No explorada" if kind=="unknown" else kind.capitalize()
     if tile.has("bridge_axis_v48"):
         label_text = "Puente elevado · "+str(tile["bridge_axis_v48"]).to_upper()
-        var options: Array = Crossings.selectable_units(_state_snapshot,cell,_viewing_side,{cell:true})
+        var options: Array = Crossings.selectable_units(_state_snapshot,cell,_viewing_side,BridgeVisibility.visible_cells(_state_snapshot,_viewing_side))
         for option in options:
             label_text += " · %s %s" % [option["domain"],option["id"]]
     var visibility: String = " · Con niebla" if bool(tile.get("seen",false)) and not bool(tile.get("visible",false)) else ""
