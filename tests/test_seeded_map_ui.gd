@@ -2,6 +2,8 @@ extends SceneTree
 
 const Scenarios = preload("res://scripts/core/Scenarios.gd")
 const Codec = preload("res://scripts/core/SaveCodec.gd")
+const Regions = preload("res://scripts/core/MixedBiomeRegionsV49.gd")
+const Minimap = preload("res://scripts/ui/BattleMinimap.gd")
 const Store = preload("res://scripts/core/SaveStore.gd")
 
 func _initialize() -> void:
@@ -107,6 +109,46 @@ func _run() -> void:
     assert(picker.get_selected_id()==Scenarios.GEOGRAPHIC_SCENARIO_ID)
     screen._reroll_map_seed()
     assert(picker.get_selected_id()==Scenarios.GEOGRAPHIC_SCENARIO_ID)
+
+    # Two-region selection must not replace the current game before confirmation.
+    screen.biome_picker.select(4)
+    screen.secondary_biome_picker.select(6)
+    seed_picker.value = 1729
+    screen.map_size_picker.select(1)
+    screen.first_picker.select(0)
+    screen._prepare_skirmish()
+    var setup: Control = screen.skirmish_setup
+    assert(setup.secondary_biome_picker.selected==6)
+    assert(not setup.secondary_biome_picker.disabled)
+    var config: Dictionary = {"version":1,"primary":"desert","secondary":"tropical"}
+    var expected: Array = Regions.geographic_candidate(1729,Vector2i(24,18),config)
+    assert(setup.map_preview.preview_map==expected)
+    var before_mixed: Dictionary = board.state.duplicate(true)
+    screen._start_skirmish_setup(setup.options())
+    assert(board.state==before_mixed)
+    assert(screen.new_game_dialog.dialog_text.contains("Selva tropical"))
+    screen._confirm_new_game()
+    assert(board.state[Regions.GENERATED_FIELD]==true)
+    assert(board.state[Regions.FIELD]==config)
+    assert(board.state["terrain"]==expected)
+    assert(Codec.decode(Codec.encode(board.state))==board.state)
+    var saved_mixed: Dictionary = board.state.duplicate(true)
+    var snapshot: Dictionary = Minimap.safe_snapshot(board.state,0)
+    for tile in snapshot["tiles"]:
+        assert(tile.has("region")==bool(tile["explored"]))
+    var tampered: Dictionary = JSON.parse_string(Codec.encode(board.state))
+    tampered["terrain"][0][0] = "mountain" if expected[0][0]!="mountain" else "plain"
+    assert(Codec.decode(JSON.stringify(tampered)).is_empty())
+    screen.secondary_biome_picker.select(5)
+    screen._confirm_new_game()
+    assert(board.state==saved_mixed)
+    assert(board.save_game())
+    screen.secondary_biome_picker.select(0)
+    picker.select(0)
+    screen._confirm_new_game()
+    assert(not board.state.has(Regions.FIELD))
+    assert(screen._load_game())
+    assert(board.state==saved_mixed and screen.secondary_biome_picker.selected==6)
 
     for path in [Store.DEFAULT_PATH,board.autosave_path]:
         for suffix in ["",".bak",".tmp"]:
