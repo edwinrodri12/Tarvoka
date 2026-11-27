@@ -943,33 +943,58 @@ static func _step_layered(state: Dictionary,idle: Dictionary) -> Dictionary:
         if attack.get("valid",false):
             attack["action"] = "attack"
             return attack
-    # Direct replenishment and one-turn returns to an eligible known base.
-    # Longer supply planning is still deliberately outside this policy.
+    # Replenish, then use the same layered topology for multi-turn returns.
+    # Temporary occupancy is checked for actual endpoints, never hidden units.
     for unit in knowledge["units"]:
         if not Turns.can_act(unit,side) or not unit.has("ammo"):
             continue
         var supply: Dictionary = Logistics.quote(state,str(unit["id"]))
-        if supply.get("valid",false) and (int(unit["ammo"])<=1 or int(unit.get("fuel",999))<=2):
+        var role: String = str(unit.get("role",""))
+        var low_ammo: bool = Logistics.ammo_capacity(role)>0 and int(unit["ammo"])<=1
+        var low_fuel: bool = Logistics.fuel_capacity(role)>0 and int(unit.get("fuel",999))<=2
+        if supply.get("valid",false) and (low_ammo or low_fuel):
             var supplied: Dictionary = Session.resupply(state,str(unit["id"]))
             if supplied.get("valid",false):
                 supplied["action"] = "resupply"
                 return supplied
         if not Turns.can_move(unit,side) or not knowledge.has("economy"):
             continue
-        if int(unit["ammo"])>1 and int(unit.get("fuel",999))>2:
+        if not low_ammo and not low_fuel:
             continue
         var domain: String = Domains.domain(unit)
         var endpoints: Dictionary = Crossings.reachable(knowledge["terrain"],public_bridges,knowledge["units"],
             unit["pos"],domain,side,Logistics.movement_budget(unit),
             Logistics.road_fast(unit),Weather.from_state(state),Weather.traction(unit),{},visible)
+        var bases: Array = []
         for site in knowledge["economy"].get("sites",[]):
             var kind: String = str(site.get("kind",""))
             var compatible: bool = (domain=="ground" and kind in ["factory","armor_plant","artillery_depot"]) or (domain=="air" and kind in ["airbase","drone_center"]) or (domain=="naval" and kind=="shipyard")
+            if compatible and int(site.get("owner",-1))==side:
+                bases.append(site["pos"])
             if compatible and int(site.get("owner",-1))==side and site["pos"]!=unit["pos"] and endpoints.has(site["pos"]):
                 var returned: Dictionary = Session.move(state,str(unit["id"]),site["pos"])
                 if returned.get("valid",false):
                     returned["action"] = "move"
                     return returned
+        var distances: Dictionary = Crossings.distances_to(knowledge["terrain"],public_bridges,bases,domain,
+            Logistics.road_fast(unit),Weather.from_state(state),Weather.traction(unit),visible)
+        var origin: Vector2i = unit["pos"]
+        if not distances.has(origin):
+            continue
+        var best_cell: Vector2i = origin
+        var best_distance: int = int(distances[origin])
+        for endpoint in endpoints:
+            if not distances.has(endpoint):
+                continue
+            var distance: int = int(distances[endpoint])
+            if distance<best_distance:
+                best_distance = distance
+                best_cell = endpoint
+        if best_cell!=origin:
+            var returned: Dictionary = Session.move(state,str(unit["id"]),best_cell)
+            if returned.get("valid",false):
+                returned["action"] = "move"
+                return returned
     best.clear()
     score = 0
     for unit in knowledge["units"]:

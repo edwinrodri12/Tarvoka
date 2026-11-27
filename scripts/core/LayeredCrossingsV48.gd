@@ -162,6 +162,39 @@ static func reachable(terrain: Array,cells: Dictionary,units: Array,
             result[cell] = ceili(float(costs[cell])/2.0)
     return result
 
+# Strategic reverse distances to known supply sites. Ignore temporary
+# occupancy here; actual endpoints are checked by reachable and Session.
+# Costs are half-points and use the forward destination entry cost.
+static func distances_to(terrain: Array,cells: Dictionary,targets: Array,domain: String,
+        motorized: bool = false,weather: String = "clear",traction: String = "foot",allowed: Variant = null) -> Dictionary:
+    if not Rules.valid_terrain(terrain) or not Domains.valid_domain(domain):
+        return {}
+    var distances: Dictionary = {}
+    var queue: Array[Vector2i] = []
+    for target in targets:
+        if not target is Vector2i or (allowed!=null and not allowed.has(target)) or tile_cost(terrain,cells,target,domain,motorized,weather,traction)<0:
+            continue
+        if not distances.has(target):
+            distances[target] = 0
+            queue.append(target)
+    var cursor := 0
+    while cursor<queue.size():
+        var at: Vector2i = queue[cursor]
+        cursor += 1
+        var entry: int = tile_cost(terrain,cells,at,domain,motorized,weather,traction)
+        for direction in Rules.DIRECTIONS:
+            var previous: Vector2i = at+direction
+            if allowed!=null and not allowed.has(previous):
+                continue
+            if not allows_step(terrain,cells,previous,at,domain):
+                continue
+            var cost: int = int(distances[at])+entry
+            if distances.has(previous) and int(distances[previous])<=cost:
+                continue
+            distances[previous] = cost
+            queue.append(previous)
+    return distances
+
 # Never reveal bridge metadata in unobserved cells.
 static func public_cells(cells: Dictionary,observed: Dictionary) -> Dictionary:
     var result: Dictionary = {}
