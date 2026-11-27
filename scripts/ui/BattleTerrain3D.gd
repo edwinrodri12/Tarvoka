@@ -1194,7 +1194,7 @@ static func bridge_surface_y(cells: Dictionary,bridges: Dictionary,
     if domain=="naval":
         return WATER_LEVEL
     if domain=="air":
-        return BridgeArt.ROAD_TOP+1.75
+        return BridgeArt.ROAD_TOP+2.75
     var cell := Vector2i(roundi(point.x/CELL),roundi(point.z/CELL))
     if bridges.has(cell):
         return BridgeArt.ROAD_TOP
