@@ -407,6 +407,13 @@ func _run() -> void:
             var fx: Node3D = model.get_node("DanoNavalVisual") as Node3D
             var hull_rest: Transform3D = hull.transform
             var mast_rest: Transform3D = mast.transform
+            var bridge_root: Node3D = model.get_node("Superestructura") as Node3D
+            var bridge_rest: Transform3D = bridge_root.transform
+            var roof_attachments: Array[Node3D] = []
+            for child in model.get_children():
+                if child is Node3D and child.get_meta("destroyer_bridge_attachment",false):
+                    roof_attachments.append(child as Node3D)
+            check(roof_attachments.size()==10,"Ten roof-mounted accessories identified")
             var lid: Node3D = model.get_node("ModuloCubierta/TapaModulo_3_2") as Node3D
             var lid_rest: Transform3D = lid.transform
             for hit_kind in ["damage","damaged","hit","hit_bullet","hit_blast"]:
@@ -420,6 +427,11 @@ func _run() -> void:
             for damage in range(5):
                 check(Art.set_destroyer_damage(model,damage,0.50), "Damage stage applied")
                 check(int(model.get_meta("destroyer_damage_stage",-1)) == damage, "Damage revision")
+                # The same whole-hull sinking transform cancels in bridge-local space.
+                for attachment in roof_attachments:
+                    var rest: Transform3D = attachment.get_meta("naval_rest_transform")
+                    check((bridge_root.transform.affine_inverse()*attachment.transform).is_equal_approx(bridge_rest.affine_inverse()*rest),"Roof accessories remain attached through damage and sinking")
+                check((bridge_root.transform.affine_inverse()*mast.position).is_equal_approx(bridge_rest.affine_inverse()*mast_rest.origin),"Mast base follows bridge roof")
                 var counts: Dictionary = {"faction":faction,"lod":lod,"damage":damage,"allocated_meshes":0,"visible_meshes":0,"visible_triangles":0}
                 _inventory(model,counts)
                 check(counts["visible_meshes"]>0 and counts["visible_triangles"]>0 and counts["visible_meshes"]<=counts["allocated_meshes"],"Sane visible workload")
@@ -466,6 +478,8 @@ func _run() -> void:
             check(Art.set_destroyer_damage(model,0), "Reset damage")
             check(hull.transform.is_equal_approx(hull_rest) and mast.transform.is_equal_approx(mast_rest), "Original geometry restored")
             check(lid.transform.is_equal_approx(lid_rest), "Deck detail restored")
+            for attachment in roof_attachments:
+                check(attachment.transform.is_equal_approx(attachment.get_meta("naval_rest_transform")),"Roof accessory restored")
             if lod>=13:
                 var hinge: Node3D = module.get_node("BisagraTapa_3_2") as Node3D
                 check(hinge.transform.is_equal_approx(hinge.get_meta("naval_rest_transform")),"Hinge restored")

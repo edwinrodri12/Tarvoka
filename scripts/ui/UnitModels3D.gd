@@ -1501,6 +1501,12 @@ static func _destroyer_navigation(root: Node3D, art_level: int) -> void:
                 _box(mast,"Peldano_%d_%d" % [side,i],
                     Vector3(sign*0.14,0.075+float(i)*0.09,0.09),
                     Vector3(0.07,0.022,0.09),METAL)
+    # These legacy root-level nodes are physically mounted on the bridge.
+    # Keep their public paths, but bind their cosmetic damage pose to the roof.
+    for child in root.get_children():
+        var label: String = str(child.name)
+        if child is Node3D and (label.begins_with("BaseAntena_") or label.begins_with("RadarRadio") or label.begins_with("LuzNavegacion_") or label.begins_with("LenteNavegacion_")):
+            child.set_meta("destroyer_bridge_attachment",true)
     root.set_meta("destroyer_navigation_revision","1.3")
 
 # Studio-only pose; rotation is independent of the mast and all game data.
@@ -1833,6 +1839,15 @@ static func set_destroyer_damage(root: Node3D, stage: int, progress: float = 0.0
         var hinge := Vector3(0,0.80,0.41)
         var lean := Basis(Vector3.BACK,deg_to_rad(-5.0))
         bridge.transform = Transform3D(lean,hinge-lean*hinge)
+        var bridge_rest: Transform3D = bridge.get_meta("naval_rest_transform")
+        var roof_delta: Transform3D = bridge.transform*bridge_rest.affine_inverse()
+        # Move the mast's base with the roof, preserving its independent lean.
+        var mast_rest: Transform3D = mast.get_meta("naval_rest_transform")
+        mast.position = roof_delta*mast_rest.origin
+        for child in root.get_children():
+            if child is Node3D and child.get_meta("destroyer_bridge_attachment",false):
+                var attachment_rest: Transform3D = child.get_meta("naval_rest_transform")
+                child.transform = roof_delta*attachment_rest
         lid.rotation_degrees.z = -28.0
         lid.position += Vector3(0.025,0.025,0.0)
     var deck_hinge: Node3D = root.get_node_or_null("ModuloCubierta/BisagraTapa_3_2") as Node3D
