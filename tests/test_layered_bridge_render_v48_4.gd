@@ -360,6 +360,44 @@ func _check_live_layered_orders() -> void:
     assert(board.get("state")["units"][1]["hp"]==state["units"][1]["hp"])
     assert(board.get("state")["units"][3]["hp"]==state["units"][3]["hp"])
     viewer.close_view()
+    # The same destination can contain a hostile naval unit without blocking
+    # a ground order. Test stale preview rejection and exact real commit.
+    var mover: Dictionary = _fixture("M","tank","ground",Vector2i(3,3),0)
+    var movement: Dictionary = Session.start_layered([mover,_fixture("N","destroyer","naval",cell,1),
+        _fixture("A","attack_heli","air",cell,0)],map,[{"x":4,"y":3,"axis":"ew"}])
+    board.set("state",movement.duplicate(true))
+    board.set("selected_id","")
+    assert(viewer.open_from_board(board) and viewer._select_3d_unit("M"))
+    assert(viewer.tap_battle_cell(cell))
+    assert(viewer._order_quote["order"]["kind"]=="move")
+    assert(board.get("state")==movement)
+    var stale: Dictionary = movement.duplicate(true)
+    stale["units"][0]["hp"] -= 1
+    board.set("state",stale)
+    viewer._confirm_3d_order()
+    assert(board.get("state")==stale and board.get("pending_order").is_empty())
+    board.set("state",movement.duplicate(true))
+    assert(viewer.open_from_board(board) and viewer._select_3d_unit("M"))
+    assert(viewer.tap_battle_cell(cell))
+    var moved: Dictionary = Session.move(movement,"M",cell)
+    assert(moved["valid"])
+    viewer._confirm_3d_order()
+    assert(board.get("state")==moved["state"])
+    assert(Codec.decode(Codec.encode(board.get("state")))==board.get("state"))
+    var ended: Dictionary = Session.end_turn(moved["state"])
+    assert(ended["valid"])
+    viewer._finish_layered_turn()
+    assert(board.get("state")==ended["state"])
+    # A fog-hidden stacked target cannot be offered even by a forged ID.
+    var scout: Dictionary = _fixture("F","tank","ground",Vector2i(1,3),0)
+    scout["vision"] = 1
+    scout["attack_range"] = 5
+    scout["target_domains"] = ["ground","naval","air"]
+    var fog: Dictionary = Session.start_layered([scout,_fixture("N","destroyer","naval",cell,1)],map,[{"x":4,"y":3,"axis":"ew"}],0,"clear",true)
+    assert(not fog.is_empty())
+    assert(Orders.layered_intents(fog,"F",cell).is_empty())
+    assert(Orders.legal_intent(fog,"F",cell,"attack","N").is_empty())
+    viewer.close_view()
     viewer.free()
     board.free()
     print("PASS V50_6_LIVE_LAYERED: exact target cycling, cancel, explicit commit and opt-in guard")
