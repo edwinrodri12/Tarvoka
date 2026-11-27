@@ -34,10 +34,14 @@ static func generate(seed: int,dims: Vector2i,config: Dictionary) -> Dictionary:
     if not valid_config(config) or not Scenarios.valid_seed(seed) or not Rules.supported_size(dims):
         return {}
     var regions: Dictionary = {}
+    # Exact mirror: calculate each noise sample once, then copy the record
+    # so a caller cannot mutate the corresponding cell on the other side.
     for y in range(dims.y):
-        for x in range(dims.x):
+        for x in range(dims.x/2):
             var cell := Vector2i(x,y)
-            regions[cell] = region_at(seed,dims,cell,config)
+            var region: Dictionary = region_at(seed,dims,cell,config)
+            regions[cell] = region
+            regions[Vector2i(dims.x-1-x,y)] = region.duplicate()
     return regions
 
 # Preview/render clients only receive regions for observed cells. No
@@ -65,7 +69,7 @@ static func public_for_state(state: Dictionary,observed: Dictionary) -> Dictiona
 
 # V49.6 standalone geographic candidate. Mix symmetric terrain profiles,
 # then reapply the same strategic anchor/connectivity invariant as V37.
-# This is not a registered scenario and never changes the legacy maps.
+# Used by the optional V49.7 geographic setup; legacy maps are unchanged.
 static func geographic_candidate(seed: int,dims: Vector2i,config: Dictionary) -> Array:
     var regions: Dictionary = generate(seed,dims,config)
     if regions.is_empty():
