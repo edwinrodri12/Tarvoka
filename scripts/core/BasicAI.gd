@@ -908,7 +908,7 @@ static func _closest_enemy_distance(cell: Vector2i, enemies: Array) -> int:
 static func _distance(a: Vector2i, b: Vector2i) -> int:
     return absi(a.x - b.x) + absi(a.y - b.y)
 
-# Experimental no-fog, no-economy policy: rank legal attacks first, then
+# Experimental policy: rank visible legal attacks, direct supply, then
 # approach attack-compatible enemies using only layered legal endpoints.
 # Never delegate a layered position to the legacy surface-only planner.
 static func _step_layered(state: Dictionary,idle: Dictionary) -> Dictionary:
@@ -916,17 +916,20 @@ static func _step_layered(state: Dictionary,idle: Dictionary) -> Dictionary:
     if not index["valid"] or not Crossings.occupancy(state["terrain"],index["cells"],state["units"])["valid"]:
         return idle
     var side: int = int(state["faction"])
+    var knowledge: Dictionary = Visibility.observed_state(state,side)
+    var visible: Variant = Visibility.visible_cells(state,side) if Visibility.enabled(state) else null
+    var public_bridges: Dictionary = Crossings.public_cells(index["cells"],Visibility.explored_cells(state,side)) if visible!=null else index["cells"]
     var best: Dictionary = {}
     var score := -999999
-    for unit in state["units"]:
+    for unit in knowledge["units"]:
         if not Turns.can_act(unit,side):
             continue
-        for enemy in state["units"]:
+        for enemy in knowledge["units"]:
             if int(enemy.get("hp",0))<=0 or int(enemy.get("faction",-1))==side:
                 continue
             if not Logistics.can_fire(unit) or not Turns.in_attack_range(unit,enemy):
                 continue
-            var exchange: Dictionary = BattleActions.public_preview_exchange(unit,enemy,state["terrain"],{},state["units"])
+            var exchange: Dictionary = BattleActions.public_preview_exchange(unit,enemy,knowledge["terrain"],knowledge.get("economy",{}),knowledge["units"])
             if not exchange.get("valid",false):
                 continue
             var candidate: int = int(exchange["damage"])*12-int(exchange["counter_damage"])*9
@@ -940,16 +943,43 @@ static func _step_layered(state: Dictionary,idle: Dictionary) -> Dictionary:
         if attack.get("valid",false):
             attack["action"] = "attack"
             return attack
+    # Direct replenishment and one-turn returns to an eligible known base.
+    # Longer supply planning is still deliberately outside this policy.
+    for unit in knowledge["units"]:
+        if not Turns.can_act(unit,side) or not unit.has("ammo"):
+            continue
+        var supply: Dictionary = Logistics.quote(state,str(unit["id"]))
+        if supply.get("valid",false) and (int(unit["ammo"])<=1 or int(unit.get("fuel",999))<=2):
+            var supplied: Dictionary = Session.resupply(state,str(unit["id"]))
+            if supplied.get("valid",false):
+                supplied["action"] = "resupply"
+                return supplied
+        if not Turns.can_move(unit,side) or not knowledge.has("economy"):
+            continue
+        if int(unit["ammo"])>1 and int(unit.get("fuel",999))>2:
+            continue
+        var domain: String = Domains.domain(unit)
+        var endpoints: Dictionary = Crossings.reachable(knowledge["terrain"],public_bridges,knowledge["units"],
+            unit["pos"],domain,side,Logistics.movement_budget(unit),
+            Logistics.road_fast(unit),Weather.from_state(state),Weather.traction(unit),{},visible)
+        for site in knowledge["economy"].get("sites",[]):
+            var kind: String = str(site.get("kind",""))
+            var compatible: bool = (domain=="ground" and kind in ["factory","armor_plant","artillery_depot"]) or (domain=="air" and kind in ["airbase","drone_center"]) or (domain=="naval" and kind=="shipyard")
+            if compatible and int(site.get("owner",-1))==side and site["pos"]!=unit["pos"] and endpoints.has(site["pos"]):
+                var returned: Dictionary = Session.move(state,str(unit["id"]),site["pos"])
+                if returned.get("valid",false):
+                    returned["action"] = "move"
+                    return returned
     best.clear()
     score = 0
-    for unit in state["units"]:
+    for unit in knowledge["units"]:
         if not Turns.can_move(unit,side):
             continue
         var origin: Vector2i = unit["pos"]
-        var endpoints: Dictionary = Crossings.reachable(state["terrain"],index["cells"],state["units"],
+        var endpoints: Dictionary = Crossings.reachable(knowledge["terrain"],public_bridges,knowledge["units"],
             origin,Domains.domain(unit),side,Logistics.movement_budget(unit),
-            Logistics.road_fast(unit),Weather.from_state(state),Weather.traction(unit))
-        for enemy in state["units"]:
+            Logistics.road_fast(unit),Weather.from_state(state),Weather.traction(unit),{},visible)
+        for enemy in knowledge["units"]:
             if int(enemy.get("hp",0))<=0 or int(enemy.get("faction",-1))==side or not Domains.can_attack(unit,enemy):
                 continue
             var target: Vector2i = enemy["pos"]
