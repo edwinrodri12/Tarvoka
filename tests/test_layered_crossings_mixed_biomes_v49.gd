@@ -115,6 +115,38 @@ func _initialize() -> void:
                         assert(mixed[anchor.y][anchor.x]!="water")
                 geographic_cases += 1
     assert(geographic_cases==24)
+    # V50.1 optimized mirrored region generation must be equivalent to
+    # independent single-cell sampling, including transition weights.
+    var cfg: Dictionary = {"version":1,"primary":"desert","secondary":"tropical"}
+    var big := Vector2i(40,30)
+    var field: Dictionary = Regions.generate(1729,big,cfg)
+    for cell in field:
+        assert(field[cell]==Regions.region_at(1729,big,cell,cfg))
+    var original: Dictionary = field[Vector2i(39,0)].duplicate(true)
+    field[Vector2i.ZERO]["secondary_weight"] = 999
+    assert(field[Vector2i(39,0)]==original)
+    var terrain: Array = Regions.geographic_candidate(1729,big,cfg)
+    var cached_state: Dictionary = Session.start([],terrain)
+    cached_state["visual_biome"] = "desert"
+    cached_state["map_seed"] = 1729
+    cached_state[Scenarios.GEOGRAPHY_FIELD] = Scenarios.GEOGRAPHY_VERSION
+    cached_state[Regions.FIELD] = cfg
+    cached_state[Regions.SEED_FIELD] = 1729
+    cached_state[Regions.GENERATED_FIELD] = true
+    var encoded: String = Codec.encode(cached_state)
+    assert(not encoded.is_empty() and Codec.decode(encoded)==cached_state)
+    var began: int = Time.get_ticks_usec()
+    for attempt in range(12):
+        assert(Codec.encode(cached_state)==encoded)
+    print("V50_CACHED_SAVE_12 ms=",float(Time.get_ticks_usec()-began)/1000.0)
+    var changed: Dictionary = cached_state.duplicate(true)
+    changed["terrain"][0][0] = "plain" if terrain[0][0]!="plain" else "mountain"
+    assert(Codec.encode(changed).is_empty())
+    changed = cached_state.duplicate(true)
+    changed[Regions.SEED_FIELD] = 1730
+    changed["map_seed"] = 1730
+    assert(Codec.encode(changed).is_empty())
+    assert(Codec.encode(cached_state)==encoded)
     var mix: Dictionary = {"version":1,"primary":"temperate","secondary":"winter"}
     var north := Vector2i(2,0)
     var south := Vector2i(2,7)
