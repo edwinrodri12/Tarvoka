@@ -973,11 +973,17 @@ static func _make_mountain_ridges(parent: Node3D,cells: Dictionary,
         var tile: Dictionary = cells[cell]
         if str(tile.get("kind",""))!="mountain" or not bool(tile.get("details",false)):
             continue
-        var base: Vector3 = world_at(cell)
-        base.y = height_at(cells,cell)+0.33
+        # V51.2: vary silhouette proportions and location deterministically,
+        # staying within the tile and retaining one mesh batch per biome.
+        var shift := Vector2(float(posmod(cell.x*19+cell.y*43,7)-3)*0.025,
+            float(posmod(cell.x*47+cell.y*23,7)-3)*0.025)
+        var base: Vector3 = world_at(cell)+Vector3(shift.x,0,shift.y)
         var angle: float = _ridge_angle(cells,cell)
-        var shape := Basis(Vector3.UP,angle).scaled(
-            Vector3(0.95,0.9+float(posmod(cell.x*11+cell.y,4))*0.07,0.95))
+        var width: float = 0.80+float(posmod(cell.x*17+cell.y*29,7))*0.032
+        var depth: float = 0.78+float(posmod(cell.x*31+cell.y*13,7))*0.035
+        var rise: float = 0.76+float(posmod(cell.x*11+cell.y*37,9))*0.055
+        base.y = height_at(cells,cell,shift.x,shift.y)+0.33*rise
+        var shape := Basis(Vector3.UP,angle).scaled(Vector3(width,rise,depth))
         transforms.append(Transform3D(shape,base))
     if transforms.is_empty():
         return 0

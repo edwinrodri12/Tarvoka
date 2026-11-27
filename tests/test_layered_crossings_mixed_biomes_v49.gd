@@ -296,6 +296,18 @@ func _check_long_supply(map: Array,records: Array,cells: Dictionary) -> void:
 
 # V51: deterministic topology overlay, no change to seed-generated terrain.
 func _check_geographic_crossings() -> void:
+    # Deliberate positive fixture: two separated mirrored spans and four
+    # safe two-tile approaches. No dependence on random seeds for this test.
+    var fixture: Array = Scenarios.terrain(0,Vector2i(24,18))
+    for x in [6,17]:
+        fixture[8][x] = "road"
+        fixture[7][x] = "water"
+        fixture[9][x] = "water"
+    var candidates: Array = Bridges.geographic_records(fixture)
+    assert(candidates==[{"x":6,"y":8,"axis":"ew"},{"x":17,"y":8,"axis":"ew"}])
+    assert(Bridges.index_records(fixture,candidates)["valid"])
+    fixture[8][8] = "mountain"
+    assert(Bridges.geographic_records(fixture).is_empty())
     var cases := 0
     var with_spans := 0
     for dims in [Vector2i(10,8),Vector2i(24,18),Vector2i(40,30)]:

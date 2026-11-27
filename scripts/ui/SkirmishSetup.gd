@@ -511,6 +511,8 @@ func _changed(manual: bool = false) -> void:
         preview_caption.text = "%s · %s. Vista de terreno sin unidades ni órdenes." % [
             scenario_picker.get_item_text(scenario_picker.selected),
             size_picker.get_item_text(size_picker.selected)]
+        if scenario_picker.selected==Scenarios.GEOGRAPHIC_SCENARIO_ID:
+            preview_caption.text += " · %d ubicaciones aptas para puentes elevados (aún en validación)." % map_preview.geographic_bridge_candidates.size()
         if not mixed.is_empty() and not MixedRegions.valid_config(mixed):
             preview_caption.text = "Elige dos biomas distintos para activar la vista previa mixta."
 

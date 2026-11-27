@@ -5,6 +5,7 @@ const Scenarios = preload("res://scripts/core/Scenarios.gd")
 const Chrome = preload("res://scripts/ui/GameUiTheme.gd")
 const Winter = preload("res://scripts/ui/WinterBattleBiome.gd")
 const MixedRegions = preload("res://scripts/core/MixedBiomeRegionsV49.gd")
+const Crossings = preload("res://scripts/core/LayeredCrossingsV48.gd")
 
 const SIZES := [Vector2i(10,8),Vector2i(24,18),Vector2i(40,30)]
 const TILES := {
@@ -21,6 +22,7 @@ var selected_seed := 0
 var visual_biome := Winter.TEMPERATE
 var mixed_config: Dictionary = {}
 var mixed_regions: Dictionary = {}
+var geographic_bridge_candidates: Array = []
 
 func _ready() -> void:
     mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -42,6 +44,7 @@ func configure(scenario_id: int, size_id: int, seed: int,
     mixed_config = next_mixed
     mixed_regions = MixedRegions.generate(selected_seed,grid_size,mixed_config) if not mixed_config.is_empty() else {}
     preview_map = Scenarios.selected_terrain(scenario_id,grid_size,selected_seed,visual_biome) if mixed_config.is_empty() else MixedRegions.geographic_candidate(selected_seed,grid_size,mixed_config)
+    geographic_bridge_candidates = Crossings.geographic_records(preview_map) if scenario_id==Scenarios.GEOGRAPHIC_SCENARIO_ID else []
     queue_redraw()
 
 func _draw() -> void:
