@@ -1360,6 +1360,8 @@ static func build(state: Dictionary, selected_id: String = "", viewer: int = 0) 
     if not bridge_index["valid"]:
         return null
     var bridge_cells: Dictionary = bridge_index["cells"]
+    if Visibility.enabled(state):
+        bridge_cells = Crossings.public_cells(bridge_cells,Visibility.explored_cells(state,viewer))
     # Render WATER under each elevated deck, not a solid road embankment.
     # This local map is visual only and cannot alter the authoritative road.
     var render_terrain: Array = terrain
@@ -1480,7 +1482,7 @@ static func build(state: Dictionary, selected_id: String = "", viewer: int = 0) 
             var approach: Vector2i = cell+direction
             if bridge_cells.has(approach):
                 continue
-            if str(cells[approach]["kind"]) not in ["plain","road"]:
+            if not bool(cells[approach].get("seen",false)) or str(cells[approach]["kind"]) not in ["plain","road"]:
                 skipped_ramps += 1
                 continue
             if reserved.has(approach):
@@ -1488,7 +1490,7 @@ static func build(state: Dictionary, selected_id: String = "", viewer: int = 0) 
                 continue
             var reach := 1
             var farther: Vector2i = approach+direction
-            if cells.has(farther) and not bridge_cells.has(farther) and not reserved.has(farther) and str(cells[farther]["kind"]) in ["plain","road"]:
+            if cells.has(farther) and not bridge_cells.has(farther) and not reserved.has(farther) and bool(cells[farther].get("seen",false)) and str(cells[farther]["kind"]) in ["plain","road"]:
                 reach = 2
             var endpoint: Vector2i = cell+direction*reach
             var ground_y: float = height_at(cells,endpoint)+0.04
@@ -1517,7 +1519,7 @@ static func build(state: Dictionary, selected_id: String = "", viewer: int = 0) 
             if not bool(report.get("fits_vertical",false)) or not bool(report.get("fits_channel_width",true)):
                 clearance_failures += 1
     counters["bridge_clearance_failures_v48"] = clearance_failures
-    scene.set_meta("bridge_inspection_only_v48",not bridge_cells.is_empty())
+    scene.set_meta("bridge_inspection_only_v48",state.has(Crossings.FIELD))
     # Android-safe, 4 Hz dynamic LOD: only cities already visible to the
     # public viewer are registered. Model roots and selection cells persist.
     var city_lod: Node=CityDistance.new()
