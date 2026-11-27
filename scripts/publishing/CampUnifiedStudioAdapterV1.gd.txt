@@ -610,7 +610,7 @@ func _destroyer_studio_create_controls() -> void:
     var idx: int = NavalArt.ROLES.find("destroyer")
     if idx < 0 or idx >= role_picker.item_count:
         return
-    role_picker.set_item_text(idx,"Destructor naval · V1.18")
+    role_picker.set_item_text(idx,"Destructor naval · V1.19")
     destroyer_controls = VBoxContainer.new()
     destroyer_controls.name = "DestructorControlesNativos"
     # Place the actual naval controls under the shared tabs rather than
@@ -621,7 +621,7 @@ func _destroyer_studio_create_controls() -> void:
     else:
         role_picker.get_parent().add_child(destroyer_controls)
     destroyer_controls.add_theme_constant_override("separation",5)
-    _title(destroyer_controls,"DESTRUCTOR NAVAL · V1.18",14)
+    _title(destroyer_controls,"DESTRUCTOR NAVAL · V1.19",14)
     destroyer_status = _title(destroyer_controls,"",11)
     destroyer_status.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
     destroyer_faction_picker = OptionButton.new()
@@ -734,7 +734,7 @@ func _destroyer_studio_sync_visibility() -> void:
             if studio_animation_panel != null:
                 studio_animation_panel.hide()
             if studio_overview_label != null:
-                studio_overview_label.text = "Destructor naval · V1.18"
+                studio_overview_label.text = "Destructor naval · V1.19"
             if faction_picker != null:
                 if not _destroyer_generic_faction_hidden:
                     _destroyer_generic_faction_previous = faction_picker.visible
@@ -791,7 +791,7 @@ func _destroyer_studio_damage_changed(stage: int) -> void:
     _destroyer_fx_time = 0.0
     NavalArt.set_destroyer_damage(model_root,stage,0.45 if stage == 4 else 0.0)
     if destroyer_status != null:
-        destroyer_status.text = "Modelo nativo V1.18 · D%d" % stage
+        destroyer_status.text = "Modelo nativo V1.19 · D%d" % stage
 
 func _destroyer_studio_stop() -> void:
     if _destroyer_studio_tween != null and _destroyer_studio_tween.is_running():
@@ -855,7 +855,7 @@ func _destroyer_studio_play(kind: String) -> void:
             if kind != "sink":
                 NavalArt.restore_model_pose("destroyer",model_root)
             else:
-                destroyer_status.text = "Modelo nativo V1.18 · D4 · Hundido")
+                destroyer_status.text = "Modelo nativo V1.19 · D4 · Hundido")
 
 func _process(delta: float) -> void:
     super._process(delta)

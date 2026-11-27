@@ -1088,6 +1088,8 @@ static func _destroyer_repaint_hull(root: Node3D, paint: Color) -> int:
 # No transparency or battle logic is introduced.
 static var _destroyer_steel_texture: ImageTexture
 static var _destroyer_normal_texture: ImageTexture
+static var _destroyer_rough_texture: ImageTexture
+static var _destroyer_cloud_mesh: ArrayMesh
 
 static func _destroyer_grain() -> ImageTexture:
     if _destroyer_steel_texture != null:
@@ -1095,11 +1097,13 @@ static func _destroyer_grain() -> ImageTexture:
     var img: Image = Image.create(64,64,false,Image.FORMAT_RGBA8)
     for y in range(64):
         for x in range(64):
-            var grain: float = float((x*37+y*73+x*y*11)%31)/30.0
-            var streak: float = 0.5+0.5*sin(float(x)*1.18+float(y)*0.06)
-            # Restrained tonal variation, not random corrosion or baked faction color.
-            var patina: float = 0.5+0.5*cos(TAU*float(x)/64.0)*sin(TAU*float(y)/64.0)
-            var shade: float = 0.885+0.055*grain+0.035*streak+0.025*patina
+            var u: float = TAU*float(x)/64.0
+            var v: float = TAU*float(y)/64.0
+            var grain: float = 0.5+0.5*sin(u*19.0+cos(v*7.0))*cos(v*17.0-u*3.0)
+            var streak: float = 0.5+0.5*sin(u*9.0+v)
+            # Multi-scale periodic tonal variation; no baked faction hue.
+            var patina: float = 0.5+0.5*cos(u)*sin(v)
+            var shade: float = 0.80+0.065*grain+0.075*streak+0.06*patina
             img.set_pixel(x,y,Color(shade,shade,shade,1.0))
     img.generate_mipmaps()
     _destroyer_steel_texture = ImageTexture.create_from_image(img)
@@ -1121,6 +1125,52 @@ static func _destroyer_relief() -> ImageTexture:
     img.generate_mipmaps()
     _destroyer_normal_texture = ImageTexture.create_from_image(img)
     return _destroyer_normal_texture
+
+# Shared greyscale roughness microstructure, separate from pigment.
+# Godot multiplies this channel by the authored material roughness.
+static func _destroyer_roughness() -> ImageTexture:
+    if _destroyer_rough_texture != null:
+        return _destroyer_rough_texture
+    var img := Image.create(64,64,false,Image.FORMAT_RGBA8)
+    for y in range(64):
+        for x in range(64):
+            var u: float = TAU*float(x)/64.0
+            var v: float = TAU*float(y)/64.0
+            var shade: float = 0.84+0.08*cos(u*2.0+v)*sin(v*3.0)+0.06*sin(u*13.0+v*2.0)
+            img.set_pixel(x,y,Color(shade,shade,shade,1.0))
+    img.generate_mipmaps()
+    _destroyer_rough_texture = ImageTexture.create_from_image(img)
+    return _destroyer_rough_texture
+
+# A shared low-poly irregular cloud; smooth radial displacement keeps the
+# existing indexed topology. Analytic gradient corrects the displaced normals.
+static func _destroyer_cloud() -> ArrayMesh:
+    if _destroyer_cloud_mesh != null:
+        return _destroyer_cloud_mesh
+    var source := SphereMesh.new()
+    source.radius = 0.5
+    source.height = 1.0
+    source.radial_segments = 12
+    source.rings = 6
+    var arrays: Array = source.surface_get_arrays(0)
+    var vertices: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
+    var normals: PackedVector3Array = arrays[Mesh.ARRAY_NORMAL]
+    for i in range(vertices.size()):
+        var direction: Vector3 = vertices[i].normalized()
+        var p: float = 7.0*direction.x+3.0*direction.y
+        var q: float = 5.0*direction.z-2.0*direction.y
+        var h: float = 6.0*direction.y+3.0*direction.z
+        var radius: float = 1.0+0.12*sin(p)*cos(q)+0.08*cos(h)
+        var gradient: Vector3 = 0.12*cos(p)*cos(q)*Vector3(7,3,0)-0.12*sin(p)*sin(q)*Vector3(0,-2,5)-0.08*sin(h)*Vector3(0,6,3)
+        var tangent_gradient: Vector3 = gradient-direction*gradient.dot(direction)
+        vertices[i] *= radius
+        normals[i] = (direction-tangent_gradient/radius).normalized()
+    arrays[Mesh.ARRAY_VERTEX] = vertices
+    arrays[Mesh.ARRAY_NORMAL] = normals
+    arrays[Mesh.ARRAY_TANGENT] = null
+    _destroyer_cloud_mesh = ArrayMesh.new()
+    _destroyer_cloud_mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES,arrays)
+    return _destroyer_cloud_mesh
 
 static func _destroyer_finish(node: Node, detail: bool) -> void:
     if node is MeshInstance3D:
@@ -1169,6 +1219,10 @@ static func _destroyer_finish(node: Node, detail: bool) -> void:
                 family = "smoke"
                 mat.metallic = 0.0
                 mat.roughness = 1.0
+            elif label.begins_with("Marca_") or label.begins_with("MarcaCostado") or label.begins_with("Quemadura"):
+                family = "scar"
+                mat.metallic = 0.0
+                mat.roughness = 0.94
             elif label.begins_with("Fuego") or label.begins_with("Impacto") or label == "DestelloVisual":
                 family = "effect"
                 mat.metallic = 0.0
@@ -1184,6 +1238,9 @@ static func _destroyer_finish(node: Node, detail: bool) -> void:
                 mat.normal_enabled = true
                 mat.normal_texture = _destroyer_relief()
                 mat.normal_scale = 0.65 if family=="deck" else (0.24 if family=="enamel" else 0.40)
+                if family!="enamel":
+                    mat.roughness_texture = _destroyer_roughness()
+                    mat.roughness_texture_channel = BaseMaterial3D.TEXTURE_CHANNEL_RED
             part.set_meta("destroyer_finish_family",family)
             part.set_meta("destroyer_surface_v15",true)
     for child in node.get_children():
@@ -1599,7 +1656,7 @@ static func _destroyer(root: Node3D, art_level: int = 10) -> void:
     for station in stations:
         deck_stations.append([station[0],station[1]*0.86,0.738,0.802])
     _destroyer_shell(root,"Cubierta",deck_stations,ARMOR)
-    root.set_meta("destroyer_art_revision","1.18")
+    root.set_meta("destroyer_art_revision","1.19")
     _destroyer_bridge(root,art_level)
     _destroyer_navigation(root,art_level)
     _destroyer_deck_equipment(root,art_level)
@@ -1629,15 +1686,26 @@ static func _destroyer_damage_setup(root: Node3D, art_level: int) -> void:
     var fx := Node3D.new()
     fx.name = "DanoNavalVisual"
     root.add_child(fx)
+    # D1 marks sit ahead of the turret, in exposed deck space, with
+    # thin closed geometry penetrating the deck instead of floating above it.
+    var scar_positions: Array[Vector3] = [
+        Vector3(-0.18,0.802,-1.73),Vector3(0.16,0.802,-1.69),
+        Vector3(0.0,0.802,-1.62),Vector3(-0.20,0.802,-1.56),
+        Vector3(0.21,0.802,-1.57)]
     for i in range(5):
-        _box(fx,"Marca_%d" % i,Vector3(-0.34+float(i)*0.17,0.817,-0.83+float(i%2)*0.15),
-            Vector3(0.14,0.028,0.18),BLACK,Vector3(0,float(i)*17,0)).hide()
+        var scar: MeshInstance3D = _box(fx,"Marca_%d" % i,scar_positions[i],
+            Vector3(0.10+float(i%2)*0.025,0.018,0.14),Color("#242B30"),Vector3(0,float(i*31-35),0))
+        scar.hide()
     for i in range(5 if art_level >= 13 else 3):
         var step: float = float(i)
         var smoke: MeshInstance3D = _sphere(fx,"Humo_%d" % i,
             Vector3(0.23+0.085*step,1.36+0.23*step,0.50+0.045*step),
             Vector3(0.27+0.095*step,0.31+0.075*step,0.29+0.075*step),
             Color("#303840").lerp(Color("#737A7E"),step/5.0))
+        if art_level>=13:
+            smoke.mesh = _destroyer_cloud()
+            smoke.rotation_degrees = Vector3(11.0*step,53.0*step,-9.0+17.0*step)
+            smoke.set_meta("destroyer_irregular_cloud",true)
         smoke.set_meta("destroyer_fx_rest",smoke.transform)
         smoke.hide()
     for i in range(4 if art_level >= 13 else 2):
@@ -1656,9 +1724,9 @@ static func _destroyer_damage_setup(root: Node3D, art_level: int) -> void:
     # Marks on the exposed walkways, rather than underneath deck equipment.
     for side in [-1,1]:
         var sign: float = float(side)
-        _box(fx,"MarcaCostado_%d" % side,Vector3(sign*0.60,0.824,-0.65),
+        _box(fx,"MarcaCostado_%d" % side,Vector3(sign*0.60,0.799,-0.65),
             Vector3(0.10,0.018,0.21),Color("#30363B"),Vector3(0,side*22,0)).hide()
-        _box(fx,"Quemadura_%d" % side,Vector3(sign*0.24,0.86,1.18),
+        _box(fx,"Quemadura_%d" % side,Vector3(sign*0.24,0.836,1.18),
             Vector3(0.22,0.018,0.23),Color("#393031"),Vector3(0,side*16,0)).hide()
     var lid: Node3D = root.get_node("ModuloCubierta/TapaModulo_3_2") as Node3D
     lid.set_meta("naval_rest_transform",lid.transform)
