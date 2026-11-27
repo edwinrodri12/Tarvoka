@@ -59,3 +59,41 @@ static func public_for_state(state: Dictionary,observed: Dictionary) -> Dictiona
         return {}
     var dims: Vector2i = Rules.map_size(state.get("terrain",[]))
     return public_regions(generate(state[SEED_FIELD],dims,state[FIELD]),observed)
+
+# V49.6 standalone geographic candidate. Mix symmetric terrain profiles,
+# then reapply the same strategic anchor/connectivity invariant as V37.
+# This is not a registered scenario and never changes the legacy maps.
+static func geographic_candidate(seed: int,dims: Vector2i,config: Dictionary) -> Array:
+    var regions: Dictionary = generate(seed,dims,config)
+    if regions.is_empty():
+        return []
+    var map: Array = Scenarios.terrain(0,dims)
+    for y in range(dims.y):
+        for x in range(dims.x/2):
+            var region: Dictionary = regions[Vector2i(x,y)]
+            var threshold: int = posmod(y*313+x*157+73,1000)
+            var style: String = region["secondary"] if int(region["secondary_weight"])>threshold else region["primary"]
+            Scenarios._geo_pair(map,dims,x,y,Scenarios._geo_kind(seed,x,y,dims,style))
+    for y in range(1,dims.y-1):
+        Scenarios._geo_pair(map,dims,0,y,"plain")
+        Scenarios._geo_pair(map,dims,1,y,"road")
+    for y in [Scenarios.scale_y(2,dims),Scenarios.scale_y(5,dims)]:
+        for x in range(dims.x):
+            map[y][x] = "road"
+    for cell in Scenarios._large_anchor_cells(dims):
+        if cell.y==0 or cell.y==dims.y-1:
+            continue
+        if map[cell.y][cell.x]=="water":
+            Scenarios._geo_pair(map,dims,cell.x,cell.y,"plain")
+        var north: int = Scenarios.scale_y(2,dims)
+        var south: int = Scenarios.scale_y(5,dims)
+        var target: int = north if absi(cell.y-north)<=absi(cell.y-south) else south
+        for y in range(mini(cell.y,target),maxi(cell.y,target)+1):
+            if map[y][cell.x]=="water":
+                Scenarios._geo_pair(map,dims,cell.x,y,"road")
+    var connected: Dictionary = Scenarios._geo_reachable_land(map,Vector2i(1,Scenarios.scale_y(2,dims)))
+    for y in range(dims.y):
+        for x in range(dims.x/2):
+            if map[y][x]!="water" and not connected.has(Vector2i(x,y)):
+                Scenarios._geo_pair(map,dims,x,y,"water")
+    return map
