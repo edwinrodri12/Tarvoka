@@ -164,3 +164,7 @@ Base V33.1 conserva V32.2 validada. V34 reutiliza cuatro insignias originales po
 ## V36–V37 — hombreras y codos
 
 Base V35 validada: native 45933841707, WebGL 45933841665, sin despliegue. V36 esculpe las hombreras existentes con diez anillos, 24 lados, labio inferior y transición comprimida según rol. Se ajustan después las insignias V34 sobre la superficie nueva. V37 sustituye dos protecciones de codo por ocho anillos de 24 lados, conservando centro real de la malla original de 14 lados y pivote ELBOW_LOCAL. Cuatro mallas existentes, sin nuevos nodos, LOD13 exclusivo. QA de cierre, dimensiones, material D0–D4, jerarquía y contactos anteriores; requiere ejecución y evaluación visual. Main avanzó después de V33; no fusionar hasta comprobar sus nuevos cambios. No FINAL.
+
+## V38 — jerarquía material PBR por especialidad
+
+V37 native 45937023283 aprobado; WebGL en curso. V38 define perfiles de rugosidad, metálico, especular y relieve distintos para armadura y caucho de los cinco roles en LOD13. Francotirador mate, médico revestimiento más liso, Guardia y Comando acabados intermedios, Logístico caucho reforzado. Mantiene color de facción exacto, mezcla V26, tejidos V29, óptica V18, texturas 64x64 existentes y toda geometría. D1–D4 reduce respuesta especular y metálica, incrementa relieve y rugosidad con restauración D0. QA evalúa propiedades reales de los cinco estados, opacidad, reutilización de texturas y material táctico intacto. V38 candidato, no FINAL ni despliegue.

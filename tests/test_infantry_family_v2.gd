@@ -332,6 +332,43 @@ func _run() -> void:
                     check(str(model.get_meta(Finish.GEAR_V17,""))==role,"V17 role-specific kit")
                     check(str(model.get_meta(Finish.OPTICS_V18,""))==role,"V18 optics identity")
                     check(str(model.get_meta(Finish.SURFACES_V19,""))==role,"V19 individual surface identity")
+                    var v38_hero: bool=bool(model.get_meta("tarvoka_infantry_v2_hero",false))
+                    check(model.has_meta(Finish.MATERIAL_V38)==v38_hero,
+                        "V38 material hierarchy only on hero models")
+                    if v38_hero:
+                        check(str(model.get_meta(Finish.MATERIAL_V38,""))==role,"V38 real role identity")
+                        for v38_kind in ["armor","rubber"]:
+                            var v38_name: String="V2_CorazaPectoralHermetica" if v38_kind=="armor" else "V2_BotaMoldeada_1"
+                            var v38_part: MeshInstance3D=model.find_child(v38_name,true,false) as MeshInstance3D
+                            check(v38_part!=null and v38_part.has_meta(Finish.STAGE_MATS),"V38 staged physical material")
+                            if v38_part==null or not v38_part.has_meta(Finish.STAGE_MATS):
+                                continue
+                            var v38_palette: Array=v38_part.get_meta(Finish.STAGE_MATS)
+                            check(v38_palette.size()==5,"V38 five damage stages")
+                            if v38_palette.size()!=5:
+                                continue
+                            var v38_profile: Vector4=Finish.material_profile_v38(role,v38_kind)
+                            var v38_clean: StandardMaterial3D=v38_palette[0]
+                            for v38_stage in range(5):
+                                var v38_mat: StandardMaterial3D=v38_palette[v38_stage]
+                                var v38_expected_rough: float=minf(1.0,v38_profile.x+float(v38_stage)*0.065)
+                                check(is_equal_approx(v38_mat.roughness,v38_expected_rough) and
+                                    is_equal_approx(v38_mat.metallic,v38_profile.y*(1.0-0.06*float(v38_stage))) and
+                                    is_equal_approx(v38_mat.metallic_specular,v38_profile.z*(1.0-0.075*float(v38_stage))) and
+                                    is_equal_approx(v38_mat.normal_scale,v38_profile.w*(1.0+0.035*float(v38_stage))),
+                                    "V38 actual PBR profile and progressive damage")
+                                check(v38_mat.transparency==BaseMaterial3D.TRANSPARENCY_DISABLED and
+                                    v38_mat.albedo_color.a==1.0 and v38_mat.normal_enabled and
+                                    v38_mat.normal_texture==v38_clean.normal_texture and
+                                    v38_mat.albedo_texture==v38_clean.albedo_texture,
+                                    "V38 opaque shared textures through all stages")
+                    else:
+                        var v38_tactical: MeshInstance3D=model.find_child("V2_CorazaPectoralHermetica",true,false) as MeshInstance3D
+                        if v38_tactical!=null and v38_tactical.has_meta(Finish.STAGE_MATS):
+                            var v38_legacy: Array=v38_tactical.get_meta(Finish.STAGE_MATS)
+                            check(is_equal_approx(v38_legacy[0].roughness,0.58) and
+                                is_equal_approx(v38_legacy[0].metallic,0.09) and
+                                not v38_legacy[0].normal_enabled,"V38 untouched tactical material")
                     var v37_hero: bool=bool(model.get_meta("tarvoka_infantry_v2_hero",false))
                     check(model.has_meta(Finish.SHOULDER_V36)==v37_hero and
                         model.has_meta(Finish.ELBOW_V37)==v37_hero,

@@ -1336,6 +1336,31 @@ static var _family_textures: Dictionary={}
 const RELIEF_V14 := "tarvoka_infantry_relief_v14"
 static var _family_normals: Dictionary={}
 
+const MATERIAL_V38 := "tarvoka_infantry_material_hierarchy_v38"
+# PBR profiles: roughness, metal response, specular, normal strength.
+# Paint remains the original faction blend; no albedo substitutions.
+const ARMOR_PBR_V38 := {
+    "line":Vector4(0.49,0.14,0.43,0.24),
+    "infantry_commando":Vector4(0.54,0.12,0.39,0.27),
+    "infantry_sniper":Vector4(0.73,0.05,0.29,0.19),
+    "infantry_logistic":Vector4(0.61,0.09,0.35,0.26),
+    "infantry_medic":Vector4(0.43,0.11,0.42,0.18)
+}
+const RUBBER_PBR_V38 := {
+    "line":Vector4(0.90,0.0,0.20,0.38),
+    "infantry_commando":Vector4(0.85,0.0,0.23,0.40),
+    "infantry_sniper":Vector4(0.94,0.0,0.17,0.35),
+    "infantry_logistic":Vector4(0.91,0.0,0.19,0.43),
+    "infantry_medic":Vector4(0.82,0.0,0.25,0.30)
+}
+
+static func material_profile_v38(role: String,kind: String)->Vector4:
+    if kind=="armor":
+        return ARMOR_PBR_V38[role]
+    if kind=="rubber":
+        return RUBBER_PBR_V38[role]
+    return Vector4.ZERO
+
 const TEXTILE_V29 := "tarvoka_infantry_textile_finish_v29"
 const EQUIPMENT_V30 := "tarvoka_infantry_equipment_finish_v30"
 const EQUIPMENT_COUNT_V30 := "tarvoka_infantry_equipment_count_v30"
@@ -1539,9 +1564,12 @@ static func _finish_family_materials(model: Node3D,hero: bool) -> bool:
                     clean.normal_scale=textile.y
                     clean.uv1_scale=Vector3.ONE*textile.z
                     clean.metallic_specular=0.22
-                elif kind=="rubber":
-                    clean.normal_scale=0.32
-                    clean.roughness=0.86
+                elif kind in ["armor","rubber"]:
+                    var pbr: Vector4=material_profile_v38(role,kind)
+                    clean.roughness=pbr.x
+                    clean.metallic=pbr.y
+                    clean.metallic_specular=pbr.z
+                    clean.normal_scale=pbr.w
             var stages: Array[StandardMaterial3D]=[clean]
             for stage in range(1,5):
                 var weathered: StandardMaterial3D=clean.duplicate() as StandardMaterial3D
@@ -1550,6 +1578,12 @@ static func _finish_family_materials(model: Node3D,hero: bool) -> bool:
                 c.a=1.0
                 weathered.albedo_color=c
                 weathered.roughness=minf(1.0,clean.roughness+float(stage)*0.065)
+                if hero and kind in ["armor","rubber"]:
+                    # Weathered coating loses specular response while the
+                    # underlying normal map stays shared and reversible.
+                    weathered.metallic_specular=clean.metallic_specular*(1.0-0.075*float(stage))
+                    weathered.metallic=clean.metallic*(1.0-0.06*float(stage))
+                    weathered.normal_scale=clean.normal_scale*(1.0+0.035*float(stage))
                 if kind=="optic":
                     # A damaged opaque optical surface becomes dull, never
                     # invisible; the original clean material is reversible.
@@ -1577,6 +1611,7 @@ static func _finish_family_materials(model: Node3D,hero: bool) -> bool:
     model.set_meta(SURFACES_V19,role)
     if hero:
         model.set_meta(TEXTILE_V29,role)
+        model.set_meta(MATERIAL_V38,role)
     return true
 
 static func sync_family_damage(model: Node3D,stage: int) -> void:
