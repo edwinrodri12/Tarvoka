@@ -135,6 +135,7 @@ func _run() -> void:
         viewer.free()
     _check_mixed_and_fog()
     await _capture_mixed_regions()
+    await _stress_large_regions()
     print("PASS V48_4_NATIVE_BRIDGE: real unit bounds, two axes, ramps and read-only water surface")
     quit(0)
 
@@ -231,6 +232,59 @@ func _capture_mixed_regions() -> void:
         assert(image!=null and not image.is_empty())
         assert(image.save_png("res://artifacts/tarvoka_mixed_v49_6_%s_%s.png" % pair)==OK)
         print("V49_MIXED_STATS pair=",pair," stats=",model.get_meta("render_stats"))
+        model.free()
+        light.free()
+        camera.free()
+
+# V50.2: bounded CPU/GPU stress fixture, not a physical Android benchmark.
+# No unstable machine-dependent timing threshold; hard bounds cover resource
+# counts, state invariance and actual viewport output.
+func _stress_large_regions() -> void:
+    var dims := Vector2i(40,30)
+    for pair in [["desert","tropical"],["wetland","archipelago"]]:
+        var config: Dictionary = {"version":1,"primary":pair[0],"secondary":pair[1]}
+        var map: Array = Regions.geographic_candidate(1729,dims,config)
+        var state: Dictionary = Session.start([],map)
+        state[Regions.FIELD] = config
+        state[Regions.SEED_FIELD] = 1729
+        var before: Dictionary = state.duplicate(true)
+        var model: Node3D = Terrain.build(state)
+        assert(model!=null and state==before)
+        var stats: Dictionary = model.get_meta("render_stats")
+        var max_corners: int = (dims.x+1)*(dims.y+1)
+        assert(stats["chunks"]==20)
+        assert(stats["land"]+stats["water"]+stats["unknown"]==1200)
+        assert(stats["height_samples_v42"]<=max_corners)
+        assert(stats["terrain_blend_palette_samples"]<=max_corners)
+        assert(stats["water_palette_samples_v27"]<=max_corners)
+        assert(stats["shared_chunk_materials_v27"]<=3)
+        assert(stats["regional_tree_groups_v49"]<=2 and stats["regional_ridge_groups_v49"]<=2)
+        assert(stats["biome_extra_batches"]<=4)
+        assert(stats["scene_build_ms_v50"]>=stats["chunk_build_ms_v42"])
+        assert(stats["scene_build_ms_v50"]>=stats["landscape_build_ms_v50"])
+        root.add_child(model)
+        var light := DirectionalLight3D.new()
+        light.rotation_degrees = Vector3(-55,-35,0)
+        light.light_energy = 1.15
+        root.add_child(light)
+        var camera := Camera3D.new()
+        camera.projection = Camera3D.PROJECTION_ORTHOGONAL
+        camera.size = 83.0
+        root.add_child(camera)
+        var focus: Vector3 = Terrain.world_at(Vector2i(19,14))
+        camera.position = focus+Vector3(35,75,65)
+        camera.look_at(focus)
+        camera.make_current()
+        for frame in range(12):
+            await process_frame
+        await RenderingServer.frame_post_draw
+        var image: Image = root.get_texture().get_image()
+        assert(image!=null and not image.is_empty())
+        assert(image.save_png("res://artifacts/tarvoka_mixed_v50_2_large_%s_%s.png" % pair)==OK)
+        print("V50_LARGE_MAP pair=",pair," scene_ms=",stats["scene_build_ms_v50"],
+            " chunk_ms=",stats["chunk_build_ms_v42"]," landscape_ms=",stats["landscape_build_ms_v50"],
+            " stats=",stats)
+        assert(state==before)
         model.free()
         light.free()
         camera.free()
