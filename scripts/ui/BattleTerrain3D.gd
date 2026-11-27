@@ -784,10 +784,57 @@ static func _append_conifer(tool: SurfaceTool,biome: String,foliage: Color) -> v
             _tri_tinted(tool,p,q,tip,foliage.darkened(0.08),foliage.lightened(0.06),apex)
             _tri(tool,Vector3(0,low,0),q,p,shade)
 
-static func _make_cone_trees(parent: Node3D,cells: Dictionary,
-        biome: String = Biomes.TEMPERATE) -> int:
-    var positions: Array[Transform3D] = []
+# V49.3: deterministic ecological transition, one style per tile.
+# Mirror the choice across teams and never instantiate hidden vegetation.
+static func _regional_style(tile: Dictionary,base: String) -> String:
+    var region: Dictionary = tile.get("mixed_region_v49",{})
+    if region.is_empty():
+        return base
+    var cell: Vector2i = tile["cell"]
+    var weight: int = int(region["secondary_weight"])
+    var threshold: int = posmod(cell.y*313+cell.x*157+73,1000)
+    # Mirrored selection threshold recorded at build time.
+    threshold = int(tile.get("mixed_threshold_v49",threshold))
+    return region["secondary"] if weight>threshold else region["primary"]
+
+static func _region_groups(cells: Dictionary,kind: String,base: String) -> Dictionary:
+    var groups: Dictionary = {}
     for cell in cells:
+        var tile: Dictionary = cells[cell]
+        if tile["kind"]!=kind or not bool(tile.get("details",false)):
+            continue
+        var style: String = _regional_style(tile,base)
+        if not groups.has(style):
+            groups[style] = {}
+        groups[style][cell] = tile
+    return groups
+
+static func _make_regional_vegetation(parent: Node3D,cells: Dictionary,base: String) -> int:
+    var groups: Dictionary = _region_groups(cells,"forest",base)
+    var total := 0
+    for style in groups:
+        var host := Node3D.new()
+        host.name = "VegetacionRegional_"+style
+        parent.add_child(host)
+        total += _make_cone_trees(host,cells,style,groups[style])
+    parent.set_meta("regional_tree_groups_v49",groups.size())
+    return total
+
+static func _make_regional_ridges(parent: Node3D,cells: Dictionary,base: String) -> int:
+    var groups: Dictionary = _region_groups(cells,"mountain",base)
+    var total := 0
+    for style in groups:
+        var host := Node3D.new()
+        host.name = "RelieveRegional_"+style
+        parent.add_child(host)
+        total += _make_mountain_ridges(host,cells,style,groups[style])
+    parent.set_meta("regional_ridge_groups_v49",groups.size())
+    return total
+
+static func _make_cone_trees(parent: Node3D,cells: Dictionary,
+        biome: String = Biomes.TEMPERATE,selection: Variant = null) -> int:
+    var positions: Array[Transform3D] = []
+    for cell in (cells if selection==null else selection):
         var tile: Dictionary = cells[cell]
         if str(tile["kind"]) != "forest" or not bool(tile.get("details",false)):
             continue
@@ -912,9 +959,9 @@ static func _ridge_face(tool: SurfaceTool,a: Vector3,b: Vector3,c: Vector3,
     _tri_tinted(tool,c,a,mid,cc,ca,tint)
 
 static func _make_mountain_ridges(parent: Node3D,cells: Dictionary,
-        biome: String) -> int:
+        biome: String,selection: Variant = null) -> int:
     var transforms: Array[Transform3D] = []
-    for cell in cells:
+    for cell in (cells if selection==null else selection):
         var tile: Dictionary = cells[cell]
         if str(tile.get("kind",""))!="mountain" or not bool(tile.get("details",false)):
             continue
@@ -1418,6 +1465,8 @@ static func build(state: Dictionary, selected_id: String = "", viewer: int = 0) 
             for tile in chunk["cells"]:
                 if bool(tile.get("seen",false)) and regions.has(tile["cell"]):
                     tile["mixed_region_v49"] = regions[tile["cell"]]
+                    var pos: Vector2i = tile["cell"]
+                    tile["mixed_threshold_v49"] = posmod(pos.y*313+mini(pos.x,dims.x-1-pos.x)*157+73,1000)
                 cells[tile["cell"]] = tile
             chunks.append(chunk)
     var counters: Dictionary = {"land":0,"water":0,"unknown":0,
@@ -1436,8 +1485,14 @@ static func build(state: Dictionary, selected_id: String = "", viewer: int = 0) 
             counters[key] = int(counters[key])+int(stats[key])
     counters["chunk_build_ms_v42"] = float(Time.get_ticks_usec()-terrain_start_usec)/1000.0
     counters["height_samples_v42"] = height_cache.size()
-    counters["trees"] = _make_cone_trees(scene,cells,biome)
-    counters["mountain_ridges"] = _make_mountain_ridges(scene,cells,biome)
+    if regions.is_empty():
+        counters["trees"] = _make_cone_trees(scene,cells,biome)
+        counters["mountain_ridges"] = _make_mountain_ridges(scene,cells,biome)
+    else:
+        counters["trees"] = _make_regional_vegetation(scene,cells,biome)
+        counters["mountain_ridges"] = _make_regional_ridges(scene,cells,biome)
+    counters["regional_tree_groups_v49"] = int(scene.get_meta("regional_tree_groups_v49",0))
+    counters["regional_ridge_groups_v49"] = int(scene.get_meta("regional_ridge_groups_v49",0))
     counters["sites"] = _make_sites(scene,state,cells)
     # Automatic workshop LOD runs only on already instantiated public sites,
     # at 4 Hz, and never changes a tile/root or any gameplay object.
@@ -1613,6 +1668,10 @@ static func build(state: Dictionary, selected_id: String = "", viewer: int = 0) 
     counters["biome_extra_batches"] = (
         1 if counters["mountain_ridges"]>0 else 0) + (
         1 if biome==Biomes.WINTER and counters["trees"]>0 else 0)
+    if not regions.is_empty():
+        # At most two vegetation and two rock groups, plus one winter cap.
+        var snow_groups: int = int(scene.has_node("VegetacionRegional_winter"))
+        counters["biome_extra_batches"] = maxi(0,int(counters["regional_tree_groups_v49"])-1)+int(counters["regional_ridge_groups_v49"])+snow_groups
     counters["terrain_blend_palette_samples"] = corner_cache.size()
     counters["water_palette_samples_v27"] = water_cache.size()
     counters["shared_chunk_materials_v27"] = materials.size()
