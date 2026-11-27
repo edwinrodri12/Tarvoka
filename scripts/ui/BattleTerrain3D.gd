@@ -128,8 +128,12 @@ static func _region_pigment(kind: String,cell: Vector2i,biome: String,region: Di
         corner: bool = false) -> Color:
     var primary: String = str(region.get("primary",biome))
     var secondary: String = str(region.get("secondary",primary))
-    return _pigment(kind,cell,primary,corner).lerp(_pigment(kind,cell,secondary,corner),
-        clampf(float(region.get("secondary_weight",0))/1000.0,0.0,1.0))
+    var weight: int = int(region.get("secondary_weight",0))
+    if weight<=0 or primary==secondary:
+        return _pigment(kind,cell,primary,corner)
+    if weight>=1000:
+        return _pigment(kind,cell,secondary,corner)
+    return _pigment(kind,cell,primary,corner).lerp(_pigment(kind,cell,secondary,corner),float(weight)/1000.0)
 
 static func _pigment(kind: String,cell: Vector2i,biome: String,corner: bool) -> Color:
     if corner and kind=="water":
@@ -1432,6 +1436,7 @@ static func _make_units(parent: Node3D,state: Dictionary,
         "hidden_enemies":hidden_enemies}
 
 static func build(state: Dictionary, selected_id: String = "", viewer: int = 0) -> Node3D:
+    var build_start_usec: int = Time.get_ticks_usec()
     var biome: String = Biomes.from_state(state)
     var terrain: Array = state.get("terrain",[])
     if not Rules.valid_terrain(terrain) or not MixedRegions.valid_state(state):
@@ -1495,6 +1500,7 @@ static func build(state: Dictionary, selected_id: String = "", viewer: int = 0) 
             counters[key] = int(counters[key])+int(stats[key])
     counters["chunk_build_ms_v42"] = float(Time.get_ticks_usec()-terrain_start_usec)/1000.0
     counters["height_samples_v42"] = height_cache.size()
+    var landscape_start_usec: int = Time.get_ticks_usec()
     if regions.is_empty():
         counters["trees"] = _make_cone_trees(scene,cells,biome)
         counters["mountain_ridges"] = _make_mountain_ridges(scene,cells,biome)
@@ -1503,6 +1509,7 @@ static func build(state: Dictionary, selected_id: String = "", viewer: int = 0) 
         counters["mountain_ridges"] = _make_regional_ridges(scene,cells,biome)
     counters["regional_tree_groups_v49"] = int(scene.get_meta("regional_tree_groups_v49",0))
     counters["regional_ridge_groups_v49"] = int(scene.get_meta("regional_ridge_groups_v49",0))
+    counters["landscape_build_ms_v50"] = float(Time.get_ticks_usec()-landscape_start_usec)/1000.0
     counters["sites"] = _make_sites(scene,state,cells)
     # Automatic workshop LOD runs only on already instantiated public sites,
     # at 4 Hz, and never changes a tile/root or any gameplay object.
@@ -1694,6 +1701,7 @@ static func build(state: Dictionary, selected_id: String = "", viewer: int = 0) 
     scene.set_meta("visual_biome",biome)
     scene.set_meta("mixed_pigments_v49",state.has(MixedRegions.FIELD))
     scene.set_meta("public_cells",cells)
+    counters["scene_build_ms_v50"] = float(Time.get_ticks_usec()-build_start_usec)/1000.0
     scene.set_meta("render_stats",counters)
     scene.set_meta("selected_unit_id",selected_id)
     return scene
