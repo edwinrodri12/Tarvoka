@@ -8,6 +8,9 @@ const Rules = preload("res://scripts/core/Rules.gd")
 const Session = preload("res://scripts/core/BattleSession.gd")
 const Codec = preload("res://scripts/core/SaveCodec.gd")
 const AI = preload("res://scripts/core/BasicAI.gd")
+const Visibility = preload("res://scripts/core/Visibility.gd")
+const Roles = preload("res://scripts/core/UnitRoles.gd")
+const Logistics = preload("res://scripts/core/Logistics.gd")
 const Scenarios = preload("res://scripts/core/Scenarios.gd")
 
 func _initialize() -> void:
@@ -53,6 +56,7 @@ func _initialize() -> void:
     assert(Bridges.public_cells(cells,{crossing:true})==cells)
     assert(map==before)
     _check_layered_session(map,records,crossing)
+    _check_fog_supply(map,records,crossing)
     # CPU-readable mesh bounds, not an actual rendered review.
     for axis in ["ew","ns"]:
         var model: Node3D = Art.build(axis)
@@ -148,7 +152,7 @@ func _check_layered_session(map: Array,records: Array,crossing: Vector2i) -> voi
     raw[Bridges.FIELD]["records"][0]["x"] = 4.5
     assert(Codec.decode(JSON.stringify(raw)).is_empty())
     var unsupported: Dictionary = state.duplicate(true)
-    unsupported["fog_enabled"] = true
+    unsupported["map_seed"] = 1729
     assert(Codec.encode(unsupported).is_empty())
     assert(not Session.end_turn(unsupported)["valid"])
     var legacy: Dictionary = Session.start([units[0],units[3]],map)
@@ -169,3 +173,42 @@ func _check_layered_session(map: Array,records: Array,crossing: Vector2i) -> voi
     var hit: Dictionary = Session.attack(battle,"S","T")
     assert(hit["valid"] and hit["damage"]>0)
     assert(Codec.decode(Codec.encode(hit["state"]))==hit["state"])
+
+func _check_fog_supply(map: Array,records: Array,crossing: Vector2i) -> void:
+    var scout: Dictionary = _fixture("F",Vector2i(1,3),"ground",0)
+    scout["vision"] = 1
+    scout["move_points"] = 5
+    var hidden: Dictionary = _fixture("H",crossing,"naval",1)
+    var fog: Dictionary = Session.start_layered([scout,hidden],map,records,0,"clear",true)
+    assert(not fog.is_empty())
+    assert(Codec.decode(Codec.encode(fog))==fog)
+    var observed: Dictionary = Visibility.observed_state(fog,0)
+    assert(observed["units"].size()==1 and observed[Bridges.FIELD]["records"].is_empty())
+    assert(not Session.move(fog,"F",crossing)["valid"])
+    assert(AI.step(fog)["valid"]==false)
+    var moved: Dictionary = Session.move(fog,"F",Vector2i(2,3))
+    assert(moved["valid"])
+    var reveal: Dictionary = Session.start_layered([_fixture("F",Vector2i(3,3),"ground",0),hidden],map,records,0,"clear",true)
+    assert(Visibility.observed_state(reveal,0)[Bridges.FIELD]["records"].size()==1)
+    assert(Session.move(reveal,"F",crossing)["valid"])
+    # Modern economy on land away from the bridge. Friendly truck can
+    # supply a tank from the deck approach, and a unit may be produced at base.
+    var tank: Dictionary = Roles.make_unit("T",0,crossing,"tank")
+    var truck: Dictionary = Roles.make_unit("L",0,Vector2i(3,3),"logistics")
+    var enemy: Dictionary = Roles.make_unit("E",1,Vector2i(7,3),"tank")
+    var economy: Dictionary = Session.start_layered([tank,truck,enemy],map,records,0,"clear",false,true,true)
+    assert(not economy.is_empty())
+    economy["units"][0]["ammo"] = 0
+    assert(Logistics.quote(economy,"T")["valid"])
+    var supplied: Dictionary = Session.resupply(economy,"T")
+    assert(supplied["valid"] and supplied["state"]["units"][0]["ammo"]>0)
+    assert(Codec.decode(Codec.encode(supplied["state"]))==supplied["state"])
+    var purchased: Dictionary = Session.purchase(economy,Vector2i(0,1),"tank")
+    assert(purchased["valid"])
+    assert(Codec.decode(Codec.encode(purchased["state"]))==purchased["state"])
+    var bad: Dictionary = economy.duplicate(true)
+    bad["economy"]["sites"][0]["pos"] = crossing
+    assert(not Bridges.state_index(bad)["valid"])
+    assert(Codec.encode(bad).is_empty())
+    var rotor: Dictionary = Roles.make_unit("R",0,crossing,"attack_heli")
+    assert(not Logistics.field_air_service_allowed(economy,rotor))
