@@ -1,6 +1,10 @@
 name: TARVOKA Android debug APK
 
 on:
+  push:
+    branches: [art/infantry-integration-v33-20261126]
+    paths:
+      - ".github/workflows/android-debug-apk.yml"
   pull_request:
     paths:
       - "export_presets.cfg"
