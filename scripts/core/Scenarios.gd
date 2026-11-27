@@ -3,6 +3,10 @@ class_name TarvokaScenarios
 
 const Rules = preload("res://scripts/core/Rules.gd")
 const RANDOM_SCENARIO_ID := 4
+const GEOGRAPHIC_SCENARIO_ID := 5
+const GEOGRAPHY_FIELD := "map_geography_version"
+const GEOGRAPHY_VERSION := 1
+const GEOGRAPHY_BIOMES := ["temperate","winter","canyon","coastal","desert","tropical","wetland","urban","archipelago"]
 const MIN_SEED := 1
 const MAX_SEED := 999999
 const LABELS := [
@@ -251,7 +255,140 @@ static func _large_seeded_terrain(seed: int, grid_size: Vector2i) -> Array:
             map[y][other] = kind
     return map
 
+# V36–V38: explicitly opt-in geography, versioned independently of legacy
+# seeded terrain. This generator is integer-only and mirrors both factions.
+static func uses_seed(scenario_id: int) -> bool:
+    return scenario_id in [RANDOM_SCENARIO_ID,GEOGRAPHIC_SCENARIO_ID]
+
+static func scenario_for_state(state: Dictionary) -> int:
+    if state.has(GEOGRAPHY_FIELD):
+        return GEOGRAPHIC_SCENARIO_ID
+    return RANDOM_SCENARIO_ID if state.has("map_seed") else identify(state["terrain"])
+
+static func selected_terrain(scenario_id: int,grid_size: Vector2i,
+        seed: int,biome: String) -> Array:
+    if scenario_id==GEOGRAPHIC_SCENARIO_ID:
+        return geographic_terrain(seed,grid_size,biome)
+    if scenario_id==RANDOM_SCENARIO_ID:
+        return seeded_terrain(seed,grid_size)
+    return terrain(scenario_id,grid_size)
+
+static func _geo_hash(seed: int,x: int,y: int,salt: int) -> int:
+    var n: int = posmod(seed*7919+x*9283+y*7349+salt*104729,32749)
+    return posmod(n*n*17+193,32749)%100
+
+static func _geo_field(seed: int,x: int,y: int,salt: int) -> int:
+    # Shared samples for neighbouring cells, rather than isolated random dots.
+    var gx: int = x/3
+    var gy: int = y/3
+    var fx: int = x%3
+    var fy: int = y%3
+    var a: int = _geo_hash(seed,gx,gy,salt)*(3-fx)+_geo_hash(seed,gx+1,gy,salt)*fx
+    var b: int = _geo_hash(seed,gx,gy+1,salt)*(3-fx)+_geo_hash(seed,gx+1,gy+1,salt)*fx
+    return (a*(3-fy)+b*fy)/9
+
+static func _geo_kind(seed: int,x: int,y: int,dims: Vector2i,biome: String) -> String:
+    var field: int = _geo_field(seed,x,y,1)
+    var relief: int = _geo_field(seed,x,y,7)
+    var mid: int = dims.x/2
+    var edge: int = mini(y,dims.y-1-y)
+    match biome:
+        "winter":
+            if relief>59: return "mountain"
+            if field<38: return "forest"
+        "canyon":
+            if abs(x-(mid-2))<=1 and relief>31: return "mountain"
+            if field<17: return "forest"
+        "coastal":
+            if edge==0 or (edge<=2 and field<38): return "water"
+            if field<58: return "forest"
+            if relief>82: return "mountain"
+        "desert":
+            if relief>69: return "mountain"
+            if field<19: return "forest"
+            if x==mid-1 and edge>1 and field<33: return "water"
+        "tropical":
+            if field<66: return "forest"
+            if relief>77: return "mountain"
+            if x==mid-1 and edge>1 and field>69: return "water"
+        "wetland":
+            if field<46 or edge==0: return "water"
+            if field<75: return "forest"
+            if relief>90: return "mountain"
+        "urban":
+            if x%4==0 or y%4==0: return "road"
+            if field<25: return "forest"
+        "archipelago":
+            if edge==0 or x>=mid-1 or (edge<=2 and field<58) or field<27:
+                return "water"
+            if field<64: return "forest"
+            if relief>82: return "mountain"
+        _:
+            if field<44: return "forest"
+            if relief>76: return "mountain"
+    return "plain"
+
+static func _geo_pair(map: Array,dims: Vector2i,x: int,y: int,kind: String) -> void:
+    map[y][x] = kind
+    map[y][dims.x-1-x] = kind
+
+static func _geo_reachable_land(map: Array,start: Vector2i) -> Dictionary:
+    var reached: Dictionary = {start:true}
+    var queue: Array[Vector2i] = [start]
+    var cursor := 0
+    while cursor<queue.size():
+        var current: Vector2i = queue[cursor]
+        cursor += 1
+        for direction in Rules.DIRECTIONS:
+            var next: Vector2i = current+direction
+            if not Rules.inside(next,map) or reached.has(next):
+                continue
+            if str(map[next.y][next.x])=="water":
+                continue
+            reached[next] = true
+            queue.append(next)
+    return reached
+
+static func geographic_terrain(seed: int,dims: Vector2i,
+        biome: String,version: int = GEOGRAPHY_VERSION) -> Array:
+    if version!=GEOGRAPHY_VERSION or not valid_seed(seed) or not Rules.supported_size(dims) or biome not in GEOGRAPHY_BIOMES:
+        return []
+    var map: Array = terrain(0,dims)
+    for y in range(dims.y):
+        for x in range(dims.x/2):
+            _geo_pair(map,dims,x,y,_geo_kind(seed,x,y,dims,biome))
+    # V37: existing fixed cities/production/relay positions stay on land.
+    # Two paired strategic crossings plus home-side spines guarantee access.
+    for y in range(1,dims.y-1):
+        _geo_pair(map,dims,0,y,"plain")
+        _geo_pair(map,dims,1,y,"road")
+    for y in [scale_y(2,dims),scale_y(5,dims)]:
+        for x in range(dims.x):
+            map[y][x] = "road"
+    for cell in _large_anchor_cells(dims):
+        if cell.y==0 or cell.y==dims.y-1:
+            continue
+        if str(map[cell.y][cell.x])=="water":
+            _geo_pair(map,dims,cell.x,cell.y,"plain")
+        # A short connection to the nearest guaranteed crossing.
+        var north: int = scale_y(2,dims)
+        var south: int = scale_y(5,dims)
+        var target: int = north if absi(cell.y-north)<=absi(cell.y-south) else south
+        for y in range(mini(cell.y,target),maxi(cell.y,target)+1):
+            if str(map[y][cell.x])=="water":
+                _geo_pair(map,dims,cell.x,y,"road")
+    # V38: remove stranded ground pockets symmetrically. Open water remains
+    # water and no existing naval or ground movement rules are modified.
+    var connected: Dictionary = _geo_reachable_land(map,Vector2i(1,scale_y(2,dims)))
+    for y in range(dims.y):
+        for x in range(dims.x/2):
+            if str(map[y][x])!="water" and not connected.has(Vector2i(x,y)):
+                _geo_pair(map,dims,x,y,"water")
+    return map
+
 static func label(scenario_id: int) -> String:
+    if scenario_id==GEOGRAPHIC_SCENARIO_ID:
+        return "Geografía del bioma"
     if scenario_id == RANDOM_SCENARIO_ID:
         return "Escaramuza aleatoria"
     if scenario_id < 0 or scenario_id >= LABELS.size():

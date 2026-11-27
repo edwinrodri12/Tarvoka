@@ -4,6 +4,7 @@ extends SceneTree
 # Rendered mesh geometry, chunk LOD budgets, fog secrecy, playable touch
 # orders, saved weather-independent visual biomes and Android UI entrypoints.
 const Terrain = preload("res://scripts/ui/BattleTerrain3D.gd")
+const SurfaceFinish = preload("res://scripts/ui/TerrainSurfaceFinish3D.gd")
 const Biomes = preload("res://scripts/ui/WinterBattleBiome.gd")
 const Session = preload("res://scripts/core/BattleSession.gd")
 const Scenarios = preload("res://scripts/core/Scenarios.gd")
@@ -42,6 +43,13 @@ func _check_biome(value: String,dims: Vector2i,
     assert(int(stats["terrain_blend_extra_batches"])==0)
     assert(int(stats["biome_extra_batches"])<=2)
     assert(int(stats["terrain_blend_palette_samples"])<=(dims.x+1)*(dims.y+1))
+    assert(int(stats["water_palette_samples_v27"])<=(dims.x+1)*(dims.y+1))
+    assert(int(stats["height_samples_v42"])<=(dims.x+1)*(dims.y+1))
+    assert(float(stats["chunk_build_ms_v42"])>=0.0)
+    print("V42_TERRAIN_COST biome=%s size=%s corners=%d chunk_ms=%.2f" % [
+        value,str(dims),int(stats["height_samples_v42"]),float(stats["chunk_build_ms_v42"])])
+    assert(int(stats["shared_chunk_materials_v27"])<=3)
+    assert(int(stats["site_foundations_v26"])>=0)
     assert(model.get_meta("public_cells").size()==dims.x*dims.y)
     assert(model.find_child("Unidad3D_F",true,false)!=null)
     if fog:
@@ -71,13 +79,323 @@ func _check_biome(value: String,dims: Vector2i,
     model.free()
     return stats
 
+# V21: the east bank at a chunk boundary must meet both the
+# shared land corners and the exact water plane; unknown water is not drawn.
+func _check_water_bank_geometry() -> void:
+    var cell := Vector2i(7,3)
+    var at: Vector3 = Terrain.world_at(cell)
+    var h: float = Terrain.CELL*0.5
+    var top: Array[Vector3] = [
+        at+Vector3(-h,0.20,-h),at+Vector3(h,0.35,-h),
+        at+Vector3(h,0.45,h),at+Vector3(-h,0.19,h)]
+    var cells: Dictionary = {}
+    cells[cell] = {"kind":"road"}
+    cells[cell+Vector2i(1,0)] = {"kind":"water","seen":true}
+    cells[cell+Vector2i(-1,0)] = {"kind":"unknown","seen":false}
+    var surface := SurfaceTool.new()
+    surface.begin(Mesh.PRIMITIVE_TRIANGLES)
+    assert(Terrain._append_water_banks(surface,cells,cell,top,Color.WHITE)==1)
+    var mesh: ArrayMesh = surface.commit()
+    var vertices: PackedVector3Array = mesh.surface_get_arrays(0)[Mesh.ARRAY_VERTEX]
+    assert(vertices.size()==6)
+    var high_count := 0
+    var low_count := 0
+    for v in vertices:
+        assert(is_equal_approx(v.x,at.x+h))
+        if is_equal_approx(v.y,Terrain.WATER_LEVEL):
+            low_count += 1
+        else:
+            assert(v.is_equal_approx(top[1]) or v.is_equal_approx(top[2]))
+            high_count += 1
+    assert(high_count==3 and low_count==3)
+    cells[cell+Vector2i(1,0)] = {"kind":"unknown","seen":false}
+    var hidden := SurfaceTool.new()
+    hidden.begin(Mesh.PRIMITIVE_TRIANGLES)
+    assert(Terrain._append_water_banks(hidden,cells,cell,top,Color.WHITE)==0)
+
+# V22-V25: test visual topology and mesh bounds without editing battle rules.
+func _check_surface_finish() -> void:
+    var road_edges: Dictionary = {"north":true,"south":true,"west":false,"east":false}
+    assert(Terrain._road_axis(road_edges)==1)
+    assert(Terrain._road_axis({"east":true,"west":true})==2)
+    assert(Terrain._road_axis({"north":true,"east":true})==0)
+    assert(Terrain._road_axis({"north":true,"south":true,"east":true})==0)
+    var cell := Vector2i(7,3)
+    var at: Vector3 = Terrain.world_at(cell)
+    var h: float = Terrain.CELL*0.5
+    var surface: Dictionary = {"x":cell.x,"z":cell.y,"top":0.14,"half":h,
+        "corners":PackedFloat32Array([0.14,0.14,0.14,0.14])}
+    var tile: Dictionary = {"roads":road_edges,"shore":{"west":true,"east":true}}
+    for biome in Biomes.CHOICES:
+        var tool := SurfaceTool.new()
+        tool.begin(Mesh.PRIMITIVE_TRIANGLES)
+        Terrain._append_road_finish(tool,at,surface,tile,biome)
+        var mesh: ArrayMesh = tool.commit()
+        var vertices: PackedVector3Array = mesh.surface_get_arrays(0)[Mesh.ARRAY_VERTEX]
+        assert(vertices.size()>0)
+        var north_end := false
+        var south_end := false
+        for vertex in vertices:
+            assert(absf(vertex.x-at.x)<=h+0.001)
+            assert(absf(vertex.z-at.z)<=h+0.001)
+            assert(vertex.y>=0.14 and vertex.y<=0.246)
+            north_end = north_end or is_equal_approx(vertex.z,at.z-h)
+            south_end = south_end or is_equal_approx(vertex.z,at.z+h)
+        assert(north_end and south_end)
+    var cells: Dictionary = {}
+    cells[cell] = {"kind":"mountain"}
+    cells[cell+Vector2i(1,0)] = {"kind":"mountain"}
+    assert(absf(Terrain._ridge_angle(cells,cell))<=0.12)
+    cells.erase(cell+Vector2i(1,0))
+    cells[cell+Vector2i(0,1)] = {"kind":"mountain"}
+    assert(absf(Terrain._ridge_angle(cells,cell)-PI*0.5)<=0.12)
+    cells[cell+Vector2i(1,0)] = {"kind":"unknown"}
+    var ridge: float = Terrain._ridge_angle(cells,cell)
+    cells.erase(cell+Vector2i(1,0))
+    assert(is_equal_approx(Terrain._ridge_angle(cells,cell),ridge))
+    var water_cells: Dictionary = {}
+    water_cells[cell] = {"kind":"water"}
+    for biome in Biomes.CHOICES:
+        var deep: Color = Terrain._water_corner_tint(water_cells,cell,biome)
+        water_cells[cell+Vector2i(-1,0)] = {"kind":"unknown"}
+        assert(Terrain._water_corner_tint(water_cells,cell,biome)==deep)
+        water_cells[cell+Vector2i(-1,0)] = {"kind":"plain"}
+        assert(Terrain._water_corner_tint(water_cells,cell,biome)!=deep)
+        water_cells.erase(cell+Vector2i(-1,0))
+
+func _check_foundation_and_cache() -> void:
+    var cell := Vector2i(7,3)
+    var cells: Dictionary = {}
+    cells[cell] = {"kind":"plain","seen":true,"details":true}
+    cells[cell+Vector2i(1,0)] = {"kind":"mountain","seen":true,"details":true}
+    var at: Vector3 = Terrain.world_at(cell)
+    var tool := SurfaceTool.new()
+    tool.begin(Mesh.PRIMITIVE_TRIANGLES)
+    var anchor: float = Terrain._append_site_foundation(tool,cells,cell,true)
+    var top: float = Terrain._foundation_top(cells,cell)
+    assert(is_equal_approx(anchor,top+0.015))
+    assert(top>Terrain.height_at(cells,cell,0.98,0.98))
+    var mesh: ArrayMesh = tool.commit()
+    var vertices: PackedVector3Array = mesh.surface_get_arrays(0)[Mesh.ARRAY_VERTEX]
+    assert(vertices.size()==72)
+    var roof_vertices := 0
+    for v in vertices:
+        assert(absf(v.x-at.x)<=0.981 and absf(v.z-at.z)<=0.981)
+        assert(v.y<=top+0.001)
+        if is_equal_approx(v.y,top):
+            roof_vertices += 1
+    assert(roof_vertices==48)
+    var model := Node3D.new()
+    var foundation := SurfaceTool.new()
+    foundation.begin(Mesh.PRIMITIVE_TRIANGLES)
+    Terrain._place_land_site(model,foundation,cells,cell,true)
+    assert(is_equal_approx(model.position.y,anchor))
+    assert(model.rotation==Vector3.ZERO)
+    model.free()
+    cells[cell] = {"kind":"water"}
+    var naval := SurfaceTool.new()
+    naval.begin(Mesh.PRIMITIVE_TRIANGLES)
+    assert(is_equal_approx(Terrain._append_site_foundation(naval,cells,cell,true),
+        Terrain.WATER_LEVEL+0.07))
+    var cache: Dictionary = {}
+    var pigment: Color = Terrain._cached_water_tint(cells,cell,cache,Biomes.WINTER)
+    assert(Terrain._cached_water_tint(cells,cell,cache,Biomes.WINTER)==pigment)
+    assert(cache.size()==1)
+    var heights: Dictionary = {}
+    assert(Terrain._cached_corners(cells,cell,heights)==Terrain._corners(cells,cell))
+    assert(heights.size()==4)
+    var adjacent: Vector2i = cell+Vector2i(1,0)
+    assert(Terrain._cached_corners(cells,adjacent,heights)==Terrain._corners(cells,adjacent))
+    assert(heights.size()==6)
+
+func _check_extended_art() -> void:
+    var cell := Vector2i(7,3)
+    var at: Vector3 = Terrain.world_at(cell)
+    var surface: Dictionary = {"x":cell.x,"z":cell.y,"top":0.19,
+        "half":Terrain.CELL*0.5,"corners":PackedFloat32Array([0.19,0.19,0.19,0.19])}
+    for biome in [Biomes.WETLAND,Biomes.URBAN,Biomes.ARCHIPELAGO]:
+        var tool := SurfaceTool.new()
+        tool.begin(Mesh.PRIMITIVE_TRIANGLES)
+        Terrain._append_extended_ground(tool,at,surface,cell,biome)
+        var mesh: ArrayMesh = tool.commit()
+        var vertices: PackedVector3Array = mesh.surface_get_arrays(0)[Mesh.ARRAY_VERTEX]
+        assert(vertices.size()>0)
+        for vertex in vertices:
+            assert(absf(vertex.x-at.x)<Terrain.CELL*0.5)
+            assert(absf(vertex.z-at.z)<Terrain.CELL*0.5)
+        var cells: Dictionary = {}
+        cells[cell] = {"kind":"water","details":true}
+        assert(Terrain._shared_corner_tint(cells,cell,biome).is_equal_approx(
+            Terrain._shore_color(biome)))
+    for kind in [Biomes.WETLAND,Biomes.URBAN]:
+        var art := SurfaceTool.new()
+        art.begin(Mesh.PRIMITIVE_TRIANGLES)
+        if kind==Biomes.WETLAND:
+            Terrain._append_reeds(art)
+        else:
+            Terrain._append_urban_tree(art)
+        var mesh: ArrayMesh = art.commit()
+        assert(mesh.surface_get_array_len(0)>0)
+
+func _check_crossing_parapets() -> void:
+    var cell := Vector2i(7,3)
+    var at: Vector3 = Terrain.world_at(cell)
+    var half: float = Terrain.CELL*0.5
+    var surface: Dictionary = {"x":cell.x,"z":cell.y,"top":0.14,"half":half,
+        "corners":PackedFloat32Array([0.14,0.14,0.14,0.14])}
+    var tile: Dictionary = {"roads":{"north":true,"south":true},
+        "shore":{"west":true,"east":true}}
+    var tool := SurfaceTool.new()
+    tool.begin(Mesh.PRIMITIVE_TRIANGLES)
+    assert(Terrain._append_crossing_parapets(tool,at,surface,tile)==1)
+    var mesh: ArrayMesh = tool.commit()
+    var vertices: PackedVector3Array = mesh.surface_get_arrays(0)[Mesh.ARRAY_VERTEX]
+    assert(vertices.size()>0)
+    for v in vertices:
+        assert(absf(v.x-at.x)>=0.779 and absf(v.x-at.x)<=0.881)
+        assert(absf(v.z-at.z)<=half+0.001)
+        assert(v.y>=0.219 and v.y<=0.411)
+    tile["shore"]["east"] = false
+    var no_crossing := SurfaceTool.new()
+    no_crossing.begin(Mesh.PRIMITIVE_TRIANGLES)
+    assert(Terrain._append_crossing_parapets(no_crossing,at,surface,tile)==0)
+
+func _check_art_finish_v44() -> void:
+    var fingerprints: Dictionary = {}
+    for biome in Biomes.CHOICES:
+        var texture: Texture2D = SurfaceFinish.biome_texture(biome)
+        assert(texture==SurfaceFinish.biome_texture(biome))
+        var img: Image = texture.get_image()
+        assert(img.get_width()==64 and img.get_height()==64)
+        assert(img.has_mipmaps())
+        fingerprints[hash(img.get_data())] = true
+        for p in [Vector2i(0,0),Vector2i(15,31),Vector2i(63,63)]:
+            var pixel: Color = img.get_pixel(p.x,p.y)
+            assert(is_equal_approx(pixel.r,pixel.g) and is_equal_approx(pixel.g,pixel.b))
+            assert(pixel.r>=0.83 and pixel.r<=1.0 and pixel.a==1.0)
+    assert(fingerprints.size()==9)
+    var cell := Vector2i(7,3)
+    var at: Vector3 = Terrain.world_at(cell)
+    var half: float = Terrain.CELL*0.5
+    var surface: Dictionary = {"x":cell.x,"z":cell.y,"top":0.19,"half":half,
+        "corners":PackedFloat32Array([0.19,0.19,0.19,0.19])}
+    for biome in [Biomes.TEMPERATE,Biomes.WINTER,Biomes.CANYON,Biomes.COASTAL,Biomes.TROPICAL]:
+        var patch := SurfaceTool.new()
+        patch.begin(Mesh.PRIMITIVE_TRIANGLES)
+        assert(Terrain._append_natural_ground(patch,at,surface,cell,biome)==2)
+        var patch_mesh: ArrayMesh = patch.commit()
+        var points: PackedVector3Array = patch_mesh.surface_get_arrays(0)[Mesh.ARRAY_VERTEX]
+        assert(points.size()==12)
+        for point in points:
+            assert(absf(point.x-at.x)<half and absf(point.z-at.z)<half)
+            assert(absf(point.x-at.x)>0.55)
+            assert(is_equal_approx(point.y,0.212))
+    # Closed conifer components: each quantized undirected edge appears
+    # twice (triangulated trunk and foliage shells, including undersides).
+    for biome in [Biomes.TEMPERATE,Biomes.WINTER,Biomes.CANYON,Biomes.DESERT]:
+        var tree := SurfaceTool.new()
+        tree.begin(Mesh.PRIMITIVE_TRIANGLES)
+        Terrain._append_conifer(tree,biome,Color("#396b4c"))
+        var mesh: ArrayMesh = tree.commit()
+        var verts: PackedVector3Array = mesh.surface_get_arrays(0)[Mesh.ARRAY_VERTEX]
+        assert(verts.size()<=216 and verts.size()>0)
+        var edges: Dictionary = {}
+        for i in range(0,verts.size(),3):
+            for e in range(3):
+                var a: Vector3 = verts[i+e]*10000.0
+                var b: Vector3 = verts[i+(e+1)%3]*10000.0
+                var ka: String = str(Vector3i(roundi(a.x),roundi(a.y),roundi(a.z)))
+                var kb: String = str(Vector3i(roundi(b.x),roundi(b.y),roundi(b.z)))
+                assert(ka!=kb)
+                var key: String = ka+"|"+kb
+                var reverse: String = kb+"|"+ka
+                if edges.has(reverse):
+                    key = reverse
+                edges[key] = int(edges.get(key,0))+1
+        for key in edges:
+            assert(edges[key]==2)
+
+func _check_relief_v47() -> void:
+    var cell := Vector2i(7,3)
+    var at: Vector3 = Terrain.world_at(cell)
+    var half: float = Terrain.CELL*0.5
+    var surface: Dictionary = {"x":cell.x,"z":cell.y,"top":0.19,"half":half,
+        "corners":PackedFloat32Array([0.19,0.19,0.19,0.19])}
+    var dunes := SurfaceTool.new()
+    dunes.begin(Mesh.PRIMITIVE_TRIANGLES)
+    Terrain._append_sand_ripples(dunes,at,surface,cell)
+    var dune_mesh: ArrayMesh = dunes.commit()
+    var vertices: PackedVector3Array = dune_mesh.surface_get_arrays(0)[Mesh.ARRAY_VERTEX]
+    assert(vertices.size()==96)
+    var maximum := 0.0
+    for vertex in vertices:
+        assert(absf(vertex.x-at.x)<half and absf(vertex.z-at.z)<half)
+        assert(absf(vertex.z-at.z)>0.45)
+        assert(vertex.y>=0.201 and vertex.y<=0.274)
+        maximum = maxf(maximum,vertex.y)
+    assert(maximum>0.25)
+    var facet := SurfaceTool.new()
+    facet.begin(Mesh.PRIMITIVE_TRIANGLES)
+    Terrain._ridge_face(facet,Vector3.ZERO,Vector3.RIGHT,Vector3.FORWARD,
+        Color.WHITE,Color.WHITE,Color.WHITE)
+    var rock: ArrayMesh = facet.commit()
+    assert(rock.surface_get_array_len(0)==9)
+    for biome in [Biomes.COASTAL,Biomes.ARCHIPELAGO,Biomes.WETLAND]:
+        for direction in ["north","east","south","west"]:
+            var shore := SurfaceTool.new()
+            shore.begin(Mesh.PRIMITIVE_TRIANGLES)
+            Terrain._append_shore_bands(shore,at,surface,direction,biome)
+            var sand: ArrayMesh = shore.commit()
+            var points: PackedVector3Array = sand.surface_get_arrays(0)[Mesh.ARRAY_VERTEX]
+            assert(points.size()==48)
+            for p in points:
+                assert(absf(p.x-at.x)<half and absf(p.z-at.z)<half)
+                assert(is_equal_approx(p.y,0.223))
+    var cells: Dictionary = {}
+    cells[cell] = {"kind":"water","details":true}
+    cells[cell+Vector2i.RIGHT] = {"kind":"plain","details":true}
+    cells[cell+Vector2i.LEFT] = {"kind":"unknown","details":false}
+    cells[cell+Vector2i.UP] = {"kind":"plain","details":false}
+    var foam := SurfaceTool.new()
+    foam.begin(Mesh.PRIMITIVE_TRIANGLES)
+    assert(Terrain._append_coastal_foam(foam,cells,cell,Biomes.COASTAL)==1)
+    var foam_mesh: ArrayMesh = foam.commit()
+    var foam_points: PackedVector3Array = foam_mesh.surface_get_arrays(0)[Mesh.ARRAY_VERTEX]
+    assert(foam_points.size()==18)
+    for p in foam_points:
+        assert(p.x-at.x>half-0.12 and p.x-at.x<half)
+        assert(absf(p.z-at.z)<half)
+        assert(is_equal_approx(p.y,Terrain.WATER_LEVEL+0.006))
+    var palms := SurfaceTool.new()
+    palms.begin(Mesh.PRIMITIVE_TRIANGLES)
+    Terrain._append_tropical_palm(palms)
+    var palm_mesh: ArrayMesh = palms.commit()
+    assert(palm_mesh.surface_get_array_len(0)==240)
+    var reeds := SurfaceTool.new()
+    reeds.begin(Mesh.PRIMITIVE_TRIANGLES)
+    Terrain._append_reeds(reeds)
+    var reed_mesh: ArrayMesh = reeds.commit()
+    assert(reed_mesh.surface_get_array_len(0)==357)
+
 func _run() -> void:
+    _check_relief_v47()
+    _check_art_finish_v44()
+    _check_crossing_parapets()
+    _check_extended_art()
+    _check_water_bank_geometry()
+    _check_surface_finish()
+    _check_foundation_and_cache()
     root.content_scale_size = Vector2i(1280,800)
-    assert(Biomes.CHOICES.size()==4)
+    assert(Biomes.CHOICES.size()==9)
     assert(Biomes.from_index(0)==Biomes.TEMPERATE)
     assert(Biomes.from_index(1)==Biomes.WINTER)
     assert(Biomes.from_index(2)==Biomes.CANYON)
     assert(Biomes.from_index(3)==Biomes.COASTAL)
+    assert(Biomes.from_index(4)==Biomes.DESERT)
+    assert(Biomes.from_index(5)==Biomes.TROPICAL)
+    assert(Biomes.from_index(6)==Biomes.WETLAND)
+    assert(Biomes.from_index(7)==Biomes.URBAN)
+    assert(Biomes.from_index(8)==Biomes.ARCHIPELAGO)
     assert(Biomes.index_for({})==0)
     assert(Biomes.index_for({Biomes.FIELD:Biomes.WINTER})==1)
     assert(not Biomes.valid("unknown"))
@@ -88,17 +406,24 @@ func _run() -> void:
         var s: Color = Terrain._biome_color("plain",Vector2i(2,4),value)
         assert(c!=s)
         _check_biome(value,Vector2i(10,8))
-    assert(different_colors.size()==4)
+    assert(different_colors.size()==9)
     _check_biome(Biomes.COASTAL,Vector2i(24,18))
     _check_biome(Biomes.WINTER,Vector2i(40,30))
     _check_biome(Biomes.CANYON,Vector2i(40,30),true)
+    _check_biome(Biomes.DESERT,Vector2i(24,18))
+    _check_biome(Biomes.DESERT,Vector2i(40,30),true)
+    _check_biome(Biomes.TROPICAL,Vector2i(24,18))
+    _check_biome(Biomes.TROPICAL,Vector2i(40,30),true)
+    _check_biome(Biomes.WETLAND,Vector2i(24,18))
+    _check_biome(Biomes.URBAN,Vector2i(40,30),true)
+    _check_biome(Biomes.ARCHIPELAGO,Vector2i(24,18))
 
     var main: Control = load("res://scenes/Main.tscn").instantiate()
     root.add_child(main)
     for i in range(7):
         await process_frame
-    assert(main.biome_picker.item_count==4)
-    assert(main.skirmish_setup.biome_picker.item_count==4)
+    assert(main.biome_picker.item_count==9)
+    assert(main.skirmish_setup.biome_picker.item_count==9)
     assert(main.battle_3d_button!=null)
     assert(main.compact_3d!=null)
     assert(main.battle_3d_view==null)
@@ -117,6 +442,8 @@ func _run() -> void:
     assert(viewer._scene.get_meta("visual_biome")==Biomes.COASTAL)
     assert(viewer.preview.render_target_update_mode==SubViewport.UPDATE_ALWAYS)
     assert(viewer._cells.size()==80)
+    assert(viewer._scene.has_meta("water_material_v40")==false or
+        viewer._scene.get_meta("water_material_v40") is StandardMaterial3D)
     assert(viewer.tap_battle_cell(Vector2i(1,1)))
     assert(board.state==original)
     for i in range(10):
@@ -154,6 +481,135 @@ func _run() -> void:
     main._open_battle_3d()
     assert(viewer._scene.get_meta("visual_biome")==Biomes.CANYON)
     viewer.close_view()
+    main.biome_picker.select(4)
+    main._confirm_new_game()
+    assert(Biomes.from_state(board.state)==Biomes.DESERT)
+    assert(Codec.decode(Codec.encode(board.state))==board.state)
+    main._open_battle_3d()
+    assert(viewer._scene.get_meta("visual_biome")==Biomes.DESERT)
+    viewer.close_view()
+    main.biome_picker.select(5)
+    main._confirm_new_game()
+    assert(Biomes.from_state(board.state)==Biomes.TROPICAL)
+    assert(Codec.decode(Codec.encode(board.state))==board.state)
+    main._open_battle_3d()
+    assert(viewer._scene.get_meta("visual_biome")==Biomes.TROPICAL)
+    viewer.close_view()
+    for index in range(6,9):
+        main.biome_picker.select(index)
+        main._confirm_new_game()
+        var expected: String = Biomes.from_index(index)
+        assert(Biomes.from_state(board.state)==expected)
+        assert(Codec.decode(Codec.encode(board.state))==board.state)
+        main._open_battle_3d()
+        assert(viewer._scene.get_meta("visual_biome")==expected)
+        viewer.close_view()
+    # V36/V40: a real geographic archipelago matches its preview/seed,
+    # with one scene-local animated material and no battle state mutation.
+    board.new_game(Scenarios.GEOGRAPHIC_SCENARIO_ID,true,false,false,true,true,
+        false,0,1729,Vector2i(10,8),{},"clear",false,Biomes.ARCHIPELAGO)
+    assert(board.state["terrain"]==Scenarios.geographic_terrain(
+        1729,Vector2i(10,8),Biomes.ARCHIPELAGO))
+    assert(Codec.decode(Codec.encode(board.state))==board.state)
+    main._open_battle_3d()
+    var water_material: StandardMaterial3D = viewer._scene.get_meta("water_material_v40")
+    var before_water: Vector3 = water_material.uv1_offset
+    var before_state: Dictionary = board.state.duplicate(true)
+    board.battery_saver = false
+    viewer._advance_water(0.2)
+    assert(water_material.uv1_offset!=before_water)
+    board.battery_saver = true
+    var paused_offset: Vector3 = water_material.uv1_offset
+    viewer._advance_water(0.3)
+    assert(water_material.uv1_offset==paused_offset)
+    board.battery_saver = false
+    assert(board.state==before_state)
+    viewer.close_view()
+    # V41–V42: actual public weather, touch passthrough and battery state.
+    for mode in ["rain","snow","dust"]:
+        var climate: String = "clear" if mode=="dust" else mode
+        var landscape: String = Biomes.DESERT if mode=="dust" else Biomes.TEMPERATE
+        board.new_game(2,true,false,false,true,true,false,0,0,
+            Vector2i(10,8),{},climate,false,landscape)
+        main._open_battle_3d()
+        var effect: Control = viewer._weather_overlay
+        assert(effect.mode==mode and effect.visible)
+        assert(effect.mouse_filter==Control.MOUSE_FILTER_IGNORE)
+        var climate_state: Dictionary = board.state.duplicate(true)
+        viewer._update_weather_effects(0.25)
+        assert(effect.phase>0.0)
+        for frame in range(8):
+            await process_frame
+        assert(effect.active_count>0 and effect.active_count<=64)
+        if mode=="dust":
+            assert(effect.active_count<=32)
+        if DisplayServer.get_name()!="headless":
+            var climate_image: Image = viewer.preview.get_texture().get_image()
+            assert(climate_image!=null and not climate_image.is_empty())
+            assert(climate_image.save_png(
+                "res://artifacts/tarvoka_biomes_v20_weather_v41_%s.png" % mode)==OK)
+        board.battery_saver = true
+        viewer._update_weather_effects(0.25)
+        assert(not effect.visible and not viewer._battle_sun.shadow_enabled)
+        board.battery_saver = false
+        viewer._update_weather_effects(0.25)
+        assert(effect.visible and viewer._battle_sun.shadow_enabled)
+        assert(board.state==climate_state)
+        viewer.close_view()
+        assert(not effect.visible)
+    # V28: collect comparable real-battle frames, not showroom renders.
+    # Same fixed map, camera defaults and clear weather for every biome.
+    if DisplayServer.get_name()!="headless":
+        for biome in Biomes.CHOICES:
+            board.new_game(2,true,false,false,true,true,false,0,0,
+                Vector2i(10,8),{},"clear",false,biome)
+            main._open_battle_3d()
+            assert(viewer._scene.get_meta("visual_biome")==biome)
+            assert(int(viewer._scene.get_meta("render_stats")["site_foundations_v26"])>0)
+            var lights := 0
+            var environments := 0
+            for child in viewer.preview.get_children():
+                if child is DirectionalLight3D:
+                    lights += 1
+                    assert(child.light_energy>=0.949 and child.light_energy<=1.121)
+                    if biome==Biomes.TEMPERATE:
+                        assert(child.light_color==Color.WHITE)
+                elif child is WorldEnvironment:
+                    environments += 1
+                    assert(child.environment.ambient_light_energy>=0.40)
+                    assert(child.environment.ambient_light_energy<=0.49)
+            assert(lights==1 and environments==1)
+            for frame in range(8):
+                await process_frame
+            var review_image: Image = viewer.preview.get_texture().get_image()
+            assert(review_image!=null and not review_image.is_empty())
+            assert(review_image.save_png(
+                "res://artifacts/tarvoka_biomes_v20_review_v28_%s.png" % biome)==OK)
+            # Close orbit on the same public forest/road/mountain sector;
+            # this reveals underside gaps that an overview can conceal.
+            viewer._look_at = Terrain.world_at(Vector2i(3,2))
+            viewer._camera_size = 9.0
+            viewer._yaw = PI*0.70
+            viewer._refresh_camera()
+            for frame in range(8):
+                await process_frame
+            var detail_image: Image = viewer.preview.get_texture().get_image()
+            assert(detail_image!=null and not detail_image.is_empty())
+            assert(detail_image.save_png(
+                "res://artifacts/tarvoka_biomes_v20_detail_v44_%s.png" % biome)==OK)
+            viewer.close_view()
+            # V43: compare native biome geography at the same reproducible seed.
+            board.new_game(Scenarios.GEOGRAPHIC_SCENARIO_ID,true,false,false,true,true,
+                false,0,1729,Vector2i(24,18),{},"clear",false,biome)
+            main._open_battle_3d()
+            assert(viewer._scene.get_meta("visual_biome")==biome)
+            for frame in range(8):
+                await process_frame
+            var geography_image: Image = viewer.preview.get_texture().get_image()
+            assert(geography_image!=null and not geography_image.is_empty())
+            assert(geography_image.save_png(
+                "res://artifacts/tarvoka_biomes_v20_geography_v43_%s.png" % biome)==OK)
+            viewer.close_view()
     main.queue_free()
-    print("PASS TARVOKA_3D_FOUR_BIOMES_V20: 4 true mesh biomes, 10x8/24x18/40x30, fog secrecy, 3D mobile battle controls, main save, bounded GPU resources")
+    print("PASS TARVOKA_3D_FOUR_BIOMES_V20: 9 true mesh biomes, 10x8/24x18/40x30, fog secrecy, 3D mobile battle controls, main save, bounded GPU resources")
     quit(0)

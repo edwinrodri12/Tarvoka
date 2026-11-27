@@ -17,6 +17,7 @@ const Ranges = preload("res://scripts/ui/BattleRanges3D.gd")
 const Orders = preload("res://scripts/ui/Battle3DOrders.gd")
 const G11ActionsV29 = preload("res://scripts/ui/G11BattleActionsV29.gd")
 const Biomes = preload("res://scripts/ui/WinterBattleBiome.gd")
+const WeatherOverlay = preload("res://scripts/ui/BattleWeatherOverlay3D.gd")
 const ImmersiveHud = preload("res://scripts/ui/ImmersiveBattleHud.gd")
 const SiteInteraction = preload("res://scripts/ui/SiteInteractionData.gd")
 const BuildingInfoCard = preload("res://scripts/ui/BuildingInfoPanel.gd")
@@ -30,6 +31,10 @@ var camera: Camera3D
 var inspection: Label
 var stats_label: Label
 var _scene: Node3D
+var _water_clock: float = 0.0
+var _water_tick: float = 0.0
+var _weather_overlay: Control
+var _battle_sun: DirectionalLight3D
 var _cursor: MeshInstance3D
 var _cells: Dictionary = {}
 var _dims := Vector2i.ZERO
@@ -111,6 +116,15 @@ func _ready() -> void:
     sun.light_energy = 1.06
     sun.shadow_enabled = true
     preview.add_child(sun)
+    _battle_sun = sun
+    var weather_layer := CanvasLayer.new()
+    weather_layer.name = "ClimaVisualV41"
+    weather_layer.layer = 5
+    preview.add_child(weather_layer)
+    _weather_overlay = WeatherOverlay.new()
+    weather_layer.add_child(_weather_overlay)
+    preview.size_changed.connect(_sync_weather_overlay_size)
+    _sync_weather_overlay_size()
     camera = Camera3D.new()
     camera.name = "CamaraBatalla3D"
     camera.projection = Camera3D.PROJECTION_ORTHOGONAL
@@ -452,6 +466,39 @@ func _process(_delta: float) -> void:
         return
     if preview.size.x > 1280 or preview.size.y > 800:
         holder.stretch_shrink = mini(8,holder.stretch_shrink+1)
+    _advance_water(_delta)
+    _update_weather_effects(_delta)
+
+func _sync_weather_overlay_size() -> void:
+    if is_instance_valid(_weather_overlay) and preview!=null:
+        _weather_overlay.size = Vector2(preview.size)
+
+func _update_weather_effects(delta: float) -> void:
+    if _scene==null or not is_instance_valid(_weather_overlay):
+        return
+    var conserving: bool = _live_board!=null and bool(_live_board.get("battery_saver"))
+    _weather_overlay.configure(_current_state(),conserving)
+    _weather_overlay.advance(delta)
+    # V42: restore shadows when leaving a conserving battle, and honor
+    # a live toggle without creating another light or rebuilding the map.
+    if is_instance_valid(_battle_sun):
+        _battle_sun.shadow_enabled = not conserving
+
+# V40: slow, subtle texture motion on the one scene-local water material.
+# No displacement, collision, extra lights or per-cell updates.
+func _advance_water(delta: float) -> void:
+    if _scene==null or not _scene.has_meta("water_material_v40"):
+        return
+    if _live_board!=null and bool(_live_board.get("battery_saver")):
+        return
+    _water_tick += maxf(delta,0.0)
+    if _water_tick<0.1:
+        return
+    _water_clock = fposmod(_water_clock+_water_tick,100.0)
+    _water_tick = 0.0
+    var material: StandardMaterial3D = _scene.get_meta("water_material_v40") as StandardMaterial3D
+    if material!=null:
+        material.uv1_offset = Vector3(_water_clock*0.01,_water_clock*0.02,0.0)
 
 func _refresh_camera() -> void:
     if camera == null:
@@ -493,6 +540,8 @@ func open_from_state(state: Dictionary, selected_id: String = "", viewer: int = 
     if model == null:
         return false
     _scene = model
+    _water_clock = 0.0
+    _water_tick = 0.0
     var visual_biome: String = Biomes.from_state(state)
     var background: Color = Color("#394d5b")
     match visual_biome:
@@ -502,10 +551,54 @@ func open_from_state(state: Dictionary, selected_id: String = "", viewer: int = 
             background = Color("#8d8377")
         Biomes.COASTAL:
             background = Color("#4d7d89")
+        Biomes.DESERT:
+            background = Color("#bfa283")
+        Biomes.TROPICAL:
+            background = Color("#668b79")
+        Biomes.WETLAND:
+            background = Color("#7f8671")
+        Biomes.URBAN:
+            background = Color("#818d99")
+        Biomes.ARCHIPELAGO:
+            background = Color("#72abb9")
+    # V35: bounded static lighting profiles, reset on every battle open.
+    # No extra lights, particles, shaders or tactical visibility changes.
+    var ambient := Color("#dce8ef")
+    var sunlight := Color.WHITE
+    var ambient_energy := 0.41
+    var sun_energy := 1.06
+    match visual_biome:
+        Biomes.DESERT:
+            ambient = Color("#f2e2cc")
+            sunlight = Color("#fff0d5")
+            sun_energy = 1.12
+        Biomes.TROPICAL,Biomes.WETLAND:
+            ambient = Color("#dcebdc")
+            sunlight = Color("#f0f3df")
+            ambient_energy = 0.48
+            sun_energy = 0.95
+        Biomes.WINTER:
+            ambient = Color("#dcebf7")
+            sunlight = Color("#edf5ff")
+            ambient_energy = 0.46
+        Biomes.URBAN:
+            ambient = Color("#dbe1e8")
+            sunlight = Color("#f2f1ea")
+        Biomes.ARCHIPELAGO:
+            ambient = Color("#e2f2f2")
+            sunlight = Color("#fff3dc")
+            sun_energy = 1.10
     for child in preview.get_children():
         if child is WorldEnvironment and child.environment != null:
             child.environment.background_color = background
+            child.environment.ambient_light_color = ambient
+            child.environment.ambient_light_energy = ambient_energy
+        elif child is DirectionalLight3D:
+            child.light_color = sunlight
+            child.light_energy = sun_energy
     _state_snapshot = state.duplicate(true)
+    _weather_overlay.reset()
+    _update_weather_effects(0.0)
     _selected_hint_unit_id = selected_id
     _ranges_visible = true
     _reset_gesture()
@@ -563,10 +656,7 @@ func open_from_board(board: Control) -> bool:
     radar_view.mouse_filter = Control.MOUSE_FILTER_IGNORE
     radar_frame.tooltip_text = (
         "Radar táctico con niebla protegida; arrastra en el mapa para mover cámara.")
-    if bool(board.get("battery_saver")):
-        for child in preview.get_children():
-            if child is DirectionalLight3D:
-                child.shadow_enabled = false
+    _update_weather_effects(0.0)
     _update_order_ui()
     return true
 
@@ -1042,6 +1132,8 @@ func close_view() -> void:
     _set_immersive_mode(false)
     hide()
     preview.render_target_update_mode = SubViewport.UPDATE_DISABLED
+    if is_instance_valid(_weather_overlay):
+        _weather_overlay.reset()
     city_perf_probe.set_recording(false)
     city_perf_probe.attach_battle(null)
     if _scene != null:

@@ -121,9 +121,10 @@ func new_game(scenario_id: int = 0, symmetric: bool = false, fog_mode: bool = fa
     _reset_touch_gesture()
     motion_effects.clear()
     unit_headings.clear()
-    var is_seeded: bool = scenario_id == Scenarios.RANDOM_SCENARIO_ID and Scenarios.valid_seed(map_seed)
-    current_scenario_id = Scenarios.RANDOM_SCENARIO_ID if is_seeded else (scenario_id if scenario_id >= 0 and scenario_id < Scenarios.LABELS.size() else 0)
-    var terrain: Array = Scenarios.seeded_terrain(map_seed,map_dimensions) if is_seeded else Scenarios.terrain(current_scenario_id,map_dimensions)
+    var is_seeded: bool = Scenarios.uses_seed(scenario_id) and Scenarios.valid_seed(map_seed)
+    current_scenario_id = scenario_id if is_seeded else (scenario_id if scenario_id >= 0 and scenario_id < Scenarios.LABELS.size() else 0)
+    var chosen_biome: String = visual_biome if Winter.valid(visual_biome) else Winter.TEMPERATE
+    var terrain: Array = Scenarios.selected_terrain(current_scenario_id,map_dimensions,map_seed,chosen_biome)
     var units: Array = [
         {"id":"A","faction":0,"hp":10,"pos":Vector2i(1,2),"move_points":3,"attack":5,"defense":0,"cover":0,"acted":false},
         {"id":"B","faction":0,"hp":10,"pos":Vector2i(1,5),"move_points":3,"attack":5,"defense":0,"cover":0,"acted":false},
@@ -158,6 +159,8 @@ func new_game(scenario_id: int = 0, symmetric: bool = false, fog_mode: bool = fa
     inspected_cell = Vector2i(-1,-1)
     if is_seeded:
         state["map_seed"] = map_seed
+        if current_scenario_id==Scenarios.GEOGRAPHIC_SCENARIO_ID:
+            state[Scenarios.GEOGRAPHY_FIELD] = Scenarios.GEOGRAPHY_VERSION
     selected_factory_pos = Vector2i(-1,-1)
     selected_id = ""
     inspected_enemy_id = ""
@@ -1442,7 +1445,7 @@ func load_game(path: String = SaveStore.DEFAULT_PATH) -> bool:
     combat_effects.clear()
     selected_factory_pos = Vector2i(-1,-1)
     inspected_cell = Vector2i(-1,-1)
-    current_scenario_id = Scenarios.RANDOM_SCENARIO_ID if state.has("map_seed") else Scenarios.identify(state["terrain"])
+    current_scenario_id = Scenarios.scenario_for_state(state)
     modern_roster = Arsenal.is_modern(state["units"]) or bool(state.get("economy", {}).get("modern", false))
     specialized_roster = Roles.is_specialized(state["units"])
     symmetric_setup = _infer_symmetric_setup()
@@ -1492,7 +1495,7 @@ func resume_autosave() -> bool:
     combat_effects.clear()
     selected_factory_pos = Vector2i(-1,-1)
     inspected_cell = Vector2i(-1,-1)
-    current_scenario_id = Scenarios.RANDOM_SCENARIO_ID if state.has("map_seed") else Scenarios.identify(state["terrain"])
+    current_scenario_id = Scenarios.scenario_for_state(state)
     modern_roster = Arsenal.is_modern(state["units"]) or bool(state.get("economy", {}).get("modern", false))
     specialized_roster = Roles.is_specialized(state["units"])
     symmetric_setup = _infer_symmetric_setup()

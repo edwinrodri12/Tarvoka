@@ -9,7 +9,57 @@ const Relay = preload("res://scripts/core/RelayControl.gd")
 const Codec = preload("res://scripts/core/SaveCodec.gd")
 const AI = preload("res://scripts/core/BasicAI.gd")
 
+func _check_geographic_maps() -> void:
+    var dimensions: Array[Vector2i] = [Vector2i(10,8),Vector2i(24,18),Vector2i(40,30)]
+    assert(Scenarios.geographic_terrain(0,dimensions[0],"desert").is_empty())
+    assert(Scenarios.geographic_terrain(1,dimensions[0],"unknown").is_empty())
+    assert(Scenarios.geographic_terrain(1,dimensions[0],"desert",2).is_empty())
+    var cases := 0
+    for dims in dimensions:
+        for biome in Scenarios.GEOGRAPHY_BIOMES:
+            for seed in [1,1729,12345,999999]:
+                var map: Array = Scenarios.geographic_terrain(seed,dims,biome)
+                assert(Rules.valid_terrain(map))
+                assert(map==Scenarios.geographic_terrain(seed,dims,biome))
+                var reachable: Dictionary = Scenarios._geo_reachable_land(map,
+                    Vector2i(1,Scenarios.scale_y(2,dims)))
+                for y in range(dims.y):
+                    for x in range(dims.x):
+                        assert(map[y][x]==map[y][dims.x-1-x])
+                        if map[y][x]!="water":
+                            assert(reachable.has(Vector2i(x,y)))
+                for anchor in Scenarios._large_anchor_cells(dims):
+                    assert(map[anchor.y][anchor.x]!="water")
+                var units: Array = Roles.modern_armies(true)
+                for unit in units:
+                    var old: Vector2i = unit["pos"]
+                    unit["pos"] = Vector2i(Scenarios.scale_x(old.x,dims),
+                        Scenarios.scale_y(old.y,dims))
+                var state: Dictionary = Session.start(units,map,0,true,true,true,true)
+                state["map_seed"] = seed
+                state[Scenarios.GEOGRAPHY_FIELD] = Scenarios.GEOGRAPHY_VERSION
+                if biome!="temperate":
+                    state["visual_biome"] = biome
+                assert(Economy.valid(state["economy"],map))
+                assert(Relay.valid(state["control"],map))
+                assert(Economy.income_for(state["economy"],0)==Economy.income_for(state["economy"],1))
+                assert(Codec.decode(Codec.encode(state))==state)
+                if biome in ["coastal","wetland","archipelago"]:
+                    assert(map[0][0]=="water" and map[0][dims.x-1]=="water")
+                    assert(Economy.site_at(state["economy"],Vector2i(0,0)).get("kind")=="shipyard")
+                    assert(Economy.site_at(state["economy"],Vector2i(dims.x-1,0)).get("kind")=="shipyard")
+                var invalid: Dictionary = state.duplicate(true)
+                invalid[Scenarios.GEOGRAPHY_FIELD] = 2
+                assert(Codec.encode(invalid).is_empty())
+                invalid = state.duplicate(true)
+                invalid.erase("map_seed")
+                assert(Codec.encode(invalid).is_empty())
+                cases += 1
+    assert(cases==108)
+    print("GEOGRAPHIC_SKIRMISH cases=",cases)
+
 func _initialize() -> void:
+    _check_geographic_maps()
     assert(Scenarios.seeded_terrain(0).is_empty())
     assert(Scenarios.seeded_terrain(-1).is_empty())
     assert(Scenarios.seeded_terrain(1000000).is_empty())

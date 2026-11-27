@@ -48,6 +48,8 @@ static func encode(state: Dictionary) -> String:
         snapshot[Identity.STATE_FIELD] = state[Identity.STATE_FIELD].duplicate(true)
     if state.has("map_seed"):
         snapshot["map_seed"] = int(state["map_seed"])
+    if state.has(Scenarios.GEOGRAPHY_FIELD):
+        snapshot[Scenarios.GEOGRAPHY_FIELD] = state[Scenarios.GEOGRAPHY_FIELD]
     if state.has("opening"):
         snapshot["opening"] = state["opening"].duplicate(true)
     if state.has("control"):
@@ -135,6 +137,10 @@ static func decode(raw: String) -> Dictionary:
         if not _whole(state["map_seed"]):
             return {}
         state["map_seed"] = int(state["map_seed"])
+    if state.has(Scenarios.GEOGRAPHY_FIELD):
+        if not _whole(state[Scenarios.GEOGRAPHY_FIELD]):
+            return {}
+        state[Scenarios.GEOGRAPHY_FIELD] = int(state[Scenarios.GEOGRAPHY_FIELD])
     if state.has("control"):
         var objective = state["control"]
         if not objective is Dictionary or not objective.get("nodes") is Array:
@@ -258,10 +264,17 @@ static func _valid_state(state: Dictionary) -> bool:
     # Disallow invalid or unrecognized values from untrusted JSON.
     if state.has(Winter.FIELD) and not Winter.valid(state[Winter.FIELD]):
         return false
+    if state.has(Scenarios.GEOGRAPHY_FIELD):
+        if not state.has("map_seed") or not state[Scenarios.GEOGRAPHY_FIELD] is int:
+            return false
+        if int(state[Scenarios.GEOGRAPHY_FIELD])!=Scenarios.GEOGRAPHY_VERSION:
+            return false
     if state.has("map_seed"):
         if not state["map_seed"] is int or not Scenarios.valid_seed(int(state["map_seed"])):
             return false
-        if state["terrain"] != Scenarios.seeded_terrain(int(state["map_seed"]),dimensions):
+        var expected: Array = Scenarios.geographic_terrain(int(state["map_seed"]),dimensions,
+            Winter.from_state(state),int(state[Scenarios.GEOGRAPHY_FIELD])) if state.has(Scenarios.GEOGRAPHY_FIELD) else Scenarios.seeded_terrain(int(state["map_seed"]),dimensions)
+        if state["terrain"] != expected:
             return false
     if not state.get("units") is Array or state["units"].size() > MAX_UNITS:
         return false

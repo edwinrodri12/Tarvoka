@@ -88,6 +88,21 @@ static func _corners(cells: Dictionary, cell: Vector2i) -> PackedFloat32Array:
         _vertex_height(cells,cell+Vector2i(1,1)),
         _vertex_height(cells,cell+Vector2i(0,1))])
 
+# V42: cache each shared ground vertex for the entire chunk build.
+# The same public records and exact sampler are used, including boundaries.
+static func _cached_height(cells: Dictionary,corner: Vector2i,cache: Dictionary) -> float:
+    if not cache.has(corner):
+        cache[corner] = _vertex_height(cells,corner)
+    return float(cache[corner])
+
+static func _cached_corners(cells: Dictionary,cell: Vector2i,
+        cache: Dictionary) -> PackedFloat32Array:
+    return PackedFloat32Array([
+        _cached_height(cells,cell,cache),
+        _cached_height(cells,cell+Vector2i(1,0),cache),
+        _cached_height(cells,cell+Vector2i(1,1),cache),
+        _cached_height(cells,cell+Vector2i(0,1),cache)])
+
 static func height_at(cells: Dictionary, cell: Vector2i,
         x: float = 0.0, z: float = 0.0) -> float:
     var record: Dictionary = cells.get(cell,{})
@@ -130,12 +145,10 @@ static func _shared_corner_tint(cells: Dictionary, corner: Vector2i,
                 kind,corner+Vector2i(dx,dy),biome)
             var weight := 1.0
             if kind == "water":
-                tint = Color("#c6dce0") if biome == Biomes.WINTER else (
-                    Color("#bbaa89") if biome != Biomes.COASTAL else Color("#7aa99b"))
+                tint = _shore_color(biome)
                 weight = 0.74
             elif kind == "road":
-                tint = Color("#abbac0") if biome == Biomes.WINTER else (
-                    Color("#999481") if biome != Biomes.CANYON else Color("#b79b76"))
+                tint = Biomes.ROAD_SLUSH if biome==Biomes.WINTER else _road_color(biome).lerp(_biome_color("plain",corner,biome),0.58)
                 weight = 0.88
             total += tint*weight
             weight_sum += weight
@@ -172,23 +185,63 @@ static func _panel(tool: SurfaceTool, nw: Vector3,ne: Vector3,
     _tri(tool,nw,sw,ne,color)
     _tri(tool,ne,sw,se,color)
 
+# V21: join the raised ground fan to the actual water plane. Both
+# endpoints reuse the shared world-space corners, including across chunks.
+# Known water only: never infer a shoreline from an unexplored neighbour.
+static func _append_water_banks(tool: SurfaceTool,cells: Dictionary,
+        cell: Vector2i,top: Array[Vector3],tint: Color) -> int:
+    var count := 0
+    var directions: Array[Vector2i] = [Vector2i(0,-1),Vector2i(1,0),
+        Vector2i(0,1),Vector2i(-1,0)]
+    for i in range(4):
+        var neighbour: Dictionary = cells.get(cell+directions[i],{})
+        if str(neighbour.get("kind","unknown")) != "water":
+            continue
+        var a: Vector3 = top[i]
+        var b: Vector3 = top[(i+1)%4]
+        var low_a := Vector3(a.x,WATER_LEVEL,a.z)
+        var low_b := Vector3(b.x,WATER_LEVEL,b.z)
+        var lower_tint: Color = tint.darkened(0.27)
+        _tri_tinted(tool,a,low_a,b,tint,lower_tint,tint)
+        _tri_tinted(tool,b,low_a,low_b,tint,lower_tint,lower_tint)
+        count += 1
+    return count
+
 static func _finish(parent: Node3D, label: String,
-        tool: SurfaceTool, count: int, kind: String) -> void:
+        tool: SurfaceTool, count: int, kind: String,
+        materials: Dictionary = {},biome: String = Biomes.TEMPERATE) -> void:
     if count == 0:
         return
     tool.generate_normals()
     var mesh := MeshInstance3D.new()
     mesh.name = label
     mesh.mesh = tool.commit()
-    var mat := StandardMaterial3D.new()
-    SurfaceFinish.apply(mat,kind)
-    mat.cull_mode = BaseMaterial3D.CULL_DISABLED
-    mesh.material_override = mat
+    # V27: share immutable terrain materials within this scene build.
+    # Geometry and vertex pigments remain independent per chunk.
+    if not materials.has(kind):
+        var mat := StandardMaterial3D.new()
+        if kind=="soil":
+            SurfaceFinish.apply_biome_soil(mat,biome)
+        else:
+            SurfaceFinish.apply(mat,kind)
+        mat.cull_mode = BaseMaterial3D.CULL_DISABLED
+        materials[kind] = mat
+    mesh.material_override = materials[kind]
     parent.add_child(mesh)
 
 static func _road_color(biome: String) -> Color:
+    if biome == Biomes.WETLAND:
+        return Color("#786c59")
+    if biome == Biomes.URBAN:
+        return Color("#4d555c")
+    if biome == Biomes.ARCHIPELAGO:
+        return Color("#9c8d76")
     if biome == Biomes.WINTER:
         return Biomes.ROAD_DARK
+    if biome == Biomes.TROPICAL:
+        return Color("#886f50")
+    if biome == Biomes.DESERT:
+        return Color("#8a735b")
     if biome == Biomes.CANYON:
         return Color("#777068")
     if biome == Biomes.COASTAL:
@@ -196,17 +249,276 @@ static func _road_color(biome: String) -> Color:
     return Color("#5f6566")
 
 static func _shore_color(biome: String) -> Color:
+    if biome == Biomes.WETLAND:
+        return Color("#8a8962")
+    if biome == Biomes.URBAN:
+        return Color("#a0a6a1")
+    if biome == Biomes.ARCHIPELAGO:
+        return Color("#e9d9aa")
     if biome == Biomes.WINTER:
         return Biomes.FROZEN_SHORE
+    if biome == Biomes.TROPICAL:
+        return Color("#91a67b")
+    if biome == Biomes.DESERT:
+        return Color("#e3c28c")
     if biome == Biomes.CANYON:
         return Color("#c5a980")
     if biome == Biomes.COASTAL:
         return Color("#7fa896")
     return Color("#c4b18d")
 
+# V22: roads and causeways keep the exact tactical footprint. All geometry
+# is batched in the existing road surface and follows the ground fan.
+static func _road_axis(edges: Dictionary) -> int:
+    var n: bool = bool(edges.get("north",false))
+    var s: bool = bool(edges.get("south",false))
+    var w: bool = bool(edges.get("west",false))
+    var e: bool = bool(edges.get("east",false))
+    if n and s and not w and not e:
+        return 1
+    if w and e and not n and not s:
+        return 2
+    return 0
+
+static func _append_road_layer(tool: SurfaceTool,at: Vector3,
+        surface: Dictionary,edges: Dictionary,width: float,
+        color: Color,lift: float) -> void:
+    var half: float = float(surface["half"])
+    RoadShore._rect(tool,at,surface,-width,width,-width,width,color,lift)
+    if bool(edges.get("north",false)):
+        RoadShore._rect(tool,at,surface,-width,width,-half,-width,color,lift)
+    if bool(edges.get("south",false)):
+        RoadShore._rect(tool,at,surface,-width,width,width,half,color,lift)
+    if bool(edges.get("west",false)):
+        RoadShore._rect(tool,at,surface,-half,-width,-width,width,color,lift)
+    if bool(edges.get("east",false)):
+        RoadShore._rect(tool,at,surface,width,half,-width,width,color,lift)
+
+static func _append_road_finish(tool: SurfaceTool,at: Vector3,
+        surface: Dictionary,tile: Dictionary,biome: String) -> void:
+    var edges: Dictionary = tile["roads"]
+    var shoulder: Color = _shore_color(biome).darkened(0.10)
+    _append_road_layer(tool,at,surface,edges,0.77,shoulder,0.032)
+    _append_road_layer(tool,at,surface,edges,0.67,_road_color(biome),ROAD_LIFT)
+    var axis: int = _road_axis(edges)
+    var half: float = float(surface["half"])
+    var stripe: Color = Color("#d8d5b7") if biome!=Biomes.WINTER else Biomes.SNOW
+    for center in [-0.80,0.0,0.80]:
+        var start: float = float(center)-0.18
+        var end: float = float(center)+0.18
+        if axis==1:
+            RoadShore._rect(tool,at,surface,-0.025,0.025,start,end,stripe,0.084)
+        elif axis==2:
+            RoadShore._rect(tool,at,surface,start,end,-0.025,0.025,stripe,0.084)
+    # Water-facing curb bands are visual only: they do not create a bridge
+    # over a water tile or change naval connectivity.
+    var shores: Dictionary = tile["shore"]
+    var curb: Color = shoulder.lightened(0.20)
+    if axis==1:
+        if bool(shores.get("west",false)):
+            RoadShore._rect(tool,at,surface,-0.77,-0.68,-half,half,curb,0.105)
+        if bool(shores.get("east",false)):
+            RoadShore._rect(tool,at,surface,0.68,0.77,-half,half,curb,0.105)
+    elif axis==2:
+        if bool(shores.get("north",false)):
+            RoadShore._rect(tool,at,surface,-half,half,-0.77,-0.68,curb,0.105)
+        if bool(shores.get("south",false)):
+            RoadShore._rect(tool,at,surface,-half,half,0.68,0.77,curb,0.105)
+
+# V25: static depth shading using only public water/land records.
+# Every shared water corner has the same world-space pigment; no shader,
+# animated geometry, or additional batches are needed.
+# V39: reinforced crossing parapets only when public water is on both
+# sides of an existing straight causeway. Same tile, same route, no claim
+# that ships can travel beneath the solid road cell.
+static func _append_crossing_parapets(tool: SurfaceTool,at: Vector3,
+        surface: Dictionary,tile: Dictionary) -> int:
+    var axis: int = _road_axis(tile["roads"])
+    var shores: Dictionary = tile["shore"]
+    var across: bool = (axis==1 and bool(shores.get("west",false))
+        and bool(shores.get("east",false))) or (axis==2 and bool(shores.get("north",false))
+        and bool(shores.get("south",false)))
+    if not across:
+        return 0
+    var half: float = float(surface["half"])
+    var concrete := Color("#a6a9a1")
+    for side in [-1.0,1.0]:
+        var inner: float = float(side)*0.78
+        var outer: float = float(side)*0.88
+        # Shared endpoints follow the same slope on neighbouring tiles.
+        for i in range(2):
+            var start: float = -half+float(i)*half
+            var end: float = start+half
+            var a: Vector2 = Vector2(inner,start) if axis==1 else Vector2(start,inner)
+            var b: Vector2 = Vector2(inner,end) if axis==1 else Vector2(end,inner)
+            var d: Vector2 = Vector2(outer,start) if axis==1 else Vector2(start,outer)
+            var e: Vector2 = Vector2(outer,end) if axis==1 else Vector2(end,outer)
+            var la: Vector3 = RoadShore._point(at,surface,a.x,a.y,0.08)
+            var lb: Vector3 = RoadShore._point(at,surface,b.x,b.y,0.08)
+            var ld: Vector3 = RoadShore._point(at,surface,d.x,d.y,0.08)
+            var le: Vector3 = RoadShore._point(at,surface,e.x,e.y,0.08)
+            var up: Vector3 = Vector3.UP*0.19
+            _panel(tool,la,lb,lb+up,la+up,concrete.darkened(0.12))
+            _panel(tool,ld,le,le+up,ld+up,concrete.darkened(0.19))
+            _panel(tool,la+up,lb+up,le+up,ld+up,concrete)
+        # End caps: no open shell when zoomed into a crossing.
+        for z in [-half,half]:
+            var a: Vector2 = Vector2(inner,z) if axis==1 else Vector2(z,inner)
+            var b: Vector2 = Vector2(outer,z) if axis==1 else Vector2(z,outer)
+            var lo_a: Vector3 = RoadShore._point(at,surface,a.x,a.y,0.08)
+            var lo_b: Vector3 = RoadShore._point(at,surface,b.x,b.y,0.08)
+            _panel(tool,lo_a,lo_b,lo_b+Vector3.UP*0.19,
+                lo_a+Vector3.UP*0.19,concrete)
+    return 1
+
+static func _water_corner_tint(cells: Dictionary,corner: Vector2i,
+        biome: String) -> Color:
+    var known_land := 0
+    for dy in [-1,0]:
+        for dx in [-1,0]:
+            var tile: Dictionary = cells.get(corner+Vector2i(dx,dy),{})
+            var kind: String = str(tile.get("kind","unknown"))
+            if kind not in ["unknown","water"]:
+                known_land += 1
+    var deep: Color = _biome_color("water",corner,biome)
+    var shallow: Color = deep.lightened(0.23)
+    return deep.lerp(shallow,clampf(float(known_land)*0.34,0.0,1.0))
+
+static func _cached_water_tint(cells: Dictionary,corner: Vector2i,
+        cache: Dictionary,biome: String) -> Color:
+    if not cache.has(corner):
+        cache[corner] = _water_corner_tint(cells,corner,biome)
+    return cache[corner]
+
+# V29: paint wind-ripple bands directly into the existing ground surface.
+# Ground positions are sampled from the same triangle fan; not a new
+# traversable terrain type and not an obstacle to buildings or units.
+static func _append_sand_ripples(tool: SurfaceTool,at: Vector3,
+        surface: Dictionary,cell: Vector2i) -> void:
+    # V45: curved, low-relief dune crests instead of straight painted bars.
+    # Each short strip tapers into the ground; the authoritative ground fan
+    # and model anchors are untouched. Leave the tile center clear.
+    var offset: float = float(posmod(cell.x*13+cell.y*7,5))*0.035
+    for side in [-1.0,1.0]:
+        var base_z: float = float(side)*(0.70+offset*0.5)
+        for i in range(4):
+            var x0: float = -0.88+float(i)*0.44
+            var x1: float = x0+0.44
+            var z0: float = base_z+sin(x0*2.8+offset)*0.075
+            var z1: float = base_z+sin(x1*2.8+offset)*0.075
+            var h0: float = 0.018+0.065*(1.0-absf(x0)/0.88)
+            var h1: float = 0.018+0.065*(1.0-absf(x1)/0.88)
+            var a: Vector3 = RoadShore._point(at,surface,x0,z0-0.14,0.012)
+            var b: Vector3 = RoadShore._point(at,surface,x1,z1-0.14,0.012)
+            var p: Vector3 = RoadShore._point(at,surface,x0,z0,h0)
+            var q: Vector3 = RoadShore._point(at,surface,x1,z1,h1)
+            var d: Vector3 = RoadShore._point(at,surface,x0,z0+0.14,0.012)
+            var e: Vector3 = RoadShore._point(at,surface,x1,z1+0.14,0.012)
+            _tri_tinted(tool,a,p,b,Color("#d4af76"),Color("#ebcf98"),Color("#d4af76"))
+            _tri_tinted(tool,b,p,q,Color("#d4af76"),Color("#ebcf98"),Color("#ebcf98"))
+            _tri_tinted(tool,p,d,q,Color("#ebcf98"),Color("#c29a65"),Color("#ebcf98"))
+            _tri_tinted(tool,q,d,e,Color("#ebcf98"),Color("#c29a65"),Color("#c29a65"))
+
+# V31–V33: surface details follow the actual ground, never add sites.
+static func _append_extended_ground(tool: SurfaceTool,at: Vector3,
+        surface: Dictionary,cell: Vector2i,biome: String) -> void:
+    if biome==Biomes.WETLAND:
+        for i in range(2):
+            var x: float = -0.68+float(i)*0.82
+            var z: float = -0.45+float(posmod(cell.x+cell.y+i,4))*0.18
+            RoadShore._rect(tool,at,surface,x,x+0.43,z,z+0.25,
+                Color("#6d7358"),0.016)
+    elif biome==Biomes.URBAN:
+        for i in range(2):
+            var x: float = -0.87+float(i)*0.91
+            RoadShore._rect(tool,at,surface,x,x+0.83,-0.82,0.82,
+                Color("#a8aba4") if i==0 else Color("#969b99"),0.020)
+            RoadShore._rect(tool,at,surface,x,x+0.83,-0.018,0.018,
+                Color("#696f70"),0.028)
+    elif biome==Biomes.ARCHIPELAGO:
+        for i in range(2):
+            var z: float = -0.45+float(i)*0.65
+            RoadShore._rect(tool,at,surface,-0.72,0.72,z,z+0.04,
+                Color("#cabd92"),0.016)
+
+# V44: restrained ground-edge detail on public plain cells, using the
+# exact tactical height sampler. Keep the center clear for unit silhouettes.
+static func _append_natural_ground(tool: SurfaceTool,at: Vector3,
+        surface: Dictionary,cell: Vector2i,biome: String) -> int:
+    var tint: Color
+    match biome:
+        Biomes.TEMPERATE: tint = Color("#84956a")
+        Biomes.WINTER: tint = Color("#c9d8df")
+        Biomes.CANYON: tint = Color("#ae8a64")
+        Biomes.COASTAL: tint = Color("#9bb894")
+        Biomes.TROPICAL: tint = Color("#477a41")
+        _: return 0
+    var count := 0
+    for i in range(2):
+        var side: float = -1.0 if i==0 else 1.0
+        var jitter: float = float(posmod(cell.x*17+cell.y*31+i*7,7))*0.035
+        var x: float = side*(0.73+jitter)
+        var z: float = -0.56+float(posmod(cell.x*11+cell.y*13+i*3,6))*0.21
+        var length: float = 0.24+jitter
+        var a: Vector3 = RoadShore._point(at,surface,x-0.13,z-0.09,0.022)
+        var b: Vector3 = RoadShore._point(at,surface,x+0.13,z-0.07,0.022)
+        var d: Vector3 = RoadShore._point(at,surface,x+0.08,z+length,0.022)
+        var e: Vector3 = RoadShore._point(at,surface,x-0.10,z+length*0.60,0.022)
+        _tri_tinted(tool,a,e,b,tint.darkened(0.07),tint,tint.lightened(0.08))
+        _tri_tinted(tool,b,e,d,tint.lightened(0.08),tint,tint.darkened(0.05))
+        count += 1
+    return count
+
+# V47: shore bands follow the existing land fan. Only exposed public
+# shore directions are used. Coastal sand, wet mud and rock use distinct
+# widths; no added cells, collisions or navigation routes.
+static func _append_shore_bands(tool: SurfaceTool,at: Vector3,
+        surface: Dictionary,key: String,biome: String) -> void:
+    var half: float = float(surface["half"])
+    var width: float = 0.36 if biome in [Biomes.COASTAL,Biomes.ARCHIPELAGO] else 0.22
+    var color: Color = _shore_color(biome)
+    for band in range(2):
+        var inner: float = half-width+float(band)*width*0.50
+        var outer: float = half-width+float(band+1)*width*0.50-0.015
+        var tint: Color = color.lightened(0.09) if band==0 else color.darkened(0.13)
+        var margin: float = 0.12
+        if key=="north":
+            RoadShore._rect(tool,at,surface,-half+margin,half-margin,-outer,-inner,tint,0.033)
+        elif key=="south":
+            RoadShore._rect(tool,at,surface,-half+margin,half-margin,inner,outer,tint,0.033)
+        elif key=="west":
+            RoadShore._rect(tool,at,surface,-outer,-inner,-half+margin,half-margin,tint,0.033)
+        elif key=="east":
+            RoadShore._rect(tool,at,surface,inner,outer,-half+margin,half-margin,tint,0.033)
+
+static func _append_coastal_foam(tool: SurfaceTool,cells: Dictionary,
+        cell: Vector2i,biome: String) -> int:
+    if biome not in [Biomes.COASTAL,Biomes.ARCHIPELAGO]:
+        return 0
+    var at: Vector3 = world_at(cell)+Vector3(0,WATER_LEVEL+0.006,0)
+    var half: float = CELL*0.5
+    var count := 0
+    for direction in [Vector2i.UP,Vector2i.RIGHT,Vector2i.DOWN,Vector2i.LEFT]:
+        var neighbor: Dictionary = cells.get(cell+direction,{})
+        if not bool(neighbor.get("details",false)) or str(neighbor.get("kind","unknown")) in ["water","unknown"]:
+            continue
+        var normal := Vector3(direction.x,0,direction.y)
+        var tangent := Vector3(-direction.y,0,direction.x)
+        var color: Color = _biome_color("water",cell,biome).lightened(0.41)
+        for i in range(3):
+            var along: float = -0.65+float(i)*0.65
+            var a: Vector3 = at+normal*(half-0.05)+tangent*(along-0.24)
+            var b: Vector3 = at+normal*(half-0.05)+tangent*(along+0.24)
+            var d: Vector3 = at+normal*(half-0.11)+tangent*(along-0.24)
+            var e: Vector3 = at+normal*(half-0.11)+tangent*(along+0.24)
+            _panel(tool,a,b,e,d,color)
+        count += 1
+    return count
+
 static func _build_chunk(parent: Node3D, data: Dictionary,
         cells: Dictionary,corner_cache: Dictionary,
-        biome: String = Biomes.TEMPERATE) -> Dictionary:
+        biome: String = Biomes.TEMPERATE,water_cache: Dictionary = {},
+        materials: Dictionary = {},height_cache: Dictionary = {}) -> Dictionary:
     var ground := SurfaceTool.new()
     var water := SurfaceTool.new()
     var unknown := SurfaceTool.new()
@@ -218,6 +530,7 @@ static func _build_chunk(parent: Node3D, data: Dictionary,
     var water_count := 0
     var hidden_count := 0
     var roads_count := 0
+    var crossings_count := 0
     var shores_count := 0
     var blended_count := 0
     for tile in data["cells"]:
@@ -235,11 +548,23 @@ static func _build_chunk(parent: Node3D, data: Dictionary,
             continue
         if kind == "water":
             var sea: Vector3 = at+Vector3(0,WATER_LEVEL,0)
-            _panel(water,sea+Vector3(-half,0,-half),sea+Vector3(half,0,-half),
-                sea+Vector3(half,0,half),sea+Vector3(-half,0,half),tinted)
+            var wn: Vector3 = sea+Vector3(-half,0,-half)
+            var we: Vector3 = sea+Vector3(half,0,-half)
+            var ws: Vector3 = sea+Vector3(half,0,half)
+            var ww: Vector3 = sea+Vector3(-half,0,half)
+            if bool(tile.get("details",false)):
+                var cn: Color = _cached_water_tint(cells,cell,water_cache,biome)
+                var ce: Color = _cached_water_tint(cells,cell+Vector2i(1,0),water_cache,biome)
+                var cs: Color = _cached_water_tint(cells,cell+Vector2i(1,1),water_cache,biome)
+                var cw: Color = _cached_water_tint(cells,cell+Vector2i(0,1),water_cache,biome)
+                _tri_tinted(water,wn,ww,we,cn,cw,ce)
+                _tri_tinted(water,we,ww,ws,ce,cw,cs)
+                _append_coastal_foam(water,cells,cell,biome)
+            else:
+                _panel(water,wn,we,ws,ww,tinted)
             water_count += 1
             continue
-        var corners: PackedFloat32Array = _corners(cells,cell)
+        var corners: PackedFloat32Array = _cached_corners(cells,cell,height_cache)
         var nw: Vector3 = at+Vector3(-half,corners[0],-half)
         var ne: Vector3 = at+Vector3(half,corners[1],-half)
         var se: Vector3 = at+Vector3(half,corners[2],half)
@@ -262,6 +587,13 @@ static func _build_chunk(parent: Node3D, data: Dictionary,
             _tri(ground,ne,middle,se,tinted)
             _tri(ground,se,middle,sw,tinted)
             _tri(ground,sw,middle,nw,tinted)
+        # Close exposed soil down to known water, including road crossings.
+        # Reuse the ground mesh/material; no additional draw batch.
+        var bank_top: Array[Vector3] = [nw,ne,se,sw]
+        var bank_tint: Color = _shore_color(biome)
+        if not bool(tile.get("details",false)):
+            bank_tint = bank_tint.darkened(0.60)
+        _append_water_banks(ground,cells,cell,bank_top,bank_tint)
         land_count += 1
         # No landscape detail on explored-but-currently-hidden positions.
         if not bool(tile.get("details",false)):
@@ -269,70 +601,158 @@ static func _build_chunk(parent: Node3D, data: Dictionary,
         var surface_cell: Dictionary = {
             "x":cell.x,"z":cell.y,"top":_cell_height(tile),
             "half":half,"corners":corners}
+        if kind=="plain" and biome==Biomes.DESERT:
+            _append_sand_ripples(ground,at,surface_cell,cell)
+        elif kind=="plain" and biome in [Biomes.WETLAND,Biomes.URBAN,Biomes.ARCHIPELAGO]:
+            _append_extended_ground(ground,at,surface_cell,cell,biome)
+        elif kind=="plain":
+            _append_natural_ground(ground,at,surface_cell,cell,biome)
         if kind == "road":
-            var width := 0.70
-            RoadShore._rect(road,at,surface_cell,-width,width,-width,width,
-                _road_color(biome),ROAD_LIFT)
-            var roads: Dictionary = tile["roads"]
-            if bool(roads["north"]):
-                RoadShore._rect(road,at,surface_cell,-width,width,-half,-width,
-                    _road_color(biome),ROAD_LIFT)
-            if bool(roads["south"]):
-                RoadShore._rect(road,at,surface_cell,-width,width,width,half,
-                    _road_color(biome),ROAD_LIFT)
-            if bool(roads["west"]):
-                RoadShore._rect(road,at,surface_cell,-half,-width,-width,width,
-                    _road_color(biome),ROAD_LIFT)
-            if bool(roads["east"]):
-                RoadShore._rect(road,at,surface_cell,width,half,-width,width,
-                    _road_color(biome),ROAD_LIFT)
+            _append_road_finish(road,at,surface_cell,tile,biome)
+            crossings_count += _append_crossing_parapets(road,at,surface_cell,tile)
             roads_count += 1
         else:
             var shore_edges: Dictionary = tile["shore"]
             for key in ["north","south","west","east"]:
                 if not bool(shore_edges.get(key,false)):
                     continue
-                var off: float = half-0.22
-                if key=="north":
-                    RoadShore._rect(shore,at,surface_cell,-half+0.12,half-0.12,
-                        -half+0.04,-off,_shore_color(biome),0.033)
-                elif key=="south":
-                    RoadShore._rect(shore,at,surface_cell,-half+0.12,half-0.12,
-                        off,half-0.04,_shore_color(biome),0.033)
-                elif key=="west":
-                    RoadShore._rect(shore,at,surface_cell,-half+0.04,-off,
-                        -half+0.12,half-0.12,_shore_color(biome),0.033)
-                else:
-                    RoadShore._rect(shore,at,surface_cell,off,half-0.04,
-                        -half+0.12,half-0.12,_shore_color(biome),0.033)
+                _append_shore_bands(shore,at,surface_cell,key,biome)
                 shores_count += 1
     var chunk := Node3D.new()
     chunk.name = "Sector3D_%d_%d" % [data["origin"].x,data["origin"].y]
     parent.add_child(chunk)
-    _finish(chunk,"SueloVisible",ground,land_count,"soil")
-    _finish(chunk,"AguaVisible",water,water_count,"water")
+    _finish(chunk,"SueloVisible",ground,land_count,"soil",materials,biome)
+    _finish(chunk,"AguaVisible",water,water_count,"water",materials)
     # Unknown terrain stays an opaque, untextured solid dark surface.
     if hidden_count > 0:
         unknown.generate_normals()
         var mesh := MeshInstance3D.new()
         mesh.name = "NieblaNoExplorada"
         mesh.mesh = unknown.commit()
-        var mat := StandardMaterial3D.new()
-        mat.vertex_color_use_as_albedo = true
-        mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-        mat.cull_mode = BaseMaterial3D.CULL_DISABLED
-        mesh.material_override = mat
+        if not materials.has("fog"):
+            var mat := StandardMaterial3D.new()
+            mat.vertex_color_use_as_albedo = true
+            mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+            mat.cull_mode = BaseMaterial3D.CULL_DISABLED
+            materials["fog"] = mat
+        mesh.material_override = materials["fog"]
         chunk.add_child(mesh)
-    _finish(chunk,"CaminosVisibles",road,roads_count,"soil")
-    _finish(chunk,"OrillasVisibles",shore,shores_count,"soil")
+    _finish(chunk,"CaminosVisibles",road,roads_count,"soil",materials,biome)
+    _finish(chunk,"OrillasVisibles",shore,shores_count,"soil",materials,biome)
     chunk.set_meta("origin",data["origin"])
     chunk.set_meta("tiles",data["tile_count"])
     return {"land":land_count,"water":water_count,"unknown":hidden_count,
-        "roads":roads_count,"shore_edges":shores_count,
+        "roads":roads_count,"shore_edges":shores_count,"crossings_v39":crossings_count,
         "blended_tiles":blended_count}
 
 # V20b: use one reusable 21-facet layered fir mesh, NOT hundreds of
 # separate trees. Snow is painted directly into the upper branches.
+# V30: closed polygonal trunk and radiating leaf meshes, instanced in the
+# existing vegetation batch. No added collision or terrain rules.
+static func _append_tropical_palm(tool: SurfaceTool) -> void:
+    var bark := Color("#76583e")
+    var leaf := Color("#387749")
+    var base := Vector3(0,-0.32,0)
+    var head := Vector3(0.10,0.83,0)
+    for i in range(6):
+        var a: float = TAU*float(i)/6.0
+        var b: float = TAU*float(i+1)/6.0
+        var u := Vector3(cos(a),0,sin(a))
+        var v := Vector3(cos(b),0,sin(b))
+        _panel(tool,base+u*0.09,base+v*0.09,head+v*0.055,head+u*0.055,bark)
+        _tri(tool,head,head+u*0.055,head+v*0.055,bark)
+        _tri(tool,base,base+v*0.09,base+u*0.09,bark)
+    for i in range(7):
+        var angle: float = TAU*float(i)/7.0
+        var radial := Vector3(cos(angle),0,sin(angle))
+        var side := Vector3(-sin(angle),0,cos(angle))*0.12
+        var middle: Vector3 = head+radial*0.32+Vector3.UP*0.19
+        var tip: Vector3 = head+radial*0.66-Vector3.UP*0.09
+        # V46: a closed, creased leaf volume with four perimeter vertices.
+        # The underside is darker but opaque, not an alpha cutout.
+        var rim: Array[Vector3] = [head,middle+side,tip,middle-side]
+        var upper: Vector3 = middle+Vector3.UP*0.026
+        var lower: Vector3 = middle-Vector3.UP*0.035
+        for edge in range(4):
+            var a: Vector3 = rim[edge]
+            var b: Vector3 = rim[(edge+1)%4]
+            _tri_tinted(tool,a,b,upper,leaf,leaf.darkened(0.12),leaf.lightened(0.22))
+            _tri(tool,b,a,lower,leaf.darkened(0.26))
+
+# Wetland reeds and urban broadleaf crowns use the same instancing path.
+static func _append_reeds(tool: SurfaceTool) -> void:
+    for i in range(7):
+        var a: float = TAU*float(i)/7.0
+        var radial := Vector3(cos(a),0,sin(a))
+        var side := Vector3(-sin(a),0,cos(a))*0.045
+        var base: Vector3 = radial*0.13+Vector3(0,-0.32,0)
+        var tip: Vector3 = radial*0.29+Vector3(0,0.44+0.08*float(i%3),0)
+        _tri_tinted(tool,base-side,base+side,tip,Color("#526a3e"),
+            Color("#78834e"),Color("#a2a26a"))
+        var head: Vector3 = tip-Vector3.UP*0.08
+        var cap: Vector3 = head+Vector3.UP*0.15
+        # Closed seed heads, while grass blades remain thin solid foliage.
+        var seed_color := Color("#8d6d42")
+        for edge in range(4):
+            var u: float = TAU*float(edge)/4.0
+            var v: float = TAU*float(edge+1)/4.0
+            var p := Vector3(cos(u)*0.040,0,sin(u)*0.040)
+            var q := Vector3(cos(v)*0.040,0,sin(v)*0.040)
+            _panel(tool,head+p,head+q,cap+q*0.75,cap+p*0.75,seed_color)
+            _tri(tool,head,head+q,head+p,seed_color.darkened(0.18))
+            _tri(tool,cap,cap+p*0.75,cap+q*0.75,seed_color.lightened(0.12))
+
+static func _append_urban_tree(tool: SurfaceTool,
+        foliage: Color = Color("#657b54")) -> void:
+    var bottom := Vector3(0,-0.32,0)
+    var top := Vector3(0,0.32,0)
+    for i in range(6):
+        var a: float = TAU*float(i)/6.0
+        var b: float = TAU*float(i+1)/6.0
+        var u := Vector3(cos(a),0,sin(a))
+        var v := Vector3(cos(b),0,sin(b))
+        _panel(tool,bottom+u*0.065,bottom+v*0.065,
+            top+v*0.04,top+u*0.04,Color("#75634e"))
+        _tri(tool,bottom,bottom+v*0.065,bottom+u*0.065,Color("#594a39"))
+        _tri(tool,top,top+u*0.04,top+v*0.04,Color("#75634e"))
+        var edge_a: Vector3 = top+u*0.42+Vector3.UP*0.18
+        var edge_b: Vector3 = top+v*0.42+Vector3.UP*0.18
+        _tri_tinted(tool,top-Vector3.UP*0.08,edge_b,edge_a,
+            foliage.darkened(0.28),foliage.darkened(0.06),foliage.lightened(0.10))
+        _tri_tinted(tool,edge_a,edge_b,top+Vector3.UP*0.61,
+            foliage.lightened(0.06),foliage.lightened(0.16),foliage.lightened(0.29))
+
+# V44/V45: closed foliage skirts and tapered bark, reused in the same
+# forest MultiMesh. Ground contact stays at local y=-0.32.
+static func _append_conifer(tool: SurfaceTool,biome: String,foliage: Color) -> void:
+    var bark := Color("#69513d")
+    var foot := Vector3(0,-0.32,0)
+    var neck := Vector3(0,0.62,0)
+    for seg in range(6):
+        var a: float = TAU*float(seg)/6.0
+        var b: float = TAU*float(seg+1)/6.0
+        var u := Vector3(cos(a),0,sin(a))
+        var v := Vector3(cos(b),0,sin(b))
+        _panel(tool,foot+u*0.065,foot+v*0.065,neck+v*0.035,neck+u*0.035,bark)
+        _tri(tool,foot,foot+v*0.065,foot+u*0.065,bark.darkened(0.2))
+        _tri(tool,neck,neck+u*0.035,neck+v*0.035,bark)
+    var layers: int = 2 if biome in [Biomes.DESERT,Biomes.CANYON] else 3
+    for layer in range(layers):
+        var radius: float = 0.42-float(layer)*0.085
+        var low: float = -0.15+float(layer)*0.27
+        var tip := Vector3(0,0.53+float(layer)*0.26,0)
+        var shade: Color = foliage.darkened(0.23)
+        for seg in range(8):
+            var a: float = TAU*float(seg)/8.0
+            var b: float = TAU*float(seg+1)/8.0
+            var ra: float = radius*(1.0 if seg%2==0 else 0.81)
+            var rb: float = radius*(1.0 if (seg+1)%2==0 else 0.81)
+            var p := Vector3(cos(a)*ra,low,sin(a)*ra)
+            var q := Vector3(cos(b)*rb,low,sin(b)*rb)
+            var apex: Color = Biomes.HARDPACK if biome==Biomes.WINTER and layer>=1 else foliage.lightened(0.13)
+            _tri_tinted(tool,p,q,tip,foliage.darkened(0.08),foliage.lightened(0.06),apex)
+            _tri(tool,Vector3(0,low,0),q,p,shade)
+
 static func _make_cone_trees(parent: Node3D,cells: Dictionary,
         biome: String = Biomes.TEMPERATE) -> int:
     var positions: Array[Transform3D] = []
@@ -340,39 +760,51 @@ static func _make_cone_trees(parent: Node3D,cells: Dictionary,
         var tile: Dictionary = cells[cell]
         if str(tile["kind"]) != "forest" or not bool(tile.get("details",false)):
             continue
-        for j in range(2 if biome!=Biomes.CANYON else 1):
+        for j in range(1 if biome in [Biomes.CANYON,Biomes.DESERT] else 2):
             var shift: Vector2 = Vector2(-0.38,0.26) if j==0 else Vector2(0.38,-0.28)
             var at: Vector3 = world_at(cell)+Vector3(shift.x,0,shift.y)
-            at.y = height_at(cells,cell,shift.x,shift.y)+0.41
             var angle: float = float(posmod(
                 cell.x*37+cell.y*83+j*19,16))/16.0*TAU
+            # V24: deterministic crown/height variation without extra trees
+            # or batches. Keep the base at the same terrain anchor.
             var scale: float = 0.82+float(posmod(cell.x*7+cell.y*13+j,5))*0.075
+            var crown: float = 0.91+float(posmod(cell.x*19+cell.y*7+j*11,5))*0.04
+            var height_scale: float = 0.90+float(posmod(cell.x*13+cell.y*23+j*3,5))*0.05
+            if biome==Biomes.DESERT:
+                crown *= 1.13
+                height_scale *= 0.48
+            elif biome in [Biomes.TROPICAL,Biomes.ARCHIPELAGO]:
+                crown *= 0.85
+                height_scale *= 1.12
+            elif biome==Biomes.WETLAND:
+                height_scale *= 0.72
+            elif biome==Biomes.URBAN:
+                crown *= 0.85
             var rotated := Basis(Vector3.UP,angle).scaled(
-                Vector3(scale,scale,scale))
+                Vector3(scale*crown,scale*height_scale,scale*crown))
+            at.y = height_at(cells,cell,shift.x,shift.y)+0.32*scale*height_scale
             positions.append(Transform3D(rotated,at))
     if positions.is_empty():
         return 0
     var foliage: Color = (
         Color("#40625b") if biome==Biomes.WINTER else
+        Color("#7e8b52") if biome==Biomes.DESERT else
         Color("#91845c") if biome==Biomes.CANYON else
         Color("#2e7665") if biome==Biomes.COASTAL else Color("#396b4c"))
     var tree_mesh := SurfaceTool.new()
     tree_mesh.begin(Mesh.PRIMITIVE_TRIANGLES)
-    for layer in range(3):
-        var radius: float = 0.45-float(layer)*0.10
-        var low: float = -0.32+float(layer)*0.29
-        var tip: Vector3 = Vector3(0,0.63+float(layer)*0.25,0)
-        for seg in range(7):
-            var angle_a: float = TAU*float(seg)/7.0
-            var angle_b: float = TAU*float(seg+1)/7.0
-            var a := Vector3(cos(angle_a)*radius,low,sin(angle_a)*radius)
-            var b := Vector3(cos(angle_b)*radius,low,sin(angle_b)*radius)
-            var top_tint: Color = (
-                Biomes.HARDPACK if biome==Biomes.WINTER and layer>=1 else
-                foliage.lightened(0.08+0.045*float(layer)))
-            var side: Color = foliage.darkened(0.065*float(seg%3))
-            _tri_tinted(tree_mesh,a,b,tip,side,foliage.lightened(0.055),
-                top_tint)
+    if biome in [Biomes.TROPICAL,Biomes.ARCHIPELAGO]:
+        _append_tropical_palm(tree_mesh)
+    elif biome==Biomes.WETLAND:
+        _append_reeds(tree_mesh)
+    elif biome==Biomes.URBAN:
+        _append_urban_tree(tree_mesh)
+    elif biome==Biomes.DESERT:
+        _append_urban_tree(tree_mesh,Color("#7e8b52"))
+    elif biome==Biomes.COASTAL:
+        _append_urban_tree(tree_mesh,Color("#2e7665"))
+    else:
+        _append_conifer(tree_mesh,biome,foliage)
     tree_mesh.generate_normals()
     var mesh: ArrayMesh = tree_mesh.commit()
     var mat := StandardMaterial3D.new()
@@ -417,6 +849,37 @@ static func _make_cone_trees(parent: Node3D,cells: Dictionary,
 # Two high points and six lateral faces, all painted in this actual rock
 # mesh. This explicitly replaces the small generic cones that made the
 # battlefield mountains appear separate from the V18b/V19 environments.
+# V23: align connected mountains with their known cardinal neighbours.
+# Never inspect unexplored ground; isolated peaks keep deterministic rotation.
+static func _ridge_angle(cells: Dictionary,cell: Vector2i) -> float:
+    var east_west := 0
+    var north_south := 0
+    for direction in [Vector2i(-1,0),Vector2i(1,0),Vector2i(0,-1),Vector2i(0,1)]:
+        var neighbour: Dictionary = cells.get(cell+direction,{})
+        if str(neighbour.get("kind","unknown"))!="mountain":
+            continue
+        if direction.x!=0:
+            east_west += 1
+        else:
+            north_south += 1
+    var jitter: float = float(posmod(cell.x*31+cell.y*17,13))/13.0
+    if east_west>north_south:
+        return (jitter-0.5)*0.24
+    if north_south>east_west:
+        return PI*0.5+(jitter-0.5)*0.24
+    return jitter*TAU
+
+# Split facets around a slightly recessed center to create real rock planes
+# without changing any shared edge or opening a seam between triangles.
+static func _ridge_face(tool: SurfaceTool,a: Vector3,b: Vector3,c: Vector3,
+        ca: Color,cb: Color,cc: Color) -> void:
+    var mid: Vector3 = (a+b+c)/3.0
+    mid.y -= 0.035
+    var tint: Color = ((ca+cb+cc)/3.0).darkened(0.08)
+    _tri_tinted(tool,a,b,mid,ca,cb,tint)
+    _tri_tinted(tool,b,c,mid,cb,cc,tint)
+    _tri_tinted(tool,c,a,mid,cc,ca,tint)
+
 static func _make_mountain_ridges(parent: Node3D,cells: Dictionary,
         biome: String) -> int:
     var transforms: Array[Transform3D] = []
@@ -426,8 +889,7 @@ static func _make_mountain_ridges(parent: Node3D,cells: Dictionary,
             continue
         var base: Vector3 = world_at(cell)
         base.y = height_at(cells,cell)+0.33
-        var angle: float = float(posmod(
-            cell.x*31+cell.y*17,13))/13.0*TAU
+        var angle: float = _ridge_angle(cells,cell)
         var shape := Basis(Vector3.UP,angle).scaled(
             Vector3(0.95,0.9+float(posmod(cell.x*11+cell.y,4))*0.07,0.95))
         transforms.append(Transform3D(shape,base))
@@ -438,6 +900,11 @@ static func _make_mountain_ridges(parent: Node3D,cells: Dictionary,
     var light: Color = rock.lightened(0.12)
     var crest: Color = (
         Biomes.SNOW if biome==Biomes.WINTER else
+        Color("#96977d") if biome==Biomes.WETLAND else
+        Color("#b4b8b6") if biome==Biomes.URBAN else
+        Color("#c3b99d") if biome==Biomes.ARCHIPELAGO else
+        Color("#7e9970") if biome==Biomes.TROPICAL else
+        Color("#e1ab79") if biome==Biomes.DESERT else
         Color("#c2ac89") if biome==Biomes.CANYON else
         Color("#80a69b") if biome==Biomes.COASTAL else Color("#96a9a0"))
     var nw := Vector3(-0.84,-0.37,-0.80)
@@ -446,19 +913,37 @@ static func _make_mountain_ridges(parent: Node3D,cells: Dictionary,
     var sw := Vector3(-0.81,-0.35,0.81)
     var peak_a := Vector3(-0.33,1.08,-0.18)
     var peak_b := Vector3(0.35,0.83,0.19)
+    match biome:
+        Biomes.DESERT:
+            peak_a = Vector3(-0.34,0.91,-0.24)
+            peak_b = Vector3(0.34,0.89,0.20)
+        Biomes.CANYON:
+            peak_a = Vector3(-0.37,1.02,-0.27)
+            peak_b = Vector3(0.38,1.00,0.21)
+        Biomes.WINTER:
+            peak_a = Vector3(-0.31,1.20,-0.18)
+            peak_b = Vector3(0.35,0.92,0.19)
+        Biomes.WETLAND, Biomes.URBAN:
+            peak_a.y = 0.72
+            peak_b.y = 0.62
+        Biomes.COASTAL, Biomes.ARCHIPELAGO:
+            peak_a = Vector3(-0.47,0.98,-0.18)
+            peak_b = Vector3(0.29,0.70,0.21)
     var mesh_tool := SurfaceTool.new()
     mesh_tool.begin(Mesh.PRIMITIVE_TRIANGLES)
-    _tri_tinted(mesh_tool,nw,ne,peak_a,shadow,rock,crest)
-    _tri_tinted(mesh_tool,ne,peak_b,peak_a,rock,light,crest)
-    _tri_tinted(mesh_tool,ne,se,peak_b,light,rock,light)
-    _tri_tinted(mesh_tool,se,sw,peak_b,shadow,rock,crest)
-    _tri_tinted(mesh_tool,sw,peak_a,peak_b,shadow,crest,light)
-    _tri_tinted(mesh_tool,sw,nw,peak_a,rock,shadow,crest)
+    _ridge_face(mesh_tool,nw,ne,peak_a,shadow,rock,crest)
+    _ridge_face(mesh_tool,ne,peak_b,peak_a,rock,light,crest)
+    _ridge_face(mesh_tool,ne,se,peak_b,light,rock,light)
+    _ridge_face(mesh_tool,se,sw,peak_b,shadow,rock,crest)
+    _ridge_face(mesh_tool,sw,peak_a,peak_b,shadow,crest,light)
+    _ridge_face(mesh_tool,sw,nw,peak_a,rock,shadow,crest)
+    # Close the underside and add a center seam for close orbit inspection.
+    _tri(mesh_tool,nw,sw,ne,shadow)
+    _tri(mesh_tool,ne,sw,se,shadow)
     mesh_tool.generate_normals()
     var peaks: ArrayMesh = mesh_tool.commit()
     var material := StandardMaterial3D.new()
-    material.vertex_color_use_as_albedo = true
-    material.albedo_color = Color.WHITE
+    SurfaceFinish.apply(material,"rock")
     material.roughness = 0.97
     material.cull_mode = BaseMaterial3D.CULL_DISABLED
     peaks.surface_set_material(0,material)
@@ -473,6 +958,47 @@ static func _make_mountain_ridges(parent: Node3D,cells: Dictionary,
     rock_instance.multimesh = multi
     parent.add_child(rock_instance)
     return transforms.size()
+
+# V26: a level, bounded visual foundation follows the ground underneath.
+# Approved site art remains upright and its local mesh is never modified.
+static func _foundation_top(cells: Dictionary,cell: Vector2i) -> float:
+    var top: float = height_at(cells,cell)
+    for z in [-0.98,0.0,0.98]:
+        for x in [-0.98,0.0,0.98]:
+            top = maxf(top,height_at(cells,cell,float(x),float(z)))
+    return top+0.055
+
+static func _append_site_foundation(tool: SurfaceTool,cells: Dictionary,
+        cell: Vector2i,visible: bool) -> float:
+    var kind: String = str(cells.get(cell,{}).get("kind","unknown"))
+    if kind in ["water","unknown"]:
+        return height_at(cells,cell)+0.07
+    var at: Vector3 = world_at(cell)
+    var top: float = _foundation_top(cells,cell)
+    var rim: Array[Vector2] = [Vector2(-0.98,-0.98),Vector2(0,-0.98),
+        Vector2(0.98,-0.98),Vector2(0.98,0),Vector2(0.98,0.98),
+        Vector2(0,0.98),Vector2(-0.98,0.98),Vector2(-0.98,0)]
+    var color := Color("#7e8176")
+    if not visible:
+        color = color.darkened(0.60)
+    var center: Vector3 = at+Vector3(0,top,0)
+    for i in range(rim.size()):
+        var a: Vector2 = rim[i]
+        var b: Vector2 = rim[(i+1)%rim.size()]
+        var hi_a: Vector3 = at+Vector3(a.x,top,a.y)
+        var hi_b: Vector3 = at+Vector3(b.x,top,b.y)
+        var lo_a: Vector3 = at+Vector3(a.x,height_at(cells,cell,a.x,a.y)-0.012,a.y)
+        var lo_b: Vector3 = at+Vector3(b.x,height_at(cells,cell,b.x,b.y)-0.012,b.y)
+        _tri(tool,center,hi_b,hi_a,color)
+        _tri(tool,hi_a,lo_a,hi_b,color.darkened(0.14))
+        _tri(tool,hi_b,lo_a,lo_b,color.darkened(0.14))
+    return top+0.015
+
+static func _place_land_site(model: Node3D,tool: SurfaceTool,
+        cells: Dictionary,cell: Vector2i,visible: bool) -> void:
+    var anchor: float = _append_site_foundation(tool,cells,cell,visible)
+    model.position = world_at(cell)+Vector3(0,anchor,0)
+    model.set_meta("terrain_anchor_v26",anchor)
 
 static func _make_sites(parent: Node3D,state: Dictionary,
         cells: Dictionary) -> int:
@@ -493,6 +1019,9 @@ static func _make_sites(parent: Node3D,state: Dictionary,
         sites.append({"kind":"relay","pos":objective["pos"],
             "owner":int(objective.get("owner",-1))})
     var drawn: int = 0
+    var foundations := SurfaceTool.new()
+    foundations.begin(Mesh.PRIMITIVE_TRIANGLES)
+    var foundation_count := 0
     for site in sites:
         var cell: Vector2i = site["pos"]
         if not cells.has(cell):
@@ -519,8 +1048,9 @@ static func _make_sites(parent: Node3D,state: Dictionary,
                 state,site,owner,visible)
             if command_hq!=null:
                 command_hq.name="Instalacion3D_city_%d_%d" % [cell.x,cell.y]
-                command_hq.position=world_at(cell)+Vector3(
-                    0,height_at(cells,cell)+0.07,0)
+                _place_land_site(command_hq,foundations,cells,cell,visible)
+                if str(known.get("kind","unknown")) not in ["water","unknown"]:
+                    foundation_count += 1
                 command_hq.set_meta("owner_public",owner)
                 command_hq.set_meta("kind","city")
                 command_hq.set_meta("battle_cell",cell)
@@ -530,8 +1060,9 @@ static func _make_sites(parent: Node3D,state: Dictionary,
             var city: Node3D=CivilianCity.build_site(state,site,owner,2)
             if city!=null:
                 city.name="Instalacion3D_city_%d_%d" % [cell.x,cell.y]
-                city.position=world_at(cell)+Vector3(
-                    0,height_at(cells,cell)+0.07,0)
+                _place_land_site(city,foundations,cells,cell,visible)
+                if str(known.get("kind","unknown")) not in ["water","unknown"]:
+                    foundation_count += 1
                 city.set_meta("owner_public",owner)
                 city.set_meta("kind","city")
                 city.set_meta("battle_cell",cell)
@@ -545,8 +1076,9 @@ static func _make_sites(parent: Node3D,state: Dictionary,
             var barracks: Node3D=InfantryBarracks.build_site(state,site,owner)
             if barracks!=null:
                 barracks.name="Instalacion3D_factory_%d_%d" % [cell.x,cell.y]
-                barracks.position=world_at(cell)+Vector3(
-                    0,height_at(cells,cell)+0.07,0)
+                _place_land_site(barracks,foundations,cells,cell,visible)
+                if str(known.get("kind","unknown")) not in ["water","unknown"]:
+                    foundation_count += 1
                 barracks.set_meta("owner_public",owner)
                 barracks.set_meta("kind","factory")
                 barracks.set_meta("battle_cell",cell)
@@ -562,8 +1094,9 @@ static func _make_sites(parent: Node3D,state: Dictionary,
             if workshop!=null:
                 workshop.name="Instalacion3D_armor_plant_%d_%d" % [
                     cell.x,cell.y]
-                workshop.position=world_at(cell)+Vector3(
-                    0,height_at(cells,cell)+0.07,0)
+                _place_land_site(workshop,foundations,cells,cell,visible)
+                if str(known.get("kind","unknown")) not in ["water","unknown"]:
+                    foundation_count += 1
                 workshop.set_meta("owner_public",owner)
                 workshop.set_meta("kind","armor_plant")
                 workshop.set_meta("battle_cell",cell)
@@ -578,8 +1111,9 @@ static func _make_sites(parent: Node3D,state: Dictionary,
             if airfield!=null:
                 airfield.name="Instalacion3D_airbase_%d_%d" % [
                     cell.x,cell.y]
-                airfield.position=world_at(cell)+Vector3(
-                    0,height_at(cells,cell)+0.07,0)
+                _place_land_site(airfield,foundations,cells,cell,visible)
+                if str(known.get("kind","unknown")) not in ["water","unknown"]:
+                    foundation_count += 1
                 airfield.set_meta("owner_public",owner)
                 airfield.set_meta("kind","airbase")
                 airfield.set_meta("battle_cell",cell)
@@ -609,8 +1143,9 @@ static func _make_sites(parent: Node3D,state: Dictionary,
             if drone_site!=null:
                 drone_site.name="Instalacion3D_drone_center_%d_%d" % [
                     cell.x,cell.y]
-                drone_site.position=world_at(cell)+Vector3(
-                    0,height_at(cells,cell)+0.07,0)
+                _place_land_site(drone_site,foundations,cells,cell,visible)
+                if str(known.get("kind","unknown")) not in ["water","unknown"]:
+                    foundation_count += 1
                 drone_site.set_meta("owner_public",owner)
                 drone_site.set_meta("kind","drone_center")
                 drone_site.set_meta("battle_cell",cell)
@@ -647,6 +1182,8 @@ static func _make_sites(parent: Node3D,state: Dictionary,
         marker.set_meta("kind",site["kind"])
         parent.add_child(marker)
         drawn += 1
+    _finish(parent,"CimentacionesTacticasV26",foundations,foundation_count,"soil")
+    parent.set_meta("terrain_foundations_v26",foundation_count)
     return drawn
 
 static func _make_units(parent: Node3D,state: Dictionary,
@@ -780,14 +1317,21 @@ static func build(state: Dictionary, selected_id: String = "", viewer: int = 0) 
                 cells[tile["cell"]] = tile
             chunks.append(chunk)
     var counters: Dictionary = {"land":0,"water":0,"unknown":0,
-        "roads":0,"shore_edges":0,"blended_tiles":0}
+        "roads":0,"shore_edges":0,"blended_tiles":0,"crossings_v39":0}
     # One palette sample per global grid corner, reused by up to four
     # tiles and across 8x8 sectors. Cache only for this render build.
     var corner_cache: Dictionary = {}
+    var water_cache: Dictionary = {}
+    var materials: Dictionary = {}
+    var height_cache: Dictionary = {}
+    var terrain_start_usec: int = Time.get_ticks_usec()
     for chunk in chunks:
-        var stats: Dictionary = _build_chunk(scene,chunk,cells,corner_cache,biome)
+        var stats: Dictionary = _build_chunk(scene,chunk,cells,corner_cache,
+            biome,water_cache,materials,height_cache)
         for key in counters:
             counters[key] = int(counters[key])+int(stats[key])
+    counters["chunk_build_ms_v42"] = float(Time.get_ticks_usec()-terrain_start_usec)/1000.0
+    counters["height_samples_v42"] = height_cache.size()
     counters["trees"] = _make_cone_trees(scene,cells,biome)
     counters["mountain_ridges"] = _make_mountain_ridges(scene,cells,biome)
     counters["sites"] = _make_sites(scene,state,cells)
@@ -910,6 +1454,11 @@ static func build(state: Dictionary, selected_id: String = "", viewer: int = 0) 
         1 if counters["mountain_ridges"]>0 else 0) + (
         1 if biome==Biomes.WINTER and counters["trees"]>0 else 0)
     counters["terrain_blend_palette_samples"] = corner_cache.size()
+    counters["water_palette_samples_v27"] = water_cache.size()
+    counters["shared_chunk_materials_v27"] = materials.size()
+    if materials.has("water"):
+        scene.set_meta("water_material_v40",materials["water"])
+    counters["site_foundations_v26"] = int(scene.get_meta("terrain_foundations_v26",0))
     scene.set_meta("board_size",dims)
     scene.set_meta("viewer",viewer)
     scene.set_meta("visual_only",true)

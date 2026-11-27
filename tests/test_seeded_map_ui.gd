@@ -14,8 +14,9 @@ func _run() -> void:
     var board = screen.board
     var picker: OptionButton = screen.scenario_picker
     var seed_picker: SpinBox = screen.map_seed_picker
-    assert(picker.item_count == 5 and seed_picker != null)
+    assert(picker.item_count == 6 and seed_picker != null)
     assert(picker.get_item_id(4) == Scenarios.RANDOM_SCENARIO_ID)
+    assert(picker.get_item_id(5) == Scenarios.GEOGRAPHIC_SCENARIO_ID)
     var original: Dictionary = board.state.duplicate(true)
 
     screen.roster_picker.select(2)
@@ -88,6 +89,24 @@ func _run() -> void:
     screen._confirm_new_game()
     assert(board.state["faction"] == 1 and board.state["control"]["turns"] == 0)
     assert(board.state["map_seed"] == 1729)
+
+    picker.select(Scenarios.GEOGRAPHIC_SCENARIO_ID)
+    screen.biome_picker.select(8)
+    seed_picker.value = 1729
+    screen._confirm_new_game()
+    assert(board.current_scenario_id==Scenarios.GEOGRAPHIC_SCENARIO_ID)
+    assert(board.state[Scenarios.GEOGRAPHY_FIELD]==Scenarios.GEOGRAPHY_VERSION)
+    assert(board.state["terrain"]==Scenarios.geographic_terrain(1729,Vector2i(10,8),"archipelago"))
+    assert(Codec.decode(Codec.encode(board.state))==board.state)
+    var geographic: Dictionary = board.state.duplicate(true)
+    assert(board.save_game())
+    picker.select(0)
+    screen._confirm_new_game()
+    screen._load_game()
+    assert(board.state==geographic)
+    assert(picker.get_selected_id()==Scenarios.GEOGRAPHIC_SCENARIO_ID)
+    screen._reroll_map_seed()
+    assert(picker.get_selected_id()==Scenarios.GEOGRAPHIC_SCENARIO_ID)
 
     for path in [Store.DEFAULT_PATH,board.autosave_path]:
         for suffix in ["",".bak",".tmp"]:
