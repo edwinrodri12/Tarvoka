@@ -301,10 +301,16 @@ static func _valid_state(state: Dictionary) -> bool:
     if state.has("map_seed"):
         if not state["map_seed"] is int or not Scenarios.valid_seed(int(state["map_seed"])):
             return false
-        var expected: Array = Scenarios.geographic_terrain(int(state["map_seed"]),dimensions,
-            Winter.from_state(state),int(state[Scenarios.GEOGRAPHY_FIELD])) if state.has(Scenarios.GEOGRAPHY_FIELD) else Scenarios.seeded_terrain(int(state["map_seed"]),dimensions)
+        var expected: Array = []
         if state.has(MixedRegions.GENERATED_FIELD):
+            if Winter.from_state(state)!=state[MixedRegions.FIELD]["primary"]:
+                return false
             expected = MixedRegions.geographic_candidate(int(state["map_seed"]),dimensions,state[MixedRegions.FIELD])
+        elif state.has(Scenarios.GEOGRAPHY_FIELD):
+            expected = Scenarios.geographic_terrain(int(state["map_seed"]),dimensions,
+                Winter.from_state(state),int(state[Scenarios.GEOGRAPHY_FIELD]))
+        else:
+            expected = Scenarios.seeded_terrain(int(state["map_seed"]),dimensions)
         if state["terrain"] != expected:
             return false
     if not state.get("units") is Array or state["units"].size() > MAX_UNITS:
