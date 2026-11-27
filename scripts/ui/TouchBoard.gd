@@ -21,6 +21,7 @@ const Visibility = preload("res://scripts/core/Visibility.gd")
 const VisualStyle = preload("res://scripts/ui/VisualStyle.gd")
 const Winter = preload("res://scripts/ui/WinterBattleBiome.gd")
 const MixedRegions = preload("res://scripts/core/MixedBiomeRegionsV49.gd")
+const MixedPreview = preload("res://scripts/ui/MixedBiomePreviewV49.gd")
 const Weather = preload("res://scripts/core/Weather.gd")
 const WeatherPainter = preload("res://scripts/ui/WeatherPainter.gd")
 const BattleVFX = preload("res://scripts/ui/BattleVFX.gd")
@@ -450,12 +451,17 @@ func _draw() -> void:
     var explored: Dictionary = Visibility.explored_cells(state, 0) if fog else {}
     var dimensions: Vector2i = map_dimensions()
     var visual_biome: String = Winter.from_state(state)
+    var regions: Dictionary = MixedPreview.regions_for(state,dimensions)
     for y in range(dimensions.y):
         for x in range(dimensions.x):
             var pos := origin + Vector2(x, y) * tile
             var terrain_type := str(state.get("terrain", [])[y][x])
+            var cell := Vector2i(x,y)
+            var region: Dictionary = regions.get(cell,{}) if not fog or explored.has(cell) else {}
+            var local_biome: String = MixedPreview.local_style(region,cell,dimensions,visual_biome)
+            var pigment: Color = VisualStyle.terrain_color(terrain_type,x,y,visual_biome) if region.is_empty() else MixedPreview.tile_tint(terrain_type,cell,region)
             var terrain_color: Color = Weather.blended_tint(
-                VisualStyle.terrain_color(terrain_type,x,y,visual_biome),
+                pigment,
                 weather_visual_previous,Weather.from_state(state),weather_blend)
             draw_rect(Rect2(pos, Vector2.ONE * tile), terrain_color)
             # Subtle tile relief reads as depth without changing top-down touch geometry.
@@ -463,8 +469,8 @@ func _draw() -> void:
             draw_line(pos + Vector2(1, tile - 1), pos + Vector2(tile - 1, tile - 1), terrain_color.darkened(0.35), maxf(1.0, tile * 0.024))
             draw_rect(Rect2(pos, Vector2.ONE * tile), Color(0.48, 0.55, 0.53, 0.60), false, 1.0)
             # Simple self-contained symbols, no borrowed art or sprite assets.
-            if visual_biome != Winter.TEMPERATE:
-                Winter.draw_biome_classic(self,terrain_type,pos,tile,visual_biome)
+            if local_biome != Winter.TEMPERATE:
+                Winter.draw_biome_classic(self,terrain_type,pos,tile,local_biome)
             elif terrain_type == "forest":
                 draw_circle(pos + tile * Vector2(0.29, 0.31), tile * 0.09, Color(0.25, 0.53, 0.27))
                 draw_circle(pos + tile * Vector2(0.65, 0.27), tile * 0.11, Color(0.20, 0.45, 0.22))
