@@ -17,6 +17,7 @@ const Logistics = preload("res://scripts/core/Logistics.gd")
 const Opening = preload("res://scripts/core/OpeningBalance.gd")
 const Weather = preload("res://scripts/core/Weather.gd")
 const Crossings = preload("res://scripts/core/LayeredCrossingsV48.gd")
+const MixedRegions = preload("res://scripts/core/MixedBiomeRegionsV49.gd")
 const Winter = preload("res://scripts/ui/WinterBattleBiome.gd")
 const Identity = preload("res://scripts/ui/FactionIdentity.gd")
 const MAX_UNITS := 256
@@ -51,6 +52,9 @@ static func encode(state: Dictionary) -> String:
         snapshot["map_seed"] = int(state["map_seed"])
     if state.has(Scenarios.GEOGRAPHY_FIELD):
         snapshot[Scenarios.GEOGRAPHY_FIELD] = state[Scenarios.GEOGRAPHY_FIELD]
+    if state.has(MixedRegions.FIELD):
+        snapshot[MixedRegions.FIELD] = state[MixedRegions.FIELD].duplicate(true)
+        snapshot[MixedRegions.SEED_FIELD] = state[MixedRegions.SEED_FIELD]
     if state.has(Crossings.FIELD):
         snapshot[Crossings.FIELD] = state[Crossings.FIELD].duplicate(true)
     if state.has("opening"):
@@ -100,6 +104,12 @@ static func decode(raw: String) -> Dictionary:
     var dimensions: Vector2i = Rules.map_size(data["terrain"])
     var state: Dictionary = data.duplicate(true)
     state.erase("version")
+    if state.has(MixedRegions.FIELD):
+        var mixed = state[MixedRegions.FIELD]
+        if not mixed is Dictionary or not _whole(mixed.get("version")) or not _whole(state.get(MixedRegions.SEED_FIELD)):
+            return {}
+        mixed["version"] = int(mixed["version"])
+        state[MixedRegions.SEED_FIELD] = int(state[MixedRegions.SEED_FIELD])
     if state.has(Crossings.FIELD):
         var config = state[Crossings.FIELD]
         if not config is Dictionary or not _whole(config.get("version")) or not config.get("records") is Array:
@@ -262,6 +272,8 @@ static func decode(raw: String) -> Dictionary:
     return state
 
 static func _valid_state(state: Dictionary) -> bool:
+    if not MixedRegions.valid_state(state):
+        return false
     if state.has("weather") and not Weather.valid(state["weather"]):
         return false
     if state.has("weather_cycle") and (
