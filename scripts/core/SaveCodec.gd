@@ -23,6 +23,21 @@ const Identity = preload("res://scripts/ui/FactionIdentity.gd")
 const MAX_UNITS := 256
 const MAX_STAT := 10000
 
+# One private canonical terrain cache. Never expose its array or bypass
+# validation of units/economy/fog. A changed seed, pair or size invalidates
+# the cache; a tampered terrain is still compared against the original.
+static var _mixed_validation_key: Array = []
+static var _mixed_validation_terrain: Array = []
+
+static func _expected_mixed_terrain(state: Dictionary,dims: Vector2i) -> Array:
+    var config: Dictionary = state[MixedRegions.FIELD]
+    var key: Array = [state["map_seed"],dims,config["version"],config["primary"],config["secondary"],state[Scenarios.GEOGRAPHY_FIELD]]
+    if key!=_mixed_validation_key:
+        _mixed_validation_terrain = MixedRegions.geographic_candidate(int(state["map_seed"]),dims,config)
+        _mixed_validation_key = key
+    return _mixed_validation_terrain
+
+
 # Portable JSON snapshot; never serialize Godot-specific Vector2i directly.
 static func encode(state: Dictionary) -> String:
     if not _valid_state(state):
@@ -305,7 +320,7 @@ static func _valid_state(state: Dictionary) -> bool:
         if state.has(MixedRegions.GENERATED_FIELD):
             if Winter.from_state(state)!=state[MixedRegions.FIELD]["primary"]:
                 return false
-            expected = MixedRegions.geographic_candidate(int(state["map_seed"]),dimensions,state[MixedRegions.FIELD])
+            expected = _expected_mixed_terrain(state,dimensions)
         elif state.has(Scenarios.GEOGRAPHY_FIELD):
             expected = Scenarios.geographic_terrain(int(state["map_seed"]),dimensions,
                 Winter.from_state(state),int(state[Scenarios.GEOGRAPHY_FIELD]))
