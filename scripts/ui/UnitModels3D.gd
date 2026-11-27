@@ -1089,6 +1089,7 @@ static func _destroyer_repaint_hull(root: Node3D, paint: Color) -> int:
 static var _destroyer_steel_texture: ImageTexture
 static var _destroyer_normal_texture: ImageTexture
 static var _destroyer_rough_texture: ImageTexture
+static var _destroyer_livery_texture: ImageTexture
 static var _destroyer_cloud_mesh: ArrayMesh
 static var _destroyer_flame_mesh: ArrayMesh
 
@@ -1208,6 +1209,42 @@ static func _destroyer_flame() -> ArrayMesh:
     _destroyer_flame_mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES,arrays)
     return _destroyer_flame_mesh
 
+# Original fictional twin-chevron insignia, a neutral pigment mask.
+# Multiplication by the faction enamel retains the official palette.
+static func _destroyer_livery() -> ImageTexture:
+    if _destroyer_livery_texture != null:
+        return _destroyer_livery_texture
+    var img := Image.create(128,48,false,Image.FORMAT_RGBA8)
+    for y in range(48):
+        for x in range(128):
+            var u: float = (float(x)+0.5)/128.0
+            var v: float = (float(y)+0.5)/48.0
+            var shade: float = 0.98
+            if u<0.045 or u>0.955 or v<0.09 or v>0.91:
+                shade = 0.65
+            elif v>0.19 and v<0.81:
+                var slash: float = absf(v-0.5)*0.23
+                if absf(u-0.43-slash)<0.028 or absf(u-0.57-slash)<0.028:
+                    shade = 0.39
+            img.set_pixel(x,y,Color(shade,shade,shade,1.0))
+    img.generate_mipmaps()
+    _destroyer_livery_texture = ImageTexture.create_from_image(img)
+    return _destroyer_livery_texture
+
+static func _destroyer_livery_uv(part: MeshInstance3D, width: float, height: float, side: int) -> void:
+    var arrays: Array = part.mesh.surface_get_arrays(0)
+    var points: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
+    var uv := PackedVector2Array()
+    for point in points:
+        # Opposite sides read in the same bow-to-stern direction.
+        uv.append(Vector2(clampf(0.5+point.x*float(side)/width,0.0,1.0),clampf(0.5-point.y/height,0.0,1.0)))
+    arrays[Mesh.ARRAY_TEX_UV] = uv
+    arrays[Mesh.ARRAY_TANGENT] = null
+    var mapped := ArrayMesh.new()
+    mapped.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES,arrays)
+    part.mesh = mapped
+    part.set_meta("destroyer_integrated_livery",true)
+
 static func _destroyer_finish(node: Node, detail: bool) -> void:
     if node is MeshInstance3D:
         var part: MeshInstance3D = node as MeshInstance3D
@@ -1285,6 +1322,10 @@ static func _destroyer_finish(node: Node, detail: bool) -> void:
                 if family!="enamel":
                     mat.roughness_texture = _destroyer_roughness()
                     mat.roughness_texture_channel = BaseMaterial3D.TEXTURE_CHANNEL_RED
+            if detail and part.get_meta("destroyer_integrated_livery",false):
+                mat.albedo_texture = _destroyer_livery()
+                mat.uv1_triplanar = false
+                mat.roughness = 0.52
             part.set_meta("destroyer_finish_family",family)
             part.set_meta("destroyer_surface_v15",true)
     for child in node.get_children():
@@ -1356,8 +1397,14 @@ static func _destroyer_bridge(root: Node3D, art_level: int) -> void:
                     Vector3(0.045,0.14,0.145),DARK)
                 _box(bridge,"CristalLateral_%d_%d" % [side,i],Vector3(sign*0.470,1.37,z),
                     Vector3(0.026,0.107,0.113),window_tint)
-        _box(bridge,"FaccionPuente_%d" % side,Vector3(sign*0.43,1.11,0.41),
-            Vector3(0.07,0.085,0.29),ARMOR)
+        if art_level>=13:
+            # Keep the painted plate above the ventilation and ahead of the door.
+            var badge: MeshInstance3D = _destroyer_insert(bridge,"FaccionPuente_%d" % side,
+                Vector3(sign*0.42,1.145,0.35),Vector3(0.24,0.075,0.075),ARMOR,true)
+            _destroyer_livery_uv(badge,0.24,0.075,side)
+        else:
+            _box(bridge,"FaccionPuente_%d" % side,Vector3(sign*0.43,1.11,0.41),
+                Vector3(0.07,0.085,0.29),ARMOR)
         if art_level>=13:
             _destroyer_insert(bridge,"PuertaServicio_%d" % side,Vector3(sign*0.425,1.045,0.55),
                 Vector3(0.15,0.19,0.047),DARK.lerp(STEEL,0.15),true)
@@ -1479,7 +1526,9 @@ static func _destroyer_navigation(root: Node3D, art_level: int) -> void:
     var panel: Array = [
         [-0.07,0.32,0.06,0.17],[-0.035,0.39,0.06,0.24],
         [0.035,0.39,0.06,0.24],[0.07,0.32,0.06,0.17]]
-    _destroyer_shell(rotor,"Radar",panel,ARMOR)
+    var radar_skin: MeshInstance3D = _destroyer_shell(rotor,"Radar",panel,ARMOR)
+    if detail:
+        radar_skin.set_meta(TANK_PAINT_META,"accent")
     _box(rotor,"FrenteSensor",Vector3(0,0.148,-0.077),
         Vector3(0.56,0.105,0.024),DARK)
     if detail:

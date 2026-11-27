@@ -117,6 +117,31 @@ func _check_material_families(model: Node3D, lod: int) -> void:
     if lod>=13:
         check(hull_mat.normal_scale<=0.25 and deck.normal_scale>hull_mat.normal_scale,"Restrained hull grain; stronger deck relief")
     check(deck.roughness_texture==hull_mat.roughness_texture,"Deck and hull reuse one roughness resource")
+    var left_badge: MeshInstance3D = model.get_node("Superestructura/FaccionPuente_-1") as MeshInstance3D
+    var right_badge: MeshInstance3D = model.get_node("Superestructura/FaccionPuente_1") as MeshInstance3D
+    var left_mat: StandardMaterial3D = left_badge.material_override as StandardMaterial3D
+    var right_mat: StandardMaterial3D = right_badge.material_override as StandardMaterial3D
+    check(left_badge.get_meta("destroyer_integrated_livery",false)==(lod>=13),"Livery inspection tier")
+    check(right_badge.get_meta("destroyer_integrated_livery",false)==(lod>=13),"Mirrored livery inspection tier")
+    if lod>=13:
+        check(_closed(left_badge.mesh) and _outward(left_badge.mesh) and _closed(right_badge.mesh) and _outward(right_badge.mesh),"Closed livery inserts")
+        check(left_mat.albedo_texture!=null and left_mat.albedo_texture==right_mat.albedo_texture and not left_mat.uv1_triplanar,"Both faction panels share planar pigment mask")
+        if left_mat.albedo_texture!=null:
+            var mask: Image = left_mat.albedo_texture.get_image()
+            check(mask!=null and mask.get_width()==128 and mask.get_height()==48,"Livery mask dimensions")
+            if mask!=null:
+                var shade: Color = mask.get_pixel(55,24)
+                var background: Color = mask.get_pixel(18,24)
+                check(background.r-shade.r>0.35 and is_equal_approx(shade.r,shade.g) and is_equal_approx(shade.g,shade.b),"Neutral high-contrast graphic")
+        var bridge: Node3D = model.get_node("Superestructura") as Node3D
+        for side in [-1,1]:
+            var badge: MeshInstance3D = bridge.get_node("FaccionPuente_%d" % side) as MeshInstance3D
+            var door: MeshInstance3D = bridge.get_node("PuertaServicio_%d" % side) as MeshInstance3D
+            var vent: MeshInstance3D = bridge.get_node("MarcoVentilacion_%d" % side) as MeshInstance3D
+            var wall: MeshInstance3D = bridge.get_node("CarcasaInferior") as MeshInstance3D
+            var bounds: AABB = badge.transform*badge.get_aabb()
+            check(not bounds.intersects(door.transform*door.get_aabb()) and not bounds.intersects(vent.transform*vent.get_aabb()),"Badge avoids door and vent")
+            check(bounds.intersects(wall.transform*wall.get_aabb()),"Badge mounted to bridge wall")
     var fx: Node3D = model.get_node("DanoNavalVisual") as Node3D
     var cloud: MeshInstance3D = fx.get_node("Humo_0") as MeshInstance3D
     check(cloud.get_meta("destroyer_irregular_cloud",false)==(lod>=13),"Irregular plume only in inspection LOD")
@@ -163,6 +188,10 @@ func _check_palette_isolation() -> void:
     var original: StandardMaterial3D = panel.material_override as StandardMaterial3D
     var other_mat: StandardMaterial3D = other.material_override as StandardMaterial3D
     var initial_color: Color = original.albedo_color
+    var badge: MeshInstance3D = first.get_node("Superestructura/FaccionPuente_1") as MeshInstance3D
+    var other_badge: MeshInstance3D = second.get_node("Superestructura/FaccionPuente_1") as MeshInstance3D
+    var badge_mask: Texture2D = (badge.material_override as StandardMaterial3D).albedo_texture
+    var other_badge_mat: StandardMaterial3D = other_badge.material_override as StandardMaterial3D
     var initial_normal: Texture2D = original.normal_texture
     var initial_grain: Texture2D = original.albedo_texture
     var initial_rough_map: Texture2D = original.roughness_texture
@@ -176,6 +205,9 @@ func _check_palette_isolation() -> void:
         check(Art.apply_faction_palette(first,faction)>0,"Repaint finished destroyer")
         var current: StandardMaterial3D = panel.material_override as StandardMaterial3D
         check(current.albedo_color.is_equal_approx(Art.faction_paint_color(faction)),"Swapped enamel")
+        var badge_material: StandardMaterial3D = badge.material_override as StandardMaterial3D
+        check(badge_material.albedo_texture==badge_mask and badge_material.albedo_color.is_equal_approx(Art.faction_paint_color(faction)),"Graphic survives faction repaint")
+        check(other_badge.material_override==other_badge_mat and other_badge_mat.albedo_color.is_equal_approx(initial_color),"Other faction graphic unaffected")
         check(is_equal_approx(current.roughness,initial_roughness) and is_equal_approx(current.metallic,initial_metallic),"Repaint retains naval finish")
         check(current.normal_texture==initial_normal and current.albedo_texture==initial_grain and current.roughness_texture==initial_rough_map,"Repaint shares texture resources")
         check(other_mat.albedo_color.is_equal_approx(initial_color) and other.material_override==other_mat,"Independent enamel unchanged")
