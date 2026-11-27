@@ -11,19 +11,32 @@ const Weather = preload("res://scripts/core/Weather.gd")
 const VERSION := 1
 const FIELD := "layered_crossings_v48"
 
-# Initial integration deliberately excludes fog, sites and relays until
-# their knowledge, supply and capture systems support layered cells.
+# V48.7: optional fog and installations; no installation or relay may
+# occupy a layered crossing. Seeded generation is still unsupported.
 static func state_index(state: Dictionary) -> Dictionary:
     if not state.has(FIELD):
         return {"valid":true,"cells":{}}
-    if state.has("fog_enabled") or state.has("economy") or state.has("control") or state.has("map_seed"):
+    if state.has("map_seed"):
         return {"valid":false,"cells":{}}
     var config = state[FIELD]
     if not config is Dictionary or config.size()!=2 or not config.get("version") is int or config["version"]!=VERSION or not config.get("records") is Array or config["records"].is_empty():
         return {"valid":false,"cells":{}}
     if not state.get("terrain") is Array:
         return {"valid":false,"cells":{}}
-    return index_records(state["terrain"],config["records"])
+    var index: Dictionary = index_records(state["terrain"],config["records"])
+    if not index["valid"]:
+        return index
+    for field in ["economy","control"]:
+        if not state.has(field):
+            continue
+        var structure = state[field]
+        var key: String = "sites" if field=="economy" else "nodes"
+        if not structure is Dictionary or not structure.get(key) is Array:
+            return {"valid":false,"cells":{}}
+        for site in structure[key]:
+            if not site is Dictionary or not site.get("pos") is Vector2i or index["cells"].has(site["pos"]):
+                return {"valid":false,"cells":{}}
+    return index
 
 static func index_records(terrain: Array,records: Array) -> Dictionary:
     if not Rules.valid_terrain(terrain) or records.size()>Rules.MAX_AREA:
@@ -107,8 +120,10 @@ static func occupancy(terrain: Array,cells: Dictionary,units: Array) -> Dictiona
 # Friendly units can be crossed but not occupied, as in Rules.reachable.
 static func reachable(terrain: Array,cells: Dictionary,units: Array,
         origin: Vector2i,domain: String,faction: int,points: int,
-        motorized: bool = false,weather: String = "clear",traction: String = "foot",trace: Dictionary = {}) -> Dictionary:
+        motorized: bool = false,weather: String = "clear",traction: String = "foot",trace: Dictionary = {},allowed: Variant = null) -> Dictionary:
     trace.clear()
+    if allowed!=null and (not allowed is Dictionary or not allowed.has(origin)):
+        return {}
     var occupancy_result: Dictionary = occupancy(terrain,cells,units)
     if not occupancy_result["valid"] or points<0 or tile_cost(terrain,cells,origin,domain,motorized,weather,traction)<0:
         return {}
@@ -125,6 +140,8 @@ static func reachable(terrain: Array,cells: Dictionary,units: Array,
         cursor += 1
         for direction in Rules.DIRECTIONS:
             var next: Vector2i = cell+direction
+            if allowed!=null and not allowed.has(next):
+                continue
             if not allows_step(terrain,cells,cell,next,domain):
                 continue
             var other: Dictionary = occupied.get(occupancy_key(next,domain,cells),{})
@@ -178,10 +195,10 @@ static func selectable_units(state: Dictionary,cell: Vector2i,viewer: int,
 static func route_for(terrain: Array,cells: Dictionary,units: Array,
         origin: Vector2i,destination: Vector2i,domain: String,faction: int,
         points: int,motorized: bool = false,weather: String = "clear",
-        traction: String = "foot") -> Array[Vector2i]:
+        traction: String = "foot",allowed: Variant = null) -> Array[Vector2i]:
     var trace: Dictionary = {}
     var legal: Dictionary = reachable(terrain,cells,units,origin,domain,
-        faction,points,motorized,weather,traction,trace)
+        faction,points,motorized,weather,traction,trace,allowed)
     var path: Array[Vector2i] = []
     if not legal.has(destination):
         return path
