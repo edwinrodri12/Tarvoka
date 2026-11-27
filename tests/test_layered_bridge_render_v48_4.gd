@@ -53,6 +53,7 @@ func _run() -> void:
         print("V48_CLEARANCE axis=",axis," ground=",ground_report," destroyer=",ship_report)
         # A failed fit is diagnostic evidence, not hidden by scaling the ship.
         assert(ship_report.has("fits_channel_width"))
+        assert(ship_report["fits_vertical"] and ship_report["fits_channel_width"])
         assert(stats["bridge_clearance_failures_v48"]==int(not bool(ship_report["fits_vertical"]) or not bool(ship_report["fits_channel_width"])))
         assert(is_equal_approx(ship.rotation.y,PI*0.5 if axis=="ns" else 0.0))
         for side in [-1,1]:
