@@ -5,6 +5,7 @@ const Scenarios = preload("res://scripts/core/Scenarios.gd")
 const Rules = preload("res://scripts/core/Rules.gd")
 const VERSION := 1
 const FIELD := "mixed_biomes_v49"
+const SEED_FIELD := "mixed_biome_seed_v49"
 
 # Two distinct visual regions with mirrored longitudinal geography.
 # Region metadata is derived rather than saved cell by cell.
@@ -46,3 +47,15 @@ static func public_regions(regions: Dictionary,observed: Dictionary) -> Dictiona
         if observed.has(cell):
             result[cell] = regions[cell].duplicate(true)
     return result
+
+# Optional visual-only save metadata independent of the tactical map seed.
+static func valid_state(state: Dictionary) -> bool:
+    if not state.has(FIELD) and not state.has(SEED_FIELD):
+        return true
+    return state.get(FIELD) is Dictionary and valid_config(state[FIELD]) and state.get(SEED_FIELD) is int and Scenarios.valid_seed(state[SEED_FIELD])
+
+static func public_for_state(state: Dictionary,observed: Dictionary) -> Dictionary:
+    if not valid_state(state) or not state.has(FIELD):
+        return {}
+    var dims: Vector2i = Rules.map_size(state.get("terrain",[]))
+    return public_regions(generate(state[SEED_FIELD],dims,state[FIELD]),observed)
