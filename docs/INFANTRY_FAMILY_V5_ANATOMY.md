@@ -138,3 +138,7 @@ Observación artística: V26 hace visible el color de facción, pero todavía ha
 ## V32 — botas con puntera y empeine protegidos
 
 La revisión visual V26 mostraba botas de silueta blanda frente a G05. V32 sustituye dos mallas superiores por ocho anillos de 24 lados, preserva extremos en Y y no modifica la suela ni su caché de contacto. Añade cuatro mallas cerradas (puntera y empeine por bota) únicamente LOD13, asentadas con intersección sobre la superficie frontal real y articuladas como hijas de la bota. Pintura moderada por rol; materiales opacos con D0–D4. Prueba identidad y geometría, anclaje y suela, más captura existente de botas. G05, LOD8 y reglas sin cambios. Rama separada preserva V30 todavía en cola. No publicar sin validar.
+
+## V32.1 — corrección V28.1 de precisión del casco
+
+V26 Pages 45922402949 y V28 Pages 45922713342 aprobados; native V28 45922713332 falló 32 veces sólo en la comprobación compuesta de topología/altura/frente del casco. La causa exacta aún no está confirmada: se elimina el paso de extracción get_faces() y se reconstruye desde los vértices nativos sin índices del ArrayMesh orgánico. El QA separa conteo, altura y borde frontal sin relajar tolerancias, y compara todos los vértices frontales originales por índice. Mantiene prueba de malla cerrada. No modifica roles, materiales ni articulaciones. Nueva ejecución requerida, V32 no aprobado todavía.

@@ -440,11 +440,25 @@ func _run() -> void:
                         if v28_shell!=null and v28_shell.has_meta("tarvoka_v28_original_bounds"):
                             var v28_before: AABB=v28_shell.get_meta("tarvoka_v28_original_bounds")
                             var v28_after: AABB=v28_shell.mesh.get_aabb()
-                            check(v28_shell.mesh.get_faces().size()==int(v28_shell.get_meta("tarvoka_v28_source_face_count")) and
-                                is_equal_approx(v28_before.position.y,v28_after.position.y) and
-                                is_equal_approx(v28_before.end.y,v28_after.end.y) and
-                                is_equal_approx(v28_before.position.z,v28_after.position.z),
-                                "V28 same helmet topology, height and front edge")
+                            var v281_arrays: Array=v28_shell.mesh.surface_get_arrays(0)
+                            var v281_vertices: PackedVector3Array=v281_arrays[Mesh.ARRAY_VERTEX]
+                            check(v281_vertices.size()==int(v28_shell.get_meta("tarvoka_v28_source_face_count")),
+                                "V28.1 same original helmet vertex count")
+                            check(is_equal_approx(v28_before.position.y,v28_after.position.y) and
+                                is_equal_approx(v28_before.end.y,v28_after.end.y),
+                                "V28.1 unchanged height "+role+" before="+str(v28_before)+" after="+str(v28_after))
+                            check(is_equal_approx(v28_before.position.z,v28_after.position.z),
+                                "V28.1 unchanged front edge "+role+" before="+str(v28_before.position.z)+" after="+str(v28_after.position.z))
+                            var v281_indices: PackedInt32Array=v28_shell.get_meta("tarvoka_v281_front_indices",PackedInt32Array())
+                            var v281_front: PackedVector3Array=v28_shell.get_meta("tarvoka_v281_front_vertices",PackedVector3Array())
+                            var v281_same: bool=not v281_front.is_empty() and v281_indices.size()==v281_front.size()
+                            if v281_same:
+                                for v281_i in range(v281_indices.size()):
+                                    var v281_index: int=v281_indices[v281_i]
+                                    if v281_index<0 or v281_index>=v281_vertices.size() or not v281_vertices[v281_index].is_equal_approx(v281_front[v281_i]):
+                                        v281_same=false
+                                        break
+                            check(v281_same,"V28.1 every original front vertex preserved "+role)
                             var v28_front: Vector3=Vector3(0.1,v28_before.get_center().y,v28_before.position.z)
                             check(Finish._helmet_vertex_v28(v28_front,v28_before,Finish.HELMET_PROFILE_V28[role]).is_equal_approx(v28_front),
                                 "V28 front visor seat unchanged")

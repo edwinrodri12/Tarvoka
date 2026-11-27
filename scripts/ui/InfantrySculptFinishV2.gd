@@ -520,18 +520,33 @@ static func _refine_helmet_v28(model: Node3D,hero: bool)->bool:
     if helmet==null or not helmet.mesh is ArrayMesh:
         return false
     var original: AABB=helmet.mesh.get_aabb()
-    var faces: PackedVector3Array=helmet.mesh.get_faces()
-    if faces.is_empty() or original.size.y<=0.0:
+    # Read the native surface directly: get_faces() goes through the
+    # engine's triangle extraction/cache, which need not retain the
+    # original vertex precision. The organic source is an unindexed soup.
+    var arrays: Array=helmet.mesh.surface_get_arrays(0)
+    var vertices: PackedVector3Array=arrays[Mesh.ARRAY_VERTEX]
+    var indices: Variant=arrays[Mesh.ARRAY_INDEX]
+    if vertices.is_empty() or vertices.size()%3!=0 or original.size.y<=0.0:
+        return false
+    if indices!=null and not indices.is_empty():
         return false
     var tool:=SurfaceTool.new()
     tool.begin(Mesh.PRIMITIVE_TRIANGLES)
     var profile: Vector2=HELMET_PROFILE_V28[role]
-    for vertex in faces:
+    var front_indices:=PackedInt32Array()
+    var front_vertices:=PackedVector3Array()
+    for i in range(vertices.size()):
+        var vertex: Vector3=vertices[i]
+        if vertex.z<=original.get_center().z:
+            front_indices.append(i)
+            front_vertices.append(vertex)
         tool.add_vertex(_helmet_vertex_v28(vertex,original,profile))
     tool.generate_normals()
     helmet.mesh=tool.commit()
     helmet.set_meta("tarvoka_v28_original_bounds",original)
-    helmet.set_meta("tarvoka_v28_source_face_count",faces.size())
+    helmet.set_meta("tarvoka_v28_source_face_count",vertices.size())
+    helmet.set_meta("tarvoka_v281_front_indices",front_indices)
+    helmet.set_meta("tarvoka_v281_front_vertices",front_vertices)
     model.set_meta(HELMET_V28,role)
     return true
 
