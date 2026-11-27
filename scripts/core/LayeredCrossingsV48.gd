@@ -107,7 +107,8 @@ static func occupancy(terrain: Array,cells: Dictionary,units: Array) -> Dictiona
 # Friendly units can be crossed but not occupied, as in Rules.reachable.
 static func reachable(terrain: Array,cells: Dictionary,units: Array,
         origin: Vector2i,domain: String,faction: int,points: int,
-        motorized: bool = false,weather: String = "clear",traction: String = "foot") -> Dictionary:
+        motorized: bool = false,weather: String = "clear",traction: String = "foot",trace: Dictionary = {}) -> Dictionary:
+    trace.clear()
     var occupancy_result: Dictionary = occupancy(terrain,cells,units)
     if not occupancy_result["valid"] or points<0 or tile_cost(terrain,cells,origin,domain,motorized,weather,traction)<0:
         return {}
@@ -136,6 +137,7 @@ static func reachable(terrain: Array,cells: Dictionary,units: Array,
             if total>budget or (costs.has(next) and int(costs[next])<=total):
                 continue
             costs[next] = total
+            trace[next] = cell
             pending.append(next)
     var result: Dictionary = {}
     for cell in costs:
@@ -170,3 +172,25 @@ static func selectable_units(state: Dictionary,cell: Vector2i,viewer: int,
             "friendly":int(unit["faction"])==viewer})
     result.sort_custom(func(a,b): return int(a["layer"])<int(b["layer"]))
     return result
+
+# Reconstruct the actual cheapest legal route, never interpolate straight
+# across unrelated terrain. Only a legal endpoint may request playback.
+static func route_for(terrain: Array,cells: Dictionary,units: Array,
+        origin: Vector2i,destination: Vector2i,domain: String,faction: int,
+        points: int,motorized: bool = false,weather: String = "clear",
+        traction: String = "foot") -> Array[Vector2i]:
+    var trace: Dictionary = {}
+    var legal: Dictionary = reachable(terrain,cells,units,origin,domain,
+        faction,points,motorized,weather,traction,trace)
+    var path: Array[Vector2i] = []
+    if not legal.has(destination):
+        return path
+    var cursor: Vector2i = destination
+    path.append(cursor)
+    while cursor!=origin:
+        if not trace.has(cursor) or path.size()>Rules.MAX_AREA:
+            return []
+        cursor = trace[cursor]
+        path.append(cursor)
+    path.reverse()
+    return path
