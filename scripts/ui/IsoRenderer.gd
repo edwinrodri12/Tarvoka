@@ -18,6 +18,7 @@ const UnitArt = preload("res://scripts/ui/UnitArt.gd")
 const UnitSprites = preload("res://scripts/ui/UnitSpriteAtlas.gd")
 const WorldArt = preload("res://scripts/ui/WorldArt.gd")
 const Winter = preload("res://scripts/ui/WinterBattleBiome.gd")
+const MixedPreview = preload("res://scripts/ui/MixedBiomePreviewV49.gd")
 const CommandArt = preload("res://scripts/ui/CommandCityArtV14.gd")
 const HeadquartersSprite = preload("res://scripts/ui/HeadquartersSpriteV15.gd")
 const BattleVFX = preload("res://scripts/ui/BattleVFX.gd")
@@ -73,6 +74,7 @@ static func draw_board(canvas: Control, state: Dictionary, selected_id: String,
     var explored: Dictionary = Visibility.explored_cells(state, 0) if fog else {}
     var detail: int = VisualBudget.detail_level(hw,battery_saver)
     var visual_biome: String = Winter.from_state(state)
+    var regions: Dictionary = MixedPreview.regions_for(state,dims)
     var bounds: Rect2i = VisualBudget.visible_grid_bounds(canvas.size,zoom,pan,dims)
     var base_origin: Vector2 = IsoTransform.origin(canvas.size,zoom,pan,dims)
     var drawn := 0
@@ -99,8 +101,11 @@ static func draw_board(canvas: Control, state: Dictionary, selected_id: String,
                     unknown += 1
                     continue
                 var terrain: String = str(state["terrain"][y][x])
+                var region: Dictionary = regions.get(cell,{})
+                var local_biome: String = MixedPreview.local_style(region,cell,dims,visual_biome)
+                var pigment: Color = VisualStyle.terrain_color(terrain,x,y,visual_biome) if region.is_empty() else MixedPreview.tile_tint(terrain,cell,region)
                 var tint: Color = Weather.blended_tint(
-                    VisualStyle.terrain_color(terrain,x,y,visual_biome),
+                    pigment,
                     weather_before,Weather.from_state(state),weather_blend)
                 _tile(canvas,vertices,tint)
                 if detail == VisualBudget.DETAIL_FULL:
@@ -110,7 +115,7 @@ static func draw_board(canvas: Control, state: Dictionary, selected_id: String,
                         maxf(1.0,hw*0.025),true)
                 if (not fog or visible.has(cell)) and VisualBudget.should_draw_terrain(detail,terrain):
                     WorldArt.draw_terrain(canvas,terrain,c,hw,phase,depth*17+x,
-                        visual_biome)
+                        local_biome)
                     decorated += 1
                 WeatherPainter.draw_iso(canvas,cell,c,hw,Weather.from_state(state),battery_saver)
                 if fog and not visible.has(cell):
