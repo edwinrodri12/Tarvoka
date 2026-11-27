@@ -76,6 +76,40 @@ static func biome_texture(biome: String) -> Texture2D:
     _cached[key] = result
     return result
 
+# V49.5: one neutral microtexture for the two-region transition.
+# It is a scene-wide blend of microdetail, not spatial material mixing;
+# region-specific vertex pigments and meshes provide spatial variation.
+# Canonical ordering limits the cache to 36 unordered pairs.
+static func mixed_microtexture(primary: String,secondary: String) -> Texture2D:
+    var ordered: Array[String] = [primary,secondary]
+    ordered.sort()
+    var key: String = "mixed_v49_"+ordered[0]+"_"+ordered[1]
+    if _cached.has(key):
+        return _cached[key]
+    var a: Image = biome_texture(ordered[0]).get_image()
+    var b: Image = biome_texture(ordered[1]).get_image()
+    var result: Image = Image.create(TILE_SIZE,TILE_SIZE,false,Image.FORMAT_RGBA8)
+    for y in range(TILE_SIZE):
+        for x in range(TILE_SIZE):
+            result.set_pixel(x,y,a.get_pixel(x,y).lerp(b.get_pixel(x,y),0.5))
+    result.generate_mipmaps()
+    var texture_result: ImageTexture = ImageTexture.create_from_image(result)
+    # Retain at most four mixed pair textures; materials hold references
+    # while a scene is alive. The nine original textures stay cached.
+    var mixed_keys: Array = []
+    for existing in _cached:
+        if str(existing).begins_with("mixed_v49_"):
+            mixed_keys.append(existing)
+    if mixed_keys.size()>=4:
+        _cached.erase(mixed_keys[0])
+    _cached[key] = texture_result
+    return texture_result
+
+static func apply_mixed_soil(material: StandardMaterial3D,primary: String,secondary: String) -> void:
+    apply(material,"soil")
+    material.albedo_texture = mixed_microtexture(primary,secondary)
+    material.roughness = 0.92
+
 static func apply_biome_soil(material: StandardMaterial3D,biome: String) -> void:
     apply(material,"soil")
     material.albedo_texture = biome_texture(biome)
