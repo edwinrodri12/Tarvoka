@@ -1101,10 +1101,11 @@ static func _destroyer_grain() -> ImageTexture:
             var u: float = TAU*float(x)/64.0
             var v: float = TAU*float(y)/64.0
             var grain: float = 0.5+0.5*sin(u*19.0+cos(v*7.0))*cos(v*17.0-u*3.0)
-            var streak: float = 0.5+0.5*sin(u*9.0+v)
-            # Multi-scale periodic tonal variation; no baked faction hue.
+            var mottling: float = 0.5+0.25*sin(3.0*u+2.0*v+sin(5.0*v))+0.25*cos(2.0*u-3.0*v)
+            # Break the conspicuous repeating bands in the V1.19 real renders.
+            # Low-amplitude neutral grain retains pigment and broad form.
             var patina: float = 0.5+0.5*cos(u)*sin(v)
-            var shade: float = 0.80+0.065*grain+0.075*streak+0.06*patina
+            var shade: float = 0.89+0.035*grain+0.045*mottling+0.03*patina
             img.set_pixel(x,y,Color(shade,shade,shade,1.0))
     img.generate_mipmaps()
     _destroyer_steel_texture = ImageTexture.create_from_image(img)
@@ -1119,8 +1120,8 @@ static func _destroyer_relief() -> ImageTexture:
         for x in range(64):
             var u: float = TAU*float(x)/64.0
             var v: float = TAU*float(y)/64.0
-            var dx: float = 0.055*cos(u*8.0+v*2.0)+0.022*sin(u*17.0-v*3.0)
-            var dy: float = 0.018*cos(u*8.0+v*2.0)
+            var dx: float = 0.018*cos(u*5.0+v*3.0+sin(v*4.0))+0.012*sin(u*17.0-v*13.0)
+            var dy: float = 0.016*cos(v*7.0-u*3.0+sin(u*2.0))+0.010*sin(v*19.0+u*11.0)
             var normal: Vector3 = Vector3(dx,dy,1.0).normalized()
             img.set_pixel(x,y,Color(normal.x*0.5+0.5,normal.y*0.5+0.5,normal.z*0.5+0.5,1.0))
     img.generate_mipmaps()
@@ -1137,7 +1138,7 @@ static func _destroyer_roughness() -> ImageTexture:
         for x in range(64):
             var u: float = TAU*float(x)/64.0
             var v: float = TAU*float(y)/64.0
-            var shade: float = 0.84+0.08*cos(u*2.0+v)*sin(v*3.0)+0.06*sin(u*13.0+v*2.0)
+            var shade: float = 0.91+0.04*cos(u*2.0+v)*sin(v*3.0)+0.025*sin(u*13.0+v*2.0+cos(v*5.0))
             img.set_pixel(x,y,Color(shade,shade,shade,1.0))
     img.generate_mipmaps()
     _destroyer_rough_texture = ImageTexture.create_from_image(img)
@@ -1269,14 +1270,14 @@ static func _destroyer_finish(node: Node, detail: bool) -> void:
                     mat.vertex_color_use_as_albedo = true
                     mat.emission = Color("#F66A24")
                     mat.emission_energy_multiplier = 0.38
-            if detail and (label in ["CascoNaval","Cubierta","Helipuerto","CarcasaInferior","Puente","TechoPuente","CarcasaMastil","CarcasaTorreta","RegistroProa","TapaBiselada"] or label.begins_with("RegistroPopa") or label.begins_with("TapaModulo_") or label.begins_with("RegistroServicio_")):
+            if detail and (label in ["CascoNaval","Cubierta","Helipuerto","CarcasaInferior","Puente","TechoPuente","CarcasaMastil","CarcasaTorreta","RegistroProa","TapaBiselada"] or label.begins_with("RegistroPopa") or label.begins_with("TapaModulo_") or label.begins_with("RegistroServicio_") or label.begins_with("PuertaServicio_") or label=="PuertaPosterior"):
                 mat.albedo_texture = _destroyer_grain()
                 mat.uv1_triplanar = true
                 mat.uv1_triplanar_sharpness = 4.0
                 mat.uv1_scale = Vector3(5.0,5.0,5.0) if family=="deck" else Vector3(3.0,3.0,3.0)
                 mat.normal_enabled = true
                 mat.normal_texture = _destroyer_relief()
-                mat.normal_scale = 0.65 if family=="deck" else (0.24 if family=="enamel" else 0.40)
+                mat.normal_scale = 0.48 if family=="deck" else (0.16 if family=="enamel" else (0.22 if family=="hull" else 0.28))
                 if family!="enamel":
                     mat.roughness_texture = _destroyer_roughness()
                     mat.roughness_texture_channel = BaseMaterial3D.TEXTURE_CHANNEL_RED
@@ -1353,18 +1354,26 @@ static func _destroyer_bridge(root: Node3D, art_level: int) -> void:
                     Vector3(0.026,0.107,0.113),window_tint)
         _box(bridge,"FaccionPuente_%d" % side,Vector3(sign*0.43,1.11,0.41),
             Vector3(0.07,0.085,0.29),ARMOR)
-        _box(bridge,"PuertaServicio_%d" % side,Vector3(sign*0.425,1.045,0.55),
-            Vector3(0.047,0.19,0.15),DARK)
-        _box(bridge,"TiradorServicio_%d" % side,Vector3(sign*0.455,1.055,0.56),
+        if art_level>=13:
+            _destroyer_insert(bridge,"PuertaServicio_%d" % side,Vector3(sign*0.425,1.045,0.55),
+                Vector3(0.15,0.19,0.047),DARK.lerp(STEEL,0.15),true)
+        else:
+            _box(bridge,"PuertaServicio_%d" % side,Vector3(sign*0.425,1.045,0.55),
+                Vector3(0.047,0.19,0.15),DARK)
+        _box(bridge,"TiradorServicio_%d" % side,Vector3(sign*0.453,1.055,0.56),
             Vector3(0.021,0.055,0.025),METAL)
     _box(bridge,"ApoyoMastil",Vector3(0,1.55,0.28),
         Vector3(0.29,0.08,0.29),DARK)
     # Aft-facing inspection and service details, attached to the existing wall.
     _box(bridge,"MarcoPosterior",Vector3(0,1.045,0.702),
         Vector3(0.31,0.21,0.034),DARK)
-    _box(bridge,"PuertaPosterior",Vector3(0,1.045,0.724),
-        Vector3(0.25,0.17,0.019),STEEL)
-    _box(bridge,"TiradorPosterior",Vector3(0.083,1.045,0.742),
+    if art_level>=13:
+        _destroyer_insert(bridge,"PuertaPosterior",Vector3(0,1.045,0.724),
+            Vector3(0.25,0.17,0.019),STEEL)
+    else:
+        _box(bridge,"PuertaPosterior",Vector3(0,1.045,0.724),
+            Vector3(0.25,0.17,0.019),STEEL)
+    _box(bridge,"TiradorPosterior",Vector3(0.083,1.045,0.740),
         Vector3(0.025,0.060,0.019),METAL)
     if art_level >= 13:
         for side in [-1,1]:

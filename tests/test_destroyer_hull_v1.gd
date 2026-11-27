@@ -114,6 +114,8 @@ func _check_material_families(model: Node3D, lod: int) -> void:
         check(deck.normal_scale>0.40,"Deck relief differentiated from hull")
     var hull_mat: StandardMaterial3D = (model.get_node("CascoNaval") as MeshInstance3D).material_override as StandardMaterial3D
     check((hull_mat.roughness_texture!=null)==(lod>=13),"Inspection roughness map tier")
+    if lod>=13:
+        check(hull_mat.normal_scale<=0.25 and deck.normal_scale>hull_mat.normal_scale,"Restrained hull grain; stronger deck relief")
     check(deck.roughness_texture==hull_mat.roughness_texture,"Deck and hull reuse one roughness resource")
     var fx: Node3D = model.get_node("DanoNavalVisual") as Node3D
     var cloud: MeshInstance3D = fx.get_node("Humo_0") as MeshInstance3D
@@ -254,6 +256,16 @@ func _run() -> void:
             check(bridge != null, "Bridge present")
             if bridge != null:
                 check(bridge.has_node("PuertaPosterior"), "Aft service details")
+                for key in ["Posterior","Servicio_-1","Servicio_1"]:
+                    var door: MeshInstance3D = bridge.get_node_or_null("Puerta"+key) as MeshInstance3D
+                    var handle: MeshInstance3D = bridge.get_node_or_null("Tirador"+key) as MeshInstance3D
+                    check(door!=null and handle!=null,"Service door and handle "+key)
+                    if door!=null and handle!=null:
+                        check(door.get_meta("destroyer_beveled_insert",false)==(lod>=13),"Beveled service door LOD")
+                        check((door.transform*door.get_aabb()).intersects(handle.transform*handle.get_aabb()),"Handle overlaps service door")
+                        if lod>=13:
+                            check(_closed(door.mesh) and _outward(door.mesh),"Closed outward service door")
+                            check((door.material_override as StandardMaterial3D).roughness_texture!=null,"Service door shared metal finish")
                 check(bridge.has_node("LamaVentilacion_1_0") == (lod >= 13), "Service detail tier")
             if bridge != null:
                 for i in range(3):
