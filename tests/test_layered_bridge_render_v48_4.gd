@@ -157,6 +157,7 @@ func _run() -> void:
     _check_mixed_and_fog()
     await _capture_mixed_regions()
     await _stress_large_regions()
+    await _capture_urban_finish()
     print("PASS V48_4_NATIVE_BRIDGE: real unit bounds, two axes, ramps and read-only water surface")
     quit(0)
 
@@ -410,3 +411,53 @@ func _check_live_layered_orders() -> void:
     viewer.free()
     board.free()
     print("PASS V50_6_LIVE_LAYERED: exact target cycling, cancel, explicit commit and opt-in guard")
+
+func _capture_urban_finish() -> void:
+    var tool := SurfaceTool.new()
+    tool.begin(Mesh.PRIMITIVE_TRIANGLES)
+    var surface: Dictionary = {"x":0,"z":0,"top":0.2,"half":1.2,"corners":PackedFloat32Array([0.2,0.2,0.2,0.2])}
+    Terrain._append_urban_plaza(tool,Vector3.ZERO,surface,Vector2i(0,0))
+    var mesh: ArrayMesh = tool.commit()
+    # 15 subdivided quads (8 triangles each) and 8 utility-cover triangles.
+    assert(mesh.surface_get_array_len(0)==384)
+    var bounds: AABB = mesh.get_aabb()
+    assert(bounds.position.x>=-1.2 and bounds.end.x<=1.2)
+    assert(bounds.position.z>=-1.2 and bounds.end.z<=1.2)
+    assert(bounds.end.y<=0.25)
+    var map: Array = []
+    for y in range(8):
+        var row: Array = []
+        for x in range(10):
+            row.append("road" if y==3 else ("forest" if x==2 and y in [1,5] else "plain"))
+        map.append(row)
+    var state: Dictionary = Session.start([],map)
+    state["visual_biome"] = "urban"
+    var original: Dictionary = state.duplicate(true)
+    var model: Node3D = Terrain.build(state)
+    assert(model!=null and state==original)
+    assert(model.get_meta("render_stats")["shared_chunk_materials_v27"]<=3)
+    root.add_child(model)
+    var light := DirectionalLight3D.new()
+    light.rotation_degrees = Vector3(-55,-35,0)
+    light.light_energy = 1.1
+    root.add_child(light)
+    var camera := Camera3D.new()
+    camera.projection = Camera3D.PROJECTION_ORTHOGONAL
+    camera.size = 12.0
+    root.add_child(camera)
+    var focus: Vector3 = Terrain.world_at(Vector2i(4,3))
+    for angle in [0,1]:
+        camera.position = focus+(Vector3(9,13,10) if angle==0 else Vector3(-10,9,8))
+        camera.look_at(focus)
+        camera.make_current()
+        for frame in range(12):
+            await process_frame
+        await RenderingServer.frame_post_draw
+        var capture: Image = root.get_texture().get_image()
+        assert(capture!=null and not capture.is_empty())
+        assert(capture.save_png("res://artifacts/tarvoka_urban_v51_3_%d.png" % angle)==OK)
+    assert(state==original)
+    model.free()
+    light.free()
+    camera.free()
+    print("PASS V51_3_URBAN: bounded plaza mesh, shared materials and two native captures")

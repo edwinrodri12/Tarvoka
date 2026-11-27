@@ -70,6 +70,7 @@ jobs:
           timeout 150s /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . --script res://tests/test_seeded_map_ui.gd 2>&1 | tee /tmp/v49-setup.log
           if grep -E 'SCRIPT ERROR:|Parse Error:|Assertion failed' /tmp/v49-setup.log; then exit 1; fi
           grep -q 'PASS seeded map UI:' /tmp/v49-setup.log
+          grep -q 'PASS V51_3_GEOGRAPHIC_BOARD:' /tmp/v49-setup.log
       - name: Render real bridge and actual unit envelopes
         shell: bash
         run: |
@@ -89,6 +90,9 @@ jobs:
           done
           grep -q "V50_LARGE_MAP" /tmp/v49-render.log
           grep -q "PASS V50_6_LIVE_LAYERED:" /tmp/v49-render.log
+          grep -q "PASS V51_3_URBAN:" /tmp/v49-render.log
+          test -s artifacts/tarvoka_urban_v51_3_0.png
+          test -s artifacts/tarvoka_urban_v51_3_1.png
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -98,3 +102,4 @@ jobs:
             artifacts/tarvoka_bridge_v48_4_*.png
             artifacts/tarvoka_mixed_v49_6_*.png
             artifacts/tarvoka_mixed_v50_2_large_*.png
+            artifacts/tarvoka_urban_v51_3_*.png
