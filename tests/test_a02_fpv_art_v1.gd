@@ -476,15 +476,32 @@ func _run()->void:
         # full silhouette. Match the kind of close inspection used for P06.
         var macro_count:int=0
         for view in [
-            ["crown",Vector3(0,5,0),Vector3.FORWARD],
-            ["front",Vector3(1.6,2.5,-3.5),Vector3.UP],
-            ["rear",Vector3(-1.6,2.5,3.5),Vector3.UP]]:
-            camera.position=view[1]
-            camera.size=1.35
-            camera.look_at(Vector3(0,1.06,0),view[2])
+            ["crown",Vector3(0,5,0),Vector3.FORWARD,Art.PAINT],
+            ["front",Vector3(1.6,2.5,-3.5),Vector3.UP,"A02_FrontVisor"],
+            ["rear",Vector3(-1.6,2.5,3.5),Vector3.UP,"A02_V5_RearBadge"]]:
+            var detail:=inspection.find_child(str(view[3]),true,false) as MeshInstance3D
+            var central:=inspection.find_child("A02_ClosedCentralShell",true,false) as MeshInstance3D
+            check(detail!=null and central!=null,"V21 named macro target exists")
+            if detail==null or central==null:
+                continue
+            # Use the actual world-space model after factory transforms.
+            # Center the subject, not an assumed author-space Y coordinate.
+            var bounds:AABB=detail.global_transform*detail.mesh.get_aabb()
+            if str(view[0])!="crown":
+                bounds=bounds.merge(central.global_transform*central.mesh.get_aabb())
+            var target:Vector3=bounds.get_center()
+            var direction:Vector3=view[1]
+            camera.position=target+direction
+            camera.size=1.35 if str(view[0])=="crown" else 1.65
+            camera.look_at(target,view[2])
             await process_frame
             await process_frame
             await process_frame
+            for i in range(8):
+                var projected:Vector2=camera.unproject_position(bounds.get_endpoint(i))
+                check(projected.x>=12.0 and projected.x<=float(vp.size.x)-12.0 and
+                    projected.y>=12.0 and projected.y<=float(vp.size.y)-12.0,
+                    "V21 intended macro subject is not clipped")
             var image:Image=vp.get_texture().get_image()
             if image!=null and not image.is_empty() and image.save_png(out+"/a02-v19-macro-"+str(view[0])+".png")==OK:
                 macro_count+=1
