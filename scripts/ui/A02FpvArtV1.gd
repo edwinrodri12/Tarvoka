@@ -299,8 +299,11 @@ static func build(root:Node3D,faction:Color,hero:bool)->bool:
         var side:float=-1.0 if i%2==0 else 1.0
         var depth:float=-1.0 if i<2 else 1.0
         var at:=Vector3(side*0.61,0.98,depth*0.52)
-        var shoulder:=_part(body,"A02_SculptedShoulder_"+str(i),sculpt,
-            Vector3(side*0.34,0.96,depth*0.28),Vector3(0.75,0.24,0.32),shell)
+        # V22: give these existing gray ornamental surfaces the same
+        # layered pigment and variable sheen as the central sculpture.
+        # Reuse the exact sealed mesh topology and existing material.
+        var shoulder:=_part(body,"A02_SculptedShoulder_"+str(i),shell_mesh,
+            Vector3(side*0.34,0.96,depth*0.28),Vector3(0.75,0.24,0.32),coated_shell)
         shoulder.rotation_degrees.y=-side*depth*34.0
         _part(body,"A02_ClosedRotorGuard_"+str(i),guard_mesh,
             at,Vector3.ONE,coated_guard)
@@ -378,6 +381,7 @@ static func build(root:Node3D,faction:Color,hero:bool)->bool:
         if part.get_parent()!=effects:
             part.set_meta(BASE_MATERIAL,part.material_override)
     root.set_meta(DAMAGE,0)
+    root.set_meta("tarvoka_a02_v22_outer_surface_finish",true)
     root.set_meta("tarvoka_a02_v21_distinct_end_art",true)
     root.set_meta("tarvoka_a02_v20_material_relief",true)
     root.set_meta("tarvoka_a02_v20_surface_atlas",true)
