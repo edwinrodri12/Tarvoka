@@ -9,7 +9,7 @@ const Weather = preload("res://scripts/core/Weather.gd")
 const Crossings = preload("res://scripts/core/LayeredCrossingsV48.gd")
 
 # Immutable movement action. Relocation is once per turn; it does NOT consume a subsequent attack.
-static func move(units: Array, unit_id: String, destination: Vector2i, faction: int, terrain: Array, weather: String = "clear",bridge_cells: Dictionary = {}) -> Dictionary:
+static func move(units: Array, unit_id: String, destination: Vector2i, faction: int, terrain: Array, weather: String = "clear",bridge_cells: Dictionary = {},allowed: Variant = null) -> Dictionary:
     var rejected := {"valid": false, "units": units.duplicate(true)}
     if not Rules.inside(destination,terrain) or unit_id.is_empty():
         return rejected
@@ -47,7 +47,7 @@ static func move(units: Array, unit_id: String, destination: Vector2i, faction: 
     if not bridge_cells.is_empty():
         var legal: Dictionary = Crossings.reachable(terrain,bridge_cells,result,
             mover["pos"],Domains.domain(mover),faction,Logistics.movement_budget(mover),
-            Logistics.road_fast(mover),weather,Weather.traction(mover))
+            Logistics.road_fast(mover),weather,Weather.traction(mover),{},allowed)
         if not legal.has(destination):
             return rejected
         Logistics.consume_move(mover,int(legal[destination]))
