@@ -10,6 +10,7 @@ const Domains = preload("res://scripts/core/Domains.gd")
 const Weather = preload("res://scripts/core/Weather.gd")
 const Scenarios = preload("res://scripts/core/Scenarios.gd")
 const VERSION := 1
+const GEOGRAPHIC_VERSION := 2
 const FIELD := "layered_crossings_v48"
 
 # V48.7: optional fog and installations; no installation or relay may
@@ -20,14 +21,14 @@ static func state_index(state: Dictionary) -> Dictionary:
     if state.has("map_seed") and state.get(Scenarios.GEOGRAPHY_FIELD)!=Scenarios.GEOGRAPHY_VERSION:
         return {"valid":false,"cells":{}}
     var config = state[FIELD]
-    if not config is Dictionary or config.size()!=2 or not config.get("version") is int or config["version"]!=VERSION or not config.get("records") is Array or config["records"].is_empty():
+    if not config is Dictionary or config.size()!=2 or not config.get("version") is int or config["version"] not in ([VERSION,GEOGRAPHIC_VERSION] if state.has("map_seed") else [VERSION]) or not config.get("records") is Array or config["records"].is_empty():
         return {"valid":false,"cells":{}}
     if not state.get("terrain") is Array:
         return {"valid":false,"cells":{}}
     var index: Dictionary = index_records(state["terrain"],config["records"])
     if not index["valid"]:
         return index
-    if state.has("map_seed") and config["records"]!=geographic_records(state["terrain"]):
+    if state.has("map_seed") and config["records"]!=geographic_records(state["terrain"],int(config["version"])):
         return {"valid":false,"cells":{}}
     for field in ["economy","control"]:
         if not state.has(field):
@@ -44,7 +45,7 @@ static func state_index(state: Dictionary) -> Dictionary:
 # V51: derive only safe, symmetric single-tile elevated spans from the
 # existing map. Two flat approach tiles per end, no installation anchors,
 # no overlapping ramps. Do not alter the underlying reproducible terrain.
-static func geographic_records(terrain: Array) -> Array:
+static func _geographic_records_v1(terrain: Array) -> Array:
     if not Rules.valid_terrain(terrain):
         return []
     var dims: Vector2i = Rules.map_size(terrain)
@@ -86,6 +87,88 @@ static func geographic_records(terrain: Array) -> Array:
                 records.append({"x":right.x,"y":right.y,"axis":axis})
                 break
     return records
+
+# V52: preserve canonical V1 saves, then add complete continuous spans
+# across wider channels. Symmetric runs share only the deck itself;
+# approaches still need two unobstructed cells and cannot overlap.
+static func geographic_records(terrain: Array,version: int = GEOGRAPHIC_VERSION) -> Array:
+    if version not in [VERSION,GEOGRAPHIC_VERSION] or not Rules.valid_terrain(terrain):
+        return []
+    var records: Array = _geographic_records_v1(terrain)
+    if version==VERSION:
+        return records
+    var dims: Vector2i = Rules.map_size(terrain)
+    var reserved: Dictionary = {}
+    for anchor in Scenarios._large_anchor_cells(dims):
+        reserved[anchor] = true
+    for record in records:
+        var cell := Vector2i(record["x"],record["y"])
+        var direction: Vector2i = Vector2i.RIGHT if record["axis"]=="ew" else Vector2i.DOWN
+        for offset in range(-2,3):
+            reserved[cell+direction*offset] = true
+    for y in range(1,dims.y-1):
+        for x in range(1,dims.x-1):
+            for axis in ["ew","ns"]:
+                var start := Vector2i(x,y)
+                var direction: Vector2i = Vector2i.RIGHT if axis=="ew" else Vector2i.DOWN
+                if not _span_tile(terrain,start,direction) or _span_tile(terrain,start-direction,direction):
+                    continue
+                var span: Array[Vector2i] = []
+                var at: Vector2i = start
+                while _span_tile(terrain,at,direction):
+                    span.append(at)
+                    at += direction
+                if span.size()<2:
+                    continue
+                var deck: Dictionary = {}
+                for cell in span:
+                    deck[cell] = true
+                    deck[Vector2i(dims.x-1-cell.x,cell.y)] = true
+                var claimed: Dictionary = {}
+                var safe := true
+                for cell in deck:
+                    if reserved.has(cell) or not _span_tile(terrain,cell,direction):
+                        safe = false
+                        break
+                    claimed[cell] = true
+                if not safe:
+                    continue
+                for cell in deck:
+                    for side in [-1,1]:
+                        if deck.has(cell+direction*side):
+                            continue
+                        for reach in [1,2]:
+                            var approach: Vector2i = cell+direction*side*reach
+                            if not Rules.inside(approach,terrain) or reserved.has(approach) or claimed.has(approach):
+                                safe = false
+                                continue
+                            if terrain[approach.y][approach.x] not in ["plain","road"]:
+                                safe = false
+                            claimed[approach] = true
+                if not safe:
+                    continue
+                var added: Array = []
+                # Canonical row-major ordering independent of dictionary iteration.
+                for row in range(dims.y):
+                    for col in range(dims.x):
+                        if deck.has(Vector2i(col,row)):
+                            added.append({"x":col,"y":row,"axis":axis})
+                if not index_records(terrain,records+added)["valid"]:
+                    continue
+                records.append_array(added)
+                for cell in claimed:
+                    reserved[cell] = true
+    return records
+
+static func _span_tile(terrain: Array,cell: Vector2i,direction: Vector2i) -> bool:
+    if not Rules.inside(cell,terrain) or terrain[cell.y][cell.x]!="road":
+        return false
+    var perpendicular := Vector2i(-direction.y,direction.x)
+    for side in [-1,1]:
+        var shore: Vector2i = cell+perpendicular*side
+        if not Rules.inside(shore,terrain) or terrain[shore.y][shore.x]!="water":
+            return false
+    return true
 
 static func index_records(terrain: Array,records: Array) -> Dictionary:
     if not Rules.valid_terrain(terrain) or records.size()>Rules.MAX_AREA:

@@ -68,7 +68,7 @@ static func with_geographic_crossings(state: Dictionary) -> Dictionary:
     if records.is_empty():
         return {}
     var next: Dictionary = state.duplicate(true)
-    next[Crossings.FIELD] = {"version":Crossings.VERSION,"records":records}
+    next[Crossings.FIELD] = {"version":Crossings.GEOGRAPHIC_VERSION,"records":records}
     var index: Dictionary = Crossings.state_index(next)
     if not index["valid"] or not Crossings.occupancy(next["terrain"],index["cells"],next["units"])["valid"]:
         return {}

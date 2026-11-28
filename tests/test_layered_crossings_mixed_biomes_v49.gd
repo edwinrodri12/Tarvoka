@@ -308,14 +308,31 @@ func _check_geographic_crossings() -> void:
     assert(Bridges.index_records(fixture,candidates)["valid"])
     fixture[8][8] = "mountain"
     assert(Bridges.geographic_records(fixture).is_empty())
+    var wide: Array = Scenarios.terrain(0,Vector2i(24,18))
+    for x in [10,11,12,13]:
+        wide[8][x] = "road"
+        wide[7][x] = "water"
+        wide[9][x] = "water"
+    assert(Bridges.geographic_records(wide,Bridges.VERSION).is_empty())
+    var extended: Array = Bridges.geographic_records(wide)
+    assert(extended.size()==4 and Bridges.index_records(wide,extended)["valid"])
+    var wide_cells: Dictionary = Bridges.index_records(wide,extended)["cells"]
+    assert(Bridges.allows_step(wide,wide_cells,Vector2i(11,8),Vector2i(12,8),"ground"))
+    assert(Bridges.allows_step(wide,wide_cells,Vector2i(11,7),Vector2i(11,8),"naval"))
     var cases := 0
     var with_spans := 0
+    var legacy_with_spans := 0
     for dims in [Vector2i(10,8),Vector2i(24,18),Vector2i(40,30)]:
         for biome in Scenarios.GEOGRAPHY_BIOMES:
             for seed in [1,1729,999999]:
                 var map: Array = Scenarios.geographic_terrain(seed,dims,biome)
                 var before: Array = map.duplicate(true)
                 var records: Array = Bridges.geographic_records(map)
+                var legacy: Array = Bridges.geographic_records(map,Bridges.VERSION)
+                if not legacy.is_empty():
+                    legacy_with_spans += 1
+                for record in legacy:
+                    assert(record in records)
                 assert(records==Bridges.geographic_records(map) and map==before)
                 assert(Bridges.index_records(map,records)["valid"])
                 cases += 1
@@ -335,8 +352,13 @@ func _check_geographic_crossings() -> void:
                 assert(not layered.is_empty() and not state.has(Bridges.FIELD))
                 assert(layered["terrain"]==before)
                 assert(Codec.decode(Codec.encode(layered))==layered)
+                if not legacy.is_empty():
+                    var old: Dictionary = state.duplicate(true)
+                    old[Bridges.FIELD] = {"version":Bridges.VERSION,"records":legacy}
+                    assert(Codec.decode(Codec.encode(old))==old)
                 var tampered: Dictionary = layered.duplicate(true)
                 tampered[Bridges.FIELD]["records"].pop_back()
                 assert(Codec.encode(tampered).is_empty())
     assert(cases==81)
-    print("V51_GEOGRAPHIC_CROSSINGS maps=",cases," maps_with_safe_spans=",with_spans)
+    assert(legacy_with_spans==7 and with_spans>=legacy_with_spans)
+    print("V52_GEOGRAPHIC_CROSSINGS maps=",cases," v1_maps=",legacy_with_spans," v2_maps=",with_spans)
