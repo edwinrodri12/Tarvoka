@@ -226,6 +226,8 @@ static func apply(model: Node3D, role: String, faction_color: Color,
         return false
     if not _refine_v14_kit(model,role,hero):
         return false
+    if not _refine_signature_v40(model,role,hero):
+        return false
     if not Sculpt.refine_v17_kit(model,role,hero):
         return false
     if not _refine_v20_accessories(model,role,hero):
@@ -442,6 +444,53 @@ static func _refine_v14_kit(model: Node3D,role: String,hero: bool) -> bool:
         _:
             return false
     model.set_meta(KIT_V14,role)
+    return true
+
+const SIGNATURE_V40 := "tarvoka_infantry_specialty_signature_v40"
+const SIGNATURE_ROLES_V40 := ["infantry_sniper","infantry_medic"]
+
+# Reuse the main kit mesh and its original parent/position. Refine BEFORE
+# V17 fits its three attachments to the actual rear surface.
+static func _refine_signature_v40(model: Node3D,role: String,hero: bool)->bool:
+    if not hero or role not in SIGNATURE_ROLES_V40:
+        return true
+    var part: MeshInstance3D=_node(model,str(KIT_V9_MAIN[role])) as MeshInstance3D
+    if part==null or part.mesh==null:
+        return false
+    var before: AABB=part.mesh.get_aabb()
+    var profile: Array[Vector3]=[]
+    var shape: float=0.80
+    if role=="infantry_sniper":
+        # Wide folded upper mantle, tapered lower drape, shallow rear.
+        # Original seam mounts remain inside the new contour.
+        profile.assign([
+            Vector3(0.158,-0.194,0.075),
+            Vector3(0.226,-0.159,0.098),
+            Vector3(0.282,-0.11,0.120),
+            Vector3(0.317,-0.067,0.127),
+            Vector3(0.350,0.00,0.135),
+            Vector3(0.331,0.038,0.129),
+            Vector3(0.281,0.077,0.110),
+            Vector3(0.226,0.109,0.089),
+            Vector3(0.150,0.132,0.065)])
+        shape=0.73
+    else:
+        # Compact rectangular medical case with defined cap and lower
+        # padding. Preserve the center rear face and existing white cross.
+        profile.assign([
+            Vector3(0.153,-0.267,0.090),
+            Vector3(0.192,-0.239,0.117),
+            Vector3(0.223,-0.197,0.133),
+            Vector3(0.240,-0.10,0.145),
+            Vector3(0.240,0.025,0.145),
+            Vector3(0.240,0.13,0.145),
+            Vector3(0.224,0.203,0.133),
+            Vector3(0.207,0.232,0.122),
+            Vector3(0.165,0.279,0.090)])
+        shape=0.44
+    part.mesh=Sculpt._organic_mesh(profile,24,PackedFloat32Array(),shape)
+    part.set_meta("tarvoka_v40_original_bounds",before)
+    model.set_meta(SIGNATURE_V40,role)
     return true
 
 const KIT_V20 := "tarvoka_infantry_specialist_accessories_v20"

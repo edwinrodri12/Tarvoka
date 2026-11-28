@@ -2,7 +2,7 @@ name: TARVOKA Infantry V1 Native 3D QA
 
 on:
   push:
-    branches: [main, art/infantry-premium-v16-20261126, art/infantry-specialist-v20-22-20261126, art/infantry-validation-v23-24-20261126, art/infantry-integration-v25-20261126, art/infantry-premium-v26-20261126, art/infantry-anatomy-v27-28-20261126, art/infantry-uniform-v29-30-20261126, art/infantry-boots-v32-20261126, art/infantry-integration-v33-20261126, art/infantry-fit-v34-35-20261126, art/infantry-joints-v36-37-20261126, art/infantry-material-v38-20261126, art/infantry-review-v39-20261127]
+    branches: [main, art/infantry-premium-v16-20261126, art/infantry-specialist-v20-22-20261126, art/infantry-validation-v23-24-20261126, art/infantry-integration-v25-20261126, art/infantry-premium-v26-20261126, art/infantry-anatomy-v27-28-20261126, art/infantry-uniform-v29-30-20261126, art/infantry-boots-v32-20261126, art/infantry-integration-v33-20261126, art/infantry-fit-v34-35-20261126, art/infantry-joints-v36-37-20261126, art/infantry-material-v38-20261126, art/infantry-review-v39-20261127, art/infantry-specialty-v40-41-20261128]
     paths:
       - 'scripts/ui/InfantrySculptFinishV2.gd'
       - 'scripts/ui/InfantryVariantsV4.gd'
@@ -154,7 +154,7 @@ jobs:
           if grep -E 'SCRIPT ERROR:|ERROR:|Parse Error:|Assertion failed' /tmp/infantry-native.log; then exit 1; fi
           grep -Fq 'PASS INFANTRY V1 NATIVE 3D:' /tmp/infantry-native.log
           test "$(find build/qa/infantry-v1 -name '*.png' | wc -l)" -eq 17
-      - name: Verify 6 approved core designs + archived art, 8 facciones and 188 native renders
+      - name: Verify 6 approved core designs + archived art, 8 facciones and 224 native renders
         shell: bash
         run: |
           set -euo pipefail
@@ -164,7 +164,7 @@ jobs:
             --script res://tests/test_infantry_family_v2.gd 2>&1 | tee /tmp/infantry-v2-native.log
           if grep -E 'SCRIPT ERROR:|ERROR:|Parse Error:|Assertion failed' /tmp/infantry-v2-native.log; then exit 1; fi
           grep -Fq 'PASS INFANTRY V2 NATIVE 3D:' /tmp/infantry-v2-native.log
-          test "$(find build/qa/infantry-v2 -name '*.png' | wc -l)" -eq 188
+          test "$(find build/qa/infantry-v2 -name '*.png' | wc -l)" -eq 224
       - name: Verify current Guardia LOD8 in actual 3D battle, fog, shared budget and performance receipt
         shell: bash
         run: |

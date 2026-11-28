@@ -115,7 +115,10 @@ func _run() -> void:
         must(v2!=null and v2.get_parent()==original_preview,
             role+" V2 comparison remains in same 3D viewport")
         if role!="infantry_engineer":
-            var expected_edition: String="V38"
+            var v40_expected: bool=role in ["infantry_sniper","infantry_medic"]
+            var expected_edition: String="V40" if v40_expected else "V38"
+            must((str(v2.get_meta("tarvoka_infantry_specialty_signature_v40",""))==role)==v40_expected,
+                role+" exact V40 signature scope in shared viewport")
             must(str(v2.get_meta("tarvoka_infantry_material_hierarchy_v38",""))==role,
                 role+" actual V38 role-specific PBR materials in shared viewport")
             must(str(v2.get_meta("tarvoka_infantry_shoulder_layers_v36",""))==role and

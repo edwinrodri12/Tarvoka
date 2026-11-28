@@ -927,6 +927,29 @@ func _run() -> void:
                         check(str(model.get_meta(Specialist.KIT_V14,""))==role,"V14 individual accessory finish")
                         check(str(model.get_meta(Specialist.KIT_V20,""))==role,"V20 specialist accessory identity")
                         var premium: bool=bool(model.get_meta("tarvoka_infantry_v2_hero",false))
+                        var v40_expected: bool=premium and role in Specialist.SIGNATURE_ROLES_V40
+                        check(model.has_meta(Specialist.SIGNATURE_V40)==v40_expected,
+                            "V40 exact specialist and LOD scope")
+                        if v40_expected:
+                            var v40_kit: MeshInstance3D=model.find_child(str(Specialist.KIT_V9_MAIN[role]),true,false) as MeshInstance3D
+                            check(v40_kit!=null and v40_kit.has_meta("tarvoka_v40_original_bounds") and
+                                closed_solid(v40_kit.mesh) and v40_kit.has_meta(Finish.STAGE_MATS),
+                                "V40 closed staged primary signature kit")
+                            if v40_kit!=null and v40_kit.has_meta("tarvoka_v40_original_bounds"):
+                                var v40_before: AABB=v40_kit.get_meta("tarvoka_v40_original_bounds")
+                                var v40_after: AABB=v40_kit.mesh.get_aabb()
+                                check(v40_kit.mesh.get_faces().size()==1296 and
+                                    is_equal_approx(v40_after.size.z,v40_before.size.z) and
+                                    v40_after.size.y>v40_before.size.y and
+                                    v40_after.size.y<v40_before.size.y+0.05,
+                                    "V40 432 triangles, same depth and modest height refinement")
+                                var v40_width: float=0.70 if role=="infantry_sniper" else 0.48
+                                check(is_equal_approx(v40_after.size.x,v40_width) and
+                                    v40_kit.get_parent().name=="TorsoRig",
+                                    "V40 intended silhouette width and original torso pivot")
+                                check(is_equal_approx(Finish.kit_rear_surface(v40_kit.mesh,0.0,0.0),
+                                    v40_before.end.z),
+                                    "V40 retains rear center plane for medical mark and seams")
                         var accessory_names: Array=Specialist.KIT_PARTS_V20[role]
                         check(int(model.get_meta(Specialist.KIT_COUNT_V20,-1))==(accessory_names.size() if premium else 0),
                             "V20 same accessory nodes, tactical untouched")
@@ -1086,6 +1109,34 @@ func _run() -> void:
                 if faction==0:
                     hero.rotation_degrees.y=0
                     await save_frame(view,"v2_%s_f%d_back"%[role,faction])
+                    if role in Finish.FAMILY_ANATOMY_ROLES or role=="infantry_engineer":
+                        # V41: six additional views per official model.
+                        # Isolated viewport, unchanged model, identical scale.
+                        var v41_camera: Transform3D=camera.transform
+                        var v41_size: float=camera.size
+                        var v41_rotation: Vector3=hero.rotation_degrees
+                        camera.size=3.6
+                        for v41_angle in [45,135,225,315]:
+                            hero.rotation_degrees.y=v41_angle
+                            await save_frame(view,"v41_%s_diagonal_%d"%[role,v41_angle])
+                        hero.rotation_degrees.y=0
+                        camera.position=Vector3(0,5.0,0)
+                        camera.look_at(Vector3(0,1.0,0),Vector3.FORWARD)
+                        camera.size=2.4
+                        await save_frame(view,"v41_%s_top"%role)
+                        # Explicit underside fill is enabled only for this
+                        # inspection, never in existing comparison images.
+                        var v41_fill:=DirectionalLight3D.new()
+                        v41_fill.rotation_degrees=Vector3(90,0,0)
+                        v41_fill.light_energy=1.15
+                        view.add_child(v41_fill)
+                        camera.position=Vector3(0,-4.0,0)
+                        camera.look_at(Vector3(0,1.0,0),Vector3.FORWARD)
+                        await save_frame(view,"v41_%s_bottom"%role)
+                        v41_fill.free()
+                        camera.transform=v41_camera
+                        camera.size=v41_size
+                        hero.rotation_degrees=v41_rotation
                     if role in Finish.FAMILY_ANATOMY_ROLES:
                         camera.size=2.75
                         for angle in [90,180,270]:
@@ -1242,7 +1293,7 @@ func _run() -> void:
     await save_frame(view,"v15_six_official_rear")
     for unit in lineup:
         unit.free()
-    check(rendered==188,"188 real 3D comparison / tactical frames")
+    check(rendered==224,"224 real 3D comparison / tactical frames")
     # Art-only variants must never enter the tactical roster.
     for role in ["infantry_urban","infantry_defense",
             "infantry_antitank","infantry_engineer",
@@ -1253,5 +1304,5 @@ func _run() -> void:
         push_error("FAIL INFANTRY V2 NATIVE 3D: %d failures"%failed)
         quit(1)
     else:
-        print("PASS INFANTRY V2 NATIVE 3D: 160 models (6 core + 4 legacy), 8 factions, 2 LOD, 188 true PNG")
+        print("PASS INFANTRY V2 NATIVE 3D: 160 models (6 core + 4 legacy), 8 factions, 2 LOD, 224 true PNG")
         quit(0)

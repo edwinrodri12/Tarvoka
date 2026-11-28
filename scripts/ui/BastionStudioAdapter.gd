@@ -458,6 +458,7 @@ func _engineer_web_entry_report() -> void:
     evidence["elbow_v37"]=str(model_root.get_meta("tarvoka_infantry_elbow_contour_v37",""))==_role
     evidence["joint_count_v37"]=int(model_root.get_meta("tarvoka_infantry_joint_mesh_count_v37",0))
     evidence["material_v38"]=str(model_root.get_meta("tarvoka_infantry_material_hierarchy_v38",""))==_role
+    evidence["signature_v40"]=str(model_root.get_meta("tarvoka_infantry_specialty_signature_v40",""))==_role
     evidence["native_viewport"]=model_root.get_parent()==preview
     JavaScriptBridge.eval("window.__tarvokaInfantryEntry="+JSON.stringify(evidence),true)
     if _role=="infantry_engineer":
@@ -1741,6 +1742,8 @@ func _infantry_review_edition() -> String:
         if EngineerFinishV9.has_model(model_root):
             return "V9"
     if model_root!=null and str(model_root.get_meta("tarvoka_infantry_role_identity_v6",""))==_role:
+        if str(model_root.get_meta("tarvoka_infantry_specialty_signature_v40",""))==_role:
+            return "V40"
         if str(model_root.get_meta("tarvoka_infantry_material_hierarchy_v38",""))==_role:
             return "V38"
         if str(model_root.get_meta("tarvoka_infantry_elbow_contour_v37",""))==_role:
