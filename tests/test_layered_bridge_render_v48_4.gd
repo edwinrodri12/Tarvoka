@@ -11,6 +11,8 @@ const Board = preload("res://scripts/ui/TouchBoard.gd")
 const Orders = preload("res://scripts/ui/Battle3DOrders.gd")
 const Hints = preload("res://scripts/core/TacticalHints.gd")
 const Roles = preload("res://scripts/core/UnitRoles.gd")
+const Crossings = preload("res://scripts/core/LayeredCrossingsV48.gd")
+const Scenarios = preload("res://scripts/core/Scenarios.gd")
 
 func _initialize() -> void:
     call_deferred("_run")
@@ -158,6 +160,7 @@ func _run() -> void:
     await _capture_mixed_regions()
     await _stress_large_regions()
     await _capture_urban_finish()
+    await _capture_continuous_bridge()
     print("PASS V48_4_NATIVE_BRIDGE: real unit bounds, two axes, ramps and read-only water surface")
     quit(0)
 
@@ -461,3 +464,61 @@ func _capture_urban_finish() -> void:
     light.free()
     camera.free()
     print("PASS V51_3_URBAN: bounded plaza mesh, shared materials and two native captures")
+
+func _capture_continuous_bridge() -> void:
+    var map: Array = Scenarios.terrain(0,Vector2i(24,18))
+    for x in [10,11,12,13]:
+        map[8][x] = "road"
+        map[7][x] = "water"
+        map[9][x] = "water"
+    var records: Array = Crossings.geographic_records(map)
+    assert(records.size()==4)
+    var state: Dictionary = Session.start_layered([Roles.make_unit("G",0,Vector2i(11,8),"tank"),
+        Roles.make_unit("N",1,Vector2i(11,8),"destroyer")],map,records)
+    assert(not state.is_empty())
+    var original: Dictionary = state.duplicate(true)
+    var model: Node3D = Terrain.build(state,"G",0)
+    assert(model!=null and state==original)
+    var stats: Dictionary = model.get_meta("render_stats")
+    assert(stats["bridge_spans_v48"]==4 and stats["bridge_ramps_v48"]==2)
+    assert(stats["bridge_steep_ramps_v48"]==0 and stats["bridge_skipped_ramps_v48"]==0)
+    assert(stats["bridge_clearance_failures_v48"]==0)
+    var public: Dictionary = model.get_meta("public_cells")
+    var spans: Dictionary = model.get_meta("bridge_cells_v48")
+    var ramps: Array = model.get_meta("bridge_ramp_profiles_v48")
+    # Check both sides of every internal seam; the deck height never drops.
+    for x in [10,11,12]:
+        var at: Vector3 = Terrain.world_at(Vector2i(x,8))
+        for shift in [1.19,1.21]:
+            assert(is_equal_approx(Terrain.bridge_surface_y(public,spans,ramps,at+Vector3(shift,0,0),"ground"),Art.ROAD_TOP))
+    var plan: Dictionary = Playback.quote(state,"G",Vector2i(13,8))
+    assert(not plan.is_empty())
+    var unit: Node3D = model.get_node("Unidad3D_G")
+    var offset: float = float(unit.get_meta("bridge_anchor_offset_v48"))
+    for sample in range(21):
+        var pose: Dictionary = Playback.sample(model,plan,float(sample)/20.0,offset)
+        assert(is_equal_approx(pose["position"].y,Art.ROAD_TOP+offset))
+    root.add_child(model)
+    var light := DirectionalLight3D.new()
+    light.rotation_degrees = Vector3(-55,-35,0)
+    light.light_energy = 1.15
+    root.add_child(light)
+    var camera := Camera3D.new()
+    camera.projection = Camera3D.PROJECTION_ORTHOGONAL
+    camera.size = 24.0
+    root.add_child(camera)
+    var focus: Vector3 = Terrain.world_at(Vector2i(11,8))+Vector3(1.2,1.0,0)
+    camera.position = focus+Vector3(9,17,15)
+    camera.look_at(focus)
+    camera.make_current()
+    for frame in range(12):
+        await process_frame
+    await RenderingServer.frame_post_draw
+    var image: Image = root.get_texture().get_image()
+    assert(image!=null and not image.is_empty())
+    assert(image.save_png("res://artifacts/tarvoka_continuous_bridge_v52.png")==OK)
+    assert(state==original)
+    model.free()
+    light.free()
+    camera.free()
+    print("PASS V52_CONTINUOUS_BRIDGE: four spans, two ramps, continuous deck and native capture")

@@ -63,6 +63,7 @@ jobs:
           if grep -E 'SCRIPT ERROR:|Parse Error:|Assertion failed' /tmp/v49-test.log; then exit 1; fi
           grep -q 'PASS V48_V49_EXPERIMENT:' /tmp/v49-test.log
           grep -q "V50_CACHED_SAVE_12" /tmp/v49-test.log
+          grep -q "V52_GEOGRAPHIC_CROSSINGS" /tmp/v49-test.log
       - name: Validate actual mixed skirmish setup and saved match
         shell: bash
         run: |
@@ -93,6 +94,8 @@ jobs:
           grep -q "PASS V51_3_URBAN:" /tmp/v49-render.log
           test -s artifacts/tarvoka_urban_v51_3_0.png
           test -s artifacts/tarvoka_urban_v51_3_1.png
+          grep -q "PASS V52_CONTINUOUS_BRIDGE:" /tmp/v49-render.log
+          test -s artifacts/tarvoka_continuous_bridge_v52.png
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -103,3 +106,4 @@ jobs:
             artifacts/tarvoka_mixed_v49_6_*.png
             artifacts/tarvoka_mixed_v50_2_large_*.png
             artifacts/tarvoka_urban_v51_3_*.png
+            artifacts/tarvoka_continuous_bridge_v52.png

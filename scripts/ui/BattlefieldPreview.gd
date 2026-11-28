@@ -71,6 +71,11 @@ func _draw() -> void:
             draw_rect(rect,tile,true)
             if tile_w > 8.0 and tile_h > 8.0:
                 draw_rect(rect,Color(0.04,0.10,0.15,0.13),false,0.7)
+    # Proposed bridge positions are public setup data, not active orders.
+    for record in geographic_bridge_candidates:
+        var center: Vector2 = inset+Vector2((float(record["x"])+0.5)*tile_w,(float(record["y"])+0.5)*tile_h)
+        var half: Vector2 = Vector2(tile_w*0.44,0) if record["axis"]=="ew" else Vector2(0,tile_h*0.44)
+        draw_line(center-half,center+half,Color("#f5d98a"),maxf(1.0,minf(tile_w,tile_h)*0.22),true)
     var left_x: float = inset.x+tile_w*0.6
     var right_x: float = size.x-inset.x-tile_w*0.6
     var cy: float = size.y*0.5
