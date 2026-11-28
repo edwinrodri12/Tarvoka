@@ -5,6 +5,7 @@ class_name TarvokaBattleRanges3D
 # alternate pathfinding, fire ranges, damage estimates or game orders.
 const Hints = preload("res://scripts/core/TacticalHints.gd")
 const Terrain = preload("res://scripts/ui/BattleTerrain3D.gd")
+const Domains = preload("res://scripts/core/Domains.gd")
 const ROAD_CLEARANCE := 0.13
 const MOVEMENT := Color(0.19,0.62,0.99,0.39)
 const COVERAGE := Color(1.0,0.63,0.17,0.31)
@@ -73,6 +74,51 @@ static func _quad(tool: SurfaceTool, cells: Dictionary,
     Terrain._tri(tool,ne,center,se,tint)
     Terrain._tri(tool,se,center,sw,tint)
     Terrain._tri(tool,sw,center,nw,tint)
+
+# Layered guides use separate small flat markers at each actual surface.
+# An attack marker is keyed by exact unit ID, never a merged cell target.
+static func _layer_pad(tool: SurfaceTool,parent: Node3D,cells: Dictionary,cell: Vector2i,domain: String,tint: Color,half: float) -> void:
+    var at: Vector3 = Terrain.world_at(cell)
+    var y: float = Terrain.bridge_surface_y(cells,parent.get_meta("bridge_cells_v48",{}),parent.get_meta("bridge_ramp_profiles_v48",[]),at,domain)+ROAD_CLEARANCE
+    var a := Vector3(at.x-half,y,at.z-half)
+    var b := Vector3(at.x+half,y,at.z-half)
+    var c := Vector3(at.x+half,y,at.z+half)
+    var d := Vector3(at.x-half,y,at.z+half)
+    Terrain._tri(tool,a,b,c,tint)
+    Terrain._tri(tool,a,c,d,tint)
+
+static func build_layered(parent: Node3D,state: Dictionary,unit_id: String,cells: Dictionary) -> Node3D:
+    var node := Node3D.new()
+    node.name = "GuiasAlcancePorNivelV50"
+    parent.add_child(node)
+    var selected: Dictionary = {}
+    for unit in state.get("units",[]):
+        if str(unit.get("id",""))==unit_id:
+            selected = unit
+            break
+    var hints: Dictionary = Hints.for_unit(state,unit_id)
+    var moves := SurfaceTool.new()
+    var attacks := SurfaceTool.new()
+    moves.begin(Mesh.PRIMITIVE_TRIANGLES)
+    attacks.begin(Mesh.PRIMITIVE_TRIANGLES)
+    var move_count := 0
+    var attack_count := 0
+    for cell in hints["moves"]:
+        if not cells.has(cell) or not bool(cells[cell].get("visible",false)):
+            continue
+        _layer_pad(moves,parent,cells,cell,Domains.domain(selected),MOVEMENT,0.73)
+        move_count += 1
+    for detail in hints.get("attacks_by_id",{}).values():
+        var cell: Vector2i = detail["cell"]
+        if not cells.has(cell) or not bool(cells[cell].get("visible",false)):
+            continue
+        _layer_pad(attacks,parent,cells,cell,detail["domain"],TARGET,0.52)
+        attack_count += 1
+    _surface(node,moves,move_count,"DestinosPorNivel")
+    _surface(node,attacks,attack_count,"ObjetivosPorNivel")
+    node.set_meta("counts",{"moves":move_count,"coverage":0,"attacks":attack_count})
+    node.set_meta("visual_only",true)
+    return node
 
 static func build(parent: Node3D, state: Dictionary, unit_id: String,
         public_cells: Dictionary) -> Node3D:

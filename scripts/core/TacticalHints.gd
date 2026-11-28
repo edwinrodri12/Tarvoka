@@ -11,6 +11,7 @@ const BattleActions = preload("res://scripts/core/BattleActions.gd")
 const TerrainTactics = preload("res://scripts/core/TerrainTactics.gd")
 const Opening = preload("res://scripts/core/OpeningBalance.gd")
 const Weather = preload("res://scripts/core/Weather.gd")
+const Crossings = preload("res://scripts/core/LayeredCrossingsV48.gd")
 
 # UI-only advisory information. All calculations use the same movement and
 # combat rules as actual actions; this module never mutates the battle state.
@@ -20,6 +21,8 @@ static func for_unit(state: Dictionary, unit_id: String) -> Dictionary:
         return empty
     if not (state.get("units") is Array) or not (state.get("terrain") is Array):
         return empty
+    if state.has(Crossings.FIELD):
+        return _layered_for_unit(state,unit_id)
     var units: Array = state["units"]
     var faction := int(state.get("faction", -1))
     if faction not in [0, 1]:
@@ -96,6 +99,63 @@ static func for_unit(state: Dictionary, unit_id: String) -> Dictionary:
             }
     return {"moves": moves, "attacks": attacks}
 
+# Exact target IDs are authoritative in the layered prototype. Keep one
+# deterministic cell representative only for legacy advisory summaries.
+static func _layered_for_unit(state: Dictionary,unit_id: String) -> Dictionary:
+    var result: Dictionary = {"moves":{},"attacks":{},"attacks_by_id":{}}
+    var index: Dictionary = Crossings.state_index(state)
+    var side: int = int(state.get("faction",-1))
+    if not index["valid"] or side not in [0,1]:
+        return result
+    var terrain: Array = state["terrain"]
+    var units: Array = state["units"]
+    if not Crossings.occupancy(terrain,index["cells"],units)["valid"]:
+        return result
+    var ids: Dictionary = {}
+    var selected: Dictionary = {}
+    for unit in units:
+        var id: String = str(unit.get("id",""))
+        if id.is_empty() or ids.has(id):
+            return result
+        ids[id] = true
+        if id==unit_id:
+            selected = unit
+    if selected.is_empty() or not Turns.can_act(selected,side):
+        return result
+    var observed: Dictionary = Visibility.observed_state(state,side)
+    var allowed: Variant = Visibility.visible_cells(state,side) if Visibility.enabled(state) else null
+    var public_bridges: Dictionary = Crossings.public_cells(index["cells"],Visibility.explored_cells(state,side)) if allowed!=null else index["cells"]
+    if Turns.can_move(selected,side):
+        result["moves"] = Crossings.reachable(observed["terrain"],public_bridges,observed["units"],selected["pos"],
+            Domains.domain(selected),side,Logistics.movement_budget(selected),Logistics.road_fast(selected),Weather.from_state(state),Weather.traction(selected),{},allowed)
+        result["moves"].erase(selected["pos"])
+    if not Logistics.can_fire(selected):
+        return result
+    for enemy in observed["units"]:
+        if int(enemy.get("hp",0))<=0 or int(enemy.get("faction",-1))==side or not Turns.in_attack_range(selected,enemy):
+            continue
+        var exchange: Dictionary = BattleActions.public_preview_exchange(selected,enemy,observed["terrain"],observed.get("economy",{}),observed["units"])
+        if not exchange.get("valid",false):
+            continue
+        var id: String = str(enemy["id"])
+        var detail: Dictionary = {"id":id,"cell":enemy["pos"],"domain":Domains.domain(enemy),
+            "damage":int(exchange["damage"]),"counter_damage":int(exchange["counter_damage"]),
+            "terrain_attack_bonus":int(exchange["terrain_attack_bonus"]),
+            "terrain_defense_cover":int(exchange["terrain_defense_cover"]),
+            "flanked":bool(exchange["flanked"]),"defeated":bool(exchange["defeated"])}
+        result["attacks_by_id"][id] = detail
+        var prior: Dictionary = result["attacks"].get(enemy["pos"],{})
+        if prior.is_empty() or id<str(prior["id"]):
+            result["attacks"][enemy["pos"]] = detail
+    return result
+
+static func attack_at(hints: Dictionary,cell: Vector2i,target_id: String) -> Dictionary:
+    if hints.has("attacks_by_id"):
+        var detail: Dictionary = hints["attacks_by_id"].get(target_id,{})
+        return detail if detail.get("cell") == cell else {}
+    var detail: Dictionary = hints.get("attacks",{}).get(cell,{})
+    return detail if detail.get("id")==target_id else {}
+
 # Display-only union of the weapon footprint from every available legal
 # movement endpoint plus the current cell. Attack remains a SEPARATE action:
 # highlighting a tile never authorizes a remote shot or a move+shot in one tap.
@@ -128,6 +188,9 @@ static func _weapon_footprint(terrain: Array, origins: Array[Vector2i], low: int
 # Only visible destinations are offered as movement endpoints in fog.
 static func friendly_weapon_coverage(state: Dictionary, unit_id: String) -> Dictionary:
     var coverage: Dictionary = {}
+    # Legacy footprint has one surface layer; do not advertise it on bridges.
+    if state.has(Crossings.FIELD):
+        return coverage
     if unit_id.is_empty() or int(state.get("winner",-1)) != -1 or not Opening.can_order(state) or not state.get("units") is Array or not state.get("terrain") is Array:
         return coverage
     var faction: int = int(state.get("faction",-1))

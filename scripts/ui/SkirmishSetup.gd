@@ -13,9 +13,11 @@ const MapPreview = preload("res://scripts/ui/BattlefieldPreview.gd")
 const Identity = preload("res://scripts/ui/FactionIdentity.gd")
 const Style = preload("res://scripts/ui/VisualStyle.gd")
 const Winter = preload("res://scripts/ui/WinterBattleBiome.gd")
+const MixedRegions = preload("res://scripts/core/MixedBiomeRegionsV49.gd")
 
 var scenario_picker: OptionButton
 var biome_picker: OptionButton
+var secondary_biome_picker: OptionButton
 var size_picker: OptionButton
 var roster_picker: OptionButton
 var fog_picker: OptionButton
@@ -159,6 +161,10 @@ func _ready() -> void:
         "Urbano · plazas y calzadas",
         "Archipiélagos · playas y litoral"
     ])
+    var second_choices: Array = ["Sin segundo bioma"]
+    for style in Winter.CHOICES:
+        second_choices.append("Región sur · "+Winter.label_for(style))
+    secondary_biome_picker = _picker(content,"Segundo bioma (geografía)",second_choices)
     size_picker = _picker(content,"Tamano",[
         "10 x 8 · Rapida","24 x 18 · Campana amplia","40 x 30 · Gran batalla"
     ])
@@ -382,6 +388,7 @@ func _preset(row: HBoxContainer, caption: String, index: int) -> void:
 func apply_preset(index: int) -> void:
     active_preset = index
     biome_picker.select(0)
+    secondary_biome_picker.select(0)
     match index:
         0:
             scenario_picker.select(0)
@@ -426,6 +433,7 @@ func load_choices(values: Dictionary) -> void:
     for name in ["scenario","biome","size","roster","fog","weather","weather_cycle","economy","objective","balance","first"]:
         var picker: OptionButton = get(name + "_picker")
         picker.select(clampi(int(values.get(name,0)),0,picker.item_count-1))
+    secondary_biome_picker.select(clampi(int(values.get("secondary_biome",0)),0,Winter.CHOICES.size()))
     seed_picker.value = clampi(int(values.get("seed",12345)),Scenarios.MIN_SEED,Scenarios.MAX_SEED)
     _preset_label.text = "Configuración personalizada · lista para desplegar."
     _changed(true)
@@ -451,6 +459,12 @@ func _changed(manual: bool = false) -> void:
         economy_picker.select(0)
     economy_picker.disabled = roster_picker.selected in [0,2]
     seed_picker.editable = Scenarios.uses_seed(scenario_picker.selected)
+    secondary_biome_picker.disabled = scenario_picker.selected!=Scenarios.GEOGRAPHIC_SCENARIO_ID
+    if secondary_biome_picker.disabled:
+        secondary_biome_picker.select(0)
+    var mixed: Dictionary = _mixed_config()
+    if start_button!=null:
+        start_button.disabled = not mixed.is_empty() and not MixedRegions.valid_config(mixed)
     var preset_summary: String = "%s · %s · %s" % [
         scenario_picker.get_item_text(scenario_picker.selected),
         size_picker.get_item_text(size_picker.selected),
@@ -463,6 +477,8 @@ func _changed(manual: bool = false) -> void:
     ]
     preset_summary += " · Bioma: %s" % [
         Winter.label_for(Winter.from_index(biome_picker.selected))]
+    if not mixed.is_empty():
+        preset_summary += " + "+Winter.label_for(mixed["secondary"]) if MixedRegions.valid_config(mixed) else " · Selecciona dos biomas distintos"
     preset_summary += " · Clima: %s (%s)" % [
         ["Despejado","Lluvia","Nieve"][weather_picker.selected],
         "cada dos rondas" if weather_cycle_picker.selected == 1 else "fijo"]
@@ -491,16 +507,26 @@ func _changed(manual: bool = false) -> void:
     if map_preview != null:
         map_preview.configure(scenario_picker.selected,size_picker.selected,
             int(seed_picker.value),
-            Winter.from_index(biome_picker.selected))
+            Winter.from_index(biome_picker.selected),mixed)
         preview_caption.text = "%s · %s. Vista de terreno sin unidades ni órdenes." % [
             scenario_picker.get_item_text(scenario_picker.selected),
             size_picker.get_item_text(size_picker.selected)]
+        if scenario_picker.selected==Scenarios.GEOGRAPHIC_SCENARIO_ID:
+            preview_caption.text += " · %d ubicaciones aptas para puentes elevados (aún en validación)." % map_preview.geographic_bridge_candidates.size()
+        if not mixed.is_empty() and not MixedRegions.valid_config(mixed):
+            preview_caption.text = "Elige dos biomas distintos para activar la vista previa mixta."
 
+
+func _mixed_config() -> Dictionary:
+    if secondary_biome_picker==null or secondary_biome_picker.selected<=0 or scenario_picker.selected!=Scenarios.GEOGRAPHIC_SCENARIO_ID:
+        return {}
+    return {"version":MixedRegions.VERSION,"primary":Winter.from_index(biome_picker.selected),"secondary":Winter.from_index(secondary_biome_picker.selected-1)}
 
 func options() -> Dictionary:
     return {
         "scenario":scenario_picker.get_selected_id(),
         "biome":biome_picker.get_selected_id(),
+        "secondary_biome":secondary_biome_picker.get_selected_id(),
         "size":size_picker.get_selected_id(),
         "roster":roster_picker.get_selected_id(),
         "fog":fog_picker.get_selected_id(),

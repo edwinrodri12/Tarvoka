@@ -17,6 +17,10 @@ const Ranges = preload("res://scripts/ui/BattleRanges3D.gd")
 const Orders = preload("res://scripts/ui/Battle3DOrders.gd")
 const G11ActionsV29 = preload("res://scripts/ui/G11BattleActionsV29.gd")
 const Biomes = preload("res://scripts/ui/WinterBattleBiome.gd")
+const Crossings = preload("res://scripts/core/LayeredCrossingsV48.gd")
+const BridgeVisibility = preload("res://scripts/core/Visibility.gd")
+const BridgeArt = preload("res://scripts/ui/LayeredBridgeArtV48.gd")
+const BridgePlayback = preload("res://scripts/ui/LayeredBridgePlaybackV48.gd")
 const WeatherOverlay = preload("res://scripts/ui/BattleWeatherOverlay3D.gd")
 const ImmersiveHud = preload("res://scripts/ui/ImmersiveBattleHud.gd")
 const SiteInteraction = preload("res://scripts/ui/SiteInteractionData.gd")
@@ -45,6 +49,9 @@ var _camera_size: float = 28.0
 var _state_snapshot: Dictionary = {}
 var _viewing_side: int = 0
 var _selected_hint_unit_id: String = ""
+var _bridge_playback: Dictionary = {}
+var _bridge_playback_time: float = 0.0
+var _bridge_original_pose: Transform3D = Transform3D.IDENTITY
 var _ranges_node: Node3D = null
 var _ranges_visible: bool = true
 var _range_text: Label
@@ -66,6 +73,8 @@ var _confirm_order_button: Button
 var _cancel_order_button: Button
 var _move_here_button: Button
 var _choose_unit_button: Button
+var _choose_order_button: Button
+var _layered_end_button: Button
 var _legacy_header: PanelContainer
 var _legacy_footer: PanelContainer
 var immersive_hud: Control
@@ -203,6 +212,16 @@ func _ready() -> void:
     _choose_unit_button.pressed.connect(_choose_unit_here)
     _choose_unit_button.hide()
     commands.add_child(_choose_unit_button)
+    _choose_order_button = Button.new()
+    _choose_order_button.text = "Otra orden"
+    _choose_order_button.pressed.connect(_cycle_layered_order)
+    _choose_order_button.hide()
+    commands.add_child(_choose_order_button)
+    _layered_end_button = Button.new()
+    _layered_end_button.text = "Fin turno"
+    _layered_end_button.pressed.connect(_finish_layered_turn)
+    _layered_end_button.hide()
+    commands.add_child(_layered_end_button)
     _cancel_order_button = Button.new()
     _cancel_order_button.name = "CancelarOrden3D"
     _cancel_order_button.text = "Cancelar orden"
@@ -468,6 +487,71 @@ func _process(_delta: float) -> void:
         holder.stretch_shrink = mini(8,holder.stretch_shrink+1)
     _advance_water(_delta)
     _update_weather_effects(_delta)
+    _advance_bridge_playback(_delta)
+
+# Experimental read-only playback API; no live order or state mutation.
+func preview_bridge_move(unit_id: String,destination: Vector2i) -> bool:
+    _stop_bridge_playback()
+    if _live_board!=null or _scene==null or int(_state_snapshot.get("faction",-1))!=_viewing_side:
+        return false
+    var plan: Dictionary = BridgePlayback.quote(_state_snapshot,unit_id,destination)
+    if plan.is_empty():
+        return false
+    var model: Node3D = _scene.get_node_or_null("Unidad3D_"+unit_id)
+    if model==null or not model.has_meta("bridge_anchor_offset_v48"):
+        return false
+    _bridge_original_pose = model.transform
+    _bridge_playback = plan
+    _bridge_playback_time = 0.0
+    return true
+
+# After an authoritative move, animate the rebuilt model from the old
+# route to its committed pose. No delayed state changes or duplicate orders.
+func _play_committed_bridge_move(plan: Dictionary) -> bool:
+    if _live_board==null or _scene==null or plan.is_empty():
+        return false
+    var route: Array = plan.get("route",[])
+    if route.size()<2:
+        return false
+    var model: Node3D = _scene.get_node_or_null("Unidad3D_"+str(plan["id"]))
+    if model==null or not model.has_meta("bridge_anchor_offset_v48") or model.get_meta("cell")!=route.back():
+        return false
+    # Do not replay across currently hidden tiles after visibility changes.
+    for cell in route:
+        if not _cells.has(cell) or not bool(_cells[cell].get("visible",false)):
+            return false
+    _bridge_original_pose = model.transform
+    _bridge_playback = plan.duplicate(true)
+    _bridge_playback["committed"] = true
+    _bridge_playback_time = 0.0
+    _advance_bridge_playback(0.0)
+    return true
+
+func _advance_bridge_playback(delta: float) -> void:
+    if _bridge_playback.is_empty() or _scene==null:
+        return
+    var model: Node3D = _scene.get_node_or_null("Unidad3D_"+str(_bridge_playback["id"]))
+    if model==null:
+        _bridge_playback.clear()
+        return
+    _bridge_playback_time += maxf(delta,0.0)
+    var progress: float = _bridge_playback_time/float(_bridge_playback["seconds"])
+    if progress>=(1.0 if bool(_bridge_playback.get("committed",false)) else 1.30):
+        _stop_bridge_playback()
+        return
+    var pose: Dictionary = BridgePlayback.sample(_scene,_bridge_playback,
+        progress,float(model.get_meta("bridge_anchor_offset_v48")))
+    if not pose.is_empty():
+        model.position = pose["position"]
+        model.rotation.y = pose["yaw"]
+
+func _stop_bridge_playback() -> void:
+    if not _bridge_playback.is_empty() and _scene!=null:
+        var model: Node3D = _scene.get_node_or_null("Unidad3D_"+str(_bridge_playback["id"]))
+        if model!=null:
+            model.transform = _bridge_original_pose
+    _bridge_playback.clear()
+    _bridge_playback_time = 0.0
 
 func _sync_weather_overlay_size() -> void:
     if is_instance_valid(_weather_overlay) and preview!=null:
@@ -528,6 +612,7 @@ func _focus_for_selected(state: Dictionary, selected_id: String) -> Vector2i:
     return Vector2i(_dims.x/2,_dims.y/2)
 
 func open_from_state(state: Dictionary, selected_id: String = "", viewer: int = 0) -> bool:
+    _stop_bridge_playback()
     _viewing_side = viewer if viewer in [0,1] else 0
     # Standalone and browser tests remain read-only.
     _set_immersive_mode(false)
@@ -640,12 +725,18 @@ func open_from_board(board: Control) -> bool:
     if board == null:
         return false
     var state: Variant = board.get("state")
-    if not state is Dictionary:
+    if not state is Dictionary or (state.has(Crossings.FIELD) and not bool(board.get("allow_layered_3d"))):
         return false
     var viewer: int = 0 if bool(board.get("ai_enabled")) else int(state.get("faction",0))
     if not open_from_state(state,str(board.get("selected_id")),viewer):
         return false
     _live_board = board
+    if state.has(Crossings.FIELD):
+        # Explicit test harness only; use the visible legacy command footer.
+        _set_immersive_mode(false)
+        _refresh_ranges()
+        _update_order_ui()
+        return true
     # Fullscreen map-first mode is exclusive to a live game, never to a
     # detached 3D studio preview (where execution must remain impossible).
     _set_immersive_mode(true)
@@ -680,10 +771,33 @@ func _update_order_ui() -> void:
     _confirm_order_button.visible = pending
     _move_here_button.hide()
     _choose_unit_button.hide()
+    _choose_order_button.hide()
+    _layered_end_button.hide()
     _sync_immersive_hud()
     if not active:
+        if _state_snapshot.has(Crossings.FIELD) and _cells.has(_selected_cell):
+            var options: Array = Crossings.selectable_units(_state_snapshot,_selected_cell,_viewing_side,BridgeVisibility.visible_cells(_state_snapshot,_viewing_side))
+            _choose_unit_button.visible = not options.is_empty()
+            _choose_unit_button.text = "Cambiar nivel"
+        else:
+            _choose_unit_button.text = "Elegir unidad"
         _order_note.text = "Solo inspección: no es tu turno o la partida ha terminado."
         return
+    if _state_snapshot.has(Crossings.FIELD):
+        var chosen: String = str(_live_board.get("selected_id"))
+        _choose_unit_button.text = "Cambiar nivel"
+        _choose_unit_button.visible = not Orders.visible_friends(_current_state(),_selected_cell).is_empty()
+        var options: Array[Dictionary] = Orders.layered_intents(_current_state(),chosen,_selected_cell)
+        _choose_order_button.visible = options.size()>1
+        _layered_end_button.visible = not pending
+        _order_note.text = "Puente · selecciona unidad, elige orden y confirma."
+        if pending:
+            var queued: Dictionary = _order_quote.get("order",{})
+            var kind: String = str(queued.get("kind",""))
+            _order_note.text = ("Objetivo exacto: "+str(queued.get("target_id",""))+" · " if kind=="attack" else "Mover · ")+str(_order_quote.get("message",""))
+            _confirm_order_button.text = "CONFIRMAR ATAQUE" if kind=="attack" else "CONFIRMAR MOVIMIENTO"
+        return
+    _choose_unit_button.text = "Elegir unidad"
     if _selected_cell.x >= 0:
         _choose_unit_button.visible = not Orders.visible_friends(
             _current_state(),_selected_cell).is_empty()
@@ -723,6 +837,8 @@ func _cancel_3d_order() -> void:
     _update_order_ui()
 
 func _select_3d_unit(unit_id: String) -> bool:
+    if bool(_bridge_playback.get("committed",false)):
+        _stop_bridge_playback()
     _drop_3d_quote()
     if not Orders.select(_live_board,unit_id):
         return false
@@ -741,12 +857,48 @@ func _preview_3d_intent(intent: Dictionary) -> bool:
     return not _order_quote.is_empty()
 
 func _choose_unit_here() -> void:
+    if _live_board==null and _state_snapshot.has(Crossings.FIELD):
+        var options: Array = Crossings.selectable_units(_state_snapshot,_selected_cell,_viewing_side,BridgeVisibility.visible_cells(_state_snapshot,_viewing_side))
+        if options.is_empty():
+            return
+        var next := 0
+        for i in range(options.size()):
+            if options[i]["id"]==_selected_hint_unit_id:
+                next = (i+1)%options.size()
+                break
+        _selected_hint_unit_id = options[next]["id"]
+        _range_text.text = "Inspección · %s · %s" % [options[next]["domain"],_selected_hint_unit_id]
+        if _cursor!=null:
+            var point: Vector3 = Terrain.world_at(_selected_cell)
+            _cursor.position.y = Terrain.bridge_surface_y(_cells,_scene.get_meta("bridge_cells_v48"),_scene.get_meta("bridge_ramp_profiles_v48"),point,options[next]["domain"])+0.065
+        return
     if not Orders.can_control(_live_board) or _selected_cell.x < 0:
         return
     var chosen: String = Orders.next_friendly(_current_state(),
         _selected_cell,str(_live_board.get("selected_id")))
     if not chosen.is_empty():
         _select_3d_unit(chosen)
+
+func _finish_layered_turn() -> void:
+    _stop_bridge_playback()
+    if not _state_snapshot.has(Crossings.FIELD) or not Orders.can_control(_live_board) or not _order_quote.is_empty() or _current_state()!=_state_snapshot:
+        return
+    _live_board.call("finish_turn")
+    _refresh_from_board()
+
+func _cycle_layered_order() -> void:
+    if not _state_snapshot.has(Crossings.FIELD) or not Orders.can_control(_live_board) or _current_state()!=_state_snapshot:
+        return
+    var options: Array[Dictionary] = Orders.layered_intents(_current_state(),str(_live_board.get("selected_id")),_selected_cell)
+    if options.is_empty():
+        return
+    var next := 0
+    var prior: Dictionary = _order_quote.get("order",{})
+    for i in range(options.size()):
+        if options[i]["kind"]==prior.get("kind") and options[i]["target_id"]==prior.get("target_id"):
+            next = (i+1)%options.size()
+            break
+    _preview_3d_intent(options[next])
 
 func _request_move_here() -> void:
     if not Orders.can_control(_live_board) or _selected_cell.x < 0:
@@ -758,15 +910,35 @@ func _request_move_here() -> void:
 
 func tap_battle_cell(cell: Vector2i) -> bool:
     # Inspections are safe in detached mode. Live taps can ONLY preview.
+    if bool(_bridge_playback.get("committed",false)):
+        _stop_bridge_playback()
     if not _cells.has(cell):
         return false
     if _live_board == null:
+        if _state_snapshot.has(Crossings.FIELD) and cell!=_selected_cell and not _selected_hint_unit_id.is_empty():
+            if preview_bridge_move(_selected_hint_unit_id,cell):
+                _order_note.text = "Recorrido de demostración · no ejecuta órdenes ni consume combustible."
+                return true
         return inspect_cell(cell)
     if _current_state() != _state_snapshot:
         _drop_3d_quote()
         _refresh_from_board()
         return false
     var selected_before: String = str(_live_board.get("selected_id"))
+    if _state_snapshot.has(Crossings.FIELD):
+        # Repeated taps NEVER commit a layered order; explicit button only.
+        _drop_3d_quote()
+        inspect_cell(cell,false)
+        if not Orders.can_control(_live_board):
+            return true
+        var options: Array[Dictionary] = Orders.layered_intents(_current_state(),selected_before,cell)
+        if not options.is_empty():
+            return _preview_3d_intent(options[0])
+        var chosen: String = Orders.next_friendly(_current_state(),cell,selected_before)
+        if not chosen.is_empty():
+            return _select_3d_unit(chosen)
+        _update_order_ui()
+        return true
     var intent: Dictionary = Orders.legal_intent(_current_state(),selected_before,cell)
     var friends: Array[Dictionary] = Orders.visible_friends(_current_state(),cell)
     # Repeated tap on the SAME still-legal target explicitly authorizes the
@@ -828,6 +1000,9 @@ func _confirm_3d_order() -> void:
                     "target":order.get("cell",Vector2i.ZERO),
                     "faction":_viewing_side}
                 break
+    var bridge_plan: Dictionary = {}
+    if _state_snapshot.has(Crossings.FIELD) and order.get("kind")=="move":
+        bridge_plan = BridgePlayback.quote(_state_snapshot,command_id,order["cell"])
     var committed: bool = Orders.confirm(_live_board,_order_quote)
     if not committed:
         # A rejected confirmation cannot leak a queued order into the 2D HUD.
@@ -838,6 +1013,8 @@ func _confirm_3d_order() -> void:
         return
     if committed:
         _order_note.text = str(_live_board.get("message"))
+        if not bridge_plan.is_empty():
+            _play_committed_bridge_move(bridge_plan)
         # Playback is AFTER the authoritative engine commit and scene rebuild.
         # Failed orders and defeated/hidden units never animate.
         if not visual.is_empty() and _scene!=null:
@@ -890,12 +1067,21 @@ func inspect_cell(cell: Vector2i, recenter: bool = true) -> bool:
     _selected_cell = cell
     _inspect_3d_site(cell)
     var selected_friendly: String = _friendly_unit_at(cell)
+    if _state_snapshot.has(Crossings.FIELD):
+        selected_friendly = ""
+        if _live_board==null:
+            _selected_hint_unit_id = ""
     if not selected_friendly.is_empty():
         _selected_hint_unit_id = selected_friendly
         _refresh_ranges()
     var tile: Dictionary = _cells[cell]
     var kind: String = str(tile.get("kind","unknown"))
     var label_text: String = "No explorada" if kind=="unknown" else kind.capitalize()
+    if tile.has("bridge_axis_v48"):
+        label_text = "Puente elevado · "+str(tile["bridge_axis_v48"]).to_upper()
+        var options: Array = Crossings.selectable_units(_state_snapshot,cell,_viewing_side,BridgeVisibility.visible_cells(_state_snapshot,_viewing_side))
+        for option in options:
+            label_text += " · %s %s" % [option["domain"],option["id"]]
     var visibility: String = " · Con niebla" if bool(tile.get("seen",false)) and not bool(tile.get("visible",false)) else ""
     inspection.text = "Casilla (%d, %d) · %s%s · %s" % [
         cell.x+1,cell.y+1,label_text,visibility,
@@ -916,12 +1102,14 @@ func inspect_cell(cell: Vector2i, recenter: bool = true) -> bool:
     cursor.name = "CursorInspeccionSinOrden"
     cursor.mesh = ring
     cursor.position = Terrain.world_at(cell)+Vector3(0,
-        Terrain.height_at(_cells,cell)+0.065,0)
+        (BridgeArt.ROAD_TOP if tile.has("bridge_axis_v48") else Terrain.height_at(_cells,cell))+0.065,0)
     _scene.add_child(cursor)
     _cursor = cursor
     if recenter or _look_at == Vector3.ZERO:
         _look_at = Terrain.world_at(cell)+Vector3.UP*0.17
         _refresh_camera()
+    if _state_snapshot.has(Crossings.FIELD):
+        _update_order_ui()
     return true
 
 func _friendly_unit_at(cell: Vector2i) -> String:
@@ -939,6 +1127,14 @@ func _refresh_ranges() -> void:
         _ranges_node.queue_free()
         _ranges_node = null
     if _scene == null:
+        return
+    if _state_snapshot.has(Crossings.FIELD):
+        if _live_board!=null and Orders.can_control(_live_board) and _ranges_visible:
+            _ranges_node = Ranges.build_layered(_scene,_state_snapshot,str(_live_board.get("selected_id")),_cells)
+            var counts: Dictionary = _ranges_node.get_meta("counts")
+            _range_text.text = "Por nivel · Azul %d destinos · Rojo %d objetivos exactos" % [counts["moves"],counts["attacks"]]
+        else:
+            _range_text.text = "Puente experimental · inspección o alcances ocultos."
         return
     if not _ranges_visible:
         _range_text.text = "Alcances ocultos · Toca «Alcances» para verlos."
@@ -1123,6 +1319,7 @@ func _on_viewport_input(event: InputEvent) -> void:
         accept_event()
 
 func close_view() -> void:
+    _stop_bridge_playback()
     _drop_3d_quote()
     if unit_detail_panel != null:
         unit_detail_panel.hide()

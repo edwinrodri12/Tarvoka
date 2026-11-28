@@ -9,6 +9,8 @@ const Session = preload("res://scripts/core/BattleSession.gd")
 const Opening = preload("res://scripts/core/OpeningBalance.gd")
 const BasicAI = preload("res://scripts/core/BasicAI.gd")
 const SaveStore = preload("res://scripts/core/SaveStore.gd")
+const Codec = preload("res://scripts/core/SaveCodec.gd")
+const Crossings = preload("res://scripts/core/LayeredCrossingsV48.gd")
 const TacticalHints = preload("res://scripts/core/TacticalHints.gd")
 const Scenarios = preload("res://scripts/core/Scenarios.gd")
 const Rules = preload("res://scripts/core/Rules.gd")
@@ -20,6 +22,8 @@ const Logistics = preload("res://scripts/core/Logistics.gd")
 const Visibility = preload("res://scripts/core/Visibility.gd")
 const VisualStyle = preload("res://scripts/ui/VisualStyle.gd")
 const Winter = preload("res://scripts/ui/WinterBattleBiome.gd")
+const MixedRegions = preload("res://scripts/core/MixedBiomeRegionsV49.gd")
+const MixedPreview = preload("res://scripts/ui/MixedBiomePreviewV49.gd")
 const Weather = preload("res://scripts/core/Weather.gd")
 const WeatherPainter = preload("res://scripts/ui/WeatherPainter.gd")
 const BattleVFX = preload("res://scripts/ui/BattleVFX.gd")
@@ -50,6 +54,7 @@ var campaign_locked := false
 var campaign_markers: Array[Vector2i] = []
 var selected_id := ""
 var inspected_enemy_id := "" # Only currently visible enemy, never saved.
+var allow_layered_3d := false # Explicit validated geographic opt-in; standard menus remain unchanged.
 var require_order_confirmation := false # Main enables safer two-stage taps; legacy test boards remain immediate.
 var pending_order: Dictionary = {}
 var selected_factory_pos := Vector2i(-1,-1)
@@ -104,38 +109,33 @@ func _ready() -> void:
     new_game()
 
 func new_game(scenario_id: int = 0, symmetric: bool = false, fog_mode: bool = false, relay_mode: bool = false, specialized: bool = false, economy_mode: bool = false, modern: bool = false, first_faction: int = 0, map_seed: int = 0, map_dimensions: Vector2i = Vector2i(10,8), chosen_factions: Dictionary = {}, weather: String = "clear", dynamic_weather: bool = false,
-        visual_biome: String = Winter.TEMPERATE) -> void:
-    campaign_locked = false
-    campaign_markers.clear()
-    symmetric_setup = symmetric
-    specialized_roster = specialized or modern
-    modern_roster = modern
+        visual_biome: String = Winter.TEMPERATE,mixed_config: Dictionary = {},layered_geography: bool = false) -> void:
+    if not mixed_config.is_empty() and (scenario_id!=Scenarios.GEOGRAPHIC_SCENARIO_ID or not Scenarios.valid_seed(map_seed) or not Rules.supported_size(map_dimensions) or not MixedRegions.valid_config(mixed_config) or mixed_config["primary"]!=visual_biome):
+        message = "Configuración multibioma inválida; se conserva la partida."
+        return
+    if layered_geography and (scenario_id!=Scenarios.GEOGRAPHIC_SCENARIO_ID or not Scenarios.valid_seed(map_seed) or not Rules.supported_size(map_dimensions)):
+        message = "Los puentes elevados requieren geografía válida; se conserva la partida."
+        return
+    var next_specialized: bool = specialized or modern
     var enemy_hp: int = 10 if symmetric else 8
     var enemy_attack: int = 5 if symmetric else 4
     if not Rules.supported_size(map_dimensions):
         map_dimensions = Vector2i(10,8)
-    view_zoom = 1.0
-    view_pan = Vector2.ZERO
-    iso_zoom = 1.0
-    iso_pan = Vector2.ZERO
-    _reset_touch_gesture()
-    motion_effects.clear()
-    unit_headings.clear()
     var is_seeded: bool = Scenarios.uses_seed(scenario_id) and Scenarios.valid_seed(map_seed)
-    current_scenario_id = scenario_id if is_seeded else (scenario_id if scenario_id >= 0 and scenario_id < Scenarios.LABELS.size() else 0)
+    var next_scenario: int = scenario_id if is_seeded else (scenario_id if scenario_id >= 0 and scenario_id < Scenarios.LABELS.size() else 0)
     var chosen_biome: String = visual_biome if Winter.valid(visual_biome) else Winter.TEMPERATE
-    var terrain: Array = Scenarios.selected_terrain(current_scenario_id,map_dimensions,map_seed,chosen_biome)
+    var terrain: Array = Scenarios.selected_terrain(next_scenario,map_dimensions,map_seed,chosen_biome) if mixed_config.is_empty() else MixedRegions.geographic_candidate(map_seed,map_dimensions,mixed_config)
     var units: Array = [
         {"id":"A","faction":0,"hp":10,"pos":Vector2i(1,2),"move_points":3,"attack":5,"defense":0,"cover":0,"acted":false},
         {"id":"B","faction":0,"hp":10,"pos":Vector2i(1,5),"move_points":3,"attack":5,"defense":0,"cover":0,"acted":false},
         {"id":"X","faction":1,"hp":enemy_hp,"pos":Vector2i(8,2),"move_points":3,"attack":enemy_attack,"defense":0,"cover":0,"acted":false},
         {"id":"Y","faction":1,"hp":enemy_hp,"pos":Vector2i(8,5),"move_points":3,"attack":enemy_attack,"defense":0,"cover":0,"acted":false}
     ]
-    if specialized_roster:
+    if next_specialized:
         units = Roles.experimental_armies(symmetric)
-    if modern_roster:
+    if modern:
         units = Roles.modern_armies(symmetric)
-    if fog_mode and not specialized_roster:
+    if fog_mode and not next_specialized:
         # Classic recon scouts are mirrored: mobility 4, sight 5.
         units.append({"id":"S","faction":0,"hp":6,"pos":Vector2i(1,3),"move_points":4,"attack":2,"defense":0,"cover":0,"vision":5,"acted":false})
         units.append({"id":"Z","faction":1,"hp":6,"pos":Vector2i(8,3),"move_points":4,"attack":2,"defense":0,"cover":0,"vision":5,"acted":false})
@@ -145,22 +145,46 @@ func new_game(scenario_id: int = 0, symmetric: bool = false, fog_mode: bool = fa
             unit["pos"] = Vector2i(Scenarios.scale_x(old.x,map_dimensions),
                 Scenarios.scale_y(old.y,map_dimensions))
     var opener: int = first_faction if first_faction in [0,1] else 0
-    state = Session.start(units, terrain, opener, fog_mode, relay_mode, economy_mode, modern_roster, true, weather, dynamic_weather)
-    # Persistent decorative setting: separate from snow weather penalties.
-    # Omitted from normal/legacy matches to preserve v1 save payloads.
+    var next_state: Dictionary = Session.start(units, terrain, opener, fog_mode, relay_mode, economy_mode, modern, true, weather, dynamic_weather)
     if Winter.valid(visual_biome) and visual_biome != Winter.TEMPERATE:
-        state[Winter.FIELD] = visual_biome
+        next_state[Winter.FIELD] = visual_biome
+    if Identity.is_valid(chosen_factions):
+        next_state[Identity.STATE_FIELD] = chosen_factions.duplicate(true)
+    if is_seeded:
+        next_state["map_seed"] = map_seed
+        if next_scenario==Scenarios.GEOGRAPHIC_SCENARIO_ID:
+            next_state[Scenarios.GEOGRAPHY_FIELD] = Scenarios.GEOGRAPHY_VERSION
+    if not mixed_config.is_empty():
+        next_state[MixedRegions.FIELD] = mixed_config.duplicate(true)
+        next_state[MixedRegions.SEED_FIELD] = map_seed
+        next_state[MixedRegions.GENERATED_FIELD] = true
+    if layered_geography:
+        next_state = Session.with_geographic_crossings(next_state)
+        if next_state.is_empty() or Codec.encode(next_state).is_empty():
+            message = "Mapa sin puentes seguros o configuración incompatible; se conserva la partida."
+            return
+    # Only replace UI/session after all requested topology checks pass.
+    campaign_locked = false
+    campaign_markers.clear()
+    symmetric_setup = symmetric
+    specialized_roster = next_specialized
+    modern_roster = modern
+    current_scenario_id = next_scenario
+    state = next_state
+    allow_layered_3d = layered_geography
+    if layered_geography:
+        require_order_confirmation = true
+    view_zoom = 1.0
+    view_pan = Vector2.ZERO
+    iso_zoom = 1.0
+    iso_pan = Vector2.ZERO
+    _reset_touch_gesture()
+    motion_effects.clear()
+    unit_headings.clear()
     weather_visual_current = Weather.from_state(state)
     weather_visual_previous = weather_visual_current
     weather_blend = 1.0
-    if Identity.is_valid(chosen_factions):
-        # Cosmetic team presentation only; no new engine faction values.
-        state[Identity.STATE_FIELD] = chosen_factions.duplicate(true)
     inspected_cell = Vector2i(-1,-1)
-    if is_seeded:
-        state["map_seed"] = map_seed
-        if current_scenario_id==Scenarios.GEOGRAPHIC_SCENARIO_ID:
-            state[Scenarios.GEOGRAPHY_FIELD] = Scenarios.GEOGRAPHY_VERSION
     selected_factory_pos = Vector2i(-1,-1)
     selected_id = ""
     inspected_enemy_id = ""
@@ -442,12 +466,20 @@ func _draw() -> void:
     var explored: Dictionary = Visibility.explored_cells(state, 0) if fog else {}
     var dimensions: Vector2i = map_dimensions()
     var visual_biome: String = Winter.from_state(state)
+    var regions: Dictionary = MixedPreview.regions_for(state,dimensions)
     for y in range(dimensions.y):
         for x in range(dimensions.x):
             var pos := origin + Vector2(x, y) * tile
+            var cell := Vector2i(x,y)
+            if fog and not explored.has(cell):
+                draw_rect(Rect2(pos,Vector2.ONE*tile),fog_cover_color(false))
+                continue
             var terrain_type := str(state.get("terrain", [])[y][x])
+            var region: Dictionary = regions.get(cell,{}) if not fog or explored.has(cell) else {}
+            var local_biome: String = MixedPreview.local_style(region,cell,dimensions,visual_biome)
+            var pigment: Color = VisualStyle.terrain_color(terrain_type,x,y,visual_biome) if region.is_empty() else MixedPreview.tile_tint(terrain_type,cell,region)
             var terrain_color: Color = Weather.blended_tint(
-                VisualStyle.terrain_color(terrain_type,x,y,visual_biome),
+                pigment,
                 weather_visual_previous,Weather.from_state(state),weather_blend)
             draw_rect(Rect2(pos, Vector2.ONE * tile), terrain_color)
             # Subtle tile relief reads as depth without changing top-down touch geometry.
@@ -455,8 +487,8 @@ func _draw() -> void:
             draw_line(pos + Vector2(1, tile - 1), pos + Vector2(tile - 1, tile - 1), terrain_color.darkened(0.35), maxf(1.0, tile * 0.024))
             draw_rect(Rect2(pos, Vector2.ONE * tile), Color(0.48, 0.55, 0.53, 0.60), false, 1.0)
             # Simple self-contained symbols, no borrowed art or sprite assets.
-            if visual_biome != Winter.TEMPERATE:
-                Winter.draw_biome_classic(self,terrain_type,pos,tile,visual_biome)
+            if local_biome != Winter.TEMPERATE:
+                Winter.draw_biome_classic(self,terrain_type,pos,tile,local_biome)
             elif terrain_type == "forest":
                 draw_circle(pos + tile * Vector2(0.29, 0.31), tile * 0.09, Color(0.25, 0.53, 0.27))
                 draw_circle(pos + tile * Vector2(0.65, 0.27), tile * 0.11, Color(0.20, 0.45, 0.22))
@@ -887,7 +919,8 @@ func _request_order(cell: Vector2i, target: Dictionary) -> void:
     var hints: Dictionary = TacticalHints.for_unit(state, selected_id)
     var enemy_id := str(target.get("id", ""))
     var kind := "attack" if not target.is_empty() else "move"
-    var legal: bool = bool(hints["attacks"].has(cell)) if kind == "attack" else bool(hints["moves"].has(cell))
+    var detail: Dictionary = TacticalHints.attack_at(hints,cell,enemy_id)
+    var legal: bool = not detail.is_empty() if kind == "attack" else bool(hints["moves"].has(cell))
     if not legal:
         pending_order.clear()
         message = "Apertura completada. Pulsa Terminar turno." if Opening.remaining(state) == 0 else "Accion no permitida."
@@ -896,9 +929,9 @@ func _request_order(cell: Vector2i, target: Dictionary) -> void:
     if require_order_confirmation and pending_order != order:
         pending_order = order
         if kind == "attack":
-            var damage := int(hints["attacks"][cell]["damage"])
-            var response_max: int = int(hints["attacks"][cell].get("counter_damage",0))
-            var effects: Dictionary = hints["attacks"][cell]
+            var damage := int(detail["damage"])
+            var response_max: int = int(detail.get("counter_damage",0))
+            var effects: Dictionary = detail
             var ground_note := " | terreno: ATQ %+d, cobertura rival +%d%s" % [
                 int(effects.get("terrain_attack_bonus",0)),int(effects.get("terrain_defense_cover",0)),
                 ", flanqueo" if bool(effects.get("flanked",false)) else ""
@@ -929,7 +962,7 @@ func _commit_order(order: Dictionary) -> bool:
     var hints: Dictionary = TacticalHints.for_unit(state, unit_id)
     var result: Dictionary = {}
     if kind == "attack":
-        if not hints["attacks"].has(cell) or str(hints["attacks"][cell]["id"]) != enemy_id:
+        if TacticalHints.attack_at(hints,cell,enemy_id).is_empty():
             message = "Objetivo ya no disponible."
             return false
         result = Session.attack(state, unit_id, enemy_id)
@@ -1176,6 +1209,9 @@ func _gui_input(event: InputEvent) -> void:
             accept_event()
 
 func _tap(point: Vector2) -> void:
+    if state.has("layered_crossings_v48"):
+        message = "Usa el visor 3D experimental para elegir nivel y objetivo."
+        return
     if campaign_locked:
         return
     if ai_enabled and int(state.get("faction", -1)) != 0:
@@ -1426,13 +1462,19 @@ func save_game(path: String = SaveStore.DEFAULT_PATH) -> bool:
     message = "Partida guardada." if ok else "No se pudo guardar la partida."
     return ok
 
-func load_game(path: String = SaveStore.DEFAULT_PATH) -> bool:
+func load_game(path: String = SaveStore.DEFAULT_PATH,accept_layered: bool = false) -> bool:
     var report: Dictionary = SaveStore.load_report(path)
     var restored: Dictionary = report["state"]
+    if restored.has(Crossings.FIELD) and not accept_layered:
+        message = "Partida de puentes: requiere apertura explícita del visor 3D."
+        return false
     if restored.is_empty():
         message = "No se pudo cargar la partida."
         return false
     state = restored
+    allow_layered_3d = state.has(Crossings.FIELD)
+    if allow_layered_3d:
+        require_order_confirmation = true
     weather_visual_current = Weather.from_state(state)
     weather_visual_previous = weather_visual_current
     weather_blend = 1.0
@@ -1477,12 +1519,15 @@ func _infer_symmetric_setup() -> bool:
             return int(unit.get("attack", 0)) == 5
     return false
 
-func resume_autosave() -> bool:
+func resume_autosave(accept_layered: bool = false) -> bool:
     var report: Dictionary = SaveStore.load_report(autosave_path)
     var restored: Dictionary = report["state"]
-    if restored.is_empty():
+    if restored.is_empty() or (restored.has(Crossings.FIELD) and not accept_layered):
         return false
     state = restored
+    allow_layered_3d = state.has(Crossings.FIELD)
+    if allow_layered_3d:
+        require_order_confirmation = true
     weather_visual_current = Weather.from_state(state)
     weather_visual_previous = weather_visual_current
     weather_blend = 1.0

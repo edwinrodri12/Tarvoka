@@ -13,6 +13,7 @@ const SupplyNavigation = preload("res://scripts/core/SupplyNavigation.gd")
 const BattleActions = preload("res://scripts/core/BattleActions.gd")
 const Opening = preload("res://scripts/core/OpeningBalance.gd")
 const Weather = preload("res://scripts/core/Weather.gd")
+const Crossings = preload("res://scripts/core/LayeredCrossingsV48.gd")
 const SupplyStrategy = preload("res://scripts/core/SupplyStrategy.gd")
 
 # Tactical AI v2: bounded, deterministic, scene-independent and rule-compliant.
@@ -27,6 +28,8 @@ static func step(state: Dictionary) -> Dictionary:
     var faction := int(state.get("faction", -1))
     if faction not in [0, 1]:
         return idle
+    if state.has(Crossings.FIELD):
+        return _step_layered(state,idle)
     # Decide from the currently observable units; do not inspect hidden targets.
     var knowledge: Dictionary = Visibility.observed_state(state, faction)
     var friends: Array = []
@@ -904,3 +907,119 @@ static func _closest_enemy_distance(cell: Vector2i, enemies: Array) -> int:
 
 static func _distance(a: Vector2i, b: Vector2i) -> int:
     return absi(a.x - b.x) + absi(a.y - b.y)
+
+# Experimental policy: rank visible legal attacks, direct supply, then
+# approach attack-compatible enemies using only layered legal endpoints.
+# Never delegate a layered position to the legacy surface-only planner.
+static func _step_layered(state: Dictionary,idle: Dictionary) -> Dictionary:
+    var index: Dictionary = Crossings.state_index(state)
+    if not index["valid"] or not Crossings.occupancy(state["terrain"],index["cells"],state["units"])["valid"]:
+        return idle
+    var side: int = int(state["faction"])
+    var knowledge: Dictionary = Visibility.observed_state(state,side)
+    var visible: Variant = Visibility.visible_cells(state,side) if Visibility.enabled(state) else null
+    var public_bridges: Dictionary = Crossings.public_cells(index["cells"],Visibility.explored_cells(state,side)) if visible!=null else index["cells"]
+    var best: Dictionary = {}
+    var score := -999999
+    for unit in knowledge["units"]:
+        if not Turns.can_act(unit,side):
+            continue
+        for enemy in knowledge["units"]:
+            if int(enemy.get("hp",0))<=0 or int(enemy.get("faction",-1))==side:
+                continue
+            if not Logistics.can_fire(unit) or not Turns.in_attack_range(unit,enemy):
+                continue
+            var exchange: Dictionary = BattleActions.public_preview_exchange(unit,enemy,knowledge["terrain"],knowledge.get("economy",{}),knowledge["units"])
+            if not exchange.get("valid",false):
+                continue
+            var candidate: int = int(exchange["damage"])*12-int(exchange["counter_damage"])*9
+            if exchange.get("defeated",false):
+                candidate += 1000
+            if candidate>score:
+                score = candidate
+                best = {"unit":str(unit["id"]),"enemy":str(enemy["id"])}
+    if not best.is_empty():
+        var attack: Dictionary = Session.attack(state,best["unit"],best["enemy"])
+        if attack.get("valid",false):
+            attack["action"] = "attack"
+            return attack
+    # Replenish, then use the same layered topology for multi-turn returns.
+    # Temporary occupancy is checked for actual endpoints, never hidden units.
+    for unit in knowledge["units"]:
+        if not Turns.can_act(unit,side) or not unit.has("ammo"):
+            continue
+        var supply: Dictionary = Logistics.quote(state,str(unit["id"]))
+        var role: String = str(unit.get("role",""))
+        var low_ammo: bool = Logistics.ammo_capacity(role)>0 and int(unit["ammo"])<=1
+        var low_fuel: bool = Logistics.fuel_capacity(role)>0 and int(unit.get("fuel",999))<=2
+        if supply.get("valid",false) and (low_ammo or low_fuel):
+            var supplied: Dictionary = Session.resupply(state,str(unit["id"]))
+            if supplied.get("valid",false):
+                supplied["action"] = "resupply"
+                return supplied
+        if not Turns.can_move(unit,side) or not knowledge.has("economy"):
+            continue
+        if not low_ammo and not low_fuel:
+            continue
+        var domain: String = Domains.domain(unit)
+        var endpoints: Dictionary = Crossings.reachable(knowledge["terrain"],public_bridges,knowledge["units"],
+            unit["pos"],domain,side,Logistics.movement_budget(unit),
+            Logistics.road_fast(unit),Weather.from_state(state),Weather.traction(unit),{},visible)
+        var bases: Array = []
+        for site in knowledge["economy"].get("sites",[]):
+            var kind: String = str(site.get("kind",""))
+            var compatible: bool = (domain=="ground" and kind in ["factory","armor_plant","artillery_depot"]) or (domain=="air" and kind in ["airbase","drone_center"]) or (domain=="naval" and kind=="shipyard")
+            if compatible and int(site.get("owner",-1))==side:
+                bases.append(site["pos"])
+            if compatible and int(site.get("owner",-1))==side and site["pos"]!=unit["pos"] and endpoints.has(site["pos"]):
+                var returned: Dictionary = Session.move(state,str(unit["id"]),site["pos"])
+                if returned.get("valid",false):
+                    returned["action"] = "move"
+                    return returned
+        var distances: Dictionary = Crossings.distances_to(knowledge["terrain"],public_bridges,bases,domain,
+            Logistics.road_fast(unit),Weather.from_state(state),Weather.traction(unit),visible)
+        var origin: Vector2i = unit["pos"]
+        if not distances.has(origin):
+            continue
+        var best_cell: Vector2i = origin
+        var best_distance: int = int(distances[origin])
+        for endpoint in endpoints:
+            if not distances.has(endpoint):
+                continue
+            var distance: int = int(distances[endpoint])
+            if distance<best_distance:
+                best_distance = distance
+                best_cell = endpoint
+        if best_cell!=origin:
+            var returned: Dictionary = Session.move(state,str(unit["id"]),best_cell)
+            if returned.get("valid",false):
+                returned["action"] = "move"
+                return returned
+    best.clear()
+    score = 0
+    for unit in knowledge["units"]:
+        if not Turns.can_move(unit,side):
+            continue
+        var origin: Vector2i = unit["pos"]
+        var endpoints: Dictionary = Crossings.reachable(knowledge["terrain"],public_bridges,knowledge["units"],
+            origin,Domains.domain(unit),side,Logistics.movement_budget(unit),
+            Logistics.road_fast(unit),Weather.from_state(state),Weather.traction(unit),{},visible)
+        for enemy in knowledge["units"]:
+            if int(enemy.get("hp",0))<=0 or int(enemy.get("faction",-1))==side or not Domains.can_attack(unit,enemy):
+                continue
+            var target: Vector2i = enemy["pos"]
+            var old_distance: int = absi(origin.x-target.x)+absi(origin.y-target.y)
+            for cell in endpoints:
+                if cell==origin:
+                    continue
+                var distance: int = absi(cell.x-target.x)+absi(cell.y-target.y)
+                var gain: int = (old_distance-distance)*100-int(endpoints[cell])
+                if gain>score:
+                    score = gain
+                    best = {"unit":str(unit["id"]),"cell":cell}
+    if not best.is_empty():
+        var move: Dictionary = Session.move(state,best["unit"],best["cell"])
+        if move.get("valid",false):
+            move["action"] = "move"
+            return move
+    return idle

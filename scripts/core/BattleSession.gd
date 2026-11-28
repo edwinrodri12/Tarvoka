@@ -11,6 +11,7 @@ const Economy = preload("res://scripts/core/UrbanEconomy.gd")
 const Logistics = preload("res://scripts/core/Logistics.gd")
 const Opening = preload("res://scripts/core/OpeningBalance.gd")
 const Weather = preload("res://scripts/core/Weather.gd")
+const Crossings = preload("res://scripts/core/LayeredCrossingsV48.gd")
 
 # Scene-independent two-faction battle state. All operations return fresh dictionaries.
 static func start(units: Array, terrain: Array, first_faction: int = 0, fog_enabled: bool = false, relay_mode: bool = false, economy_mode: bool = false, modern_mode: bool = false, balanced_opening: bool = false, weather: String = "clear", dynamic_weather: bool = false) -> Dictionary:
@@ -45,6 +46,34 @@ static func start(units: Array, terrain: Array, first_faction: int = 0, fog_enab
         return Visibility.update_exploration(state)
     return state
 
+# Explicit sandbox entrypoint; ordinary new_game never enables it.
+static func start_layered(units: Array,terrain: Array,records: Array,
+        first_faction: int = 0,weather: String = "clear",fog: bool = false,economy: bool = false,modern: bool = false,relays: bool = false) -> Dictionary:
+    var state: Dictionary = start(units,terrain,first_faction,fog,relays,economy,modern,false,weather)
+    if (economy and not state.has("economy")) or (relays and not state.has("control")):
+        return {}
+    state[Crossings.FIELD] = {"version":Crossings.VERSION,"records":records.duplicate(true)}
+    var index: Dictionary = Crossings.state_index(state)
+    if not index["valid"] or not Crossings.occupancy(terrain,index["cells"],state["units"])["valid"]:
+        return {}
+    return state
+
+# Opt-in conversion of a canonical geographic battle, preserving its
+# economy, opening, weather, faction and exploration. Empty means no safe
+# crossing available or invalid occupancy; caller keeps the original.
+static func with_geographic_crossings(state: Dictionary) -> Dictionary:
+    if not state.has("map_seed") or state.has(Crossings.FIELD) or not state.get("terrain") is Array or not state.get("units") is Array:
+        return {}
+    var records: Array = Crossings.geographic_records(state["terrain"])
+    if records.is_empty():
+        return {}
+    var next: Dictionary = state.duplicate(true)
+    next[Crossings.FIELD] = {"version":Crossings.GEOGRAPHIC_VERSION,"records":records}
+    var index: Dictionary = Crossings.state_index(next)
+    if not index["valid"] or not Crossings.occupancy(next["terrain"],index["cells"],next["units"])["valid"]:
+        return {}
+    return next
+
 static func move(state: Dictionary, unit_id: String, destination: Vector2i) -> Dictionary:
     if not _active(state) or not Opening.can_order(state):
         return {"valid": false, "state": state.duplicate(true)}
@@ -52,7 +81,11 @@ static func move(state: Dictionary, unit_id: String, destination: Vector2i) -> D
     # this also prevents hidden occupancy from revealing enemy coordinates.
     if Visibility.enabled(state) and not Visibility.visible_cells(state, int(state["faction"])).has(destination):
         return {"valid": false, "state": state.duplicate(true)}
-    var action: Dictionary = MoveActions.move(state["units"], unit_id, destination, state["faction"], state["terrain"], Weather.from_state(state))
+    var crossing_index: Dictionary = Crossings.state_index(state)
+    if not crossing_index["valid"]:
+        return {"valid":false,"state":state.duplicate(true)}
+    var allowed: Variant = Visibility.visible_cells(state,int(state["faction"])) if Visibility.enabled(state) and not crossing_index["cells"].is_empty() else null
+    var action: Dictionary = MoveActions.move(state["units"], unit_id, destination, state["faction"], state["terrain"], Weather.from_state(state),crossing_index["cells"],allowed)
     return _apply(state, action)
 
 static func attack(state: Dictionary, attacker_id: String, defender_id: String) -> Dictionary:
@@ -123,6 +156,10 @@ static func end_turn(state: Dictionary) -> Dictionary:
     return {"valid": true, "state": next}
 
 static func _active(state: Dictionary) -> bool:
+    if state.has(Crossings.FIELD):
+        var index: Dictionary = Crossings.state_index(state)
+        if not index["valid"] or not state.get("units") is Array or not Crossings.occupancy(state["terrain"],index["cells"],state["units"])["valid"]:
+            return false
     return state.has("units") and state["units"] is Array and state.has("terrain") and state["terrain"] is Array and Rules.valid_terrain(state["terrain"]) and state.has("faction") and state["faction"] in [0, 1] and int(state.get("winner", -1)) == -1
 
 static func _apply(state: Dictionary, action: Dictionary) -> Dictionary:

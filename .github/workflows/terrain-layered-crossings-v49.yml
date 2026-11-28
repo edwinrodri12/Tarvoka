@@ -1,0 +1,109 @@
+name: TARVOKA V48-V49 experimental terrain graph
+on:
+  pull_request:
+    paths:
+      - "scripts/core/LayeredCrossingsV48.gd"
+      - "scripts/core/MixedBiomeRegionsV49.gd"
+      - "scripts/ui/LayeredBridgeArtV48.gd"
+      - "scripts/ui/LayeredBridgePlaybackV48.gd"
+      - "scripts/core/TerrainTactics.gd"
+      - "tests/test_modern_arsenal_ui.gd"
+      - "scripts/ui/BattleTerrain3D.gd"
+      - "scripts/ui/TerrainSurfaceFinish3D.gd"
+      - "scripts/ui/SkirmishSetup.gd"
+      - "scripts/ui/Main.gd"
+      - "scripts/ui/TouchBoard.gd"
+      - "scripts/ui/BattlefieldPreview.gd"
+      - "scripts/ui/IsoRenderer.gd"
+      - "scripts/ui/BattleMinimap.gd"
+      - "scripts/ui/City3DPerfProbeV7.gd"
+      - "tests/test_seeded_map_ui.gd"
+      - "tests/test_scenarios.gd"
+      - "scripts/ui/Battle3DMapView.gd"
+      - "scripts/core/BattleSession.gd"
+      - "scripts/core/SaveCodec.gd"
+      - "scripts/core/MoveActions.gd"
+      - "scripts/core/BasicAI.gd"
+      - "scripts/core/TacticalHints.gd"
+      - "scripts/ui/Battle3DOrders.gd"
+      - "scripts/ui/BattleRanges3D.gd"
+      - "scripts/core/Visibility.gd"
+      - "scripts/core/Logistics.gd"
+      - "scripts/ui/MixedBiomePreviewV49.gd"
+      - "tests/test_layered_bridge_render_v48_4.gd"
+      - "tests/test_layered_crossings_mixed_biomes_v49.gd"
+      - ".github/workflows/terrain-layered-crossings-v49.yml"
+  workflow_dispatch:
+concurrency:
+  group: terrain-v49-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+permissions:
+  contents: read
+jobs:
+  prototype:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 16
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Godot and import checkout
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -fsSL --retry 3 https://github.com/godotengine/godot/releases/download/4.3-stable/Godot_v4.3-stable_linux.x86_64.zip -o /tmp/godot.zip
+          unzip -q /tmp/godot.zip -d /tmp
+          chmod +x /tmp/Godot_v4.3-stable_linux.x86_64
+          rm -f scripts/ui/BastionStudioAdapter.gd scripts/ui/CivilianCityStudioAdapter.gd
+          timeout 140s /tmp/Godot_v4.3-stable_linux.x86_64 --headless --editor --path . --import --quit 2>&1 | tee /tmp/v49-import.log
+          if grep -E 'SCRIPT ERROR:|Parse Error:|Import failed' /tmp/v49-import.log; then exit 1; fi
+      - name: Run isolated graph and region assertions
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout 150s /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . --script res://tests/test_layered_crossings_mixed_biomes_v49.gd 2>&1 | tee /tmp/v49-test.log
+          if grep -E 'SCRIPT ERROR:|Parse Error:|Assertion failed' /tmp/v49-test.log; then exit 1; fi
+          grep -q 'PASS V48_V49_EXPERIMENT:' /tmp/v49-test.log
+          grep -q "V50_CACHED_SAVE_12" /tmp/v49-test.log
+          grep -q "V52_GEOGRAPHIC_CROSSINGS" /tmp/v49-test.log
+      - name: Validate actual mixed skirmish setup and saved match
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout 150s /tmp/Godot_v4.3-stable_linux.x86_64 --headless --path . --script res://tests/test_seeded_map_ui.gd 2>&1 | tee /tmp/v49-setup.log
+          if grep -E 'SCRIPT ERROR:|Parse Error:|Assertion failed' /tmp/v49-setup.log; then exit 1; fi
+          grep -q 'PASS seeded map UI:' /tmp/v49-setup.log
+          grep -q 'PASS V51_3_GEOGRAPHIC_BOARD:' /tmp/v49-setup.log
+      - name: Render real bridge and actual unit envelopes
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts
+          timeout 300s xvfb-run -a -s "-screen 0 1280x800x24" /tmp/Godot_v4.3-stable_linux.x86_64 --path . --rendering-driver opengl3 --audio-driver Dummy --script res://tests/test_layered_bridge_render_v48_4.gd 2>&1 | tee /tmp/v49-render.log
+          if grep -E 'SCRIPT ERROR:|Parse Error:|Assertion failed' /tmp/v49-render.log; then exit 1; fi
+          grep -q 'PASS V48_4_NATIVE_BRIDGE:' /tmp/v49-render.log
+          test -s artifacts/tarvoka_bridge_v48_4_ew.png
+          test -s artifacts/tarvoka_bridge_v48_4_ns.png
+          for pair in temperate_winter desert_tropical wetland_urban coastal_archipelago; do
+            test -s "artifacts/tarvoka_mixed_v49_6_${pair}.png"
+          done
+          grep -q "V49_MIXED_STATS" /tmp/v49-render.log
+          for pair in desert_tropical wetland_archipelago; do
+            test -s "artifacts/tarvoka_mixed_v50_2_large_${pair}.png"
+          done
+          grep -q "V50_LARGE_MAP" /tmp/v49-render.log
+          grep -q "PASS V50_6_LIVE_LAYERED:" /tmp/v49-render.log
+          grep -q "PASS V51_3_URBAN:" /tmp/v49-render.log
+          test -s artifacts/tarvoka_urban_v51_3_0.png
+          test -s artifacts/tarvoka_urban_v51_3_1.png
+          grep -q "PASS V52_CONTINUOUS_BRIDGE:" /tmp/v49-render.log
+          test -s artifacts/tarvoka_continuous_bridge_v52.png
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: TARVOKA-V49-experimental-logs
+          path: |
+            /tmp/v49-*.log
+            artifacts/tarvoka_bridge_v48_4_*.png
+            artifacts/tarvoka_mixed_v49_6_*.png
+            artifacts/tarvoka_mixed_v50_2_large_*.png
+            artifacts/tarvoka_urban_v51_3_*.png
+            artifacts/tarvoka_continuous_bridge_v52.png

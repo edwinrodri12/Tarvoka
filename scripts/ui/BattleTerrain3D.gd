@@ -31,7 +31,10 @@ const G11ActionsV29 = preload("res://scripts/ui/G11BattleActionsV29.gd")
 const G13ActionsV70 = preload("res://scripts/ui/G13BattleActionsV70.gd")
 const FactionIdentity = preload("res://scripts/ui/FactionIdentity.gd")
 const Domains = preload("res://scripts/core/Domains.gd")
+const Crossings = preload("res://scripts/core/LayeredCrossingsV48.gd")
+const BridgeArt = preload("res://scripts/ui/LayeredBridgeArtV48.gd")
 const Biomes = preload("res://scripts/ui/WinterBattleBiome.gd")
+const MixedRegions = preload("res://scripts/core/MixedBiomeRegionsV49.gd")
 const CELL := 2.40
 const MAX_DETAILED_UNITS := 8
 const WATER_LEVEL := -0.17
@@ -119,9 +122,29 @@ static func _biome_color(kind: String,cell: Vector2i,
         return COLORS.get(kind,COLORS["plain"])
     return Biomes.tile_color(kind,cell.x,cell.y,biome)
 
+# V49.2: public region pigments use existing geometry and draw batches.
+# Vegetation meshes and material textures remain the original base biome.
+static func _region_pigment(kind: String,cell: Vector2i,biome: String,region: Dictionary,
+        corner: bool = false) -> Color:
+    var primary: String = str(region.get("primary",biome))
+    var secondary: String = str(region.get("secondary",primary))
+    var weight: int = int(region.get("secondary_weight",0))
+    if weight<=0 or primary==secondary:
+        return _pigment(kind,cell,primary,corner)
+    if weight>=1000:
+        return _pigment(kind,cell,secondary,corner)
+    return _pigment(kind,cell,primary,corner).lerp(_pigment(kind,cell,secondary,corner),float(weight)/1000.0)
+
+static func _pigment(kind: String,cell: Vector2i,biome: String,corner: bool) -> Color:
+    if corner and kind=="water":
+        return _shore_color(biome)
+    if corner and kind=="road":
+        return Biomes.ROAD_SLUSH if biome==Biomes.WINTER else _road_color(biome).lerp(_biome_color("plain",cell,biome),0.58)
+    return _biome_color(kind,cell,biome)
+
 static func _tint(record: Dictionary,biome: String = Biomes.TEMPERATE) -> Color:
-    var tint: Color = _biome_color(str(record.get("kind","unknown")),
-        record.get("cell",Vector2i.ZERO),biome)
+    var tint: Color = _region_pigment(str(record.get("kind","unknown")),
+        record.get("cell",Vector2i.ZERO),biome,record.get("mixed_region_v49",{}))
     if not bool(record.get("visible",false)) and bool(record.get("seen",false)):
         tint = tint.darkened(0.60)
     return tint
@@ -150,6 +173,8 @@ static func _shared_corner_tint(cells: Dictionary, corner: Vector2i,
             elif kind == "road":
                 tint = Biomes.ROAD_SLUSH if biome==Biomes.WINTER else _road_color(biome).lerp(_biome_color("plain",corner,biome),0.58)
                 weight = 0.88
+            if tile.has("mixed_region_v49"):
+                tint = _region_pigment(kind,corner+Vector2i(dx,dy),biome,tile["mixed_region_v49"],true)
             total += tint*weight
             weight_sum += weight
     if weight_sum <= 0.0:
@@ -310,6 +335,13 @@ static func _append_road_finish(tool: SurfaceTool,at: Vector3,
             RoadShore._rect(tool,at,surface,-0.025,0.025,start,end,stripe,0.084)
         elif axis==2:
             RoadShore._rect(tool,at,surface,start,end,-0.025,0.025,stripe,0.084)
+    if biome==Biomes.URBAN and axis in [1,2]:
+        for side in [-1.0,1.0]:
+            var edge: float = float(side)*0.86
+            if axis==1:
+                RoadShore._rect(tool,at,surface,edge-0.09,edge+0.09,-half,half,Color("#adb0a9"),0.045)
+            else:
+                RoadShore._rect(tool,at,surface,-half,half,edge-0.09,edge+0.09,Color("#adb0a9"),0.045)
     # Water-facing curb bands are visual only: they do not create a bridge
     # over a water tile or change naval connectivity.
     var shores: Dictionary = tile["shore"]
@@ -381,6 +413,16 @@ static func _water_corner_tint(cells: Dictionary,corner: Vector2i,
             if kind not in ["unknown","water"]:
                 known_land += 1
     var deep: Color = _biome_color("water",corner,biome)
+    var total := Color(0,0,0,0)
+    var samples := 0
+    for dy in [-1,0]:
+        for dx in [-1,0]:
+            var tile: Dictionary = cells.get(corner+Vector2i(dx,dy),{})
+            if tile.get("kind")=="water" and bool(tile.get("details",false)) and tile.has("mixed_region_v49"):
+                total += _region_pigment("water",corner,biome,tile["mixed_region_v49"])
+                samples += 1
+    if samples>0:
+        deep = total*(1.0/float(samples))
     var shallow: Color = deep.lightened(0.23)
     return deep.lerp(shallow,clampf(float(known_land)*0.34,0.0,1.0))
 
@@ -429,17 +471,41 @@ static func _append_extended_ground(tool: SurfaceTool,at: Vector3,
             RoadShore._rect(tool,at,surface,x,x+0.43,z,z+0.25,
                 Color("#6d7358"),0.016)
     elif biome==Biomes.URBAN:
-        for i in range(2):
-            var x: float = -0.87+float(i)*0.91
-            RoadShore._rect(tool,at,surface,x,x+0.83,-0.82,0.82,
-                Color("#a8aba4") if i==0 else Color("#969b99"),0.020)
-            RoadShore._rect(tool,at,surface,x,x+0.83,-0.018,0.018,
-                Color("#696f70"),0.028)
+        _append_urban_plaza(tool,at,surface,cell)
     elif biome==Biomes.ARCHIPELAGO:
         for i in range(2):
             var z: float = -0.45+float(i)*0.65
             RoadShore._rect(tool,at,surface,-0.72,0.72,z,z+0.04,
                 Color("#cabd92"),0.016)
+
+# V51.3: varied paved courtyards, gutters and recessed utility covers.
+# All vertices follow the existing terrain fan. No new building, collider,
+# material or draw group; no object may obscure the tactical unit center.
+static func _append_urban_plaza(tool: SurfaceTool,at: Vector3,surface: Dictionary,cell: Vector2i) -> void:
+    var style: int = posmod(cell.x*17+cell.y*31,3)
+    var slab: Color = [Color("#999e98"),Color("#a7aba3"),Color("#919a9c")][style]
+    RoadShore._rect(tool,at,surface,-0.97,0.97,-0.97,0.97,slab.darkened(0.16),0.015)
+    for row in range(3):
+        for col in range(3):
+            var x: float = -0.92+float(col)*0.62
+            var z: float = -0.92+float(row)*0.62
+            var variation: float = float(posmod(cell.x*7+cell.y*11+row*13+col*3,5)-2)*0.025
+            var color: Color = slab.lightened(variation) if variation>=0.0 else slab.darkened(-variation)
+            RoadShore._rect(tool,at,surface,x,x+0.59,z,z+0.59,color,0.024)
+    for side in [-1.0,1.0]:
+        var edge: float = float(side)*0.98
+        RoadShore._rect(tool,at,surface,edge-0.045,edge+0.045,-0.98,0.98,slab.lightened(0.16),0.033)
+    var center := Vector2(0.67 if style!=1 else -0.67,0.67 if style==2 else -0.67)
+    var midpoint: Vector3 = RoadShore._point(at,surface,center.x,center.y,0.035)
+    for segment in range(8):
+        var a: float = TAU*float(segment)/8.0
+        var b: float = TAU*float(segment+1)/8.0
+        var p: Vector3 = RoadShore._point(at,surface,center.x+cos(a)*0.12,center.y+sin(a)*0.12,0.035)
+        var q: Vector3 = RoadShore._point(at,surface,center.x+cos(b)*0.12,center.y+sin(b)*0.12,0.035)
+        _tri(tool,midpoint,p,q,Color("#596465"))
+    for bar in range(3):
+        var z: float = center.y-0.045+float(bar)*0.045
+        RoadShore._rect(tool,at,surface,center.x-0.07,center.x+0.07,z,z+0.012,Color("#88918d"),0.041)
 
 # V44: restrained ground-edge detail on public plain cells, using the
 # exact tactical height sampler. Keep the center clear for unit silhouettes.
@@ -539,6 +605,7 @@ static func _build_chunk(parent: Node3D, data: Dictionary,
         var at: Vector3 = world_at(cell)
         var half: float = CELL*0.5
         var tinted: Color = _tint(tile,biome)
+        var local_biome: String = _regional_style(tile,biome)
         if kind == "unknown":
             var flat: Vector3 = at+Vector3(0,FOG_LEVEL,0)
             _panel(unknown,flat+Vector3(-half,0,-half),
@@ -559,7 +626,7 @@ static func _build_chunk(parent: Node3D, data: Dictionary,
                 var cw: Color = _cached_water_tint(cells,cell+Vector2i(0,1),water_cache,biome)
                 _tri_tinted(water,wn,ww,we,cn,cw,ce)
                 _tri_tinted(water,we,ww,ws,ce,cw,cs)
-                _append_coastal_foam(water,cells,cell,biome)
+                _append_coastal_foam(water,cells,cell,local_biome)
             else:
                 _panel(water,wn,we,ws,ww,tinted)
             water_count += 1
@@ -590,7 +657,10 @@ static func _build_chunk(parent: Node3D, data: Dictionary,
         # Close exposed soil down to known water, including road crossings.
         # Reuse the ground mesh/material; no additional draw batch.
         var bank_top: Array[Vector3] = [nw,ne,se,sw]
-        var bank_tint: Color = _shore_color(biome)
+        var bank_tint: Color = _shore_color(local_biome)
+        if tile.has("mixed_region_v49"):
+            var region: Dictionary = tile["mixed_region_v49"]
+            bank_tint = _shore_color(region["primary"]).lerp(_shore_color(region["secondary"]),float(region["secondary_weight"])/1000.0)
         if not bool(tile.get("details",false)):
             bank_tint = bank_tint.darkened(0.60)
         _append_water_banks(ground,cells,cell,bank_top,bank_tint)
@@ -601,14 +671,14 @@ static func _build_chunk(parent: Node3D, data: Dictionary,
         var surface_cell: Dictionary = {
             "x":cell.x,"z":cell.y,"top":_cell_height(tile),
             "half":half,"corners":corners}
-        if kind=="plain" and biome==Biomes.DESERT:
+        if kind=="plain" and local_biome==Biomes.DESERT:
             _append_sand_ripples(ground,at,surface_cell,cell)
-        elif kind=="plain" and biome in [Biomes.WETLAND,Biomes.URBAN,Biomes.ARCHIPELAGO]:
-            _append_extended_ground(ground,at,surface_cell,cell,biome)
+        elif kind=="plain" and local_biome in [Biomes.WETLAND,Biomes.URBAN,Biomes.ARCHIPELAGO]:
+            _append_extended_ground(ground,at,surface_cell,cell,local_biome)
         elif kind=="plain":
-            _append_natural_ground(ground,at,surface_cell,cell,biome)
+            _append_natural_ground(ground,at,surface_cell,cell,local_biome)
         if kind == "road":
-            _append_road_finish(road,at,surface_cell,tile,biome)
+            _append_road_finish(road,at,surface_cell,tile,local_biome)
             crossings_count += _append_crossing_parapets(road,at,surface_cell,tile)
             roads_count += 1
         else:
@@ -616,7 +686,7 @@ static func _build_chunk(parent: Node3D, data: Dictionary,
             for key in ["north","south","west","east"]:
                 if not bool(shore_edges.get(key,false)):
                     continue
-                _append_shore_bands(shore,at,surface_cell,key,biome)
+                _append_shore_bands(shore,at,surface_cell,key,local_biome)
                 shores_count += 1
     var chunk := Node3D.new()
     chunk.name = "Sector3D_%d_%d" % [data["origin"].x,data["origin"].y]
@@ -753,10 +823,57 @@ static func _append_conifer(tool: SurfaceTool,biome: String,foliage: Color) -> v
             _tri_tinted(tool,p,q,tip,foliage.darkened(0.08),foliage.lightened(0.06),apex)
             _tri(tool,Vector3(0,low,0),q,p,shade)
 
-static func _make_cone_trees(parent: Node3D,cells: Dictionary,
-        biome: String = Biomes.TEMPERATE) -> int:
-    var positions: Array[Transform3D] = []
+# V49.3: deterministic ecological transition, one style per tile.
+# Mirror the choice across teams and never instantiate hidden vegetation.
+static func _regional_style(tile: Dictionary,base: String) -> String:
+    var region: Dictionary = tile.get("mixed_region_v49",{})
+    if region.is_empty():
+        return base
+    var cell: Vector2i = tile["cell"]
+    var weight: int = int(region["secondary_weight"])
+    var threshold: int = posmod(cell.y*313+cell.x*157+73,1000)
+    # Mirrored selection threshold recorded at build time.
+    threshold = int(tile.get("mixed_threshold_v49",threshold))
+    return region["secondary"] if weight>threshold else region["primary"]
+
+static func _region_groups(cells: Dictionary,kind: String,base: String) -> Dictionary:
+    var groups: Dictionary = {}
     for cell in cells:
+        var tile: Dictionary = cells[cell]
+        if tile["kind"]!=kind or not bool(tile.get("details",false)):
+            continue
+        var style: String = _regional_style(tile,base)
+        if not groups.has(style):
+            groups[style] = {}
+        groups[style][cell] = tile
+    return groups
+
+static func _make_regional_vegetation(parent: Node3D,cells: Dictionary,base: String) -> int:
+    var groups: Dictionary = _region_groups(cells,"forest",base)
+    var total := 0
+    for style in groups:
+        var host := Node3D.new()
+        host.name = "VegetacionRegional_"+style
+        parent.add_child(host)
+        total += _make_cone_trees(host,cells,style,groups[style])
+    parent.set_meta("regional_tree_groups_v49",groups.size())
+    return total
+
+static func _make_regional_ridges(parent: Node3D,cells: Dictionary,base: String) -> int:
+    var groups: Dictionary = _region_groups(cells,"mountain",base)
+    var total := 0
+    for style in groups:
+        var host := Node3D.new()
+        host.name = "RelieveRegional_"+style
+        parent.add_child(host)
+        total += _make_mountain_ridges(host,cells,style,groups[style])
+    parent.set_meta("regional_ridge_groups_v49",groups.size())
+    return total
+
+static func _make_cone_trees(parent: Node3D,cells: Dictionary,
+        biome: String = Biomes.TEMPERATE,selection: Variant = null) -> int:
+    var positions: Array[Transform3D] = []
+    for cell in (cells if selection==null else selection):
         var tile: Dictionary = cells[cell]
         if str(tile["kind"]) != "forest" or not bool(tile.get("details",false)):
             continue
@@ -881,17 +998,23 @@ static func _ridge_face(tool: SurfaceTool,a: Vector3,b: Vector3,c: Vector3,
     _tri_tinted(tool,c,a,mid,cc,ca,tint)
 
 static func _make_mountain_ridges(parent: Node3D,cells: Dictionary,
-        biome: String) -> int:
+        biome: String,selection: Variant = null) -> int:
     var transforms: Array[Transform3D] = []
-    for cell in cells:
+    for cell in (cells if selection==null else selection):
         var tile: Dictionary = cells[cell]
         if str(tile.get("kind",""))!="mountain" or not bool(tile.get("details",false)):
             continue
-        var base: Vector3 = world_at(cell)
-        base.y = height_at(cells,cell)+0.33
+        # V51.2: vary silhouette proportions and location deterministically,
+        # staying within the tile and retaining one mesh batch per biome.
+        var shift := Vector2(float(posmod(cell.x*19+cell.y*43,7)-3)*0.025,
+            float(posmod(cell.x*47+cell.y*23,7)-3)*0.025)
+        var base: Vector3 = world_at(cell)+Vector3(shift.x,0,shift.y)
         var angle: float = _ridge_angle(cells,cell)
-        var shape := Basis(Vector3.UP,angle).scaled(
-            Vector3(0.95,0.9+float(posmod(cell.x*11+cell.y,4))*0.07,0.95))
+        var width: float = 0.80+float(posmod(cell.x*17+cell.y*29,7))*0.032
+        var depth: float = 0.78+float(posmod(cell.x*31+cell.y*13,7))*0.035
+        var rise: float = 0.76+float(posmod(cell.x*11+cell.y*37,9))*0.055
+        base.y = height_at(cells,cell,shift.x,shift.y)+0.33*rise
+        var shape := Basis(Vector3.UP,angle).scaled(Vector3(width,rise,depth))
         transforms.append(Transform3D(shape,base))
     if transforms.is_empty():
         return 0
@@ -1186,8 +1309,33 @@ static func _make_sites(parent: Node3D,state: Dictionary,
     parent.set_meta("terrain_foundations_v26",foundation_count)
     return drawn
 
+# V48.5: sample the exact same ramp plane used by the wedge mesh.
+static func bridge_surface_y(cells: Dictionary,bridges: Dictionary,
+        ramps: Array,point: Vector3,domain: String) -> float:
+    if domain=="naval":
+        return WATER_LEVEL
+    if domain=="air":
+        return BridgeArt.ROAD_TOP+2.75
+    var cell := Vector2i(roundi(point.x/CELL),roundi(point.z/CELL))
+    if bridges.has(cell):
+        return BridgeArt.ROAD_TOP
+    for ramp in ramps:
+        var center: Vector3 = world_at(ramp["cell"])
+        var direction: Vector2i = ramp["direction"]
+        var dx: float = point.x-center.x
+        var dz: float = point.z-center.z
+        var along: float = dx*direction.x+dz*direction.y
+        var lateral: float = absf(dx*direction.y-dz*direction.x)
+        var length: float = CELL*float(ramp["reach"])
+        if along>=CELL*0.5-0.001 and along<=length+0.001 and lateral<=BridgeArt.RAMP_HALF_WIDTH:
+            return lerpf(BridgeArt.ROAD_TOP,float(ramp["ground_y"]),
+                clampf((along-CELL*0.5)/(length-CELL*0.5),0.0,1.0))
+    var at: Vector3 = world_at(cell)
+    return height_at(cells,cell,point.x-at.x,point.z-at.z)+0.04
+
 static func _make_units(parent: Node3D,state: Dictionary,
-        cells: Dictionary, selected_id: String, viewer: int = 0) -> Dictionary:
+        cells: Dictionary, selected_id: String, viewer: int = 0,
+        bridge_cells: Dictionary = {},ramps: Array = []) -> Dictionary:
     var visible_count := 0
     var detailed := 0
     var apc_lod := 0
@@ -1281,6 +1429,50 @@ static func _make_units(parent: Node3D,state: Dictionary,
         model.position = world_at(cell)+Vector3(0,height_at(cells,cell)+altitude,0)
         if role=="apc" and APCTactical.has_model(model):
             APCTactical.rebase(model)
+        if not bridge_cells.is_empty():
+            var domain: String = Domains.domain(unit)
+            # Native destroyer hull stations run along local Z. Orient the
+            # ship along the channel, perpendicular to the bridge deck.
+            if bridge_cells.has(cell) and domain=="naval" and role=="destroyer":
+                model.rotation.y = PI*0.5 if bridge_cells[cell]=="ns" else 0.0
+            elif bridge_cells.has(cell) and domain=="ground" and role=="tank":
+                # Native tank tracks run along local Z. Align with deck,
+                # not with the water channel. Preserve all model dimensions.
+                model.rotation.y = PI*0.5 if bridge_cells[cell]=="ew" else 0.0
+            model.position = Vector3.ZERO
+            # Determine the real visible bounds with the model's existing
+            # scale. Do not rescale or modify any approved unit mesh.
+            var measurement: Dictionary = BridgeArt.model_bounds(model)
+            var base_y: float = bridge_surface_y(cells,bridge_cells,ramps,world_at(cell),domain)
+            if measurement["valid"]:
+                var box: AABB = measurement["bounds"]
+                # The original art convention varies; put the visual
+                # envelope's bottom on the selected layer for inspection.
+                model.position = world_at(cell)+Vector3.UP*(base_y-box.position.y)
+                model.set_meta("bridge_anchor_offset_v48",-box.position.y)
+                if bridge_cells.has(cell) and domain in [Domains.GROUND,Domains.NAVAL]:
+                    var adjusted := AABB(box.position+Vector3.UP*(base_y-box.position.y),box.size)
+                    var report: Dictionary = BridgeArt.clearance_report(adjusted,domain)
+                    if domain=="naval":
+                        var across_x: bool = bridge_cells[cell]=="ew"
+                        var lateral_min: float = adjusted.position.x if across_x else adjusted.position.z
+                        var lateral_max: float = adjusted.end.x if across_x else adjusted.end.z
+                        report["fits_channel_width"] = lateral_min>=-CELL*0.5+0.03 and lateral_max<=CELL*0.5-0.03
+                        report["channel_width"] = CELL
+                    else:
+                        var across_x: bool = bridge_cells[cell]=="ns"
+                        var lateral_min: float = adjusted.position.x if across_x else adjusted.position.z
+                        var lateral_max: float = adjusted.end.x if across_x else adjusted.end.z
+                        report["deck_width"] = BridgeArt.ROAD_WIDTH
+                        report["lateral_min"] = lateral_min
+                        report["lateral_max"] = lateral_max
+                        report["fits_deck_width"] = lateral_min>=-BridgeArt.ROAD_WIDTH*0.5+0.03 and lateral_max<=BridgeArt.ROAD_WIDTH*0.5-0.03
+                    model.set_meta("bridge_clearance_v48",report)
+            else:
+                model.position = world_at(cell)+Vector3.UP*(base_y+altitude)
+                if bridge_cells.has(cell):
+                    model.set_meta("bridge_clearance_v48",{"fits_vertical":false,"unmeasured":true})
+            model.set_meta("bridge_domain_v48",domain)
         model.set_meta("visual_layer",Domains.layer(unit))
         model.set_meta("cell",cell)
         model.set_meta("faction",faction)
@@ -1293,27 +1485,46 @@ static func _make_units(parent: Node3D,state: Dictionary,
         "hidden_enemies":hidden_enemies}
 
 static func build(state: Dictionary, selected_id: String = "", viewer: int = 0) -> Node3D:
+    var build_start_usec: int = Time.get_ticks_usec()
     var biome: String = Biomes.from_state(state)
     var terrain: Array = state.get("terrain",[])
-    if not Rules.valid_terrain(terrain):
+    if not Rules.valid_terrain(terrain) or not MixedRegions.valid_state(state):
         return null
+    var bridge_index: Dictionary = Crossings.state_index(state)
+    if not bridge_index["valid"]:
+        return null
+    var bridge_cells: Dictionary = bridge_index["cells"]
+    if Visibility.enabled(state):
+        bridge_cells = Crossings.public_cells(bridge_cells,Visibility.explored_cells(state,viewer))
+    # Render WATER under each elevated deck, not a solid road embankment.
+    # This local map is visual only and cannot alter the authoritative road.
+    var render_terrain: Array = terrain
+    if not bridge_cells.is_empty():
+        render_terrain = terrain.duplicate(true)
+        for cell in bridge_cells:
+            render_terrain[cell.y][cell.x] = "water"
     var scene := Node3D.new()
     scene.name = "MapaTactico3DReal"
     var dims: Vector2i = Rules.map_size(terrain)
     var use_fog: bool = Visibility.enabled(state)
     var explored: Dictionary = Visibility.explored_cells(state,viewer) if use_fog else {}
     var visible: Dictionary = Visibility.visible_cells(state,viewer) if use_fog else {}
+    var regions: Dictionary = MixedRegions.generate(state[MixedRegions.SEED_FIELD],dims,state[MixedRegions.FIELD]) if state.has(MixedRegions.FIELD) else {}
     var cells: Dictionary = {}
     var chunks: Array[Dictionary] = []
     for y in range(0,dims.y,Adapter.CHUNK_SIDE):
         for x in range(0,dims.x,Adapter.CHUNK_SIDE):
-            var chunk: Dictionary = Adapter.collect(terrain,Vector2i(x,y),
+            var chunk: Dictionary = Adapter.collect(render_terrain,Vector2i(x,y),
                 Vector2i(Adapter.CHUNK_SIDE,Adapter.CHUNK_SIDE),
                 explored,visible,use_fog)
             if chunk.is_empty():
                 scene.free()
                 return null
             for tile in chunk["cells"]:
+                if bool(tile.get("seen",false)) and regions.has(tile["cell"]):
+                    tile["mixed_region_v49"] = regions[tile["cell"]]
+                    var pos: Vector2i = tile["cell"]
+                    tile["mixed_threshold_v49"] = posmod(pos.y*313+mini(pos.x,dims.x-1-pos.x)*157+73,1000)
                 cells[tile["cell"]] = tile
             chunks.append(chunk)
     var counters: Dictionary = {"land":0,"water":0,"unknown":0,
@@ -1323,6 +1534,12 @@ static func build(state: Dictionary, selected_id: String = "", viewer: int = 0) 
     var corner_cache: Dictionary = {}
     var water_cache: Dictionary = {}
     var materials: Dictionary = {}
+    if not regions.is_empty():
+        var config: Dictionary = state[MixedRegions.FIELD]
+        var soil := StandardMaterial3D.new()
+        SurfaceFinish.apply_mixed_soil(soil,config["primary"],config["secondary"])
+        soil.cull_mode = BaseMaterial3D.CULL_DISABLED
+        materials["soil"] = soil
     var height_cache: Dictionary = {}
     var terrain_start_usec: int = Time.get_ticks_usec()
     for chunk in chunks:
@@ -1332,8 +1549,16 @@ static func build(state: Dictionary, selected_id: String = "", viewer: int = 0) 
             counters[key] = int(counters[key])+int(stats[key])
     counters["chunk_build_ms_v42"] = float(Time.get_ticks_usec()-terrain_start_usec)/1000.0
     counters["height_samples_v42"] = height_cache.size()
-    counters["trees"] = _make_cone_trees(scene,cells,biome)
-    counters["mountain_ridges"] = _make_mountain_ridges(scene,cells,biome)
+    var landscape_start_usec: int = Time.get_ticks_usec()
+    if regions.is_empty():
+        counters["trees"] = _make_cone_trees(scene,cells,biome)
+        counters["mountain_ridges"] = _make_mountain_ridges(scene,cells,biome)
+    else:
+        counters["trees"] = _make_regional_vegetation(scene,cells,biome)
+        counters["mountain_ridges"] = _make_regional_ridges(scene,cells,biome)
+    counters["regional_tree_groups_v49"] = int(scene.get_meta("regional_tree_groups_v49",0))
+    counters["regional_ridge_groups_v49"] = int(scene.get_meta("regional_ridge_groups_v49",0))
+    counters["landscape_build_ms_v50"] = float(Time.get_ticks_usec()-landscape_start_usec)/1000.0
     counters["sites"] = _make_sites(scene,state,cells)
     # Automatic workshop LOD runs only on already instantiated public sites,
     # at 4 Hz, and never changes a tile/root or any gameplay object.
@@ -1391,7 +1616,63 @@ static func build(state: Dictionary, selected_id: String = "", viewer: int = 0) 
     else:
         drone_lod.free()
     counters["drone_center_lod_models"]=drone_count
-    counters["units"] = _make_units(scene,state,cells,selected_id,viewer)
+    var bridge_count := 0
+    var ramp_count := 0
+    var skipped_ramps := 0
+    var steep_ramps := 0
+    var ramp_profiles: Array = []
+    var reserved: Dictionary = {}
+    for cell in bridge_cells:
+        var axis: String = bridge_cells[cell]
+        var bridge: Node3D = BridgeArt.build(axis)
+        bridge.name = "PuenteElevado_%d_%d" % [cell.x,cell.y]
+        bridge.position = world_at(cell)
+        scene.add_child(bridge)
+        cells[cell]["bridge_axis_v48"] = axis
+        bridge_count += 1
+        for side in [-1,1]:
+            var direction := Vector2i(side,0) if axis=="ew" else Vector2i(0,-side)
+            var approach: Vector2i = cell+direction
+            if bridge_cells.has(approach):
+                continue
+            if not bool(cells[approach].get("seen",false)) or str(cells[approach]["kind"]) not in ["plain","road"]:
+                skipped_ramps += 1
+                continue
+            if reserved.has(approach):
+                skipped_ramps += 1
+                continue
+            var reach := 1
+            var farther: Vector2i = approach+direction
+            if cells.has(farther) and not bridge_cells.has(farther) and not reserved.has(farther) and bool(cells[farther].get("seen",false)) and str(cells[farther]["kind"]) in ["plain","road"]:
+                reach = 2
+            var endpoint: Vector2i = cell+direction*reach
+            var ground_y: float = height_at(cells,endpoint)+0.04
+            var ramp: Node3D = BridgeArt.build_ramp(axis,side,ground_y,reach)
+            if ramp!=null:
+                ramp.position = world_at(cell)
+                ramp.name = "Rampa_%d_%d_%d" % [cell.x,cell.y,side]
+                scene.add_child(ramp)
+                ramp_count += 1
+                if float(ramp.get_meta("slope_degrees"))>35.0:
+                    steep_ramps += 1
+                for step in range(1,reach+1):
+                    reserved[cell+direction*step] = true
+                ramp_profiles.append({"cell":cell,"direction":direction,"reach":reach,"ground_y":ground_y})
+    scene.set_meta("bridge_ramp_profiles_v48",ramp_profiles)
+    scene.set_meta("bridge_cells_v48",bridge_cells)
+    counters["bridge_steep_ramps_v48"] = steep_ramps
+    counters["bridge_spans_v48"] = bridge_count
+    counters["bridge_ramps_v48"] = ramp_count
+    counters["bridge_skipped_ramps_v48"] = skipped_ramps
+    counters["units"] = _make_units(scene,state,cells,selected_id,viewer,bridge_cells,ramp_profiles)
+    var clearance_failures := 0
+    for child in scene.get_children():
+        if child.has_meta("bridge_clearance_v48"):
+            var report: Dictionary = child.get_meta("bridge_clearance_v48")
+            if not bool(report.get("fits_vertical",false)) or not bool(report.get("fits_channel_width",true)) or not bool(report.get("fits_deck_width",true)):
+                clearance_failures += 1
+    counters["bridge_clearance_failures_v48"] = clearance_failures
+    scene.set_meta("bridge_inspection_only_v48",state.has(Crossings.FIELD))
     # Android-safe, 4 Hz dynamic LOD: only cities already visible to the
     # public viewer are registered. Model roots and selection cells persist.
     var city_lod: Node=CityDistance.new()
@@ -1453,6 +1734,10 @@ static func build(state: Dictionary, selected_id: String = "", viewer: int = 0) 
     counters["biome_extra_batches"] = (
         1 if counters["mountain_ridges"]>0 else 0) + (
         1 if biome==Biomes.WINTER and counters["trees"]>0 else 0)
+    if not regions.is_empty():
+        # At most two vegetation and two rock groups, plus one winter cap.
+        var snow_groups: int = int(scene.has_node("VegetacionRegional_winter"))
+        counters["biome_extra_batches"] = maxi(0,int(counters["regional_tree_groups_v49"])-1)+int(counters["regional_ridge_groups_v49"])+snow_groups
     counters["terrain_blend_palette_samples"] = corner_cache.size()
     counters["water_palette_samples_v27"] = water_cache.size()
     counters["shared_chunk_materials_v27"] = materials.size()
@@ -1463,7 +1748,9 @@ static func build(state: Dictionary, selected_id: String = "", viewer: int = 0) 
     scene.set_meta("viewer",viewer)
     scene.set_meta("visual_only",true)
     scene.set_meta("visual_biome",biome)
+    scene.set_meta("mixed_pigments_v49",state.has(MixedRegions.FIELD))
     scene.set_meta("public_cells",cells)
+    counters["scene_build_ms_v50"] = float(Time.get_ticks_usec()-build_start_usec)/1000.0
     scene.set_meta("render_stats",counters)
     scene.set_meta("selected_unit_id",selected_id)
     return scene

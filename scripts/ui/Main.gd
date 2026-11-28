@@ -43,6 +43,7 @@ const TurnReadout = preload("res://scripts/ui/BattleTurnReadout.gd")
 const QuickNavigation = preload("res://scripts/ui/QuickUnitNavigation.gd")
 const Weather = preload("res://scripts/core/Weather.gd")
 const Winter = preload("res://scripts/ui/WinterBattleBiome.gd")
+const MixedRegions = preload("res://scripts/core/MixedBiomeRegionsV49.gd")
 const BattleView3D = preload("res://scripts/ui/Battle3DMapView.gd")
 const ImmersiveHud = preload("res://scripts/ui/ImmersiveBattleHud.gd")
 const MoveRiskData = preload("res://scripts/ui/MoveRiskComparison.gd")
@@ -135,6 +136,7 @@ var confirm_button: Button
 var new_game_dialog: ConfirmationDialog
 var scenario_picker: OptionButton
 var biome_picker: OptionButton
+var secondary_biome_picker: OptionButton
 var map_size_picker: OptionButton
 var camera_zoom_in: Button
 var camera_zoom_out: Button
@@ -701,6 +703,20 @@ func _ready() -> void:
     biome_picker.add_item("Archipiélagos · playas y litoral",8)
     biome_picker.select(Winter.index_for(board.state))
     panel.add_child(biome_picker)
+    secondary_biome_picker = OptionButton.new()
+    secondary_biome_picker.name = "SelectorSegundoBiomaV49"
+    secondary_biome_picker.custom_minimum_size.y = 54
+    secondary_biome_picker.add_item("Sin segundo bioma",0)
+    for i in range(Winter.CHOICES.size()):
+        secondary_biome_picker.add_item("Región sur · "+Winter.label_for(Winter.from_index(i)),i+1)
+    secondary_biome_picker.select(Winter.CHOICES.find(board.state[MixedRegions.FIELD]["secondary"])+1 if board.state.has(MixedRegions.GENERATED_FIELD) else 0)
+    secondary_biome_picker.disabled = scenario_picker.get_selected_id()!=Scenarios.GEOGRAPHIC_SCENARIO_ID
+    scenario_picker.item_selected.connect(func(_index: int):
+        secondary_biome_picker.disabled = scenario_picker.get_selected_id()!=Scenarios.GEOGRAPHIC_SCENARIO_ID
+        if secondary_biome_picker.disabled:
+            secondary_biome_picker.select(0))
+    secondary_biome_picker.tooltip_text = "Disponible en Geografía del bioma; elige dos paisajes distintos."
+    panel.add_child(secondary_biome_picker)
     var biome_help := Label.new()
     biome_help.text = "El bioma es el paisaje. El clima de abajo controla movilidad y precipitaciones, independientemente."
     biome_help.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -2132,6 +2148,8 @@ func _load_game(path: String = "user://tarvoka_battle_v1.json") -> bool:
     if board.load_game(path):
         scenario_picker.select(board.current_scenario_id)
         biome_picker.select(Winter.index_for(board.state))
+        secondary_biome_picker.select(Winter.CHOICES.find(board.state[MixedRegions.FIELD]["secondary"])+1 if board.state.has(MixedRegions.GENERATED_FIELD) else 0)
+        secondary_biome_picker.disabled = scenario_picker.get_selected_id()!=Scenarios.GEOGRAPHIC_SCENARIO_ID
         var grid: Vector2i = board.map_dimensions()
         map_size_picker.select(0 if grid == Vector2i(10,8) else (1 if grid == Vector2i(24,18) else 2))
         balance_picker.select(1 if board.symmetric_setup else 0)
@@ -2149,7 +2167,23 @@ func _load_game(path: String = "user://tarvoka_battle_v1.json") -> bool:
         return true
     return false
 
+func _mixed_setup() -> Dictionary:
+    if secondary_biome_picker.get_selected_id()==0:
+        return {}
+    return {"version":MixedRegions.VERSION,"primary":Winter.from_index(biome_picker.get_selected_id()),"secondary":Winter.from_index(secondary_biome_picker.get_selected_id()-1)}
+
+func _mixed_setup_allowed() -> bool:
+    var config: Dictionary = _mixed_setup()
+    if config.is_empty():
+        return true
+    if scenario_picker.get_selected_id()!=Scenarios.GEOGRAPHIC_SCENARIO_ID or not MixedRegions.valid_config(config):
+        board.message = "Elige Geografía del bioma y dos paisajes diferentes, o desactiva el segundo."
+        return false
+    return true
+
 func _new_game() -> void:
+    if not _mixed_setup_allowed():
+        return
     var mode_name := "Simetrico" if balance_picker.get_selected_id() == 1 else "Entrenamiento"
     var fog_name := "niebla de guerra" if fog_picker.get_selected_id() == 1 else "mapa visible"
     var weather_name: String = Weather.label(str(Weather.TYPES[weather_picker.get_selected_id()]))
@@ -2167,6 +2201,8 @@ func _new_game() -> void:
     var map_name: String = "%s (%d × %d)" % [Scenarios.label(scenario_picker.get_selected_id()),dimensions.x,dimensions.y]
     var biome_name: String = Winter.label_for(
         Winter.from_index(biome_picker.get_selected_id()))
+    if not _mixed_setup().is_empty():
+        biome_name += " + "+Winter.label_for(_mixed_setup()["secondary"])
     if Scenarios.uses_seed(scenario_picker.get_selected_id()):
         map_name += " (semilla %d)" % int(map_seed_picker.value)
     new_game_dialog.dialog_text = "Iniciar %s en modo %s con %s, %s, %s, bioma %s, clima %s y objetivo %s? Comienza %s. Se reemplaza el autoguardado. La partida manual se conserva." % [map_name, mode_name, roster_name, fog_name, urban_name, biome_name, weather_name, objective_name, starter_name]
@@ -2180,6 +2216,8 @@ func _new_game() -> void:
         new_game_dialog.popup_centered()
 
 func _confirm_new_game() -> void:
+    if not _mixed_setup_allowed():
+        return
     _close_results_screen()
     if roster_picker.get_selected_id() == 2:
         economy_picker.select(1)
@@ -2191,7 +2229,7 @@ func _confirm_new_game() -> void:
     board.new_game(scenario_picker.get_selected_id(), balance_picker.get_selected_id() == 1, fog_picker.get_selected_id() == 1, relay_picker.get_selected_id() == 1, roster_picker.get_selected_id() != 0, economy_picker.get_selected_id() == 1, roster_picker.get_selected_id() == 2, first_picker.get_selected_id(), seed, _selected_map_size(), next_identity,
         str(Weather.TYPES[weather_picker.get_selected_id()]),
         weather_cycle_picker.get_selected_id() == 1,
-        Winter.from_index(biome_picker.get_selected_id()))
+        Winter.from_index(biome_picker.get_selected_id()),_mixed_setup())
     _pending_visual_factions.clear()
     call_deferred("_frame_camera_after_layout")
     if skirmish_setup != null and skirmish_setup.visible:
@@ -2214,6 +2252,8 @@ func _reroll_map_seed() -> void:
     map_seed_picker.value = next
     if not Scenarios.uses_seed(scenario_picker.get_selected_id()):
         scenario_picker.select(Scenarios.RANDOM_SCENARIO_ID)
+        secondary_biome_picker.select(0)
+        secondary_biome_picker.disabled = true
 
 func _cancel_selection() -> void:
     board.cancel_selection()
@@ -2318,7 +2358,7 @@ func _prepare_skirmish() -> void:
         "scenario":scenario_picker.get_selected_id(), "size":map_size_picker.get_selected_id(),
         "roster":roster_picker.get_selected_id(), "fog":fog_picker.get_selected_id(),
         "weather":weather_picker.get_selected_id(),
-        "biome":biome_picker.get_selected_id(),
+        "biome":biome_picker.get_selected_id(), "secondary_biome":secondary_biome_picker.get_selected_id(),
         "weather_cycle":weather_cycle_picker.get_selected_id(),
         "economy":economy_picker.get_selected_id(), "objective":relay_picker.get_selected_id(),
         "balance":balance_picker.get_selected_id(), "first":first_picker.get_selected_id(),
@@ -2358,6 +2398,8 @@ func _start_skirmish_setup(configuration: Dictionary) -> void:
     fog_picker.select(int(configuration["fog"]))
     weather_picker.select(int(configuration.get("weather",0)))
     biome_picker.select(int(configuration.get("biome",0)))
+    secondary_biome_picker.disabled = scenario_picker.get_selected_id()!=Scenarios.GEOGRAPHIC_SCENARIO_ID
+    secondary_biome_picker.select(clampi(int(configuration.get("secondary_biome",0)),0,Winter.CHOICES.size()) if not secondary_biome_picker.disabled else 0)
     weather_cycle_picker.select(int(configuration.get("weather_cycle",0)))
     economy_picker.select(int(configuration["economy"]))
     relay_picker.select(int(configuration["objective"]))
